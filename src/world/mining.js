@@ -65,6 +65,7 @@ export function blockDrops(blockId, tool = HAND, rng = Math.random, meta = 0) {
     case 'gravel': return rng() < 0.1 ? [{ id: I.FLINT, count: 1 }] : [{ id: B.GRAVEL, count: 1 }];
     case 'slab': return [{ id: blockId, count: meta === 2 ? 2 : 1 }];
     case 'wool': return [{ id: WOOL_ITEMS[meta & 15], count: 1 }];
+    case 'melon': return [{ id: I.MELON_SLICE, count: 3 + Math.floor(rng() * 5) }];
     case 'bookshelf': return [{ id: I.BOOK, count: 3 }];
     case 'bed': return (meta & 8) ? [{ id: I.BED, count: 1 }] : []; // the head half drops the bed
     case 'door': return (meta & 8) ? [] : [{ id: I.OAK_DOOR, count: 1 }]; // the lower half drops the door

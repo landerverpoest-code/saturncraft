@@ -31,6 +31,7 @@ export const B = {
   OAK_STAIRS: 72, COBBLESTONE_STAIRS: 73, STONE_BRICK_STAIRS: 74, SANDSTONE_STAIRS: 75,
   CARROTS: 76, OAK_FENCE: 77, SPRUCE_FENCE: 78, BIRCH_FENCE: 79, OAK_FENCE_GATE: 80,
   SPAWNER: 81, MOSSY_COBBLESTONE: 82, SUGAR_CANE: 83, BOOKSHELF: 84, BRICKS: 85, GLASS_PANE: 86, DIRT_PATH: 87,
+  PUMPKIN: 88, JACK_O_LANTERN: 89, MELON: 90,
 };
 
 const defaults = {
@@ -162,6 +163,9 @@ def(B.MOSSY_COBBLESTONE, 'Mossy Cobblestone', { hardness: 2, resistance: 6, tool
 def(B.SUGAR_CANE, 'Sugar Cane', { ...plant, sound: 'grass' });
 def(B.BOOKSHELF, 'Bookshelf', { hardness: 1.5, resistance: 1.5, tool: TOOL.AXE, sound: 'wood', flammable: true, drops: 'bookshelf', tex: { top: 'oak_planks', bottom: 'oak_planks', side: 'bookshelf' } });
 def(B.DIRT_PATH, 'Dirt Path', { hardness: 0.65, resistance: 0.65, tool: TOOL.SHOVEL, drops: B.DIRT, sound: 'gravel', tex: { top: 'dirt_path', bottom: 'dirt', side: 'dirt_path_side' } });
+def(B.PUMPKIN, 'Pumpkin', { hardness: 1, resistance: 1, tool: TOOL.AXE, sound: 'wood', tex: { top: 'pumpkin_top', bottom: 'pumpkin_top', side: 'pumpkin_side' } });
+def(B.JACK_O_LANTERN, 'Pumpkin Lantern', { hardness: 1, resistance: 1, tool: TOOL.AXE, sound: 'wood', emit: 15, tex: { top: 'pumpkin_top', bottom: 'pumpkin_top', side: 'pumpkin_side', front: 'pumpkin_lantern' } });
+def(B.MELON, 'Melon', { hardness: 1, resistance: 1, tool: TOOL.AXE, sound: 'wood', drops: 'melon', tex: { top: 'melon_top', bottom: 'melon_top', side: 'melon_side' } });
 def(B.BRICKS, 'Bricks', { hardness: 2, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD });
 def(B.GLASS_PANE, 'Glass Pane', { hardness: 0.3, resistance: 0.3, opaque: false, shape: SHAPE.PANE, layer: LAYER.CUTOUT, drops: null, sound: 'glass', tex: { all: 'glass' } });
 

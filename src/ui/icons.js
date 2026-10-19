@@ -117,6 +117,7 @@ const ITEM_STYLE = {
   oak_door: ['door', { h: '#9c7444', H: '#b88a55', w: '#5a3d1e' }],
   wheat_seeds: ['seeds', { h: '#3e8a24', H: '#2a6a18' }], wheat: ['wheat', { h: '#d6ac44', H: '#f0d070', s: '#a88a30' }],
   bone_meal: ['dust', { h: '#f2f0e8' }],
+  melon_slice: ['meat', { h: '#e84a3a', w: '#4a9a2a' }], pumpkin_pie: ['bread', { h: '#d8801e', H: '#f0a040', w: '#8a5426' }],
   paper: ['paper', { h: '#f4f0e4', H: '#ffffff', s: '#c8c0b0' }], book: ['book', { h: '#8a4a2a', H: '#a8603a', w: '#f0eadc' }],
   brick: ['ingot', { h: '#b25a3e' }],
   carrot: ['carrot', { h: '#e8862a', H: '#ffb060', s: '#3f9a2a' }],

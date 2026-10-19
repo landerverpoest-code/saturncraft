@@ -476,6 +476,11 @@ export class TerrainGenerator {
         if (r < 0.015) blocks[above] = hashf(this.seed, x0 + x, z0 + z, 42) < 0.5 ? B.SUNPETAL : B.REDBLOOM;
         else if (r < 0.015 + grassP) blocks[above] = B.TALL_GRASS;
       }
+      // pumpkin patches (plains/taiga) and melons (forests)
+      if (ground === B.GRASS && !blocks[above] && hashf(this.seed, (x0 + x) >> 3, (z0 + z) >> 3, 46) < 0.03 && hashf(this.seed, x0 + x, z0 + z, 47) < 0.12) {
+        if (biome === BIOME.PLAINS || biome === BIOME.TAIGA) { blocks[above] = B.PUMPKIN; meta[above] = Math.floor(hashf(this.seed, x0 + x, z0 + z, 48) * 4); }
+        else if (biome === BIOME.FOREST || biome === BIOME.BIRCH_FOREST) blocks[above] = B.MELON;
+      }
       // sugar cane on the shore: grass, dirt or sand next to water
       if ((ground === B.GRASS || ground === B.SAND || ground === B.DIRT) && top === SEA_LEVEL && hashf(this.seed, x0 + x, z0 + z, 44) < 0.12) {
         const wet = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => { const xx = x + dx, zz = z + dz; return xx >= 0 && zz >= 0 && xx < 16 && zz < 16 && blocks[cidx(xx, top, zz)] === B.WATER; });

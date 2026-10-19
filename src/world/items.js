@@ -92,6 +92,8 @@ item('paper', 'Paper');
 item('book', 'Book');
 item('brick', 'Brick');
 item('bone_meal', 'Bone Meal', { boneMeal: true });
+item('melon_slice', 'Melon Slice', { food: { hunger: 2, saturation: 1.2 } });
+item('pumpkin_pie', 'Pumpkin Pie', { food: { hunger: 8, saturation: 4.8 } });
 // dyes and coloured wool (white wool is the plain Wool block item)
 export const DYES = [], WOOL_ITEMS = [];
 COLORS.forEach(([key, name], c) => {

@@ -468,7 +468,19 @@ export class Mob {
       this.chase(g, p, 1);
       this.tryMelee(g, p);
       this.headPitch = 0;
-    } else this.wanderAI(g, 1);
+      return;
+    }
+    // Shamblers also hunt settlers within 16 blocks
+    if (this.type === 'shambler') {
+      if (this.prey && (this.prey.dead || this.prey.deathTime > 0 || Math.hypot(this.prey.x - this.x, this.prey.z - this.z) > 24)) this.prey = null;
+      if (!this.prey && g.ticks % 20 === this.id % 20) {
+        for (const e of g.entities.list) {
+          if (e.kind === 'mob' && e.def.villager && !e.dead && e.deathTime === 0 && Math.hypot(e.x - this.x, e.z - this.z) < 16 && this.canSee(g, e.x, e.eyeY, e.z)) { this.prey = e; break; }
+        }
+      }
+      if (this.prey) { this.chase(g, this.prey, 1); this.tryMelee(g, this.prey); return; }
+    }
+    this.wanderAI(g, 1);
   }
 
   spiderAI(g, p, pdist) {

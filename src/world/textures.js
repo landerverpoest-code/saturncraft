@@ -20,6 +20,7 @@ for (const b of BLOCKS) {
 addTex('furnace_side');
 addTex('farmland_moist');
 addTex('door_upper');
+addTex('pumpkin_face');
 for (let r = 0; r < 4; r++) { addTex('bed_head_top_' + r); addTex('bed_foot_top_' + r); }
 for (let i = 0; i < 8; i++) addTex('wheat_' + i);
 for (let i = 0; i < 4; i++) addTex('carrots_' + i);
@@ -237,6 +238,35 @@ const GEN = {
   tuff: (c) => c.noiseFill(['#5f6159', '#6c6e64', '#575951', '#787a6f'].map(hex), 0.5),
   dirt: (c) => c.noiseFill(P.dirt, 0.4),
   farmland: (c) => farmland(c, false),
+  pumpkin_side: (c) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const rib = x % 4 === 0 ? 0.72 : x % 4 === 1 || x % 4 === 3 ? 0.92 : 1.04;
+      c.set(x, y, shade(hex('#d8801e'), rib * (0.95 + c.h(x, y) * 0.1)));
+    }
+  },
+  pumpkin_top: (c) => {
+    GEN.pumpkin_side(c);
+    for (let y = 6; y < 10; y++) for (let x = 6; x < 10; x++) c.set(x, y, shade(hex('#6a7a2a'), 0.9 + c.h(x, y) * 0.2));
+  },
+  pumpkin_face: (c) => {
+    GEN.pumpkin_side(c);
+    const d = hex('#3a1e06');
+    for (const [x0, y0] of [[3, 4], [10, 4]]) for (let y = y0; y < y0 + 3; y++) for (let x = x0; x < x0 + 3; x++) if (y - y0 >= Math.abs(x - x0 - 1)) c.set(x, y, d);
+    for (let x = 3; x < 13; x++) { c.set(x, 10, d); if (x % 3 !== 0) c.set(x, 11, d); }
+    c.set(4, 9, d); c.set(11, 9, d);
+  },
+  pumpkin_lantern: (c) => {
+    GEN.pumpkin_face(c);
+    const glow = hex('#ffd860');
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const p = c.get(x, y); if (p[0] < 80) c.set(x, y, shade(glow, 0.9 + c.h(x, y) * 0.15)); }
+  },
+  melon_side: (c) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const stripe = (x + Math.floor(c.h(0, y, 5) * 2)) % 4 < 2;
+      c.set(x, y, shade(hex(stripe ? '#5a9a2a' : '#2f6e1a'), 0.92 + c.h(x, y) * 0.12));
+    }
+  },
+  melon_top: (c) => { GEN.melon_side(c); for (let y = 6; y < 10; y++) for (let x = 6; x < 10; x++) c.set(x, y, hex('#7a6a2a')); },
   dirt_path: (c) => c.noiseFill(['#9a7a48', '#8a6c3e', '#a8865a', '#7e6238'].map(hex), 0.35),
   dirt_path_side: (c) => {
     c.noiseFill(P.dirt, 0.4);
