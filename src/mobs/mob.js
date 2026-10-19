@@ -135,6 +135,7 @@ export class Mob {
     for (const m of [this, mate]) { m.loveTicks = 0; m.age = 6000; m.breedTime = 0; }
     this.hearts(g, 7);
     g.entities.spawnXp(this.x, this.y + 0.5, this.z, 1 + Math.floor(Math.random() * 7));
+    if (g.milestones) g.milestones.event('breed');
   }
 
   /** Is the player holding this animal's food within 10 blocks? */
@@ -190,6 +191,7 @@ export class Mob {
     const killedByPlayer = this.lastHurtByPlayer > 0;
     this.killedByPlayer = killedByPlayer;
     if (killedByPlayer) g.player.stats.kills++;
+    if (killedByPlayer && this.def.category === CATEGORY.MONSTER && g.milestones) g.milestones.event('kill');
     if (this.age < 0) { this.killedByPlayer = false; return; } // babies drop nothing
     for (const d of rollDrops(this.type, { killedByPlayer, onFire: this.fireTicks > 0, sheared: this.sheared })) {
       if (d.id === B.WOOL) d.id = WOOL_ITEMS[this.woolColor || 0];

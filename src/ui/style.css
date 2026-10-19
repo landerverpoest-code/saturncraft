@@ -122,3 +122,15 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 .trade-row .trade-btn { padding: 4px 14px; min-width: 0; width: auto; font-size: 13px; }
 .trade-row .trade-btn:disabled { opacity: .45; cursor: default; }
 .trade-row.sold-out { opacity: .55; }
+
+.milestone { position: absolute; right: 12px; top: 90px; display: flex; gap: 10px; align-items: center; background: rgba(24, 22, 40, .92); border: 2px solid #f0b04a; border-radius: 6px; padding: 8px 14px 8px 8px; color: #fff; animation: msin .4s ease-out; transition: transform .6s, opacity .6s; z-index: 5; }
+.milestone.out { transform: translateX(120%); opacity: 0; }
+.milestone img { width: 32px; height: 32px; image-rendering: pixelated; }
+.milestone .m-head { color: #f0d060; font-size: 12px; }
+.milestone .m-title { font-weight: bold; }
+@keyframes msin { from { transform: translateX(120%); } to { transform: translateX(0); } }
+.milestone-list { display: grid; grid-template-columns: repeat(2, minmax(0, 300px)); gap: 6px; max-height: 60vh; overflow-y: auto; margin-bottom: 10px; }
+.milestone-row { display: flex; gap: 8px; align-items: center; background: rgba(255,255,255,.06); border-radius: 4px; padding: 6px; opacity: .45; filter: grayscale(1); }
+.milestone-row.done { opacity: 1; filter: none; border: 1px solid #f0b04a; }
+.milestone-row img { width: 32px; height: 32px; image-rendering: pixelated; }
+.milestone-row .d { font-size: 12px; opacity: .8; }

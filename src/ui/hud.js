@@ -81,6 +81,17 @@ export class HUD {
 
   setVisible(v) { this.visible = v; this.root.style.display = v ? '' : 'none'; }
 
+  /** Slide-in card for a reached milestone. */
+  milestone(m) {
+    const card = document.createElement('div');
+    card.className = 'milestone';
+    card.innerHTML = `<img src="${iconURL(m.icon)}"><div><div class="m-head">Milestone reached!</div><div class="m-title"></div></div>`;
+    card.querySelector('.m-title').textContent = m.title;
+    this.root.appendChild(card);
+    setTimeout(() => card.classList.add('out'), 4500);
+    setTimeout(() => card.remove(), 5200);
+  }
+
   toast(msg, ms = 2500) {
     this.toastEl.textContent = msg;
     this.toastEl.style.opacity = 1;

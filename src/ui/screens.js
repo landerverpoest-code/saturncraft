@@ -4,6 +4,7 @@ import { ITEMS, maxStack } from '../world/items.js';
 import { craft, RECIPES, recipeLayout, chooseIngredients } from '../player/crafting.js';
 import { B } from '../world/blocks.js';
 import { canTrade, doTrade, MAX_USES } from '../mobs/trades.js';
+import { MILESTONES } from '../player/milestones.js';
 
 function el(html) { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstChild; }
 
@@ -435,7 +436,7 @@ export class UI {
             if (left) g.entities.spawnItem(g.player.x, g.player.y + 1, g.player.z, { ...got, count: left });
             done++;
           }
-          if (done) { g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); g.entities.spawnXp(g.player.x, g.player.y + 1, g.player.z, 3 * done); }
+          if (done) { g.milestones.event('trade'); g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); g.entities.spawnXp(g.player.x, g.player.y + 1, g.player.z, 3 * done); }
           this.refreshAll();
         });
         this.refreshers.push(() => {
@@ -485,6 +486,7 @@ export class UI {
       <div class="field"><label>Volume: <b id="volv">${Math.round(g.settings.volume * 100)}</b>%</label><input type="range" min="0" max="100" value="${Math.round(g.settings.volume * 100)}" id="vol"></div>
       <div class="field"><label>Music: <b id="musv">${Math.round((g.settings.music ?? 0.5) * 100)}</b>%</label><input type="range" min="0" max="100" value="${Math.round((g.settings.music ?? 0.5) * 100)}" id="mus"></div>
       <div class="field"><label><input type="checkbox" id="sh" ${g.settings.shadows ? 'checked' : ''}> Sun shadows (3 shadow-casting lights)</label></div>
+      <button class="btn" data-a="ms">Milestones</button>
       <button class="btn" data-a="title">Save &amp; Quit to Title</button>
     </div>`);
     const bind = (id, lbl, fn) => s.querySelector('#' + id).addEventListener('input', (e) => { s.querySelector('#' + lbl).textContent = fn(+e.target.value); });
@@ -496,6 +498,23 @@ export class UI {
     s.querySelector('#sh').addEventListener('change', (e) => g.setSetting('shadows', e.target.checked));
     s.querySelector('[data-a=resume]').onclick = () => { this.open = null; this.clear(); g.onUIClosed(); };
     s.querySelector('[data-a=title]').onclick = () => g.quitToTitle();
+    s.querySelector('[data-a=ms]').onclick = () => this.showMilestones();
+    this.layer.appendChild(s);
+  }
+
+  showMilestones() {
+    this.clear();
+    this.open = 'pause';
+    const g = this.game, done = g.milestones.done;
+    const s = el(`<div class="screen"><h2>Milestones (${done.size}/${MILESTONES.length})</h2><div class="milestone-list"></div><button class="btn">Back</button></div>`);
+    const list = s.querySelector('.milestone-list');
+    for (const m of MILESTONES) {
+      const row = el(`<div class="milestone-row ${done.has(m.id) ? 'done' : ''}"><img src="${iconURL(m.icon)}"><div><b></b><div class="d"></div></div></div>`);
+      row.querySelector('b').textContent = m.title;
+      row.querySelector('.d').textContent = m.desc;
+      list.appendChild(row);
+    }
+    s.querySelector('button').onclick = () => this.showPause();
     this.layer.appendChild(s);
   }
 

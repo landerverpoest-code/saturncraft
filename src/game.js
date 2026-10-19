@@ -17,6 +17,7 @@ import { Clouds } from './sky/clouds.js';
 import { Weather, WeatherRenderer } from './sky/weather.js';
 import { Chat } from './ui/chat.js';
 import { Music } from './audio/music.js';
+import { Milestones } from './player/milestones.js';
 import { effectiveSkyLight, skyState } from './sky/suns.js';
 import { SIDE_DIRS, BED_HEAD } from './world/shapes.js';
 import { CATEGORY } from './mobs/mobTypes.js';
@@ -98,6 +99,8 @@ export class Game {
     this.entities = new EntityManager(this);
     this.spawner = new MobSpawner(this);
     this.spawnerBlocks = new SpawnerBlocks(this);
+    this.milestones = new Milestones(this);
+    this.player.inventory.listeners.push(() => this.milestones.checkInventory());
     this.interaction = new Interaction(this);
     this.input = new Input(this.canvas);
     this.input.sensitivity = 0.0022 * s.sensitivity / 100;
@@ -301,6 +304,7 @@ export class Game {
       let t = this.time;
       while (skyState(t).aboveCount === 0 && t < this.time + 200000) t += 20;
       this.time = t;
+      this.milestones.event('sleep');
     }
     const stand = this.world.getBlock(s.x, s.y, s.z) === B.BED ? this.standNextTo(s.x, s.y, s.z) : null;
     if (stand) p.setPosition(stand.x, stand.y, stand.z);
@@ -341,6 +345,7 @@ export class Game {
   }
 
   onBlockBroken(x, y, z, id, meta = 0) {
+    if (id === B.SPAWNER) this.milestones.event('spawner');
     if (id === B.CHEST) {
       const k = `${x},${y},${z}`;
       const c = (meta & 8) ? this.getChest(x, y, z, meta) : this.chests.get(k);
@@ -421,6 +426,7 @@ export class Game {
     this.tickFurnaces();
     this.particles.tick();
     if (this.ticks % 1200 === 0) this.save(); // autosave every minute
+    if (this.ticks % 100 === 0) this.milestones.tick();
     if (this.ticks % 20 === 0) {
       // music mood: underground, night (all suns down) or day
       const px = Math.floor(p.x), py = Math.floor(p.y + 1), pz = Math.floor(p.z);

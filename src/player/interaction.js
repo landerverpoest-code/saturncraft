@@ -306,6 +306,7 @@ export class Interaction {
       meta = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 1 : 3) : (dz > 0 ? 2 : 0);
     }
     w.setBlockUrgent(px, py, pz, placeId, meta);
+    if (CROPS.has(placeId) && g.milestones) g.milestones.event('plant');
     if (isFluid(placeId)) w.scheduleTick(px, py, pz, 5);
     g.audio.play('place_' + BLOCKS[placeId].sound, [px + 0.5, py + 0.5, pz + 0.5]);
     if (d.places === B.WATER || d.places === B.LAVA) {

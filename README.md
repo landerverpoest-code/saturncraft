@@ -300,6 +300,7 @@ poison from eyes) follow the documented table.
 * Weather: rain spells (12 000–24 000 ticks) after clear spells (12 000–180 000), fading in/out at 0.01 per tick; rain or snow by biome (none in deserts), stopped by roofs; overcast sky, weaker sun light, grey clouds, splashes and rain sound; rain puts out burning players and mobs and undead do not catch fire in it
 * Creative mode: flight, instant breaking without drops, no damage (except the void) or hunger, unlimited blocks, item catalogue with search; hostile mobs ignore creative players
 * Chat with commands (see Controls)
+* 18 milestones (the reference game's advancements, with Saturncraft's own names) with a toast when reached and an overview in the pause menu, saved per world
 * Third-person cameras (F5, behind and in front, pulled in by walls) with an animated player model holding the selected item
 * Animated title screen (stars, ringed giant, three suns, scrolling landscape) with splash texts
 * Blocky cloud layer (12×12 cells, 4 thick, y=192, drifting 0.03 blocks/tick), coloured by the suns
