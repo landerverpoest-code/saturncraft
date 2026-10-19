@@ -54,6 +54,7 @@ varying vec2 vTuv;
 varying vec3 vLit;
 varying float vShade;
 flat varying float vTile;
+#define SUN_MASK ( vLit.x > 0.0 ) // sunlight is scaled by sky light: none underground
 float lightCurve(float f) {
   float b = f / (4.0 - 3.0 * f);
   float g = 1.0 - pow(1.0 - b, 4.0);
@@ -80,9 +81,12 @@ vec3 outgoingLight = reflectedLight.directDiffuse * skyB * mix(1.0, aoF, 0.5)
 }
 
 export function createTerrainMaterials() {
-  const opaque = patch(new THREE.MeshLambertMaterial({ vertexColors: true, alphaTest: 0.5 }));
-  const translucent = patch(new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, depthWrite: true }), { water: true });
-  return { opaque, translucent };
+  // Solid blocks get no alpha test, so the GPU can reject hidden fragments
+  // before shading them; leaves/plants/glass/torches use the cutout material.
+  const opaque = patch(new THREE.MeshLambertMaterial({ vertexColors: true }));
+  const cutout = patch(new THREE.MeshLambertMaterial({ vertexColors: true, alphaTest: 0.5 }));
+  const trans = patch(new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, depthWrite: true }), { water: true });
+  return { opaque, cutout, trans };
 }
 
 /** Depth material for shadow maps that respects cut-out alpha (leaves, plants). */

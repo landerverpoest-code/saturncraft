@@ -176,8 +176,8 @@ and apparent size (`src/sky/suns.js`):
   suns appear together their glows add and the scene light colour is the
   intensity-weighted blend of the visible suns. Each sun owns one
   shadow-casting directional light (three shadow maps in total); shadow maps
-  are refreshed round-robin (brightest sun every other frame) and lights below
-  the horizon are switched off.
+  are refreshed round-robin (brightest sun every 3rd frame, the others every
+  6th) and lights below the horizon are switched off.
 
 ## Ringed gas giant
 
@@ -296,7 +296,9 @@ poison from eyes) follow the documented table.
 * **Lighting**: sky light is stored per block and darkened in the shader by the
   combined sun light; the light curve blends vanilla's brightness formula with
   its default gamma. Fog is spherical. Leaves cast full shadows only where
-  their texture is opaque.
+  their texture is opaque. Sun shadows only come from terrain up to 140 blocks
+  sunward of the player, so very long twilight shadows of distant hills end
+  there.
 * **Mob AI** is a simplified goal system (no goal priority selectors; a
   bounded A* of 250 nodes; panicking animals steer directly). Mobs do not seek
   shade from the suns, and there are no doors, wolves or cats to react to.
@@ -317,19 +319,35 @@ poison from eyes) follow the documented table.
 ## Performance
 
 * Target: stable 60 fps at render distance 8 on a mid-range laptop GPU.
-* Terrain at render distance 8 is ~1.9 M opaque triangles in ~580 draw calls
-  before frustum culling (2 per chunk); typically a third is in view.
+* Terrain at render distance 8 is ~1.9 M triangles in total. **Occlusion
+  culling** (`src/world/visibility.js`) brings what is drawn down to ~0.3 M from
+  the surface and a few thousand inside a sealed cave: every 16³ section records
+  which of its faces connect through non-opaque blocks, and a flood fill from the
+  camera (which never turns back against a direction it took) trims each
+  chunk's draw range and bounding sphere to the sections it reached. A/B renders
+  with and without culling are pixel-identical.
+* Solid blocks, alpha-tested blocks (leaves, plants, glass, torches) and water
+  are three separate meshes per chunk, so the solid pass has no `discard` and
+  the GPU can reject hidden fragments before shading them.
 * Generation (~15 ms/chunk) and meshing (~1.5 ms/section) run in a worker pool
   (`hardwareConcurrency − 1`, 2–6 workers); main-thread chunk work is budgeted to
   ~6 ms per frame; the simulation tick costs ~0.1–1 ms.
-* Shadows: three 1024² maps over a ±44-block area, one or two refreshed per
-  frame. Turn them off in the pause menu on weak GPUs; lower the render
-  distance for integrated graphics.
+* Shadows: three 1024² maps over a ±44-block area. The brightest sun's map is
+  redrawn every 3rd frame and the others every 6th (the suns move ~0.3°/s;
+  all three are redrawn right after a block edit). The shadow pass only draws
+  sections that contain sky light and lie inside the light's frustum, which
+  reaches 140 blocks sunward. The 17-tap shadow lookup is skipped for suns
+  below the horizon, faces turned away from a sun, and surfaces without sky
+  light (sunlight is scaled by sky light, so none of these change the image).
+* The sky dome, rings and ice particles are drawn after the terrain with depth
+  testing, so the gas-giant shader only runs on pixels where sky is visible.
+* Turn shadows off in the pause menu on weak GPUs; lower the render distance
+  for integrated graphics.
 * Pixel ratio is capped at 1.25 (`pixelRatioCap` in the settings).
 
 ## Tests
 
-`npm test` runs 95 unit tests:
+`npm test` runs 103 unit tests:
 
 * **physics** — constants, walk/sprint/sneak speeds, jump apex and duration,
   sprint-jump, terminal velocity, fall damage, collision, step-up, ledge
@@ -342,6 +360,8 @@ poison from eyes) follow the documented table.
   three-sun night/day spawning, sunlight burning probability
 * **drops** — mob drop ranges and distributions, player-kill conditions,
   cooked meat, block drops by tool tier, ore count ranges, flint chance
+* **visibility** — section face connectivity (air, rock, tunnels, sealed
+  pockets, see-through leaves), cut-out mesh layer, camera flood fill
 * **mining / survival / crafting / world** — break times against the
   documented table, tool stats, hunger/regeneration/starvation, recipes and
   smelting, deterministic generation, bedrock/water/ore placement, canopy

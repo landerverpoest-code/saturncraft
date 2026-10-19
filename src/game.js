@@ -27,6 +27,15 @@ import { saveGame, applySave, applyPlayerSave } from './world/save.js';
 THREE.ShaderChunk.fog_vertex = `#ifdef USE_FOG
   vFogDepth = length(mvPosition.xyz);
 #endif`;
+// Skip the 17-tap shadow lookup for suns that are down and for surfaces
+// facing away from a sun: the light contributes nothing there anyway.
+{
+  const from = 'directLight.color *= ( directLight.visible && receiveShadow ) ? getShadow(';
+  if (!THREE.ShaderChunk.lights_fragment_begin.includes(from)) throw new Error('lights_fragment_begin changed');
+  // Materials may define SUN_MASK (terrain: "has sky light") to skip it too.
+  THREE.ShaderChunk.lights_fragment_begin = '#ifndef SUN_MASK\n#define SUN_MASK true\n#endif\n' + THREE.ShaderChunk.lights_fragment_begin.replace(from,
+    'directLight.color *= ( directLight.visible && receiveShadow && SUN_MASK && dot( directLight.color, vec3( 1.0 ) ) > 0.0 && dot( geometryNormal, directLight.direction ) > 0.0 ) ? getShadow(');
+}
 
 export const DEFAULT_SETTINGS = { renderDistance: 8, fov: 75, sensitivity: 100, volume: 0.5, shadows: true, shadowMapSize: 1024, pixelRatioCap: 1.25 };
 
@@ -345,6 +354,7 @@ export class Game {
     this.camera.updateProjectionMatrix();
 
     this.chunks.update(x, z, 6);
+    if (this.chunks.edited) { this.chunks.edited = false; this.sky.refreshShadows(); }
     const smoothTime = this.time + alpha;
     const st = this.sky.update(smoothTime, sec, this.camera, new THREE.Vector3(x, y, z));
     terrainUniforms.uTime.value = sec;
@@ -357,6 +367,7 @@ export class Game {
     this.sky.uniforms.uUnderwater.value = b.eyeInWater ? 1 : 0;
     this.audio.setListener(x, y + eye, z, p.yaw);
 
+    this.chunks.updateVisibility(this.camera.position);
     this.entities.render(alpha, sec);
     this.overlay.update(this.interaction, p.dead);
     this.renderer.clear();

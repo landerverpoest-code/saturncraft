@@ -48,10 +48,12 @@ export class Sky {
     };
     const mat = new THREE.ShaderMaterial({
       uniforms: this.uniforms, vertexShader: skyVertex, fragmentShader: skyFragment,
-      side: THREE.BackSide, depthWrite: false, depthTest: false, fog: false,
+      side: THREE.BackSide, depthWrite: false, depthTest: true, fog: false,
     });
     this.mesh = new THREE.Mesh(new THREE.SphereGeometry(500, 48, 24), mat);
-    this.mesh.renderOrder = -1000;
+    // Drawn after the opaque terrain at the far plane, so the (expensive) sky
+    // shader only runs on pixels the terrain left uncovered.
+    this.mesh.renderOrder = 1000;
     this.mesh.frustumCulled = false;
     scene.add(this.mesh);
     this.rings = new RingSystem(scene, this, PLANET.ringInner, PLANET.ringOuter);
@@ -68,7 +70,7 @@ export class Sky {
       l.shadow.mapSize.set(this.shadowSize, this.shadowSize);
       const cam = l.shadow.camera;
       cam.left = -this.shadowExtent; cam.right = this.shadowExtent; cam.top = this.shadowExtent; cam.bottom = -this.shadowExtent;
-      cam.near = 1; cam.far = 400;
+      cam.near = 60; cam.far = 260; // casters up to 140 blocks sunward of the player, receivers 60 below
       l.shadow.bias = -0.0004;
       l.shadow.normalBias = 0.04;
       l.shadow.autoUpdate = false;
@@ -76,6 +78,7 @@ export class Sky {
       this.lights.push(l);
     }
     this.frame = 0;
+    this.urgentShadows = 3;
     this.state = skyState(0);
     this.horizon = new THREE.Color();
     this.zenith = new THREE.Color();
@@ -149,13 +152,24 @@ export class Sky {
       l.position.set(fx + s.dir[0] * 200, fy + s.dir[1] * 200, fz + s.dir[2] * 200);
       l.target.updateMatrixWorld();
     });
-    // Round-robin shadow map refresh: brightest sun every other frame, others in turn
+    // Round-robin shadow map refresh. The suns move ~0.3 deg/s and a stale map
+    // stays consistent with its own matrix, so the brightest sun is redrawn
+    // every 3rd frame and the others every 6th; after a block edit
+    // (refreshShadows) every map is redrawn on the following frames.
     this.frame++;
     const order = st.suns.map((s, i) => [s.factor, i]).sort((a, b) => b[0] - a[0]);
-    const pick = this.frame % 2 === 0 ? order[0][1] : order[1 + ((this.frame >> 1) % 2)][1];
     for (let i = 0; i < 3; i++) this.lights[i].shadow.needsUpdate = false;
-    if (this.lights[pick].intensity > 0.01) this.lights[pick].shadow.needsUpdate = true;
-    else if (this.lights[order[0][1]].intensity > 0.01) this.lights[order[0][1]].shadow.needsUpdate = true;
+    let pick = -1;
+    if (this.urgentShadows > 0) pick = order[--this.urgentShadows][1];
+    else if (this.frame % 3 === 0) pick = order[0][1];
+    else if (this.frame % 3 === 1) pick = order[1 + ((this.frame / 3 | 0) % 2)][1];
+    if (pick >= 0) {
+      if (this.lights[pick].intensity > 0.01) this.lights[pick].shadow.needsUpdate = true;
+      else if (this.lights[order[0][1]].intensity > 0.01) this.lights[order[0][1]].shadow.needsUpdate = true;
+    }
     return st;
   }
+
+  /** Redraw every shadow map over the next three frames (after terrain edits). */
+  refreshShadows() { this.urgentShadows = 3; }
 }

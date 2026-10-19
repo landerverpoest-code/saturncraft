@@ -1,11 +1,33 @@
 // Streams chunks around the player: generation jobs in a worker pool, light
 // stitching, section meshing (workers for bulk, main thread for edits) and
-// per-chunk merged geometry (2 draw calls per chunk).
+// per-chunk merged geometry (2 draw calls per chunk). Occlusion culling trims
+// each chunk's draw range to the sections the camera can see into.
 import * as THREE from 'three';
 import { meshSection, pidx, PAD_VOL } from '../world/mesher.js';
 import { MIN_Y, SECTION_COUNT, cidx } from '../world/constants.js';
 import { chunkKey } from '../world/world.js';
+import { sectionVisibility, sectionHasSky, floodVisible, ALL_OPEN } from '../world/visibility.js';
 import { createTerrainMaterials, createTerrainDepthMaterial } from './terrainMaterial.js';
+
+const LAYER_NAMES = ['opaque', 'cutout', 'trans'];
+const _frustum = new THREE.Frustum(), _m4 = new THREE.Matrix4(), _box = new THREE.Box3();
+/** Shadow pass: draw only the visible surface-layer sections inside the light's frustum. */
+function shadowRange(r, o, c, sc, g) {
+  const s = o.userData.shadow;
+  if (!s) return;
+  _frustum.setFromProjectionMatrix(_m4.multiplyMatrices(sc.projectionMatrix, sc.matrixWorldInverse));
+  const ranges = g.userData.ranges, x = o.position.x, z = o.position.z;
+  let start = -1, end = -1;
+  for (let sy = s[0]; sy <= s[1]; sy++) {
+    if (!ranges[sy * 2 + 1]) continue;
+    _box.min.set(x, MIN_Y + sy * 16, z); _box.max.set(x + 16, MIN_Y + sy * 16 + 16, z + 16);
+    if (!_frustum.intersectsBox(_box)) continue;
+    if (start < 0) start = ranges[sy * 2];
+    end = ranges[sy * 2] + ranges[sy * 2 + 1];
+  }
+  g.setDrawRange(Math.max(start, 0), start < 0 ? 0 : end - start);
+}
+function viewRange(r, o, c, sc, g) { const v = o.userData.view; if (v) g.setDrawRange(v[0], v[1]); }
 
 export class ChunkRenderer {
   constructor(world, scene, seed, opts = {}) {
@@ -29,7 +51,9 @@ export class ChunkRenderer {
     this.rebuild = new Set();
     this.jobId = 0;
     this.center = [0, 0];
-    this.stats = { chunks: 0, meshed: 0, drawn: 0 };
+    this.stats = { chunks: 0, meshed: 0, drawn: 0, visibleSections: 0 };
+    this.visDirty = true;
+    this.visKey = '';
   }
 
   setRenderDistance(r) { this.renderDistance = r; }
@@ -100,17 +124,24 @@ export class ChunkRenderer {
       if (!this.neighboursLoaded(c)) { c.urgent.clear(); continue; }
       for (const sy of c.urgent) {
         c.dirty.delete(sy);
-        this.applySection(c, sy, c.sectionNonAir[sy] ? meshSection(this.extractSection(c, sy)) : { opaque: null, trans: null });
+        if (c.sectionNonAir[sy]) {
+          const sec = this.extractSection(c, sy);
+          this.applySection(c, sy, { ...meshSection(sec), vis: sectionVisibility(sec.blocks), sky: sectionHasSky(sec.light) });
+        } else this.applySection(c, sy, { opaque: null, cutout: null, trans: null });
         this.pendingMesh.delete(chunkKey(c.cx, c.cz) * 32 + sy);
       }
       c.urgent.clear();
       this.buildChunkGeometry(c);
+      this.edited = true;
     }
   }
 
   applySection(c, sy, r) {
-    if (!c.render) c.render = { sections: new Array(SECTION_COUNT).fill(null), opaque: null, trans: null };
-    c.render.sections[sy] = (r.opaque || r.trans) ? { opaque: r.opaque, trans: r.trans } : null;
+    if (!c.render) c.render = { sections: new Array(SECTION_COUNT).fill(null), vis: new Array(SECTION_COUNT).fill(ALL_OPEN), sky: new Array(SECTION_COUNT).fill(true), opaque: null, cutout: null, trans: null };
+    c.render.sections[sy] = (r.opaque || r.cutout || r.trans) ? { opaque: r.opaque, cutout: r.cutout, trans: r.trans } : null;
+    c.render.vis[sy] = r.vis ?? ALL_OPEN;
+    c.render.sky[sy] = r.sky ?? true;
+    this.visDirty = true;
   }
 
   update(px, pz, frameBudgetMs = 6) {
@@ -180,7 +211,7 @@ export class ChunkRenderer {
           c.dirty.delete(sy);
           const key = chunkKey(c.cx, c.cz) * 32 + sy;
           if (!c.sectionNonAir[sy]) {
-            this.applySection(c, sy, { opaque: null, trans: null });
+            this.applySection(c, sy, { opaque: null, cutout: null, trans: null });
             this.pendingMesh.delete(key);
             this.rebuild.add(c);
             continue;
@@ -208,7 +239,7 @@ export class ChunkRenderer {
 
   buildChunkGeometry(c) {
     if (!c.render) return;
-    for (const layer of ['opaque', 'trans']) {
+    for (const layer of LAYER_NAMES) {
       let nv = 0, ni = 0, minY = Infinity, maxY = -Infinity;
       for (let s = 0; s < SECTION_COUNT; s++) {
         const p = c.render.sections[s] && c.render.sections[s][layer];
@@ -221,6 +252,7 @@ export class ChunkRenderer {
         if (mesh) { this.scene.remove(mesh); mesh.geometry.dispose(); c.render[layer] = null; }
         continue;
       }
+      const ranges = new Int32Array(SECTION_COUNT * 2); // per section: first index, index count
       const pos = new Float32Array(nv * 3), nrm = new Int8Array(nv * 3), uv = new Float32Array(nv * 2);
       const col = new Uint8Array(nv * 3), lit = new Uint8Array(nv * 4), idx = new Uint32Array(ni);
       let vo = 0, io = 0;
@@ -230,6 +262,7 @@ export class ChunkRenderer {
         const n = p.pos.length / 3;
         pos.set(p.pos, vo * 3); nrm.set(p.nrm, vo * 3); uv.set(p.uv, vo * 2); col.set(p.col, vo * 3); lit.set(p.lit, vo * 4);
         for (let k = 0; k < p.idx.length; k++) idx[io + k] = p.idx[k] + vo;
+        ranges[s * 2] = io; ranges[s * 2 + 1] = p.idx.length;
         vo += n; io += p.idx.length;
       }
       const g = new THREE.BufferGeometry();
@@ -242,25 +275,88 @@ export class ChunkRenderer {
       const cy = (minY + maxY) / 2, hy = (maxY - minY) / 2;
       g.boundingSphere = new THREE.Sphere(new THREE.Vector3(8, cy, 8), Math.sqrt(8 * 8 * 2 + hy * hy));
       g.boundingBox = new THREE.Box3(new THREE.Vector3(0, minY, 0), new THREE.Vector3(16, maxY, 16));
-      if (mesh) { mesh.geometry.dispose(); mesh.geometry = g; }
+      g.userData.ranges = ranges;
+      if (mesh) { mesh.geometry.dispose(); mesh.geometry = g; mesh.userData.view = mesh.userData.shadow = null; }
       else {
-        mesh = new THREE.Mesh(g, layer === 'opaque' ? this.materials.opaque : this.materials.translucent);
+        mesh = new THREE.Mesh(g, this.materials[layer]);
         mesh.position.set(c.cx * 16, 0, c.cz * 16);
         mesh.matrixAutoUpdate = false;
         mesh.updateMatrix();
-        mesh.castShadow = layer === 'opaque';
+        mesh.castShadow = layer !== 'trans';
         mesh.receiveShadow = true;
-        if (layer === 'opaque') mesh.customDepthMaterial = this.depthMaterial;
+        if (layer === 'cutout') mesh.customDepthMaterial = this.depthMaterial;
+        if (mesh.castShadow) {
+          mesh.onBeforeShadow = shadowRange;
+          mesh.onAfterShadow = viewRange;
+        }
         this.scene.add(mesh);
         c.render[layer] = mesh;
       }
     }
     c.meshed = true;
+    this.visDirty = true;
+  }
+
+  /**
+   * Occlusion culling: flood fill from the camera's section and limit each
+   * chunk's draw range (and bounding sphere) to the sections it reached.
+   * Runs only when the camera changes section or meshes change.
+   */
+  updateVisibility(cam) {
+    const ccx = Math.floor(cam.x / 16), ccz = Math.floor(cam.z / 16);
+    const csy = Math.floor((cam.y - MIN_Y) / 16);
+    const key = `${ccx},${csy},${ccz}`;
+    if (!this.visDirty && key === this.visKey) return;
+    this.visDirty = false; this.visKey = key;
+    const w = this.world;
+    const lo = new Map(), hi = new Map();
+    let count = 0;
+    floodVisible(ccx, csy, ccz, this.renderDistance + 1, (cx, sy, cz) => {
+      const c = w.getChunk(cx, cz);
+      if (!c) return -1;
+      return c.render ? c.render.vis[sy] : ALL_OPEN;
+    }, (cx, sy, cz) => {
+      const k = chunkKey(cx, cz);
+      const a = lo.get(k);
+      if (a === undefined || sy < a) lo.set(k, sy);
+      if (!(hi.get(k) >= sy)) hi.set(k, sy);
+      count++;
+    });
+    this.stats.visibleSections = count;
+    for (const c of w.chunks.values()) {
+      if (!c.render) continue;
+      const k = chunkKey(c.cx, c.cz);
+      const s0 = lo.get(k), s1 = hi.get(k);
+      for (const layer of LAYER_NAMES) {
+        const mesh = c.render[layer];
+        if (!mesh) continue;
+        const g = mesh.geometry, r = g.userData.ranges;
+        let first = -1, last = -1;
+        if (s0 !== undefined) for (let s = s0; s <= s1; s++) if (r[s * 2 + 1]) { if (first < 0) first = s; last = s; }
+        if (first < 0) { mesh.visible = false; continue; }
+        mesh.visible = true;
+        const start = r[first * 2], end = r[last * 2] + r[last * 2 + 1];
+        g.setDrawRange(start, end - start);
+        if (layer !== 'trans') {
+          // Sunlight is scaled by sky light, so sections without any sky light
+          // (rock and caves underground) never need to cast sun shadows. One
+          // extra section below covers back faces just under a lit surface.
+          let sFirst = first;
+          while (sFirst <= last && !c.render.sky[sFirst]) sFirst++;
+          if (sFirst > first) sFirst--;
+          mesh.userData.view = [start, end - start];
+          mesh.userData.shadow = [sFirst, last];
+        }
+        const y0 = MIN_Y + first * 16, y1 = MIN_Y + last * 16 + 16, hy = (y1 - y0) / 2;
+        g.boundingSphere.center.set(8, (y0 + y1) / 2, 8);
+        g.boundingSphere.radius = Math.sqrt(128 + hy * hy);
+      }
+    }
   }
 
   disposeChunk(c) {
     if (!c.render) return;
-    for (const layer of ['opaque', 'trans']) {
+    for (const layer of LAYER_NAMES) {
       const m = c.render[layer];
       if (m) { this.scene.remove(m); m.geometry.dispose(); }
     }

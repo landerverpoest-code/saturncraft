@@ -75,6 +75,7 @@ class Buf {
 }
 
 const opaqueBuf = new Buf();
+const cutoutBuf = new Buf(4096); // alpha-tested (leaves, plants, glass, torches)
 const transBuf = new Buf(4096);
 
 export function liquidHeight(meta) {
@@ -89,15 +90,15 @@ export function liquidHeight(meta) {
  */
 export function meshSection(sec) {
   const { blocks, light, meta, colors } = sec;
-  opaqueBuf.reset(); transBuf.reset();
-  opaqueBuf.yBase = transBuf.yBase = sec.yBase || 0;
+  opaqueBuf.reset(); cutoutBuf.reset(); transBuf.reset();
+  opaqueBuf.yBase = cutoutBuf.yBase = transBuf.yBase = sec.yBase || 0;
   const ao = [0, 0, 0, 0], sk = [0, 0, 0, 0], bl = [0, 0, 0, 0];
   for (let y = 0; y < 16; y++) for (let z = 0; z < 16; z++) for (let x = 0; x < 16; x++) {
     const i = pidx(x, y, z);
     const id = blocks[i];
     if (!id) continue;
     const shape = SHAPES[id];
-    const buf = LAYERS[id] === LAYER.TRANSLUCENT ? transBuf : opaqueBuf;
+    const buf = LAYERS[id] === LAYER.TRANSLUCENT ? transBuf : LAYERS[id] === LAYER.CUTOUT ? cutoutBuf : opaqueBuf;
     const ci = (x + z * 16) * 6;
     if (shape === SHAPE.CUBE) {
       const translucent = !OPAQUE[id];
@@ -190,7 +191,7 @@ export function meshSection(sec) {
       }
     }
   }
-  return { opaque: opaqueBuf.out(), trans: transBuf.out() };
+  return { opaque: opaqueBuf.out(), cutout: cutoutBuf.out(), trans: transBuf.out() };
 }
 
 function swapVert(buf, a, b) {

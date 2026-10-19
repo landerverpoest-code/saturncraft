@@ -2,6 +2,7 @@
 import { TerrainGenerator } from './generator.js';
 import { computeChunkLight } from './lighting.js';
 import { meshSection } from './mesher.js';
+import { sectionVisibility, sectionHasSky } from './visibility.js';
 import { CHUNK_VOLUME } from './constants.js';
 
 let gen = null;
@@ -20,8 +21,9 @@ self.onmessage = (e) => {
     );
   } else if (m.type === 'mesh') {
     const r = meshSection(m);
+    const vis = sectionVisibility(m.blocks), sky = sectionHasSky(m.light);
     const transfer = [];
-    for (const part of [r.opaque, r.trans]) if (part) for (const k in part) transfer.push(part[k].buffer);
-    self.postMessage({ type: 'mesh', jobId: m.jobId, cx: m.cx, cz: m.cz, sy: m.sy, version: m.version, opaque: r.opaque, trans: r.trans }, transfer);
+    for (const part of [r.opaque, r.cutout, r.trans]) if (part) for (const k in part) transfer.push(part[k].buffer);
+    self.postMessage({ type: 'mesh', jobId: m.jobId, cx: m.cx, cz: m.cz, sy: m.sy, version: m.version, opaque: r.opaque, cutout: r.cutout, trans: r.trans, vis, sky }, transfer);
   }
 };

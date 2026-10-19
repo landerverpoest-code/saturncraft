@@ -149,12 +149,12 @@ export class RingSystem {
     const geo = new THREE.RingGeometry(inner, outer, 256, 6);
     this.ringMat = new THREE.ShaderMaterial({
       uniforms: this.uniforms, vertexShader: ringVertex, fragmentShader: ringFragment,
-      side: THREE.DoubleSide, depthWrite: false, depthTest: false, transparent: false,
+      side: THREE.DoubleSide, depthWrite: false, depthTest: true, transparent: false,
       blending: THREE.NormalBlending, fog: false,
     });
     this.ring = new THREE.Mesh(geo, this.ringMat);
     this.ring.frustumCulled = false;
-    this.ring.renderOrder = -999;
+    this.ring.renderOrder = 1001; // after the sky dome, behind all terrain
     scene.add(this.ring);
 
     // Orbiting ice particles, distributed by ring density bands
@@ -171,10 +171,10 @@ export class RingSystem {
     pg.setAttribute('orbit', new THREE.BufferAttribute(orbit, 3));
     this.particles = new THREE.Points(pg, new THREE.ShaderMaterial({
       uniforms: this.uniforms, vertexShader: particleVertex, fragmentShader: particleFragment,
-      depthWrite: false, depthTest: false, transparent: false, blending: THREE.AdditiveBlending, fog: false,
+      depthWrite: false, depthTest: true, transparent: false, blending: THREE.AdditiveBlending, fog: false,
     }));
     this.particles.frustumCulled = false;
-    this.particles.renderOrder = -998;
+    this.particles.renderOrder = 1002;
     scene.add(this.particles);
     this.planet = planet;
   }
