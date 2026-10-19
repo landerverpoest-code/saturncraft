@@ -3,6 +3,7 @@
 // neighbours) so it can run inside a worker without access to the world.
 import { B, OPAQUE, SHAPES, LAYERS, SHAPE, LAYER } from './blocks.js';
 import { FACE_TILE, FRONT_TILE, texId } from './textures.js';
+import { doorBox, ladderBox, SIDE_DIRS, DOOR_UPPER } from './shapes.js';
 
 export const PAD = 18;
 export const PAD_VOL = PAD * PAD * PAD;
@@ -38,6 +39,7 @@ const FOLIAGE_FIXED = { [B.BIRCH_LEAVES]: [128, 167, 85], [B.SPRUCE_LEAVES]: [97
 const FURNACE_FRONT_DIR = [5, 0, 4, 1];
 const WHEAT_TILES = [0, 1, 2, 3, 4, 5, 6, 7].map((i) => texId('wheat_' + i));
 const FARMLAND_MOIST = texId('farmland_moist');
+const DOOR_LOWER = texId('door_lower'), DOOR_UPPER_TILE = texId('door_upper');
 
 class Buf {
   constructor(cap = 16384) { this.alloc(cap); this.n = 0; this.ni = 0; this.yBase = 0; }
@@ -188,8 +190,29 @@ export function meshSection(sec) {
         }
       }
     } else if (shape === SHAPE.TORCH) {
-      const l = light[i];
-      emitBox(buf, x, y, z, 7 / 16, 0, 7 / 16, 9 / 16, 10 / 16, 9 / 16, FACE_TILE[id * 6], (l >> 4) * 17, (l & 15) * 17, true);
+      const l = light[i], m = meta[i];
+      if (!m) emitBox(buf, x, y, z, 7 / 16, 0, 7 / 16, 9 / 16, 10 / 16, 9 / 16, FACE_TILE[id * 6], (l >> 4) * 17, (l & 15) * 17);
+      else {
+        // wall torch: base against the wall, leaning 22.5 degrees away from it
+        const [dx, , dz] = SIDE_DIRS[(m - 1) & 3];
+        const cx = 0.5 + dx * 0.36, cz = 0.5 + dz * 0.36, y0 = 3.5 / 16;
+        const n0 = buf.n;
+        emitBox(buf, x, y, z, cx - 1 / 16, y0, cz - 1 / 16, cx + 1 / 16, y0 + 10 / 16, cz + 1 / 16, FACE_TILE[id * 6], (l >> 4) * 17, (l & 15) * 17);
+        for (let v = n0; v < buf.n; v++) {
+          const h = buf.pos[v * 3 + 1] - buf.yBase - y - y0;
+          buf.pos[v * 3] -= dx * h * 0.41; buf.pos[v * 3 + 2] -= dz * h * 0.41;
+        }
+      }
+    } else if (shape === SHAPE.DOOR) {
+      const l = light[i], b = doorBox(meta[i]);
+      emitBox(buf, x, y, z, b[0], b[1], b[2], b[3], b[4], b[5], meta[i] & DOOR_UPPER ? DOOR_UPPER_TILE : DOOR_LOWER, (l >> 4) * 17, (l & 15) * 17, 'box');
+    } else if (shape === SHAPE.LADDER) {
+      // a thin panel just off the wall (both faces textured)
+      const l = light[i], b = ladderBox(meta[i]);
+      const s = meta[i] & 3, a = s === 1 || s === 3 ? 0 : 2; // axis of the wall normal
+      const atWall = s === 1 || s === 2 ? 1 : 0, off = atWall ? -1 / 16 : 1 / 16;
+      b[a] = atWall + off - 0.005; b[a + 3] = atWall + off + 0.005;
+      emitBox(buf, x, y, z, b[0], b[1], b[2], b[3], b[4], b[5], FACE_TILE[id * 6], (l >> 4) * 17, (l & 15) * 17, 'box');
     } else if (shape === SHAPE.CACTUS) {
       const l = light[i];
       const sky = (l >> 4) * 17, blk = (l & 15) * 17;
@@ -219,7 +242,8 @@ function swapVert(buf, a, b) {
   sw(buf.pos, 3); sw(buf.uv, 2); sw(buf.col, 3); sw(buf.lit, 4);
 }
 
-function emitBox(buf, x, y, z, x0, y0, z0, x1, y1, z1, tile, sky, blk) {
+/** Axis-aligned box; uvMode 'torch' maps the top to the torch tip, 'box' maps every face to its sub-rectangle. */
+function emitBox(buf, x, y, z, x0, y0, z0, x1, y1, z1, tile, sky, blk, uvMode = 'torch') {
   const mn = [x0, y0, z0], mx = [x1, y1, z1];
   for (let d = 0; d < 6; d++) {
     const f = FACES[d];
@@ -236,7 +260,8 @@ function emitBox(buf, x, y, z, x0, y0, z0, x1, y1, z1, tile, sky, blk) {
       if (d === 2 || d === 3) { u = p[0]; v = 1 - p[2] - (d === 2 ? 0.25 : 0); }
       else if (d === 0 || d === 1) { u = p[2]; v = 1 - p[1]; }
       else { u = p[0]; v = 1 - p[1]; }
-      if (d === 2) { u = 7 / 16 + s * 2 / 16; v = 6 / 16 + t * 2 / 16; }
+      if (d === 2 && uvMode === 'torch') { u = 7 / 16 + s * 2 / 16; v = 6 / 16 + t * 2 / 16; }
+      else if ((d === 2 || d === 3) && uvMode === 'box') { u = p[0]; v = p[2]; }
       buf.vert(x + p[0], y + p[1], z + p[2], f.n[0], f.n[1], f.n[2], u, v, 255, 255, 255, sky, blk, 0, tile);
     }
     buf.quad(false);

@@ -6,6 +6,7 @@ import { texturePixels } from '../world/textures.js';
 import { itemCanvas } from '../ui/icons.js';
 import { blockFaceTexture, lightAt } from '../entities/entities.js';
 import { SWING_TICKS } from '../player/interaction.js';
+import { selectionBox } from '../world/shapes.js';
 
 export class BlockOverlay {
   constructor(scene) {
@@ -38,8 +39,11 @@ export class BlockOverlay {
     if (!t || hidden || interaction.mobTarget) { this.outline.visible = false; this.crack.visible = false; return; }
     const d = BLOCKS[t.id];
     this.outline.visible = true;
-    if (d.shape === SHAPE.CROSS) { this.outline.scale.set(0.7, 0.8, 0.7); this.outline.position.set(t.x + 0.5, t.y + 0.4, t.z + 0.5); }
-    else if (d.shape === SHAPE.TORCH) { this.outline.scale.set(0.25, 0.625, 0.25); this.outline.position.set(t.x + 0.5, t.y + 0.3125, t.z + 0.5); }
+    const sel = selectionBox(t.id, interaction.game.world.getMeta(t.x, t.y, t.z));
+    if (sel) {
+      this.outline.scale.set(sel[3] - sel[0], sel[4] - sel[1], sel[5] - sel[2]);
+      this.outline.position.set(t.x + (sel[0] + sel[3]) / 2, t.y + (sel[1] + sel[4]) / 2, t.z + (sel[2] + sel[5]) / 2);
+    } else if (d.shape === SHAPE.CROSS) { this.outline.scale.set(0.7, 0.8, 0.7); this.outline.position.set(t.x + 0.5, t.y + 0.4, t.z + 0.5); }
     else { this.outline.scale.set(1, 1, 1); this.outline.position.set(t.x + 0.5, t.y + 0.5, t.z + 0.5); }
     const br = interaction.breaking;
     if (br && br.progress > 0) {
@@ -82,7 +86,7 @@ export class HeldItem {
     this.mesh = null;
     if (id == null) { this.group.add(this.hand); this.hand.position.set(0.52, -0.48, -0.8); this.hand.rotation.set(-0.55, 0.2, 0.32); return; }
     const d = ITEMS[id];
-    if (d.block !== undefined && BLOCKS[d.block].shape !== SHAPE.CROSS && BLOCKS[d.block].shape !== SHAPE.TORCH) {
+    if (d.block !== undefined && (BLOCKS[d.block].shape === SHAPE.CUBE || BLOCKS[d.block].shape === SHAPE.CACTUS)) {
       const b = BLOCKS[d.block];
       const side = new THREE.MeshLambertMaterial({ map: blockFaceTexture(b.tex.side), transparent: true, alphaTest: 0.3 });
       const top = new THREE.MeshLambertMaterial({ map: blockFaceTexture(b.tex.top), transparent: true, alphaTest: 0.3 });

@@ -19,6 +19,7 @@ for (const b of BLOCKS) {
 }
 addTex('furnace_side');
 addTex('farmland_moist');
+addTex('door_upper');
 for (let i = 0; i < 8; i++) addTex('wheat_' + i);
 addTex('water_flow');
 addTex('lava_flow');
@@ -371,6 +372,30 @@ const GEN = {
     const m = hex('#c9c9c9'), md = hex('#6d6d6d');
     for (let y = 3; y < 9; y++) for (let x = 6; x < 10; x++) c.set(x, y, (x === 6 || y === 8) ? md : m);
     c.set(7, 6, md); c.set(8, 6, md);
+  },
+  door_lower: (c) => {
+    planks(c, '#9c7444');
+    const d = hex('#5a3d1e');
+    for (let i = 0; i < 16; i++) { c.set(0, i, d); c.set(15, i, d); c.set(i, 15, d); }
+    for (let y = 2; y < 13; y++) { c.set(3, y, shade(d, 1.3)); c.set(12, y, shade(d, 1.3)); }
+    for (let x = 3; x < 13; x++) { c.set(x, 2, shade(d, 1.3)); c.set(x, 12, shade(d, 1.3)); }
+    c.set(12, 1, hex('#8a8a8a')); c.set(13, 1, hex('#5a5a5a')); // handle
+  },
+  door_upper: (c) => {
+    planks(c, '#9c7444');
+    const d = hex('#5a3d1e');
+    for (let i = 0; i < 16; i++) { c.set(0, i, d); c.set(15, i, d); c.set(i, 0, d); }
+    // two window panes
+    for (let y = 3; y < 10; y++) for (const x0 of [3, 9]) for (let x = x0; x < x0 + 4; x++) c.set(x, y, [0, 0, 0], 0);
+    for (let y = 2; y < 11; y++) { c.set(2, y, d); c.set(7, y, d); c.set(8, y, d); c.set(13, y, d); }
+    for (let x = 2; x < 14; x++) { c.set(x, 2, d); c.set(x, 10, d); }
+    c.set(12, 14, hex('#8a8a8a')); c.set(13, 14, hex('#5a5a5a'));
+  },
+  ladder: (c) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
+    const w = hex('#8a6438');
+    for (let y = 0; y < 16; y++) { c.set(2, y, w); c.set(3, y, shade(w, 0.8)); c.set(12, y, w); c.set(13, y, shade(w, 0.8)); }
+    for (const ry of [1, 5, 9, 13]) for (let x = 4; x < 12; x++) { c.set(x, ry, shade(w, 1.1)); c.set(x, ry + 1, shade(w, 0.75)); }
   },
   furnace_top: (c) => c.noiseFill(['#6e6e70', '#7c7c7e', '#626264'].map(hex), 0.3),
   furnace_side: (c) => {

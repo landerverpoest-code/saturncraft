@@ -72,7 +72,7 @@ export function explode(game, x, y, z, power, source) {
   }
   // Blocks
   for (const [bx, by, bz, id] of blocks) {
-    if (BLOCKS[id].hardness < 0) continue;
+    if (BLOCKS[id].hardness < 0 || w.getBlock(bx, by, bz) !== id) continue; // may already be gone (door halves)
     const meta = w.getMeta(bx, by, bz);
     w.setBlock(bx, by, bz, B.AIR);
     if (Math.random() < 1 / power) {

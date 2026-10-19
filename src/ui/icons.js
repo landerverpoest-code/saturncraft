@@ -29,7 +29,7 @@ function blockIcon(b) {
   ctx.imageSmoothingEnabled = false;
   const tint = (face) => (b.tint === 'grass' && face === 'top') || b.tint === 'foliage' ? (b.tint === 'grass' ? GRASS_TINT : LEAF_TINT)
     : b.tint === 'birch' ? [128, 167, 85] : b.tint === 'spruce' ? [97, 153, 97] : null;
-  if (b.shape === SHAPE.CROSS || b.shape === SHAPE.TORCH) {
+  if (b.shape === SHAPE.CROSS || b.shape === SHAPE.TORCH || b.shape === SHAPE.LADDER) {
     ctx.drawImage(texCanvas(b.tex.side, b.tint ? GRASS_TINT : null), 0, 0, 32, 32);
     return c;
   }
@@ -70,6 +70,7 @@ const T = {
   seeds: ['................', '................', '................', '................', '.....h....h.....', '...h...hH....h..', '......H...h.....', '..h..h...H...h..', '....H..h....h...', '...h....H..h....', '.....h.h...H....', '...H.....h......', '.......h...h....', '................', '................', '................'],
   wheat: ['................', '..........h.h...', '.........hHh....', '........hHhh.h..', '.......hHhhhh...', '......hHhhh.....', '.....hhhh.......', '....shh.........', '...ss...........', '..ss............', '.ss.............', 'ss..............', '................', '................', '................', '................'],
   bread: ['................', '................', '................', '................', '....hhhhhhhh....', '..hhHHhHHhHHhh..', '.hHHhhHhhHhhHHh.', '.hhhhhhhhhhhhhh.', '.hhhhhhhhhhhhhh.', '.wwwwwwwwwwwwww.', '..wwwwwwwwwwww..', '................', '................', '................', '................', '................'],
+  door: ['................', '....wwwwwwww....', '....whhhhhhw....', '....wh.hh.hw....', '....wh.hh.hw....', '....whhhhhhw....', '....whhhhhhw....', '....whhhhhhw....', '....whhhhhhw....', '....whhhhhww....', '....whhhhhhw....', '....whhhhhhw....', '....whhhhhhw....', '....whhhhhhw....', '....wwwwwwww....', '................'],
   egg: ['................', '................', '......hhh.......', '.....hHhhh......', '....hHhhhhh.....', '....hhhhhhh.....', '...hhhhhhhhh....', '...hhhhhhhhh....', '...hhhhhhhhh....', '....hhhhhhh.....', '.....hhhhh......', '................', '................', '................', '................', '................'],
 };
 
@@ -94,6 +95,7 @@ const ITEM_STYLE = {
   apple: ['apple', { h: '#d42a2a', s: '#5a3a1a', l: '#3a8a2a' }],
   bucket: ['bucket', { h: '#b8b8b8', w: '#b8b8b8' }], water_bucket: ['bucket', { h: '#b8b8b8', w: '#3a6ad8' }], lava_bucket: ['bucket', { h: '#b8b8b8', w: '#ff7a1a' }],
   bow: ['bow', { s: '#7a5a32', w: '#dddddd' }],
+  oak_door: ['door', { h: '#9c7444', H: '#b88a55', w: '#5a3d1e' }],
   wheat_seeds: ['seeds', { h: '#3e8a24', H: '#2a6a18' }], wheat: ['wheat', { h: '#d6ac44', H: '#f0d070', s: '#a88a30' }],
   bread: ['bread', { h: '#b8783a', H: '#d89a50', w: '#8a5426' }],
 };

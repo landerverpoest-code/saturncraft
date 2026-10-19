@@ -81,6 +81,7 @@ item('water_bucket', 'Water Bucket', { stack: 1, places: B.WATER });
 item('lava_bucket', 'Lava Bucket', { stack: 1, places: B.LAVA, fuel: 20000 });
 item('bow', 'Bow', { stack: 1, durability: 384, bow: true });
 item('wheat_seeds', 'Wheat Seeds', { places: B.WHEAT });
+item('oak_door', 'Oak Door', { door: true });
 item('wheat', 'Wheat');
 item('bread', 'Bread', { food: { hunger: 5, saturation: 6 } });
 

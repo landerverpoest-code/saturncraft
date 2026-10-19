@@ -6,6 +6,7 @@ import { breakProgressPerTick, blockDrops } from '../world/mining.js';
 import { PHYS } from '../physics/constants.js';
 import { EXHAUSTION } from './survival.js';
 import { lightAt } from '../entities/entities.js';
+import { sideOf, DOOR_OPEN, DOOR_UPPER } from '../world/shapes.js';
 
 /** Brightness for block particles: local light, dimmed with the combined sunlight (as the held item). */
 function particleLight(g, x, y, z) {
@@ -201,6 +202,14 @@ export class Interaction {
     if (!p.sneaking || !st) {
       if (t.id === B.WORKBENCH) { g.ui.openWorkbench(); return true; }
       if (t.id === B.FURNACE || t.id === B.FURNACE_LIT) { g.ui.openFurnace(t.x, t.y, t.z); return true; }
+      if (t.id === B.DOOR) {
+        // open/close both halves together
+        const m = w.getMeta(t.x, t.y, t.z), by = m & DOOR_UPPER ? t.y - 1 : t.y;
+        for (const yy of [by, by + 1]) if (w.getBlock(t.x, yy, t.z) === B.DOOR) w.setBlockUrgent(t.x, yy, t.z, B.DOOR, w.getMeta(t.x, yy, t.z) ^ DOOR_OPEN, false);
+        g.audio.play(m & DOOR_OPEN ? 'door_close' : 'door_open', [t.x + 0.5, by + 1, t.z + 0.5]);
+        this.swing = SWING_TICKS;
+        return true;
+      }
       if (t.id === B.CHEST) { g.ui.openChest(t.x, t.y, t.z); g.audio.play('chest_open', [t.x + 0.5, t.y + 0.5, t.z + 0.5]); return true; }
     }
     if (!st) return false;
@@ -212,6 +221,7 @@ export class Interaction {
       this.swing = SWING_TICKS;
       return true;
     }
+    if (d.door) return this.placeDoor(t);
     let placeId = isBlockItem(st.id) ? st.id : d.places;
     if (placeId === undefined) return false;
     // Place location: replace soft blocks, else the adjacent cell
@@ -221,9 +231,14 @@ export class Interaction {
     const cur = w.getBlock(px, py, pz);
     if (cur && !BLOCKS[cur].replaceable) return false;
     if (SOLID[placeId] && (p.intersectsBlock(px, py, pz) || g.entities.blockOccupied(px, py, pz))) return false;
-    if (BLOCKS[placeId].needsSupport && !w.hasSupport(px, py, pz, placeId)) return false;
-    if ((placeId === B.TALL_GRASS || placeId === B.SUNPETAL || placeId === B.REDBLOOM) && !w.hasSupport(px, py, pz, placeId)) return false;
     let meta = 0;
+    if (placeId === B.TORCH || placeId === B.LADDER) {
+      // torches stand on floors or hang on walls; ladders only hang on walls
+      if (t.face[1] === -1 || (placeId === B.LADDER && t.face[1] === 1)) return false;
+      if (t.face[1] === 0) { const s = sideOf(-t.face[0], -t.face[2]); meta = placeId === B.TORCH ? 1 + s : s; }
+    }
+    if (BLOCKS[placeId].needsSupport && !w.hasSupport(px, py, pz, placeId, meta)) return false;
+    if ((placeId === B.TALL_GRASS || placeId === B.SUNPETAL || placeId === B.REDBLOOM) && !w.hasSupport(px, py, pz, placeId)) return false;
     if (placeId === B.FURNACE || BLOCKS[placeId].tex.front) {
       // face the player: meta 0 = -z front, 1 = +x, 2 = +z, 3 = -x
       const dx = p.x - (px + 0.5), dz = p.z - (pz + 0.5);
@@ -236,6 +251,27 @@ export class Interaction {
       p.inventory.slots[p.inventory.selected] = { id: I.BUCKET, count: 1, damage: 0 };
       p.inventory.changed();
     } else p.inventory.removeFromSlot(p.inventory.selected, 1);
+    this.swing = SWING_TICKS;
+    return true;
+  }
+
+  /** Doors take two blocks: the clicked spot (or the one beside it) and the one above. */
+  placeDoor(t) {
+    const g = this.game, w = g.world, p = g.player;
+    let px = t.x, py = t.y, pz = t.z;
+    if (!(BLOCKS[t.id].replaceable && !isFluid(t.id))) { px += t.face[0]; py += t.face[1]; pz += t.face[2]; }
+    for (const yy of [py, py + 1]) {
+      const cur = w.getBlock(px, yy, pz);
+      if (cur && !BLOCKS[cur].replaceable) return false;
+      if (p.intersectsBlock(px, yy, pz) || g.entities.blockOccupied(px, yy, pz)) return false;
+    }
+    if (!SOLID[w.getBlock(px, py - 1, pz)]) return false;
+    const dx = p.x - (px + 0.5), dz = p.z - (pz + 0.5);
+    const facing = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 1 : 3) : (dz > 0 ? 2 : 0);
+    w.setBlockUrgent(px, py + 1, pz, B.DOOR, facing | DOOR_UPPER, false);
+    w.setBlockUrgent(px, py, pz, B.DOOR, facing);
+    g.audio.play('place_wood', [px + 0.5, py + 0.5, pz + 0.5]);
+    p.inventory.removeFromSlot(p.inventory.selected, 1);
     this.swing = SWING_TICKS;
     return true;
   }

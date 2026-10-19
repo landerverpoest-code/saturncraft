@@ -265,6 +265,7 @@ poison from eyes) follow the documented table.
 * Inventory, hotbar, 2×2 and 3×3 shaped/shapeless crafting, furnace smelting
 * Farming: hoes till grass/dirt; tall grass drops seeds (1/8); wheat grows through 8 stages on random ticks (3 per section per tick) with the reference growth-speed formula, needs light ≥ 9; farmland is moistened by water within 4 blocks, dries out, reverts to dirt and can be trampled; bread from 3 wheat
 * Grass spreads to nearby dirt in light ≥ 9
+* Oak doors (two blocks, 3/16-thick collision box, open/close with right-click), ladders (climb 0.2/tick, fall capped at 0.15, sneak to hold on), torches on walls
 * Chests (27 slots, shift-click transfer, contents drop when broken, saved with the world); furnaces and chests face the player when placed
 * Bow and arrows (player and Rattler), arrow pick-up
 * Death screen, item drop on death, respawn; pause menu with settings
@@ -276,11 +277,11 @@ poison from eyes) follow the documented table.
 * Experience orbs and enchanting, armour items, shields, potions and status-effect UI (only hunger/poison effects exist)
 * Breeding/taming, shearing, sheep colours, other crops, bone meal
 * Villages, other structures, the other dimensions, redstone-style circuitry
-* Double chests and other storage containers, doors, slabs, stairs, fences, beds (spawn is fixed)
-* Wall-mounted torches, fire blocks and fire spread, weather (rain/snow/thunder)
+* Double chests and other storage containers, slabs, stairs, fences, trapdoors
+* Fire blocks and fire spread, snow/thunder
 * Slimes, witches, drowned, husks/strays as separate variants, baby mobs, mob equipment
 * Difficulty levels (fixed at Normal), creative mode, commands, multiplayer
-* Sprint-swimming/crawling poses, ladders, boats, minecarts, elytra
+* Sprint-swimming/crawling poses, boats, minecarts, elytra
 
 ## Deliberate deviations
 

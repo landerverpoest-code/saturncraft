@@ -5,6 +5,7 @@ import { LightEngine } from './lighting.js';
 import { MIN_Y, MAX_Y, WORLD_HEIGHT, SECTION_COUNT, cidx } from './constants.js';
 import { TerrainGenerator } from './generator.js';
 import { tickFluid, fluidDelay } from './fluids.js';
+import { SIDE_DIRS, selectionBox, collisionBoxes, DOOR_UPPER } from './shapes.js';
 
 export function chunkKey(cx, cz) { return (cx + 32768) * 65536 + (cz + 32768); }
 
@@ -112,9 +113,9 @@ export class World {
   }
 
   /** Player edit: mesh affected sections immediately rather than via workers. */
-  setBlockUrgent(x, y, z, id, meta = 0) {
+  setBlockUrgent(x, y, z, id, meta = 0, notify = true) {
     this.urgentEdits = true;
-    try { return this.setBlock(x, y, z, id, meta); } finally { this.urgentEdits = false; }
+    try { return this.setBlock(x, y, z, id, meta, notify); } finally { this.urgentEdits = false; }
   }
 
   /**
@@ -178,14 +179,26 @@ export class World {
     }
   }
 
-  hasSupport(x, y, z, id) {
+  hasSupport(x, y, z, id, metaIn) {
     const below = this.getBlock(x, y - 1, z);
     if (id === B.CACTUS) {
       if (below !== B.CACTUS && below !== B.SAND) return false;
       for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (SOLID[this.getBlock(x + dx, y, z + dz)]) return false;
       return true;
     }
-    if (id === B.TORCH) return SOLID[below] && OPAQUE[below];
+    if (id === B.TORCH || id === B.LADDER) {
+      const meta = metaIn ?? this.getMeta(x, y, z);
+      const side = id === B.TORCH ? meta - 1 : meta & 3;
+      if (id === B.TORCH && !meta) return SOLID[below] && OPAQUE[below];
+      const [dx, , dz] = SIDE_DIRS[side & 3];
+      const wall = this.getBlock(x + dx, y, z + dz);
+      return !!(SOLID[wall] && OPAQUE[wall]);
+    }
+    if (id === B.DOOR) {
+      // the lower half stands on a solid block with its upper half above; the upper half sits on the lower
+      if ((metaIn ?? this.getMeta(x, y, z)) & DOOR_UPPER) return below === B.DOOR;
+      return !!SOLID[below] && below !== B.DOOR && this.getBlock(x, y + 1, z) === B.DOOR;
+    }
     if (id === B.DEAD_BUSH) return below === B.SAND || below === B.DIRT || below === B.GRASS;
     if (id === B.WHEAT) return below === B.FARMLAND;
     return below === B.GRASS || below === B.DIRT || below === B.SNOWY_GRASS;
@@ -237,9 +250,10 @@ export class World {
       const id = this.getBlock(x, y, z);
       if (id && (hitFluids ? true : !isFluid(id))) {
         const sh = BLOCKS[id];
-        if (sh.shape === 2 || sh.shape === 4) {
+        const sel = selectionBox(id, this.getMeta(x, y, z)) || (sh.shape === 2 ? PLANT_BOX : null);
+        if (sel) {
           // small shapes: test against reduced box
-          const box = id === B.TORCH ? [0.375, 0, 0.375, 0.625, 0.625, 0.625] : [0.15, 0, 0.15, 0.85, 0.8, 0.85];
+          const box = sel;
           const hit = rayBox(ox, oy, oz, dx, dy, dz, x + box[0], y + box[1], z + box[2], x + box[3], y + box[4], z + box[5]);
           if (hit !== null && hit <= maxDist) return { x, y, z, id, face, dist: hit };
         } else return { x, y, z, id, face, dist: t };
@@ -278,10 +292,19 @@ export class World {
     for (let x = Math.floor(minX); x <= Math.floor(maxX - 1e-7); x++)
       for (let y = Math.floor(minY); y <= Math.floor(maxY - 1e-7); y++)
         for (let z = Math.floor(minZ); z <= Math.floor(maxZ - 1e-7); z++)
-          if (SOLID[this.getBlock(x, y, z)]) return true;
+          if (SOLID[this.getBlock(x, y, z)]) {
+            const id = this.getBlock(x, y, z);
+            const shaped = id === B.DOOR ? collisionBoxes(id, this.getMeta(x, y, z)) : null;
+            if (!shaped) return true;
+            for (const s of shaped) {
+              if (maxX > x + s[0] && minX < x + s[3] && maxY > y + s[1] && minY < y + s[4] && maxZ > z + s[2] && minZ < z + s[5]) return true;
+            }
+          }
     return false;
   }
 }
+
+const PLANT_BOX = [0.15, 0, 0.15, 0.85, 0.8, 0.85];
 
 function rayBox(ox, oy, oz, dx, dy, dz, x0, y0, z0, x1, y1, z1) {
   let tmin = -Infinity, tmax = Infinity;

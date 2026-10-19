@@ -4,6 +4,7 @@
 import { PHYS, groundAccel } from './constants.js';
 import { BLOCKS, SOLID, B } from '../world/blocks.js';
 import { liquidHeight } from '../world/mesher.js';
+import { collisionBoxes } from '../world/shapes.js';
 
 const EPS = 1e-7;
 
@@ -36,7 +37,10 @@ export class Body {
     const z0 = Math.floor(minZ), z1 = Math.floor(maxZ - EPS);
     for (let x = x0; x <= x1; x++) for (let z = z0; z <= z1; z++) for (let y = y0; y <= y1; y++) {
       const id = world.getBlock(x, y, z);
-      if (SOLID[id]) out.push(x, y, z, x + 1, y + 1, z + 1);
+      if (!SOLID[id]) continue;
+      const shaped = id === B.DOOR ? collisionBoxes(id, world.getMeta(x, y, z)) : null;
+      if (shaped) for (const s of shaped) out.push(x + s[0], y + s[1], z + s[2], x + s[3], y + s[4], z + s[5]);
+      else out.push(x, y, z, x + 1, y + 1, z + 1);
     }
     return out;
   }
@@ -181,11 +185,28 @@ export class Body {
     const accel = this.onGround ? groundAccel(speed, slip) : (input.sprint ? PHYS.AIR_ACCEL_SPRINT : PHYS.AIR_ACCEL);
     this.accelerate(fwd, str, yaw, accel);
     if (input.climbing) { this.vy = Math.max(this.vy, 0.2); this.fallDistance = 0; }
+    // Ladders: horizontal speed and descent capped at 0.15, sneaking holds on
+    const ladder = this.onLadder(world);
+    if (ladder) {
+      this.vx = Math.max(-0.15, Math.min(0.15, this.vx));
+      this.vz = Math.max(-0.15, Math.min(0.15, this.vz));
+      this.vy = Math.max(this.vy, -0.15);
+      if (input.sneak && this.vy < 0) this.vy = 0;
+      this.fallDistance = 0;
+    }
     this.move(world, this.vx, this.vy, this.vz, input.sneak);
+    if (ladder && (this.horizontalCollision || input.jump)) this.vy = 0.2; // climb
     if (!this.noGravity) this.vy -= PHYS.GRAVITY;
     this.vy *= PHYS.DRAG_Y;
     const fr = this.onGround ? slip * PHYS.GROUND_FRICTION_MUL : PHYS.AIR_FRICTION;
     this.vx *= fr; this.vz *= fr;
+  }
+
+  /** Is the body inside a ladder block (feet or anywhere along its height)? */
+  onLadder(world) {
+    const x = Math.floor(this.x), z = Math.floor(this.z);
+    for (let y = Math.floor(this.y); y <= Math.floor(this.y + this.height - 0.01); y++) if (world.getBlock(x, y, z) === B.LADDER) return true;
+    return false;
   }
 
   /** Add input-relative acceleration (moveRelative). yaw 0 faces -Z. */

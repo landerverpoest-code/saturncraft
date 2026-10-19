@@ -110,6 +110,8 @@ export class Audio {
       case 'bucket_fill': this.noise(t, 0.3, 900, 1, 0.3 * gain, out); break;
       case 'fizz': this.noise(t, 0.5, 4000, 1, 0.3 * gain, out, 'highpass'); break;
       case 'click': this.tone(t, 0.04, 1200, 900, 0.15 * gain, out, 'square'); break;
+      case 'door_open': this.noise(t, 0.12, 900, 2, 0.25 * gain, out); this.tone(t, 0.18, 220, 300, 0.12 * gain, out, 'triangle'); break;
+      case 'door_close': this.noise(t, 0.07, 600, 1.5, 0.4 * gain, out, 'lowpass'); this.tone(t, 0.08, 160, 110, 0.15 * gain, out, 'triangle'); break;
       case 'chest_open': this.tone(t, 0.25, 180, 240, 0.18 * gain, out, 'sawtooth'); this.noise(t, 0.2, 700, 2, 0.15 * gain, out); break;
       case 'chest_close': this.noise(t, 0.08, 500, 1.5, 0.35 * gain, out, 'lowpass'); this.tone(t, 0.1, 140, 90, 0.2 * gain, out, 'triangle'); break;
       case 'land': this.noise(t, 0.12, 500, 1, 0.4 * gain, out, 'lowpass'); break;
