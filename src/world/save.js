@@ -70,7 +70,7 @@ export async function saveGame(game) {
   for (const [k, v] of game.spawner.savedMobs) savedMobs[k] = v;
   const liveMobs = game.entities.list
     .filter((e) => e.kind === 'mob' && e.persistent && e.deathTime === 0 && !e.removed)
-    .map((e) => ({ type: e.type, x: e.x, y: e.y, z: e.z, health: e.health, yaw: e.yaw }));
+    .map((e) => e.saveData());
   const data = {
     version: 1,
     seed: game.seed,

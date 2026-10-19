@@ -85,6 +85,8 @@ item('oak_door', 'Oak Door', { door: true });
 item('bed', 'Bed', { stack: 1, bed: true });
 item('wheat', 'Wheat');
 item('bread', 'Bread', { food: { hunger: 5, saturation: 6 } });
+item('carrot', 'Carrot', { food: { hunger: 3, saturation: 3.6 }, places: B.CARROTS });
+item('shears', 'Shears', { stack: 1, durability: 238, shears: true });
 
 // Tools
 for (const mat of Object.keys(MATERIALS)) {

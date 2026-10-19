@@ -13,13 +13,15 @@ export function rollDrops(type, ctx = {}, rng = Math.random) {
   const out = [];
   for (const d of def.drops) {
     if (d.playerOnly && !ctx.killedByPlayer) continue;
+    if (d.notSheared && ctx.sheared) continue;
     const n = d.min + Math.floor(rng() * (d.max - d.min + 1));
     if (n <= 0) continue;
     out.push({ id: ctx.onFire && d.cooked ? d.cooked : d.id, count: n });
   }
   if (def.rare && ctx.killedByPlayer && rng() < def.rare.chance) {
-    // vanilla's rare pool has 3 equally likely entries; only the ingot exists here
-    if (rng() < 1 / 3) out.push({ id: def.rare.ids[0], count: 1 });
+    // vanilla's rare pool has 3 equally likely entries (a missing one drops nothing)
+    const pick = def.rare.ids[Math.floor(rng() * 3)];
+    if (pick !== undefined) out.push({ id: pick, count: 1 });
   }
   return out;
 }

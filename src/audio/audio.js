@@ -133,6 +133,7 @@ export class Audio {
       case 'orb': this.tone(t, 0.12, 1200 + Math.random() * 500, 1800, 0.12 * gain, out, 'sine'); break;
       case 'levelup': this.tone(t, 0.5, 600, 1200, 0.2 * gain, out, 'triangle'); this.tone(t + 0.1, 0.5, 900, 1600, 0.15 * gain, out, 'sine'); break;
       case 'equip': this.noise(t, 0.15, 2500, 2, 0.25 * gain, out); this.tone(t, 0.1, 500, 700, 0.1 * gain, out, 'square'); break;
+      case 'shear': this.noise(t, 0.06, 4000, 3, 0.25 * gain, out); this.noise(t + 0.08, 0.06, 3500, 3, 0.25 * gain, out); break;
       case 'chest_open': this.tone(t, 0.25, 180, 240, 0.18 * gain, out, 'sawtooth'); this.noise(t, 0.2, 700, 2, 0.15 * gain, out); break;
       case 'chest_close': this.noise(t, 0.08, 500, 1.5, 0.35 * gain, out, 'lowpass'); this.tone(t, 0.1, 140, 90, 0.2 * gain, out, 'triangle'); break;
       case 'land': this.noise(t, 0.12, 500, 1, 0.4 * gain, out, 'lowpass'); break;

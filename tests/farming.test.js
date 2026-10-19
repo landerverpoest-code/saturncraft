@@ -76,6 +76,14 @@ describe('farming', () => {
     expect(fromGrass / 8000).toBeCloseTo(0.125, 1);
   });
 
+  it('carrots: 2-5 when ripe, the carrot back otherwise', () => {
+    const r = rng(4);
+    expect(blockDrops(B.CARROTS, toolOf(null), r, 4)).toEqual([{ id: I.CARROT, count: 1 }]);
+    let min = 9, max = 0;
+    for (let k = 0; k < 3000; k++) { const n = blockDrops(B.CARROTS, toolOf(null), r, 7)[0].count; min = Math.min(min, n); max = Math.max(max, n); }
+    expect([min, max]).toEqual([2, 5]);
+  });
+
   it('bread and hoe recipes', () => {
     const s = (id) => (id == null ? null : { id, count: 1 });
     expect(craft([I.WHEAT, I.WHEAT, I.WHEAT, null, null, null, null, null, null].map(s), 3)).toEqual({ id: I.BREAD, count: 1 });

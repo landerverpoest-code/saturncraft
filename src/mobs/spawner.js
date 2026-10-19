@@ -118,7 +118,7 @@ export class MobSpawner {
     const k = chunkKey(cx, cz);
     const saved = this.savedMobs.get(k);
     if (saved) {
-      for (const s of saved) { const m = this.spawnMob(s.type, s.x, s.y, s.z); m.health = s.health; m.yaw = s.yaw; }
+      for (const s of saved) this.spawnMob(s.type, s.x, s.y, s.z).loadData(s);
       this.savedMobs.delete(k);
     }
     if (this.generated.has(k)) return;
@@ -146,7 +146,7 @@ export class MobSpawner {
     for (const e of this.game.entities.list) {
       if (e.kind !== 'mob' || e.dead) continue;
       if (Math.floor(e.x / 16) !== cx || Math.floor(e.z / 16) !== cz) continue;
-      if (e.persistent && e.deathTime === 0) list.push({ type: e.type, x: e.x, y: e.y, z: e.z, health: e.health, yaw: e.yaw });
+      if (e.persistent && e.deathTime === 0) list.push(e.saveData());
       e.removed = true; e.dead = true;
     }
     if (list.length) this.savedMobs.set(k, list);

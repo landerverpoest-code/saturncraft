@@ -208,7 +208,7 @@ export class World {
       return !!SOLID[below] && below !== B.DOOR && this.getBlock(x, y + 1, z) === B.DOOR;
     }
     if (id === B.DEAD_BUSH) return below === B.SAND || below === B.DIRT || below === B.GRASS;
-    if (id === B.WHEAT) return below === B.FARMLAND;
+    if (id === B.WHEAT || id === B.CARROTS) return below === B.FARMLAND;
     return below === B.GRASS || below === B.DIRT || below === B.SNOWY_GRASS;
   }
 

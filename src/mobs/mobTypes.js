@@ -9,30 +9,30 @@ export const MOBS = {
   bristleback: {
     name: 'Bristleback', role: 'pig', category: CATEGORY.CREATURE,
     health: 10, speed: 0.25, width: 0.9, height: 0.9, panicSpeed: 1.25, sound: 'oink',
-    drops: [{ id: I.RAW_PORK, min: 1, max: 3, cooked: I.COOKED_PORK }],
+    drops: [{ id: I.RAW_PORK, min: 1, max: 3, cooked: I.COOKED_PORK }], food: [I.CARROT],
   },
   mooxen: {
     name: 'Mooxen', role: 'cow', category: CATEGORY.CREATURE,
     health: 10, speed: 0.2, width: 0.9, height: 1.4, panicSpeed: 2.0, sound: 'moo',
-    drops: [{ id: I.LEATHER, min: 0, max: 2 }, { id: I.RAW_BEEF, min: 1, max: 3, cooked: I.STEAK }],
+    drops: [{ id: I.LEATHER, min: 0, max: 2 }, { id: I.RAW_BEEF, min: 1, max: 3, cooked: I.STEAK }], food: [I.WHEAT],
   },
   fleecer: {
     name: 'Fleecer', role: 'sheep', category: CATEGORY.CREATURE,
     health: 8, speed: 0.23, width: 0.9, height: 1.3, panicSpeed: 1.25, sound: 'baa',
-    drops: [{ id: B.WOOL, min: 1, max: 1 }, { id: I.RAW_MUTTON, min: 1, max: 2, cooked: I.COOKED_MUTTON }],
+    drops: [{ id: B.WOOL, min: 1, max: 1, notSheared: true }, { id: I.RAW_MUTTON, min: 1, max: 2, cooked: I.COOKED_MUTTON }], food: [I.WHEAT],
   },
   cluckling: {
     name: 'Cluckling', role: 'chicken', category: CATEGORY.CREATURE,
     health: 4, speed: 0.25, width: 0.4, height: 0.7, panicSpeed: 1.4, sound: 'cluck', noFallDamage: true,
-    drops: [{ id: I.FEATHER, min: 0, max: 2 }, { id: I.RAW_CHICKEN, min: 1, max: 1, cooked: I.COOKED_CHICKEN }],
+    drops: [{ id: I.FEATHER, min: 0, max: 2 }, { id: I.RAW_CHICKEN, min: 1, max: 1, cooked: I.COOKED_CHICKEN }], food: [I.WHEAT_SEEDS],
   },
   shambler: {
     name: 'Shambler', role: 'zombie', category: CATEGORY.MONSTER,
     health: 20, speed: 0.23, width: 0.6, height: 1.95, attack: 3, followRange: 35, armor: 2,
     burnsInSun: true, sound: 'grunt',
     drops: [{ id: I.ROTTEN_FLESH, min: 0, max: 2 }],
-    // rare player-kill drop (2.5%); the vanilla pool also has carrot/potato which do not exist here
-    rare: { chance: 0.025, ids: [I.IRON_INGOT] },
+    // rare player-kill drop (2.5%): iron ingot, carrot or potato (no potatoes here)
+    rare: { chance: 0.025, ids: [I.IRON_INGOT, I.CARROT] },
   },
   rattler: {
     name: 'Rattler', role: 'skeleton', category: CATEGORY.MONSTER,

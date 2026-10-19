@@ -22,6 +22,7 @@ addTex('farmland_moist');
 addTex('door_upper');
 for (let r = 0; r < 4; r++) { addTex('bed_head_top_' + r); addTex('bed_foot_top_' + r); }
 for (let i = 0; i < 8; i++) addTex('wheat_' + i);
+for (let i = 0; i < 4; i++) addTex('carrots_' + i);
 addTex('water_flow');
 addTex('lava_flow');
 for (let i = 0; i < 10; i++) addTex('destroy_' + i);
@@ -197,6 +198,21 @@ function bedTop(c, head, r) {
     let px = x, py = y;
     if (r === 2) { px = 15 - x; py = 15 - y; } else if (r === 1) { px = y; py = 15 - x; } else if (r === 3) { px = 15 - y; py = x; }
     c.set(x, y, pattern(px, py));
+  }
+}
+
+// Carrot crop stage 0..3: leafy tufts, orange tops showing when ripe.
+function carrots(c, stage) {
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
+  const leaf = hex('#3f9a2a'), leafD = hex('#2a7a1e'), orange = hex('#e8862a');
+  const h = 3 + stage * 2;
+  for (const sx of [2, 6, 10, 13]) {
+    for (let k = 0; k < h; k++) {
+      const y = 15 - k;
+      c.set(sx, y, shade(leaf, 0.85 + c.h(sx, k) * 0.3));
+      if (k > 1 && k % 2 === 0) { c.set(sx - 1, y, leafD); c.set(sx + 1, y - 1, leaf); }
+    }
+    if (stage === 3) { c.set(sx, 15, orange); c.set(sx + 1, 15, shade(orange, 0.85)); c.set(sx, 14, shade(orange, 1.1)); }
   }
 }
 
@@ -504,6 +520,7 @@ function destroyStage(c, stage) {
 function paint(c, name) {
   if (name.startsWith('destroy_')) destroyStage(c, +name.slice(8));
   else if (name.startsWith('wheat_')) wheat(c, +name.slice(6));
+  else if (name.startsWith('carrots_')) carrots(c, +name.slice(8));
   else if (name.startsWith('bed_head_top_') || name.startsWith('bed_foot_top_')) bedTop(c, name.startsWith('bed_head'), +name.slice(-1));
   else if (GEN[name]) GEN[name](c);
   else c.noiseFill(P.stone);

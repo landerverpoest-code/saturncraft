@@ -67,6 +67,13 @@ export function blockDrops(blockId, tool = HAND, rng = Math.random, meta = 0) {
     case 'bed': return (meta & 8) ? [{ id: I.BED, count: 1 }] : []; // the head half drops the bed
     case 'door': return (meta & 8) ? [] : [{ id: I.OAK_DOOR, count: 1 }]; // the lower half drops the door
     case 'seeds': return rng() < 0.125 ? [{ id: I.WHEAT_SEEDS, count: 1 }] : [];
+    case 'carrots': {
+      // mature: 1 + 1 + binomial(3, 4/7) carrots; otherwise the carrot back
+      if ((meta & 7) < 7) return [{ id: I.CARROT, count: 1 }];
+      let n = 2;
+      for (let k = 0; k < 3; k++) if (rng() < 4 / 7) n++;
+      return [{ id: I.CARROT, count: n }];
+    }
     case 'wheat': {
       // mature: 1 wheat + 1 seed + binomial(3, 4/7) seeds; otherwise just the seed back
       if ((meta & 7) < 7) return [{ id: I.WHEAT_SEEDS, count: 1 }];

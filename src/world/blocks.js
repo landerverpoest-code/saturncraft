@@ -29,6 +29,7 @@ export const B = {
   FARMLAND: 63, WHEAT: 64, DOOR: 65, LADDER: 66, BED: 67,
   OAK_SLAB: 68, COBBLESTONE_SLAB: 69, STONE_BRICK_SLAB: 70, SANDSTONE_SLAB: 71,
   OAK_STAIRS: 72, COBBLESTONE_STAIRS: 73, STONE_BRICK_STAIRS: 74, SANDSTONE_STAIRS: 75,
+  CARROTS: 76,
 };
 
 const defaults = {
@@ -124,6 +125,8 @@ def(B.CHEST, 'Chest', { hardness: 2.5, resistance: 2.5, tool: TOOL.AXE, sound: '
 // Farmland: meta = moisture 0..7 (moist when > 0). Wheat: meta = growth stage 0..7.
 def(B.FARMLAND, 'Farmland', { hardness: 0.6, resistance: 0.6, tool: TOOL.SHOVEL, drops: B.DIRT, sound: 'gravel', tex: { top: 'farmland', bottom: 'dirt', side: 'dirt' } });
 def(B.WHEAT, 'Wheat Crops', { ...plant, shape: SHAPE.CROP, drops: 'wheat', tex: { all: 'wheat_7' } });
+def(B.CARROTS, 'Carrots', { ...plant, shape: SHAPE.CROP, drops: 'carrots', tex: { all: 'carrots_3' } });
+export const CROPS = new Set([B.WHEAT, B.CARROTS]);
 
 // Door: two blocks, meta bits in shapes.js. Ladder: meta = side of its wall.
 def(B.DOOR, 'Oak Door', { hardness: 3, resistance: 3, tool: TOOL.AXE, sound: 'wood', flammable: true, opaque: false, shape: SHAPE.DOOR, layer: LAYER.CUTOUT, drops: 'door', needsSupport: true, tex: { all: 'door_lower' } });

@@ -43,11 +43,71 @@ export class Mob {
     this.eggTime = 6000 + Math.floor(Math.random() * 6000);
     this.move = null;
     this.strafeDir = Math.random() < 0.5 ? 1 : -1;
+    // breeding: age < 0 is a baby growing up, age > 0 a breeding cooldown
+    this.age = 0; this.loveTicks = 0; this.breedTime = 0;
+    this.sheared = false; this.eatTimer = 0;
+  }
+
+  get baby() { return this.age < 0; }
+
+  setBaby(on) {
+    this.age = on ? -24000 : 0;
+    const k = on ? 0.5 : 1;
+    this.body.width = this.def.width * k; this.body.height = this.def.height * k;
+  }
+
+  /** State kept when the mob is saved with its chunk. */
+  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared }; }
+  loadData(s) {
+    this.health = s.health; this.yaw = s.yaw;
+    if (s.age < 0) { this.setBaby(true); this.age = s.age; } else this.age = s.age || 0;
+    this.sheared = !!s.sheared;
+  }
+
+  /** Fed its breeding food: babies grow 10 % faster, adults fall in love. */
+  feed(g) {
+    if (this.age < 0) { this.age += Math.floor(-this.age * 0.1); this.hearts(g, 2, true); return true; }
+    if (this.age === 0 && this.loveTicks === 0) { this.loveTicks = 600; this.hearts(g, 7); return true; }
+    return false;
+  }
+
+  hearts(g, n, green = false) {
+    for (let k = 0; k < n; k++) {
+      g.particles.emit(this.x + (Math.random() - 0.5) * this.width, this.y + this.height + Math.random() * 0.4, this.z + (Math.random() - 0.5) * this.width,
+        (Math.random() - 0.5) * 0.02, 0.02, (Math.random() - 0.5) * 0.02, green ? 0.3 : 1, green ? 1 : 0.15, green ? 0.3 : 0.3, 20, -0.002);
+    }
+  }
+
+  /** Nearest adult of the same kind that is also in love, within 8 blocks. */
+  findMate(g) {
+    let best = null, bd = 64;
+    for (const e of g.entities.list) {
+      if (e === this || e.kind !== 'mob' || e.type !== this.type || e.loveTicks <= 0 || e.age !== 0 || e.deathTime > 0) continue;
+      const d2 = (e.x - this.x) ** 2 + (e.y - this.y) ** 2 + (e.z - this.z) ** 2;
+      if (d2 < bd) { bd = d2; best = e; }
+    }
+    return best;
+  }
+
+  breed(g, mate) {
+    const baby = g.spawner.spawnMob(this.type, (this.x + mate.x) / 2, Math.max(this.y, mate.y), (this.z + mate.z) / 2);
+    baby.setBaby(true);
+    baby.yaw = this.yaw;
+    for (const m of [this, mate]) { m.loveTicks = 0; m.age = 6000; m.breedTime = 0; }
+    this.hearts(g, 7);
+    g.entities.spawnXp(this.x, this.y + 0.5, this.z, 1 + Math.floor(Math.random() * 7));
+  }
+
+  /** Is the player holding this animal's food within 10 blocks? */
+  tempted(g) {
+    const p = g.player, st = p.inventory.selectedStack;
+    if (p.dead || !st || !this.def.food || !this.def.food.includes(st.id)) return false;
+    return (p.x - this.x) ** 2 + (p.y - this.y) ** 2 + (p.z - this.z) ** 2 < 100;
   }
 
   get x() { return this.body.x; } get y() { return this.body.y; } get z() { return this.body.z; }
-  get width() { return this.def.width; } get height() { return this.def.height; }
-  get eyeY() { return this.body.y + this.def.height * 0.85; }
+  get width() { return this.body.width; } get height() { return this.body.height; }
+  get eyeY() { return this.body.y + this.height * 0.85; }
 
   hurt(dmg, source, attacker = null, knockback = 0.4, projectile = null) {
     if (this.deathTime > 0 || this.removed) return false;
@@ -91,7 +151,8 @@ export class Mob {
     const killedByPlayer = this.lastHurtByPlayer > 0;
     this.killedByPlayer = killedByPlayer;
     if (killedByPlayer) g.player.stats.kills++;
-    for (const d of rollDrops(this.type, { killedByPlayer, onFire: this.fireTicks > 0 })) {
+    if (this.age < 0) { this.killedByPlayer = false; return; } // babies drop nothing
+    for (const d of rollDrops(this.type, { killedByPlayer, onFire: this.fireTicks > 0, sheared: this.sheared })) {
       g.entities.spawnItem(this.x, this.y + 0.5, this.z, d);
     }
   }
@@ -272,11 +333,58 @@ export class Mob {
       if (this.panicTicks === 0) this.wander = null;
       return;
     }
+    if (this.age < 0) { if (++this.age === 0) this.setBaby(false); } else if (this.age > 0) this.age--;
+    // breeding: walk to the partner, a baby after 3 s close together
+    if (this.loveTicks > 0) {
+      this.loveTicks--;
+      if (g.ticks % 10 === 0) this.hearts(g, 1);
+      const mate = this.findMate(g);
+      if (mate) {
+        const d = Math.hypot(mate.x - this.x, mate.z - this.z);
+        this.yaw = Math.atan2(-(mate.x - this.x), -(mate.z - this.z));
+        if (d > 1.2) this.steer(mate.x, mate.z, 1);
+        if (d < 3 && ++this.breedTime >= 60 && this.id < mate.id) this.breed(g, mate);
+        return;
+      }
+    }
+    // follow a player holding food
+    if (this.tempted(g)) {
+      const p = g.player, d = Math.hypot(p.x - this.x, p.z - this.z);
+      this.yaw = Math.atan2(-(p.x - this.x), -(p.z - this.z));
+      this.headPitch = -0.3;
+      if (d > 2.5) this.steer(p.x, p.z, 1.1);
+      this.wander = null; this.path = null;
+      return;
+    }
+    this.headPitch = 0;
+    // sheep graze: grass under them turns to dirt and their wool grows back
+    if (this.type === 'fleecer') {
+      if (this.eatTimer > 0) {
+        this.headPitch = 1.0;
+        if (--this.eatTimer === 0) this.graze(g);
+        return;
+      }
+      if (Math.random() < (this.baby ? 1 / 50 : 1 / 1000)) {
+        const bx = Math.floor(this.x), by = Math.floor(this.y), bz = Math.floor(this.z);
+        const w = g.world;
+        if (w.getBlock(bx, by, bz) === B.TALL_GRASS || w.getBlock(bx, by - 1, bz) === B.GRASS) { this.eatTimer = 40; this.wander = null; this.path = null; return; }
+      }
+    }
     this.wanderAI(g, 1);
     if (this.type === 'cluckling' && --this.eggTime <= 0) {
       g.entities.spawnItem(this.x, this.y + 0.3, this.z, { id: I.EGG, count: 1 });
       this.eggTime = 6000 + Math.floor(Math.random() * 6000);
     }
+  }
+
+  graze(g) {
+    const w = g.world, bx = Math.floor(this.x), by = Math.floor(this.y), bz = Math.floor(this.z);
+    if (w.getBlock(bx, by, bz) === B.TALL_GRASS) w.setBlock(bx, by, bz, B.AIR);
+    else if (w.getBlock(bx, by - 1, bz) === B.GRASS) w.setBlock(bx, by - 1, bz, B.DIRT);
+    else return;
+    g.audio.play('step_grass', [this.x, this.y, this.z]);
+    this.sheared = false;
+    if (this.age < 0) this.age = Math.min(0, this.age + 1200);
   }
 
   /** Acquire the player as target if in range and visible. */
@@ -454,6 +562,9 @@ export class Mob {
 
   renderUpdate(m, px, py, pz, alpha, L, sec) {
     m.position.set(px, py, pz);
+    m.scale.setScalar(this.age < 0 ? 0.5 : 1);
+    const parts = m.userData.parts;
+    if (parts && parts.wool) { parts.wool.visible = !this.sheared; parts.tuft.visible = !this.sheared; }
     const yaw = this.prevYaw + wrap(this.yaw - this.prevYaw) * alpha;
     m.rotation.set(0, yaw, 0);
     if (this.deathTime > 0) m.rotation.z = Math.min(1, (this.deathTime + alpha) / 10) * Math.PI / 2;

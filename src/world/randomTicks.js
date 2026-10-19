@@ -2,7 +2,7 @@
 // section near the player get a chance to change, as in the reference game
 // (randomTickSpeed = 3). Handles grass spreading, farmland moisture and crop
 // growth.
-import { B, OPAQUE } from './blocks.js';
+import { B, OPAQUE, CROPS } from './blocks.js';
 import { MIN_Y, SECTION_COUNT, cidx } from './constants.js';
 
 export const RANDOM_TICK_SPEED = 3;
@@ -59,17 +59,17 @@ export function randomTickBlock(world, x, y, z, id, rng = Math.random) {
     const m = world.getMeta(x, y, z);
     if (farmlandHydrated(world, x, y, z)) { if (m !== 7) world.setBlock(x, y, z, B.FARMLAND, 7); }
     else if (m > 0) world.setBlock(x, y, z, B.FARMLAND, m - 1);
-    else if (world.getBlock(x, y + 1, z) !== B.WHEAT) world.setBlock(x, y, z, B.DIRT);
-  } else if (id === B.WHEAT) {
+    else if (!CROPS.has(world.getBlock(x, y + 1, z))) world.setBlock(x, y, z, B.DIRT);
+  } else if (CROPS.has(id)) {
     const stage = world.getMeta(x, y, z);
     if (stage >= 7 || rawLight(world, x, y + 1, z) < 9) return;
-    if (rng() < cropGrowthChance(growthSpeed(world, x, y, z))) world.setBlock(x, y, z, B.WHEAT, stage + 1);
+    if (rng() < cropGrowthChance(growthSpeed(world, x, y, z, id))) world.setBlock(x, y, z, id, stage + 1);
   }
 }
 
 /** Ids that react to random ticks (fast pre-filter). */
 export const RANDOM_TICKS = new Uint8Array(256);
-for (const id of [B.GRASS, B.FARMLAND, B.WHEAT]) RANDOM_TICKS[id] = 1;
+for (const id of [B.GRASS, B.FARMLAND, ...CROPS]) RANDOM_TICKS[id] = 1;
 
 /** Run one tick's worth of random ticks in all chunks within `radius` chunks of (cx, cz). */
 export function runRandomTicks(world, cx, cz, radius, rng = Math.random) {

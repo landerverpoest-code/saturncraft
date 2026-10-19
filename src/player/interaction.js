@@ -76,7 +76,11 @@ export class Interaction {
     // Use
     const st = p.inventory.selectedStack;
     const d = st && ITEMS[st.id];
-    if (input.right && d && d.food) {
+    // right-clicking an animal feeds, breeds or shears it
+    if (input.rightPressed && this.mobTarget && this.interactMob(this.mobTarget.mob)) { this.useDelay = USE_DELAY; return; }
+    // food that is also a seed (carrots) is planted when aimed at the top of farmland
+    const plants = d && d.places && this.target && this.target.id === B.FARMLAND && this.target.face[1] === 1;
+    if (input.right && d && d.food && !plants) {
       if (p.hunger.canEat()) {
         this.eating++;
         if (this.eating % 4 === 0) g.audio.play('eat');
@@ -299,6 +303,28 @@ export class Interaction {
     return true;
   }
 
+  /** Feed / breed / shear a passive mob. Returns true if something happened. */
+  interactMob(mob) {
+    const g = this.game, p = g.player, st = p.inventory.selectedStack, d = st && ITEMS[st.id];
+    if (!d || mob.deathTime > 0 || mob.def.category !== 'creature') return false;
+    if (d.shears && mob.type === 'fleecer' && !mob.sheared && mob.age >= 0) {
+      mob.sheared = true;
+      const n = 1 + Math.floor(Math.random() * 3);
+      for (let k = 0; k < n; k++) g.entities.spawnItem(mob.x, mob.y + 1, mob.z, { id: B.WOOL, count: 1 }, [(Math.random() - Math.random()) * 0.1, Math.random() * 0.05 + 0.1, (Math.random() - Math.random()) * 0.1]);
+      p.inventory.damageSelected(1);
+      g.audio.play('shear', [mob.x, mob.y + 1, mob.z]);
+      this.swing = SWING_TICKS;
+      return true;
+    }
+    if (mob.def.food && mob.def.food.includes(st.id) && mob.feed(g)) {
+      p.inventory.removeFromSlot(p.inventory.selected, 1);
+      g.audio.play('eat', [mob.x, mob.y + 1, mob.z]);
+      this.swing = SWING_TICKS;
+      return true;
+    }
+    return false;
+  }
+
   /** Put a block (used for merging slabs) and consume one item. */
   finishPlace(x, y, z, id, meta) {
     const g = this.game, p = g.player;
@@ -356,7 +382,7 @@ export class Interaction {
 
   pickBlock(id) {
     const inv = this.game.player.inventory;
-    const asItem = { [B.DOOR]: I.OAK_DOOR, [B.BED]: I.BED, [B.WHEAT]: I.WHEAT_SEEDS, [B.FURNACE_LIT]: B.FURNACE, [B.FARMLAND]: B.DIRT };
+    const asItem = { [B.DOOR]: I.OAK_DOOR, [B.BED]: I.BED, [B.WHEAT]: I.WHEAT_SEEDS, [B.CARROTS]: I.CARROT, [B.FURNACE_LIT]: B.FURNACE, [B.FARMLAND]: B.DIRT };
     const want = asItem[id] ?? id;
     for (let i = 0; i < 9; i++) if (inv.slots[i] && inv.slots[i].id === want) { inv.selected = i; return; }
     if (this.game.player.creative && ITEMS[want]) {
