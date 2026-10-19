@@ -1,13 +1,15 @@
 // Terrain materials: three.js Lambert (so the three sun lights and their
 // shadow maps work) with a texture-array lookup and baked sky/block light.
 import * as THREE from 'three';
-import { generateTextureData, TEX_NAMES, TEX_SIZE } from '../world/textures.js';
+import { generateTextureData, TEX_NAMES, TEX_SIZE, texId } from '../world/textures.js';
 
 export const terrainUniforms = {
   uAtlas: { value: null },
   uTorch: { value: new THREE.Color(1.0, 0.82, 0.6) },
   uMinLight: { value: 0.035 },
   uTime: { value: 0 },
+  uFire: { value: texId('fire') },
+  uFireFrames: { value: texId('fire_0') },
 };
 
 export function createTextureArray() {
@@ -50,6 +52,8 @@ uniform sampler2DArray uAtlas;
 uniform vec3 uTorch;
 uniform float uMinLight;
 uniform float uTime;
+uniform float uFire;
+uniform float uFireFrames;
 varying vec2 vTuv;
 varying vec3 vLit;
 varying float vShade;
@@ -64,7 +68,9 @@ float lightCurve(float f) {
       .replace('#include <map_fragment>', `
 vec2 tuv = vTuv;
 ${water ? 'tuv += vec2(uTime * 0.02, uTime * 0.035);' : ''}
-vec4 texel = texture(uAtlas, vec3(tuv, vTile));
+float tile = vTile;
+if (abs(tile - uFire) < 0.5) tile = uFireFrames + mod(floor(uTime * 12.0), 8.0); // animated fire
+vec4 texel = texture(uAtlas, vec3(tuv, tile));
 diffuseColor *= texel;`)
       .replace(
         'vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;',

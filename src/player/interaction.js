@@ -6,6 +6,7 @@ import { breakProgressPerTick, blockDrops, canHarvest } from '../world/mining.js
 import { PHYS } from '../physics/constants.js';
 import { EXHAUSTION } from './survival.js';
 import { lightAt } from '../entities/entities.js';
+import { canLight, FIRE_DELAY } from '../world/fire.js';
 import { sideOf, SIDE_DIRS, DOOR_OPEN, DOOR_UPPER, BED_HEAD, SLAB_TOP, SLAB_DOUBLE, STAIRS_UPSIDE, GATE_OPEN } from '../world/shapes.js';
 
 /** Brightness for block particles: local light, dimmed with the combined sunlight (as the held item). */
@@ -153,6 +154,7 @@ export class Interaction {
     const meta = g.world.getMeta(x, y, z);
     g.world.setBlockUrgent(x, y, z, B.AIR);
     if (g.onBlockBroken) g.onBlockBroken(x, y, z, id, meta);
+    if (id === B.FIRE) { g.audio.play('fizz', [x + 0.5, y + 0.5, z + 0.5]); return; }
     g.audio.play('break_' + BLOCKS[id].sound, [x + 0.5, y + 0.5, z + 0.5]);
     g.particles && g.particles.blockBreak(x, y, z, id, particleLight(g, x + 0.5, y + 0.5, z + 0.5));
     const xp = p.creative ? null : ORE_XP[id];
@@ -293,6 +295,17 @@ export class Interaction {
       w.setBlockUrgent(t.x, t.y, t.z, B.FARMLAND, 0);
       g.audio.play('place_gravel', [t.x + 0.5, t.y + 1, t.z + 0.5]);
       p.inventory.damageSelected(1);
+      this.swing = SWING_TICKS;
+      return true;
+    }
+    // Flint and steel lights a fire on the clicked face (or lights a fire on top of a solid block)
+    if (d.igniter) {
+      const fx = t.x + t.face[0], fy = t.y + t.face[1], fz = t.z + t.face[2];
+      if (!canLight(w, fx, fy, fz)) return false;
+      w.setBlockUrgent(fx, fy, fz, B.FIRE, 0);
+      w.scheduleTick(fx, fy, fz, FIRE_DELAY + Math.floor(Math.random() * 10));
+      g.audio.play('ignite', [fx + 0.5, fy + 0.5, fz + 0.5]);
+      if (p.gamemode !== 'creative') p.inventory.damageSelected(1);
       this.swing = SWING_TICKS;
       return true;
     }

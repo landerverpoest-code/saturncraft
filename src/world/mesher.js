@@ -177,6 +177,26 @@ export function meshSection(sec) {
           }
         }
       }
+    } else if (shape === SHAPE.FIRE) {
+      // two crossed planes plus four planes along the edges leaning inwards, both sides, full bright
+      const l = light[i], tile = FACE_TILE[id * 6 + 2];
+      const sky = (l >> 4) * 17, blk = 255, h = 1.3;
+      const planes = [
+        [x, z, x + 1, z + 1, 0, 0], [x, z + 1, x + 1, z, 0, 0],
+        [x + 0.05, z, x + 0.05, z + 1, 0.25, 0], [x + 0.95, z, x + 0.95, z + 1, -0.25, 0],
+        [x, z + 0.05, x + 1, z + 0.05, 0, 0.25], [x, z + 0.95, x + 1, z + 0.95, 0, -0.25],
+      ];
+      buf.ensure(48);
+      for (const [x1, z1, x2, z2, lx, lz] of planes) {
+        for (let side = 0; side < 2; side++) {
+          buf.vert(x1, y, z1, 0, 1, 0, 0, 1, 255, 255, 255, sky, blk, 0, tile);
+          buf.vert(x2, y, z2, 0, 1, 0, 1, 1, 255, 255, 255, sky, blk, 0, tile);
+          buf.vert(x2 + lx, y + h, z2 + lz, 0, 1, 0, 1, 0, 255, 255, 255, sky, blk, 0, tile);
+          buf.vert(x1 + lx, y + h, z1 + lz, 0, 1, 0, 0, 0, 255, 255, 255, sky, blk, 0, tile);
+          buf.quad(false);
+          if (side === 0) { const n = buf.n; for (let k = 0; k < 2; k++) swapVert(buf, n - 4 + k, n - 1 - k); }
+        }
+      }
     } else if (shape === SHAPE.CROP) {
       // four planes in a # pattern, both sides
       const l = light[i];

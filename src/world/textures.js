@@ -25,6 +25,7 @@ for (let r = 0; r < 4; r++) { addTex('bed_head_top_' + r); addTex('bed_foot_top_
 for (let i = 0; i < 8; i++) addTex('wheat_' + i);
 for (let i = 0; i < 4; i++) addTex('carrots_' + i);
 addTex('water_flow');
+for (let i = 0; i < 8; i++) addTex('fire_' + i);
 addTex('lava_flow');
 for (let i = 0; i < 10; i++) addTex('destroy_' + i);
 
@@ -597,8 +598,31 @@ function destroyStage(c, stage) {
   }
 }
 
+// Fire: 8 looping frames of rising flame tongues. Each column has its own
+// height that wobbles over time; colour runs from white-yellow at the base to
+// deep orange at the tips. Frames tile vertically so the loop is seamless.
+function fire(c, frame) {
+  const cols = [];
+  for (let x = 0; x < 16; x++) {
+    const ph = c.h(x, 0, 7) * Math.PI * 2, base = 0.45 + c.h(x, 1, 8) * 0.4;
+    const edge = Math.min(x, 15 - x) < 2 ? 0.55 : 1;
+    cols.push(16 * edge * (base + 0.18 * Math.sin(ph + frame * Math.PI / 4)));
+  }
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    const h = (cols[x] + (cols[(x + 1) & 15] + cols[(x + 15) & 15]) * 0.5) / 2;
+    const up = 15 - y; // height above the bottom
+    const flick = hash4(c.seed, x, (y + frame * 2) & 15, 9) / 4294967296;
+    if (up > h + flick * 2 - 1) { c.set(x, y, [0, 0, 0], 0); continue; }
+    const t = Math.min(1, up / Math.max(1, h));
+    const col = t < 0.35 ? mix(hex('#fff3b0'), hex('#ffc93a'), t / 0.35) : mix(hex('#ffb12a'), hex('#d8420e'), (t - 0.35) / 0.65);
+    c.set(x, y, shade(col, 0.9 + flick * 0.15));
+  }
+}
+
 function paint(c, name) {
   if (name.startsWith('destroy_')) destroyStage(c, +name.slice(8));
+  else if (name === 'fire') fire(c, 0);
+  else if (name.startsWith('fire_')) fire(c, +name.slice(5));
   else if (name.startsWith('wheat_')) wheat(c, +name.slice(6));
   else if (name.startsWith('carrots_')) carrots(c, +name.slice(8));
   else if (name.startsWith('bed_head_top_') || name.startsWith('bed_foot_top_')) bedTop(c, name.startsWith('bed_head'), +name.slice(-1));

@@ -89,6 +89,7 @@ item('wheat', 'Wheat');
 item('bread', 'Bread', { food: { hunger: 5, saturation: 6 } });
 item('carrot', 'Carrot', { food: { hunger: 3, saturation: 3.6 }, places: B.CARROTS });
 item('shears', 'Shears', { stack: 1, durability: 238, shears: true });
+item('flint_and_steel', 'Flint and Steel', { stack: 1, durability: 64, igniter: true });
 item('paper', 'Paper');
 item('book', 'Book');
 item('brick', 'Brick');

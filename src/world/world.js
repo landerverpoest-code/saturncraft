@@ -5,6 +5,7 @@ import { LightEngine } from './lighting.js';
 import { MIN_Y, MAX_Y, WORLD_HEIGHT, SECTION_COUNT, cidx } from './constants.js';
 import { TerrainGenerator } from './generator.js';
 import { tickFluid, fluidDelay } from './fluids.js';
+import { tickFire, fireCanStay } from './fire.js';
 import { SIDE_DIRS, selectionBox, collisionBoxes, SHAPED_COLLISION, DOOR_UPPER, BED_HEAD } from './shapes.js';
 
 export function chunkKey(cx, cz) { return (cx + 32768) * 65536 + (cz + 32768); }
@@ -43,7 +44,7 @@ export class World {
     this.gen = new TerrainGenerator(seed); // main-thread copy for spawn search
     this.scheduled = new Map();  // posKey -> {x,y,z,tick}
     this.tickCount = 0;
-    this.listeners = { blockChanged: [], fallingBlock: [], dropItems: [] };
+    this.listeners = { blockChanged: [], fallingBlock: [], dropItems: [], fireCrackle: [] };
     this._lastKey = -1; this._lastChunk = null;
   }
 
@@ -174,7 +175,9 @@ export class World {
     if (!id) return;
     const d = BLOCKS[id];
     if (d.fluid) this.scheduleTick(x, y, z, fluidDelay(id));
-    else if (d.gravity) {
+    else if (id === B.FIRE) {
+      if (!fireCanStay(this, x, y, z)) this.setBlock(x, y, z, B.AIR);
+    } else if (d.gravity) {
       const below = this.getBlock(x, y - 1, z);
       if (!SOLID[below] || isFluid(below)) this.scheduleTick(x, y, z, 2);
     } else if (d.needsSupport) {
@@ -248,6 +251,7 @@ export class World {
       const id = this.getBlock(t.x, t.y, t.z);
       const d = BLOCKS[id];
       if (d.fluid) tickFluid(this, t.x, t.y, t.z, id);
+      else if (id === B.FIRE) { tickFire(this, t.x, t.y, t.z); if (Math.random() < 0.3) this.emit('fireCrackle', t.x, t.y, t.z); }
       else if (d.gravity) {
         const below = this.getBlock(t.x, t.y - 1, t.z);
         if ((!SOLID[below] || isFluid(below)) && t.y > MIN_Y) {

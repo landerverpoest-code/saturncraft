@@ -89,6 +89,8 @@ export class Game {
     this.sky.setShadowsEnabled(s.shadows);
     this.clouds = new Clouds(this.scene, this.seed);
     this.weather = new Weather();
+    // fire checks this: rain puts out (and stops) fires that are open to the sky
+    this.world.rainingAt = (x, y, z) => this.weather.level >= 0.2 && Weather.precipitation(this.world.biomeAt(x, z)) === 'rain' && this.world.heightAt(x, z) <= y;
     this.chat = this.chat || new Chat(this);
     this.weatherFx = new WeatherRenderer(this.scene);
     this.particles = new Particles(this.scene);
@@ -114,6 +116,7 @@ export class Game {
     this.overlay = new BlockOverlay(this.scene);
 
     this.world.on('fallingBlock', (x, y, z, id) => this.entities.spawnFallingBlock(x, y, z, id));
+    this.world.on('fireCrackle', (x, y, z) => this.audio.play('fire', [x + 0.5, y + 0.5, z + 0.5]));
     this.world.on('dropItems', (x, y, z, id, meta) => {
       for (const st of blockDrops(id, toolOf(null), Math.random, meta)) this.entities.spawnItem(x + 0.5, y + 0.3, z + 0.5, st);
     });

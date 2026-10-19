@@ -184,6 +184,10 @@ export class Player {
       this.fireTicks = Math.max(this.fireTicks, 300);
       this.hurt(4, 'lava');
     }
+    if (b.inFire && !b.inWater) {
+      this.fireTicks = Math.max(this.fireTicks, 160);
+      this.hurt(1, 'fire');
+    }
     if (b.inWater) this.fireTicks = 0;
     if (this.fireTicks > 0) {
       if (this.fireTicks % 20 === 0) this.hurt(1, 'fire');

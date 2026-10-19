@@ -306,6 +306,7 @@ export class Mob {
     }
     if (b.inWater) { b.fallDistance = 0; this.fireTicks = 0; }
     if (b.inLava) { this.fireTicks = Math.max(this.fireTicks, 300); this.hurt(4, 'lava'); }
+    if (b.inFire && !b.inWater) { this.fireTicks = Math.max(this.fireTicks, 160); this.hurt(1, 'fire'); }
     // Undead burn in combined sunlight from the three suns
     if (this.def.burnsInSun && g.ticks % 2 === 0) {
       const st = g.sky.state;

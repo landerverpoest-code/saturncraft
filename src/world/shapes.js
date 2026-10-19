@@ -169,6 +169,9 @@ export function collisionBoxes(id, meta, world, x, y, z) {
   return null;
 }
 
+// fire is only hit by aiming at its floor: punching it there puts it out
+const FIRE_BOX = [0, 0, 0, 1, 1 / 16, 1];
+
 /** Selection (outline / raycast) box, or null for a full cube. */
 export function selectionBox(id, meta) {
   if (id === B.DOOR) return doorBox(meta);
@@ -179,5 +182,6 @@ export function selectionBox(id, meta) {
   if (BLOCKS[id].shape === SHAPE.SLAB) return slabBox(meta);
   if (id === B.LADDER) return ladderBox(meta);
   if (id === B.TORCH) return torchBox(meta);
+  if (id === B.FIRE) return FIRE_BOX;
   return null;
 }

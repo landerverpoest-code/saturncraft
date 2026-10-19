@@ -4,6 +4,7 @@
 // growth.
 import { B, OPAQUE, CROPS } from './blocks.js';
 import { MIN_Y, SECTION_COUNT, cidx } from './constants.js';
+import { lavaIgnite, FIRE_DELAY } from './fire.js';
 
 export const RANDOM_TICK_SPEED = 3;
 
@@ -69,6 +70,10 @@ export function randomTickBlock(world, x, y, z, id, rng = Math.random) {
     const age = world.getMeta(x, y, z);
     if (age >= 15) { world.setBlock(x, y + 1, z, B.SUGAR_CANE, 0); world.setBlock(x, y, z, B.SUGAR_CANE, 0); }
     else world.setBlock(x, y, z, B.SUGAR_CANE, age + 1);
+  } else if (id === B.LAVA) {
+    lavaIgnite(world, x, y, z, rng);
+  } else if (id === B.FIRE) {
+    world.scheduleTick(x, y, z, FIRE_DELAY); // keeps fires burning after a reload
   } else if (CROPS.has(id)) {
     const stage = world.getMeta(x, y, z);
     if (stage >= 7 || rawLight(world, x, y + 1, z) < 9) return;
@@ -78,7 +83,7 @@ export function randomTickBlock(world, x, y, z, id, rng = Math.random) {
 
 /** Ids that react to random ticks (fast pre-filter). */
 export const RANDOM_TICKS = new Uint8Array(256);
-for (const id of [B.GRASS, B.FARMLAND, B.SUGAR_CANE, ...CROPS]) RANDOM_TICKS[id] = 1;
+for (const id of [B.GRASS, B.FARMLAND, B.SUGAR_CANE, B.LAVA, B.FIRE, ...CROPS]) RANDOM_TICKS[id] = 1;
 
 /** Run one tick's worth of random ticks in all chunks within `radius` chunks of (cx, cz). */
 export function runRandomTicks(world, cx, cz, radius, rng = Math.random) {

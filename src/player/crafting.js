@@ -51,6 +51,7 @@ for (const [a, b, out, n] of [
 // dyeing white wool
 for (let c = 1; c < 16; c++) shapeless([DYES[c], B.WOOL], WOOL_ITEMS[c], 1);
 shaped([' I', 'I '], { I: I.IRON_INGOT }, I.SHEARS, 1);
+shapeless([I.IRON_INGOT, I.FLINT], I.FLINT_AND_STEEL);
 for (const [planks, fence] of [[B.OAK_PLANKS, B.OAK_FENCE], [B.SPRUCE_PLANKS, B.SPRUCE_FENCE], [B.BIRCH_PLANKS, B.BIRCH_FENCE]]) shaped(['PSP', 'PSP'], { P: planks, S: I.STICK }, fence, 3);
 shaped(['SPS', 'SPS'], { P: 'planks', S: I.STICK }, B.OAK_FENCE_GATE, 1);
 shaped(['PPP'], { P: 'planks' }, B.OAK_SLAB, 6);
