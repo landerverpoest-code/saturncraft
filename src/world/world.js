@@ -5,7 +5,7 @@ import { LightEngine } from './lighting.js';
 import { MIN_Y, MAX_Y, WORLD_HEIGHT, SECTION_COUNT, cidx } from './constants.js';
 import { TerrainGenerator } from './generator.js';
 import { tickFluid, fluidDelay } from './fluids.js';
-import { SIDE_DIRS, selectionBox, collisionBoxes, DOOR_UPPER } from './shapes.js';
+import { SIDE_DIRS, selectionBox, collisionBoxes, SHAPED_COLLISION, DOOR_UPPER, BED_HEAD } from './shapes.js';
 
 export function chunkKey(cx, cz) { return (cx + 32768) * 65536 + (cz + 32768); }
 
@@ -194,6 +194,14 @@ export class World {
       const wall = this.getBlock(x + dx, y, z + dz);
       return !!(SOLID[wall] && OPAQUE[wall]);
     }
+    if (id === B.BED) {
+      // each half needs its partner: the head lies towards side (meta & 3) of the foot
+      const meta = metaIn ?? this.getMeta(x, y, z);
+      const [dx, , dz] = SIDE_DIRS[meta & 3];
+      const head = meta & BED_HEAD, s = head ? -1 : 1;
+      const other = this.getBlock(x + dx * s, y, z + dz * s), om = this.getMeta(x + dx * s, y, z + dz * s);
+      return other === B.BED && (om & BED_HEAD) !== head && (om & 3) === (meta & 3);
+    }
     if (id === B.DOOR) {
       // the lower half stands on a solid block with its upper half above; the upper half sits on the lower
       if ((metaIn ?? this.getMeta(x, y, z)) & DOOR_UPPER) return below === B.DOOR;
@@ -294,7 +302,7 @@ export class World {
         for (let z = Math.floor(minZ); z <= Math.floor(maxZ - 1e-7); z++)
           if (SOLID[this.getBlock(x, y, z)]) {
             const id = this.getBlock(x, y, z);
-            const shaped = id === B.DOOR ? collisionBoxes(id, this.getMeta(x, y, z)) : null;
+            const shaped = SHAPED_COLLISION[id] ? collisionBoxes(id, this.getMeta(x, y, z)) : null;
             if (!shaped) return true;
             for (const s of shaped) {
               if (maxX > x + s[0] && minX < x + s[3] && maxY > y + s[1] && minY < y + s[4] && maxZ > z + s[2] && minZ < z + s[5]) return true;

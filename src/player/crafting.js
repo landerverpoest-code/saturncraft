@@ -28,6 +28,7 @@ shaped(['PP', 'PP'], { P: 'planks' }, B.WORKBENCH, 1);
 shaped(['PPP', 'P P', 'PPP'], { P: 'planks' }, B.CHEST, 1);
 shaped(['WWW'], { W: I.WHEAT }, I.BREAD, 1);
 shaped(['PP', 'PP', 'PP'], { P: 'planks' }, I.OAK_DOOR, 3);
+shaped(['WWW', 'PPP'], { W: B.WOOL, P: 'planks' }, I.BED, 1);
 shaped(['S S', 'SSS', 'S S'], { S: I.STICK }, B.LADDER, 3);
 shaped(['C', 'S'], { C: I.COAL, S: I.STICK }, B.TORCH, 4);
 shaped(['CCC', 'C C', 'CCC'], { C: 'stone_mat' }, B.FURNACE, 1);

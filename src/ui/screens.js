@@ -29,6 +29,7 @@ export class UI {
 
   close() {
     if (this.open === 'death') return;
+    if (this.open === 'sleep') { this.game.wakeUp(false); return; }
     const g = this.game;
     // return crafting grid + cursor items
     const inv = g.player.inventory;
@@ -285,8 +286,24 @@ export class UI {
     this.chest = c;
   }
 
+  /** Sleeping: the screen fades to black; "Leave Bed" (or Esc) gets up early. */
+  showSleep() {
+    this.clear();
+    this.open = 'sleep';
+    const s = el('<div class="screen sleep-screen" style="justify-content:flex-end;padding-bottom:12vh"><button class="btn">Leave Bed</button></div>');
+    s.querySelector('button').onclick = () => this.game.wakeUp(false);
+    this.layer.appendChild(s);
+    this.sleepEl = s;
+  }
+
   /** Called each frame while a furnace screen is open */
-  tickOpen() { if (this.open === 'furnace') for (const r of this.refreshers) r(); }
+  tickOpen() {
+    if (this.open === 'furnace') for (const r of this.refreshers) r();
+    if (this.open === 'sleep' && this.sleepEl) {
+      const s = this.game.player.sleeping;
+      this.sleepEl.style.background = `rgba(4,6,14,${s ? Math.min(1, s.ticks / 70) : 0})`;
+    }
+  }
 
   showPause() {
     this.clear();

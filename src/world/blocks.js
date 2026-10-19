@@ -8,7 +8,7 @@ export const TOOL = { NONE: null, PICKAXE: 'pickaxe', AXE: 'axe', SHOVEL: 'shove
 export const TIER = { ANY: -1, WOOD: 0, STONE: 1, IRON: 2, DIAMOND: 3 };
 
 // Render shapes understood by the mesher
-export const SHAPE = { NONE: 0, CUBE: 1, CROSS: 2, LIQUID: 3, TORCH: 4, CACTUS: 5, CROP: 6, DOOR: 7, LADDER: 8 };
+export const SHAPE = { NONE: 0, CUBE: 1, CROSS: 2, LIQUID: 3, TORCH: 4, CACTUS: 5, CROP: 6, DOOR: 7, LADDER: 8, BED: 9 };
 
 // Render layers
 export const LAYER = { OPAQUE: 0, CUTOUT: 1, TRANSLUCENT: 2 };
@@ -26,7 +26,7 @@ export const B = {
   OBSIDIAN: 48, WOOL: 49, COAL_BLOCK: 50, IRON_BLOCK: 51, GOLD_BLOCK: 52,
   DIAMOND_BLOCK: 53, GRANITE: 54, DIORITE: 55, ANDESITE: 56, TUFF: 57, SNOWY_GRASS: 58,
   SPRUCE_PLANKS: 59, BIRCH_PLANKS: 60, STONE_BRICKS: 61, CHEST: 62,
-  FARMLAND: 63, WHEAT: 64, DOOR: 65, LADDER: 66,
+  FARMLAND: 63, WHEAT: 64, DOOR: 65, LADDER: 66, BED: 67,
 };
 
 const defaults = {
@@ -126,6 +126,8 @@ def(B.WHEAT, 'Wheat Crops', { ...plant, shape: SHAPE.CROP, drops: 'wheat', tex: 
 // Door: two blocks, meta bits in shapes.js. Ladder: meta = side of its wall.
 def(B.DOOR, 'Oak Door', { hardness: 3, resistance: 3, tool: TOOL.AXE, sound: 'wood', flammable: true, opaque: false, shape: SHAPE.DOOR, layer: LAYER.CUTOUT, drops: 'door', needsSupport: true, tex: { all: 'door_lower' } });
 def(B.LADDER, 'Ladder', { hardness: 0.4, resistance: 0.4, tool: TOOL.AXE, sound: 'wood', flammable: true, solid: false, opaque: false, shape: SHAPE.LADDER, layer: LAYER.CUTOUT, needsSupport: true });
+// Bed: two blocks; meta bits 0-1 = side the head lies towards, bit 3 = head half.
+def(B.BED, 'Bed', { hardness: 0.2, resistance: 0.2, sound: 'wool', flammable: true, opaque: false, shape: SHAPE.BED, layer: LAYER.CUTOUT, drops: 'bed', needsSupport: true, tex: { top: 'bed_foot_top_0', bottom: 'oak_planks', side: 'bed_side' } });
 
 export const NUM_BLOCKS = BLOCKS.length;
 

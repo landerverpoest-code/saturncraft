@@ -20,6 +20,7 @@ for (const b of BLOCKS) {
 addTex('furnace_side');
 addTex('farmland_moist');
 addTex('door_upper');
+for (let r = 0; r < 4; r++) { addTex('bed_head_top_' + r); addTex('bed_foot_top_' + r); }
 for (let i = 0; i < 8; i++) addTex('wheat_' + i);
 addTex('water_flow');
 addTex('lava_flow');
@@ -175,6 +176,27 @@ function wheat(c, stage) {
       c.set(sx + lean - 1, ey, shade(hex(stage === 7 ? '#b98a2a' : '#8fa040'), 0.9 + c.h(sx, ey) * 0.2));
       c.set(sx + lean + 1, ey + 1, shade(hex(stage === 7 ? '#d6ac44' : '#a4b048'), 0.9));
     }
+  }
+}
+
+// Bed tops: pattern drawn with the head end at row 0, rotated so it points
+// towards side r (0 -z, 1 +x, 2 +z, 3 -x) when mapped onto the top face.
+function bedTop(c, head, r) {
+  const red = hex('#b02a2a'), redD = hex('#8a1e1e'), white = hex('#e8e6e0'), whiteD = hex('#c8c6c0'), wood = hex('#7a5530');
+  const pattern = (px, py) => {
+    if (px === 0 || px === 15) return wood;
+    if (head) {
+      if (py === 0) return wood;
+      if (py >= 2 && py <= 5 && px >= 2 && px <= 13) return (py === 5 || px === 13) ? whiteD : white;
+      if (py <= 6) return shade(white, 0.92);
+      if (py === 7) return redD;
+    } else if (py === 15) return wood;
+    return shade(red, 0.9 + c.h(px, py) * 0.15);
+  };
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    let px = x, py = y;
+    if (r === 2) { px = 15 - x; py = 15 - y; } else if (r === 1) { px = y; py = 15 - x; } else if (r === 3) { px = 15 - y; py = x; }
+    c.set(x, y, pattern(px, py));
   }
 }
 
@@ -391,6 +413,13 @@ const GEN = {
     for (let x = 2; x < 14; x++) { c.set(x, 2, d); c.set(x, 10, d); }
     c.set(12, 14, hex('#8a8a8a')); c.set(13, 14, hex('#5a5a5a'));
   },
+  bed_side: (c) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
+    const red = hex('#a02626'), wood = hex('#7a5530');
+    for (let y = 7; y < 12; y++) for (let x = 0; x < 16; x++) c.set(x, y, shade(red, y === 7 ? 1.1 : 0.9 + c.h(x, y) * 0.12));
+    for (let x = 0; x < 16; x++) c.set(x, 12, wood);
+    for (let y = 13; y < 16; y++) for (const x of [0, 1, 2, 13, 14, 15]) c.set(x, y, shade(wood, 0.85));
+  },
   ladder: (c) => {
     for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
     const w = hex('#8a6438');
@@ -475,6 +504,7 @@ function destroyStage(c, stage) {
 function paint(c, name) {
   if (name.startsWith('destroy_')) destroyStage(c, +name.slice(8));
   else if (name.startsWith('wheat_')) wheat(c, +name.slice(6));
+  else if (name.startsWith('bed_head_top_') || name.startsWith('bed_foot_top_')) bedTop(c, name.startsWith('bed_head'), +name.slice(-1));
   else if (GEN[name]) GEN[name](c);
   else c.noiseFill(P.stone);
 }

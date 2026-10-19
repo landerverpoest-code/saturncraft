@@ -79,10 +79,11 @@ export async function saveGame(game) {
     player: {
       x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, health: p.health,
       food: p.hunger.food, saturation: p.hunger.saturation, exhaustion: p.hunger.exhaustion,
-      air: p.air, spawn: p.spawn, slots: p.inventory.slots, selected: p.inventory.selected,
+      air: p.air, spawn: p.spawn, bed: p.bed || null, slots: p.inventory.slots, selected: p.inventory.selected,
     },
     furnaces: [...game.furnaces.values()],
     chests: [...game.chests.values()],
+    worldSpawn: game.worldSpawn,
     generated: [...game.spawner.generated],
     savedMobs, liveMobs, chunks,
   };
@@ -131,7 +132,7 @@ export function applyPlayerSave(game, d) {
   p.setPosition(d.x, d.y, d.z);
   p.yaw = d.yaw; p.pitch = d.pitch; p.health = d.health;
   p.hunger.food = d.food; p.hunger.saturation = d.saturation; p.hunger.exhaustion = d.exhaustion;
-  p.air = d.air; p.spawn = d.spawn;
+  p.air = d.air; p.spawn = d.spawn; p.bed = d.bed || null;
   p.inventory.slots = d.slots.map((s) => (s ? { ...s } : null));
   p.inventory.selected = d.selected;
   p.inventory.changed();

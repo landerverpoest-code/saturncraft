@@ -48,18 +48,28 @@ export function torchBox(meta) {
   return [cx - 0.16, 0.2, cz - 0.16, cx + 0.16, 0.85, cz + 0.16];
 }
 
+export const BED_HEAD = 8;
+export const BED_BOX = [0, 0, 0, 1, 9 / 16, 1];
+
+/** Blocks whose collision is not a full cube. */
+export const SHAPED_COLLISION = new Uint8Array(256);
+SHAPED_COLLISION[B.DOOR] = 1;
+SHAPED_COLLISION[B.BED] = 1;
+
 /**
  * Collision boxes of a solid non-cube block, or null for an ordinary full
  * cube. (Ladders and torches are not solid and never collide.)
  */
 export function collisionBoxes(id, meta) {
   if (id === B.DOOR) return [doorBox(meta)];
+  if (id === B.BED) return [BED_BOX];
   return null;
 }
 
 /** Selection (outline / raycast) box, or null for a full cube. */
 export function selectionBox(id, meta) {
   if (id === B.DOOR) return doorBox(meta);
+  if (id === B.BED) return BED_BOX;
   if (id === B.LADDER) return ladderBox(meta);
   if (id === B.TORCH) return torchBox(meta);
   return null;

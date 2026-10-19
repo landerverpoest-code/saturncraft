@@ -13,7 +13,9 @@ import { Particles } from './render/particles.js';
 import { HeldItem, BlockOverlay } from './render/overlays.js';
 import { Sky } from './sky/sky.js';
 import { Clouds } from './sky/clouds.js';
-import { effectiveSkyLight } from './sky/suns.js';
+import { effectiveSkyLight, skyState } from './sky/suns.js';
+import { SIDE_DIRS, BED_HEAD } from './world/shapes.js';
+import { CATEGORY } from './mobs/mobTypes.js';
 import { Player } from './player/player.js';
 import { Interaction } from './player/interaction.js';
 import { SMELTING, SMELT_TIME } from './player/crafting.js';
@@ -154,6 +156,8 @@ export class Game {
       this.player.spawn = { x: px + 0.5, y, z: pz + 0.5 };
       this.player.setPosition(px + 0.5, y, pz + 0.5);
     }
+    // the world spawn (used again when the home bed is gone)
+    this.worldSpawn = (this.saveData && this.saveData.worldSpawn) || { ...this.player.spawn };
 
     this.running = true;
     this.lastTime = performance.now();
@@ -198,8 +202,79 @@ export class Game {
   }
 
   respawn() {
+    const p = this.player;
+    // the bed must still be there (when its chunk is loaded we can check)
+    if (p.bed && this.world.isLoaded(p.bed.x, p.bed.z) && this.world.getBlock(p.bed.x, p.bed.y, p.bed.z) !== B.BED) {
+      p.bed = null;
+      p.spawn = { ...this.worldSpawn };
+      this.hud.toast('You have no home bed, or it was obstructed');
+    }
     this.player.respawn();
     this.input.lock();
+  }
+
+  // ---- beds & sleeping -------------------------------------------------------
+  /** Right-click on a bed: set the respawn point and sleep if it is night and safe. */
+  trySleep(x, y, z) {
+    const w = this.world, p = this.player;
+    const m = w.getMeta(x, y, z);
+    const [dx, , dz] = SIDE_DIRS[m & 3];
+    const head = m & BED_HEAD ? [x, z] : [x + dx, z + dz];
+    if (skyState(this.time).aboveCount > 0) { this.hud.toast('You can only sleep at night (when all three suns are down)'); return; }
+    if (Math.hypot(p.x - (head[0] + 0.5), p.z - (head[1] + 0.5)) > 3.5) { this.hud.toast('You may not rest now; the bed is too far away'); return; }
+    for (const e of this.entities.mobs) {
+      if (e.dead || e.def.category !== CATEGORY.MONSTER) continue;
+      if (Math.abs(e.x - (head[0] + 0.5)) < 8 && Math.abs(e.z - (head[1] + 0.5)) < 8 && Math.abs(e.y - y) < 5) { this.hud.toast('You may not rest now; there are monsters nearby'); return; }
+    }
+    p.bed = { x: head[0], y, z: head[1] };
+    const stand = this.standNextTo(head[0], y, head[1]) || { x: head[0] + 0.5, y: y + 0.5625, z: head[1] + 0.5 };
+    p.spawn = stand;
+    this.hud.toast('Respawn point set');
+    // lie down on the bed
+    p.sleeping = { x: head[0], y, z: head[1], ticks: 0 };
+    p.setPosition(head[0] + 0.5, y + 0.5625, head[1] + 0.5);
+    p.yaw = Math.atan2(dx, dz); // feet towards the foot of the bed
+    p.pitch = 0;
+    this.input.unlock();
+    this.ui.showSleep();
+  }
+
+  /** A free spot (feet position) next to a block, or null. */
+  standNextTo(x, y, z) {
+    const w = this.world;
+    for (const dy of [0, -1, 1]) {
+      for (const [dx, dz] of [[0, 1], [1, 0], [0, -1], [-1, 0], [1, 1], [-1, 1], [1, -1], [-1, -1]]) {
+        const cx = x + dx, cy = y + dy, cz = z + dz;
+        const free = (yy) => { const id = w.getBlock(cx, yy, cz); return !BLOCKS[id].solid && !BLOCKS[id].fluid; };
+        if (BLOCKS[w.getBlock(cx, cy - 1, cz)].solid && free(cy) && free(cy + 1)) return { x: cx + 0.5, y: cy, z: cz + 0.5 };
+      }
+    }
+    return null;
+  }
+
+  /** Get up: skip to sunrise if the player slept long enough. */
+  wakeUp(skipNight) {
+    const p = this.player, s = p.sleeping;
+    if (!s) return;
+    p.sleeping = null;
+    if (skipNight) {
+      let t = this.time;
+      while (skyState(t).aboveCount === 0 && t < this.time + 200000) t += 20;
+      this.time = t;
+    }
+    const stand = this.world.getBlock(s.x, s.y, s.z) === B.BED ? this.standNextTo(s.x, s.y, s.z) : null;
+    if (stand) p.setPosition(stand.x, stand.y, stand.z);
+    else p.setPosition(p.x, s.y + 1, p.z);
+    if (this.ui.open === 'sleep') { this.ui.open = null; this.ui.clear(); this.onUIClosed(); }
+  }
+
+  tickSleep() {
+    const p = this.player, s = p.sleeping;
+    if (!s) return;
+    if (p.dead || this.world.getBlock(s.x, s.y, s.z) !== B.BED || p.hurtTime > 0) { this.wakeUp(false); return; }
+    p.setPosition(s.x + 0.5, s.y + 0.5625, s.z + 0.5);
+    p.body.vx = p.body.vy = p.body.vz = 0;
+    if (++s.ticks >= 100) this.wakeUp(true); // 5 seconds of sleep skips the night
   }
 
   getFurnace(x, y, z) {
@@ -279,7 +354,8 @@ export class Game {
     runRandomTicks(this.world, Math.floor(this.player.x / 16), Math.floor(this.player.z / 16), Math.min(this.chunks.renderDistance, 6));
     // Hold the player in place until the terrain under them has loaded (spawn, respawn, teleports)
     const p = this.player;
-    if (this.chunks.isAreaReady(p.x, p.z, 0)) this.player.tick(this.world, mv);
+    if (p.sleeping) this.tickSleep();
+    if (this.chunks.isAreaReady(p.x, p.z, 0)) this.player.tick(this.world, p.sleeping ? { forward: 0, strafe: 0, jump: false, sneak: false, sprint: false } : mv);
     else p.prev = { x: p.x, y: p.y, z: p.z };
     if (!blocking) {
       this.interaction.tick({
@@ -367,7 +443,7 @@ export class Game {
     const x = p.prev.x + (b.x - p.prev.x) * alpha;
     const y = p.prev.y + (b.y - p.prev.y) * alpha;
     const z = p.prev.z + (b.z - p.prev.z) * alpha;
-    const eye = p.eyeHeight;
+    const eye = p.sleeping ? 0.3 : p.eyeHeight;
     // view bobbing while walking
     const speed = Math.hypot(b.vx, b.vz);
     const bob = b.onGround ? Math.sin(sec * 9) * Math.min(0.06, speed * 0.25) : 0;

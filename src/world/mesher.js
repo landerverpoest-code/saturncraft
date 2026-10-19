@@ -3,7 +3,7 @@
 // neighbours) so it can run inside a worker without access to the world.
 import { B, OPAQUE, SHAPES, LAYERS, SHAPE, LAYER } from './blocks.js';
 import { FACE_TILE, FRONT_TILE, texId } from './textures.js';
-import { doorBox, ladderBox, SIDE_DIRS, DOOR_UPPER } from './shapes.js';
+import { doorBox, ladderBox, SIDE_DIRS, DOOR_UPPER, BED_HEAD, BED_BOX } from './shapes.js';
 
 export const PAD = 18;
 export const PAD_VOL = PAD * PAD * PAD;
@@ -40,6 +40,8 @@ const FURNACE_FRONT_DIR = [5, 0, 4, 1];
 const WHEAT_TILES = [0, 1, 2, 3, 4, 5, 6, 7].map((i) => texId('wheat_' + i));
 const FARMLAND_MOIST = texId('farmland_moist');
 const DOOR_LOWER = texId('door_lower'), DOOR_UPPER_TILE = texId('door_upper');
+const BED_TOPS = [0, 1, 2, 3].map((r) => [texId('bed_foot_top_' + r), texId('bed_head_top_' + r)]);
+const BED_SIDE = texId('bed_side'), BED_BOTTOM = texId('oak_planks');
 
 class Buf {
   constructor(cap = 16384) { this.alloc(cap); this.n = 0; this.ni = 0; this.yBase = 0; }
@@ -203,6 +205,9 @@ export function meshSection(sec) {
           buf.pos[v * 3] -= dx * h * 0.41; buf.pos[v * 3 + 2] -= dz * h * 0.41;
         }
       }
+    } else if (shape === SHAPE.BED) {
+      const l = light[i], m = meta[i], top = BED_TOPS[m & 3][m & BED_HEAD ? 1 : 0];
+      emitBox(buf, x, y, z, ...BED_BOX, [BED_SIDE, BED_SIDE, top, BED_BOTTOM, BED_SIDE, BED_SIDE], (l >> 4) * 17, (l & 15) * 17, 'box');
     } else if (shape === SHAPE.DOOR) {
       const l = light[i], b = doorBox(meta[i]);
       emitBox(buf, x, y, z, b[0], b[1], b[2], b[3], b[4], b[5], meta[i] & DOOR_UPPER ? DOOR_UPPER_TILE : DOOR_LOWER, (l >> 4) * 17, (l & 15) * 17, 'box');
@@ -262,7 +267,7 @@ function emitBox(buf, x, y, z, x0, y0, z0, x1, y1, z1, tile, sky, blk, uvMode = 
       else { u = p[0]; v = 1 - p[1]; }
       if (d === 2 && uvMode === 'torch') { u = 7 / 16 + s * 2 / 16; v = 6 / 16 + t * 2 / 16; }
       else if ((d === 2 || d === 3) && uvMode === 'box') { u = p[0]; v = p[2]; }
-      buf.vert(x + p[0], y + p[1], z + p[2], f.n[0], f.n[1], f.n[2], u, v, 255, 255, 255, sky, blk, 0, tile);
+      buf.vert(x + p[0], y + p[1], z + p[2], f.n[0], f.n[1], f.n[2], u, v, 255, 255, 255, sky, blk, 0, typeof tile === 'number' ? tile : tile[d]);
     }
     buf.quad(false);
   }

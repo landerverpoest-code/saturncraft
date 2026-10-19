@@ -6,7 +6,7 @@ import { breakProgressPerTick, blockDrops } from '../world/mining.js';
 import { PHYS } from '../physics/constants.js';
 import { EXHAUSTION } from './survival.js';
 import { lightAt } from '../entities/entities.js';
-import { sideOf, DOOR_OPEN, DOOR_UPPER } from '../world/shapes.js';
+import { sideOf, SIDE_DIRS, DOOR_OPEN, DOOR_UPPER, BED_HEAD } from '../world/shapes.js';
 
 /** Brightness for block particles: local light, dimmed with the combined sunlight (as the held item). */
 function particleLight(g, x, y, z) {
@@ -202,6 +202,7 @@ export class Interaction {
     if (!p.sneaking || !st) {
       if (t.id === B.WORKBENCH) { g.ui.openWorkbench(); return true; }
       if (t.id === B.FURNACE || t.id === B.FURNACE_LIT) { g.ui.openFurnace(t.x, t.y, t.z); return true; }
+      if (t.id === B.BED) { g.trySleep(t.x, t.y, t.z); return true; }
       if (t.id === B.DOOR) {
         // open/close both halves together
         const m = w.getMeta(t.x, t.y, t.z), by = m & DOOR_UPPER ? t.y - 1 : t.y;
@@ -222,6 +223,7 @@ export class Interaction {
       return true;
     }
     if (d.door) return this.placeDoor(t);
+    if (d.bed) return this.placeBed(t);
     let placeId = isBlockItem(st.id) ? st.id : d.places;
     if (placeId === undefined) return false;
     // Place location: replace soft blocks, else the adjacent cell
@@ -271,6 +273,29 @@ export class Interaction {
     w.setBlockUrgent(px, py + 1, pz, B.DOOR, facing | DOOR_UPPER, false);
     w.setBlockUrgent(px, py, pz, B.DOOR, facing);
     g.audio.play('place_wood', [px + 0.5, py + 0.5, pz + 0.5]);
+    p.inventory.removeFromSlot(p.inventory.selected, 1);
+    this.swing = SWING_TICKS;
+    return true;
+  }
+
+  /** Beds take two blocks: the foot where clicked and the head further along the player's view. */
+  placeBed(t) {
+    const g = this.game, w = g.world, p = g.player;
+    let px = t.x, py = t.y, pz = t.z;
+    if (!(BLOCKS[t.id].replaceable && !isFluid(t.id))) { px += t.face[0]; py += t.face[1]; pz += t.face[2]; }
+    const fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw);
+    const side = Math.abs(fx) > Math.abs(fz) ? (fx > 0 ? 1 : 3) : (fz > 0 ? 2 : 0);
+    const [dx, , dz] = SIDE_DIRS[side];
+    const cells = [[px, pz], [px + dx, pz + dz]];
+    for (const [cx, cz] of cells) {
+      const cur = w.getBlock(cx, py, cz);
+      if (cur && !BLOCKS[cur].replaceable) return false;
+      if (!SOLID[w.getBlock(cx, py - 1, cz)]) return false;
+      if (p.intersectsBlock(cx, py, cz) || g.entities.blockOccupied(cx, py, cz)) return false;
+    }
+    w.setBlockUrgent(px + dx, py, pz + dz, B.BED, side | BED_HEAD, false);
+    w.setBlockUrgent(px, py, pz, B.BED, side);
+    g.audio.play('place_wool', [px + 0.5, py + 0.5, pz + 0.5]);
     p.inventory.removeFromSlot(p.inventory.selected, 1);
     this.swing = SWING_TICKS;
     return true;
