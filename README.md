@@ -51,10 +51,14 @@ in the console.
 | Look | Mouse |
 | Mine / attack | Left mouse button (hold to mine) |
 | Place block / use item / eat / draw bow | Right mouse button (hold to eat or draw) |
-| Open workbench / furnace | Right-click the block (sneak to place against it instead) |
+| Open workbench / furnace / chest, open doors, sleep in a bed | Right-click the block (sneak to place against it instead) |
+| Till soil | Right-click grass or dirt with a hoe |
+| Put on armour | Right-click with it, or `Shift`+click it in the inventory |
 | Pick block into hand | Middle mouse button |
 | Select hotbar slot | `1`–`9` or mouse wheel |
-| Inventory (2×2 crafting) | `E` |
+| Inventory (2×2 crafting); item catalogue in creative mode | `E` |
+| Chat / commands (`/help` lists them) | `T`, or `/` to start a command |
+| Fly (creative mode) | Double-tap `Space`; `Space` up, `Shift` down |
 | Drop item (stack with `Ctrl`) | `Q` |
 | Pause menu / close screen | `Esc` |
 | Debug overlay (fps, position, light, suns) | `F3` |
@@ -63,6 +67,11 @@ in the console.
 Inventory screens: left-click picks up / places a stack, right-click splits a
 stack or places one item, `Shift`+click moves a stack between sections,
 `Shift`+click on a crafting result crafts as many as possible.
+
+Commands: `/gamemode survival|creative` (`/gm 0|1`), `/time set day|night|noon|midnight|<ticks>`,
+`/time add <ticks>`, `/weather clear|rain`, `/tp x y z` (`~` = relative), `/give <item> [count]`
+(e.g. `/give diamond_sword`, `/give oak planks 64`), `/summon <mob>` (Saturncraft names or the role,
+e.g. `zombie`), `/xp <n> [levels]`, `/kill`, `/heal`, `/clear`, `/spawnpoint`, `/seed`.
 
 ## Project layout
 
@@ -274,6 +283,8 @@ poison from eyes) follow the documented table.
 * Death screen, item drop on death, respawn; pause menu with settings
 * Procedural sound effects with stereo panning; world saving
 * Weather: rain spells (12 000–24 000 ticks) after clear spells (12 000–180 000), fading in/out at 0.01 per tick; rain or snow by biome (none in deserts), stopped by roofs; overcast sky, weaker sun light, grey clouds, splashes and rain sound; rain puts out burning players and mobs and undead do not catch fire in it
+* Creative mode: flight, instant breaking without drops, no damage (except the void) or hunger, unlimited blocks, item catalogue with search; hostile mobs ignore creative players
+* Chat with commands (see Controls)
 * Blocky cloud layer (12×12 cells, 4 thick, y=192, drifting 0.03 blocks/tick), coloured by the suns
 
 **Not yet implemented**
@@ -284,7 +295,7 @@ poison from eyes) follow the documented table.
 * Double chests and other storage containers, slabs, stairs, fences, trapdoors
 * Fire blocks and fire spread, thunderstorms and lightning, snow layers
 * Slimes, witches, drowned, husks/strays as separate variants, baby mobs, mob equipment
-* Difficulty levels (fixed at Normal), creative mode, commands, multiplayer
+* Difficulty levels (fixed at Normal), spectator/adventure modes, multiplayer
 * Sprint-swimming/crawling poses, boats, minecarts, elytra
 
 ## Deliberate deviations

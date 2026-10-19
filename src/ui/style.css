@@ -88,3 +88,13 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 #xpfill { height: 100%; width: 0; background: linear-gradient(#b6f05a, #5fb81e); border-radius: 1px; }
 #xplevel { position: absolute; left: 50%; top: -13px; transform: translateX(-50%); color: #8cf43a; font: bold 14px monospace; text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000; }
 .armor-slot:empty::after { content: ''; position: absolute; inset: 6px; opacity: .22; background: #000; border-radius: 3px; }
+#chat { position: fixed; left: 8px; bottom: 120px; width: min(560px, calc(100vw - 16px)); z-index: 30; pointer-events: none; font: 14px/1.35 system-ui, sans-serif; }
+#chat .chat-log { display: flex; flex-direction: column; max-height: 40vh; overflow: hidden; justify-content: flex-end; }
+#chat .chat-line { color: #fff; background: rgba(0,0,0,.45); padding: 2px 6px; text-shadow: 1px 1px 0 #000; transition: opacity .6s; white-space: pre-wrap; }
+#chat .chat-line.faded { opacity: 0; }
+#chat.open .chat-line.faded { opacity: 1; }
+#chat .chat-input { pointer-events: auto; width: 100%; margin-top: 4px; padding: 6px 8px; background: rgba(0,0,0,.6); color: #fff; border: 1px solid rgba(255,255,255,.35); border-radius: 3px; font: inherit; outline: none; box-sizing: border-box; }
+#chat .chat-input.hidden { display: none; }
+.creative-grid { max-height: calc(var(--slot) * 5 + 30px); overflow-y: auto; margin-bottom: 10px; padding-right: 4px; }
+.creative-search { width: 100%; box-sizing: border-box; padding: 5px 8px; margin-bottom: 8px; border-radius: 3px; border: 1px solid rgba(0,0,0,.3); font: inherit; }
+#hud.creative #health, #hud.creative #food, #hud.creative #armor, #hud.creative #xpbar { visibility: hidden; }

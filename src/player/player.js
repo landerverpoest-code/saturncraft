@@ -31,6 +31,8 @@ export class Player {
     this.listeners = { hurt: [], death: [] };
     this.stats = { blocksMined: 0, kills: 0 };
     this.xp = newXp();
+    this.gamemode = 'survival';  // or 'creative'
+    this.flying = false;
     this.xpDelay = 0;           // ticks until the next orb can be absorbed
   }
 
@@ -45,6 +47,15 @@ export class Player {
     this.body.fallDistance = 0;
   }
 
+  get creative() { return this.gamemode === 'creative'; }
+
+  setGamemode(mode) {
+    this.gamemode = mode;
+    this.inventory.creative = mode === 'creative';
+    if (mode !== 'creative') this.flying = false;
+    this.fireTicks = 0;
+  }
+
   heal(n) { if (!this.dead) this.health = Math.min(MAX_HEALTH, this.health + n); }
 
   /**
@@ -53,6 +64,7 @@ export class Player {
    */
   hurt(amount, source = 'generic', attacker = null) {
     if (this.dead || amount <= 0) return false;
+    if (this.creative && source !== 'void' && source !== 'kill') return false; // creative players only die in the void
     if (this.invulnerable > 10) {
       if (amount <= this.lastHurt) return false;
       const extra = amount - this.lastHurt;
@@ -121,7 +133,9 @@ export class Player {
     this.attackTicks++;
 
     // Sneaking changes the hitbox height (only if there is room to stand)
-    const wantSneak = !!input.sneak;
+    if (this.flyGrace > 0) this.flyGrace--;
+    if (this.flying && ((b.onGround && !this.flyGrace) || !this.creative)) this.flying = false; // landing ends flight
+    const wantSneak = !!input.sneak && !this.flying; // sneak descends while flying
     if (!wantSneak && this.sneaking) {
       if (!world.boxCollides(b.x - 0.3, b.y, b.z - 0.3, b.x + 0.3, b.y + PHYS.PLAYER_HEIGHT, b.z + 0.3)) this.sneaking = false;
     } else this.sneaking = wantSneak;
@@ -130,7 +144,7 @@ export class Player {
     b.updateFluidState(world, this.eyeHeight);
 
     // Sprint rules
-    const canSprint = this.hunger.food >= SPRINT_MIN_FOOD && !this.sneaking && input.forward > 0 && !this.effects.blindness;
+    const canSprint = (this.creative || this.hunger.food >= SPRINT_MIN_FOOD) && !this.sneaking && input.forward > 0 && !this.effects.blindness;
     if (input.sprint && canSprint) this.sprinting = true;
     if (!canSprint || (b.horizontalCollision && !b.inWater)) this.sprinting = false;
 
@@ -140,12 +154,14 @@ export class Player {
       forward: input.forward, strafe: input.strafe, yaw: this.yaw,
       jump: input.jump && (this.jumpCooldown === 0 || b.inWater || b.inLava),
       sprint: this.sprinting, sneak: this.sneaking,
+      flying: this.flying, descend: this.flying && !!input.sneak,
     });
     if (this.jumpCooldown > 0) this.jumpCooldown--;
     if (b.jumped) this.jumpCooldown = 10;
     if (!input.jump) this.jumpCooldown = 0;
 
     // Exhaustion from movement
+    if (this.creative) this.hunger.exhaustion = 0;
     const dist = Math.hypot(b.x - x0, b.z - z0);
     if (b.inWater) this.hunger.addExhaustion(EXHAUSTION.SWIM_PER_M * Math.hypot(dist, b.y - y0));
     else if (this.sprinting && wasOnGround) this.hunger.addExhaustion(EXHAUSTION.SPRINT_PER_M * dist);
@@ -187,7 +203,7 @@ export class Player {
     if (this.effects.poison && this.effects.poison % 25 === 0 && this.health > 1) this.hurt(1, 'poison');
     for (const k of Object.keys(this.effects)) if (--this.effects[k] <= 0) delete this.effects[k];
 
-    this.hunger.tick(this);
+    if (!this.creative) this.hunger.tick(this);
   }
 
   touches(world, bx, id) {

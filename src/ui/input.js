@@ -15,12 +15,18 @@ export class Input {
     this.sensitivity = 0.0022;
     this.locked = false;
     this.lastForwardTap = 0;
+    this.lastJumpTap = 0;
+    this.flyToggle = false;     // double-tapped jump (creative flight)
     this.doubleTapSprint = false;
     this.onKey = null;
 
     window.addEventListener('keydown', (e) => {
       if (e.repeat) { if (this.locked) e.preventDefault(); return; }
-      if (['Space', 'F1', 'F3', 'F5', 'Tab'].includes(e.code) || (e.ctrlKey && e.code === 'KeyW')) e.preventDefault();
+      if (['Space', 'F1', 'F3', 'F5', 'Tab', 'Slash'].includes(e.code) || (e.ctrlKey && e.code === 'KeyW')) e.preventDefault();
+      if (KEYS.jump.includes(e.code)) {
+        const now = performance.now();
+        if (now - this.lastJumpTap < 280) { this.flyToggle = true; this.lastJumpTap = 0; } else this.lastJumpTap = now;
+      }
       if (KEYS.forward.includes(e.code)) {
         const now = performance.now();
         if (now - this.lastForwardTap < 280) this.doubleTapSprint = true;

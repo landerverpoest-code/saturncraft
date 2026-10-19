@@ -143,6 +143,7 @@ export class HUD {
       const v = showAir && i < bubbles ? 'visible' : 'hidden';
       if (img.style.visibility !== v) img.style.visibility = v;
     });
+    this.root.classList.toggle('creative', p.creative);
     // armour (2 points per icon, shown only when wearing some)
     const { points } = armorTotals(inv.armor);
     [...this.armorEl.children].forEach((img, i) => {

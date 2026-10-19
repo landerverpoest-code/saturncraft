@@ -281,7 +281,7 @@ export class Mob {
 
   /** Acquire the player as target if in range and visible. */
   acquire(g, p, pdist, range) {
-    if (p.dead) { this.target = null; return false; }
+    if (p.dead || p.creative) { this.target = null; return false; }
     if (this.target === 'player') {
       if (pdist > range * 1.5 || p.dead) this.target = null;
       return !!this.target;

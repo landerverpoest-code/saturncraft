@@ -171,6 +171,18 @@ export class Body {
       return;
     }
 
+    if (input.flying) {
+      // creative flight: 0.05 (sprint 0.1) acceleration with air friction, +-0.15 vertical
+      // per tick damped by 0.6 (about 10.9 and 4.5 blocks/s at most)
+      if (input.jump) this.vy += 0.15;
+      if (input.descend) this.vy -= 0.15;
+      this.accelerate(fwd, str, yaw, input.sprint ? 0.1 : 0.05);
+      this.move(world, this.vx, this.vy, this.vz);
+      this.vy *= 0.6; this.vx *= PHYS.AIR_FRICTION; this.vz *= PHYS.AIR_FRICTION;
+      this.fallDistance = 0;
+      this.jumped = false;
+      return;
+    }
     if (input.jump && this.onGround && (input.jumpCooldownOk ?? true)) {
       this.vy = PHYS.JUMP_VELOCITY * (input.jumpFactor ?? 1);
       if (input.sprint) {

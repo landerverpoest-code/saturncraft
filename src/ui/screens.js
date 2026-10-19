@@ -2,6 +2,7 @@
 import { iconURL } from './icons.js';
 import { ITEMS, maxStack } from '../world/items.js';
 import { craft } from '../player/crafting.js';
+import { B } from '../world/blocks.js';
 
 function el(html) { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstChild; }
 
@@ -30,6 +31,7 @@ export class UI {
   close() {
     if (this.open === 'death') return;
     if (this.open === 'sleep') { this.game.wakeUp(false); return; }
+    if (this.open === 'chat') { this.game.chat.close(); this.open = null; this.game.onUIClosed(); return; }
     const g = this.game;
     // return crafting grid + cursor items
     const inv = g.player.inventory;
@@ -308,6 +310,49 @@ export class UI {
       }));
     });
     this.chest = c;
+  }
+
+  openChat(prefix = '') {
+    this.open = 'chat';
+    this.game.input.unlock();
+    this.game.chat.open(prefix);
+  }
+
+  /** Creative mode: every item, a search box and the hotbar. Click takes a full stack. */
+  openCreative() {
+    this.game.input.unlock();
+    const g = this.game, inv = g.player.inventory;
+    const hidden = new Set([B.AIR, B.WATER, B.LAVA, B.FURNACE_LIT, B.WHEAT, B.DOOR, B.BED]);
+    const all = ITEMS.filter((d) => d && d.id && !hidden.has(d.id));
+    this.showContainer('creative', 'Creative Inventory', (panel) => {
+      const search = el('<input class="creative-search" placeholder="Search items...">');
+      search.addEventListener('keydown', (e) => e.stopPropagation());
+      search.addEventListener('keyup', (e) => e.stopPropagation());
+      const grid = el('<div class="grid creative-grid" style="grid-template-columns:repeat(9,var(--slot))"></div>');
+      const fill = () => {
+        grid.innerHTML = '';
+        const q = search.value.trim().toLowerCase();
+        for (const d of all) {
+          if (q && !d.name.toLowerCase().includes(q)) continue;
+          grid.appendChild(this.makeSlot(() => ({ id: d.id, count: 1 }), () => {}, {
+            onClick: (e) => {
+              if (this.cursor) { this.cursor = null; return; } // clicking the catalogue deletes the held stack
+              const st = { id: d.id, count: e.button === 2 ? 1 : maxStack(d.id), damage: 0 };
+              if (e.shiftKey) { inv.add(st); return; }
+              this.cursor = st;
+            },
+          }));
+        }
+      };
+      search.addEventListener('input', () => { this.refreshers = this.refreshers.filter((r) => !r.catalog); fill(); this.refreshAll(); });
+      fill();
+      panel.appendChild(search);
+      panel.appendChild(grid);
+      const hot = el('<div class="grid" style="grid-template-columns:repeat(9,var(--slot))"></div>');
+      for (let i = 0; i < 9; i++) hot.appendChild(this.makeSlot(() => inv.slots[i], (v) => { inv.slots[i] = v; }));
+      panel.appendChild(hot);
+      setTimeout(() => search.focus(), 0);
+    });
   }
 
   /** Sleeping: the screen fades to black; "Leave Bed" (or Esc) gets up early. */

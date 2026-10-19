@@ -14,6 +14,7 @@ import { HeldItem, BlockOverlay } from './render/overlays.js';
 import { Sky } from './sky/sky.js';
 import { Clouds } from './sky/clouds.js';
 import { Weather, WeatherRenderer } from './sky/weather.js';
+import { Chat } from './ui/chat.js';
 import { effectiveSkyLight, skyState } from './sky/suns.js';
 import { SIDE_DIRS, BED_HEAD } from './world/shapes.js';
 import { CATEGORY } from './mobs/mobTypes.js';
@@ -84,6 +85,7 @@ export class Game {
     this.sky.setShadowsEnabled(s.shadows);
     this.clouds = new Clouds(this.scene, this.seed);
     this.weather = new Weather();
+    this.chat = this.chat || new Chat(this);
     this.weatherFx = new WeatherRenderer(this.scene);
     this.particles = new Particles(this.scene);
     this.player = new Player();
@@ -121,6 +123,14 @@ export class Game {
       this.player.yaw = Math.PI * 0.75;
     }
 
+    // the chat opens on the key press itself, so nothing typed right after T or / reaches the game
+    this.input.onKey = (e) => {
+      if (this.running && !this.ui.blocking && (e.code === 'KeyT' || e.code === 'Slash')) {
+        e.preventDefault();
+        this.input.down.clear(); this.input.pressed.clear();
+        this.ui.openChat(e.code === 'Slash' ? '/' : '');
+      }
+    };
     this.input.onLockChange = (locked) => {
       if (!locked && !this.ui.blocking && this.running) { this.ui.showPause(); }
     };
@@ -415,10 +425,11 @@ export class Game {
     if (inp.mouse.rightPressed) this.mouseLatch.right = true;
     if (inp.mouse.middlePressed) this.mouseLatch.middle = true;
 
-    if (this.ui.open === 'death') { inp.endFrame(); return; }
+    if (this.ui.open === 'death' || this.ui.open === 'chat') { inp.consumeMouse(); inp.endFrame(); return; }
+    if (inp.flyToggle) { inp.flyToggle = false; if (p.creative && !this.ui.blocking) { p.flying = !p.flying; p.flyGrace = 10; } }
     if (inp.wasPressed('inventory')) {
-      if (this.ui.open === 'inventory' || this.ui.open === 'workbench' || this.ui.open === 'furnace' || this.ui.open === 'chest') this.ui.close();
-      else if (!this.ui.blocking) { this.input.unlock(); this.ui.openInventory(); }
+      if (['inventory', 'workbench', 'furnace', 'chest', 'creative'].includes(this.ui.open)) this.ui.close();
+      else if (!this.ui.blocking) { this.input.unlock(); if (p.creative) this.ui.openCreative(); else this.ui.openInventory(); }
     }
     if (inp.wasPressed('pause') && this.ui.blocking) {
       if (this.ui.open === 'pause') { this.ui.open = null; this.ui.clear(); this.onUIClosed(); }

@@ -8,6 +8,7 @@ export class Inventory {
   constructor(size = 36) {
     this.slots = new Array(size).fill(null);
     this.armor = [null, null, null, null]; // helmet, chestplate, leggings, boots
+    this.creative = false;                 // creative: using items never consumes or wears them
     this.selected = 0;
     this.listeners = [];
   }
@@ -44,6 +45,7 @@ export class Inventory {
   removeFromSlot(i, n = 1) {
     const s = this.slots[i];
     if (!s) return null;
+    if (this.creative) return { id: s.id, count: Math.min(n, s.count), damage: s.damage };
     const taken = { id: s.id, count: Math.min(n, s.count), damage: s.damage };
     s.count -= taken.count;
     if (s.count <= 0) this.slots[i] = null;
@@ -54,6 +56,7 @@ export class Inventory {
   /** Damage the tool in the selected slot; returns true if it broke. */
   damageSelected(amount = 1) {
     const s = this.selectedStack;
+    if (this.creative) return false;
     if (!s) return false;
     const d = ITEMS[s.id];
     if (!d || !d.durability) return false;

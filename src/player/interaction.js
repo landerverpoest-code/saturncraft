@@ -99,6 +99,14 @@ export class Interaction {
   mine() {
     const g = this.game, p = g.player, t = this.target;
     if (this.breakDelay > 0) return;
+    if (p.creative) {
+      // creative: blocks break at once (bedrock too), 5 ticks apart, without drops
+      this.swing = SWING_TICKS;
+      this.breakBlock(t.x, t.y, t.z, t.id, toolOf(null));
+      this.breaking = null;
+      this.breakDelay = BREAK_DELAY;
+      return;
+    }
     if (!this.breaking || this.breaking.x !== t.x || this.breaking.y !== t.y || this.breaking.z !== t.z || this.breaking.id !== t.id) {
       this.breaking = { x: t.x, y: t.y, z: t.z, id: t.id, progress: 0 };
     }
@@ -125,9 +133,9 @@ export class Interaction {
     if (g.onBlockBroken) g.onBlockBroken(x, y, z, id, meta);
     g.audio.play('break_' + BLOCKS[id].sound, [x + 0.5, y + 0.5, z + 0.5]);
     g.particles && g.particles.blockBreak(x, y, z, id, particleLight(g, x + 0.5, y + 0.5, z + 0.5));
-    const xp = ORE_XP[id];
+    const xp = p.creative ? null : ORE_XP[id];
     if (xp && canHarvest(id, tool)) g.entities.spawnXp(x + 0.5, y + 0.5, z + 0.5, xp[0] + Math.floor(Math.random() * (xp[1] - xp[0] + 1)));
-    for (const drop of blockDrops(id, tool, Math.random, meta)) g.entities.spawnItem(x + 0.5, y + 0.3, z + 0.5, drop);
+    if (!p.creative) for (const drop of blockDrops(id, tool, Math.random, meta)) g.entities.spawnItem(x + 0.5, y + 0.3, z + 0.5, drop);
     // Ice melts into water when broken above a solid block
     if (id === B.ICE && SOLID[g.world.getBlock(x, y - 1, z)]) {
       g.world.setBlockUrgent(x, y, z, B.WATER, 0);
@@ -321,8 +329,17 @@ export class Interaction {
 
   pickBlock(id) {
     const inv = this.game.player.inventory;
-    const want = BLOCKS[id] && typeof BLOCKS[id].drops === 'number' && !isBlockItem(id) ? BLOCKS[id].drops : id;
+    const asItem = { [B.DOOR]: I.OAK_DOOR, [B.BED]: I.BED, [B.WHEAT]: I.WHEAT_SEEDS, [B.FURNACE_LIT]: B.FURNACE, [B.FARMLAND]: B.DIRT };
+    const want = asItem[id] ?? id;
     for (let i = 0; i < 9; i++) if (inv.slots[i] && inv.slots[i].id === want) { inv.selected = i; return; }
+    if (this.game.player.creative && ITEMS[want]) {
+      // creative: put the block in an empty hotbar slot (or the selected one)
+      let slot = inv.selected;
+      if (inv.slots[slot]) for (let i = 0; i < 9; i++) if (!inv.slots[i]) { slot = i; break; }
+      inv.slots[slot] = { id: want, count: 1, damage: 0 };
+      inv.selected = slot;
+      inv.changed();
+    }
   }
 }
 
