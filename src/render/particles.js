@@ -4,6 +4,7 @@ import { texturePixels } from '../world/textures.js';
 import { BLOCKS } from '../world/blocks.js';
 
 const MAX = 2000;
+const lin = (c) => Math.pow(c / 255, 2.2); // texture colours are sRGB
 
 export class Particles {
   constructor(scene) {
@@ -30,7 +31,7 @@ export class Particles {
     this.life[i] = life; this.grav[i] = grav;
   }
 
-  blockBreak(x, y, z, id) {
+  blockBreak(x, y, z, id, light = 1) {
     const d = BLOCKS[id];
     if (!d || !d.tex) return;
     const px = texturePixels(d.tex.side);
@@ -39,7 +40,24 @@ export class Particles {
       if (px[pi + 3] < 100) continue;
       this.emit(x + Math.random(), y + Math.random(), z + Math.random(),
         (Math.random() - 0.5) * 0.15, Math.random() * 0.15, (Math.random() - 0.5) * 0.15,
-        px[pi] / 255, px[pi + 1] / 255, px[pi + 2] / 255, 15 + Math.random() * 15);
+        lin(px[pi]) * light, lin(px[pi + 1]) * light, lin(px[pi + 2]) * light, 15 + Math.random() * 15);
+    }
+  }
+
+  /** Small chips flying off the face of a block that is being mined. */
+  blockHit(x, y, z, id, face, light = 1) {
+    const d = BLOCKS[id];
+    if (!d || !d.tex) return;
+    const px = texturePixels(d.tex.side);
+    for (let k = 0; k < 3; k++) {
+      const pi = Math.floor(Math.random() * 256) * 4;
+      if (px[pi + 3] < 100) continue;
+      // a random point on the hit face, nudged just outside it
+      const p = [x + Math.random(), y + Math.random(), z + Math.random()];
+      for (let a = 0; a < 3; a++) if (face[a]) p[a] = (a === 0 ? x : a === 1 ? y : z) + (face[a] > 0 ? 1.05 : -0.05);
+      this.emit(p[0], p[1], p[2],
+        face[0] * 0.05 + (Math.random() - 0.5) * 0.06, face[1] * 0.05 + Math.random() * 0.06, face[2] * 0.05 + (Math.random() - 0.5) * 0.06,
+        lin(px[pi]) * light, lin(px[pi + 1]) * light, lin(px[pi + 2]) * light, 8 + Math.random() * 8);
     }
   }
 

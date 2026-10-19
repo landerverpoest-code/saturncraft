@@ -115,7 +115,9 @@ tests/                     vitest suites (95 tests)
   near y = −59, iron has its mountain band, beryl only in mountains.
 * **Blocks** break with vanilla hardness, tool multipliers, harvest tiers,
   the ×5 penalties for mining in water or while airborne, and the 5-tick delay
-  between breaks. Sand and gravel fall; plants, torches and cacti pop off when
+  between breaks. While mining, ten crack stages spread over the block
+  (multiplied into its texture, so they follow its lighting), chips fly off
+  the hit face and the arm chops continuously. Sand and gravel fall; plants, torches and cacti pop off when
   unsupported. Water spreads 7 blocks every 5 ticks, lava 3 blocks every 30
   ticks, with downhill seeking, infinite sources and lava/water hardening
   (obsidian / cobblestone / stone).

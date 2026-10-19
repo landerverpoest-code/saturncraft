@@ -5,8 +5,15 @@ import { ITEMS, I, toolOf, isBlockItem } from '../world/items.js';
 import { breakProgressPerTick, blockDrops } from '../world/mining.js';
 import { PHYS } from '../physics/constants.js';
 import { EXHAUSTION } from './survival.js';
+import { lightAt } from '../entities/entities.js';
+
+/** Brightness for block particles: local light, dimmed with the combined sunlight (as the held item). */
+function particleLight(g, x, y, z) {
+  return lightAt(g, x, y, z) * (0.4 + 0.6 * Math.min(1, g.sky.state.combined + 0.25));
+}
 
 export const EAT_TICKS = 32;
+export const SWING_TICKS = 6;
 const BREAK_DELAY = 5;
 const USE_DELAY = 4;
 
@@ -57,7 +64,7 @@ export class Interaction {
     } else {
       this.breaking = null;
     }
-    if (input.leftPressed && !this.mobTarget && !this.target) { this.swing = 6; p.attackTicks = 0; }
+    if (input.leftPressed && !this.mobTarget && !this.target) { this.swing = SWING_TICKS; p.attackTicks = 0; }
 
     // Use
     const st = p.inventory.selectedStack;
@@ -91,8 +98,12 @@ export class Interaction {
     const tool = toolOf(p.inventory.selectedStack);
     const per = breakProgressPerTick(t.id, tool, { onGround: p.body.onGround || p.body.inWater, inWater: p.body.eyeInWater });
     this.breaking.progress += per;
-    this.swing = 6;
-    if (g.ticks % 4 === 0) g.audio.play('hit_' + BLOCKS[t.id].sound, [t.x + 0.5, t.y + 0.5, t.z + 0.5]);
+    // holding the button chains full swings into a continuous chopping motion
+    if (this.swing <= 0) this.swing = SWING_TICKS;
+    if (g.ticks % 4 === 0) {
+      g.audio.play('hit_' + BLOCKS[t.id].sound, [t.x + 0.5, t.y + 0.5, t.z + 0.5]);
+      g.particles && g.particles.blockHit(t.x, t.y, t.z, t.id, t.face, particleLight(g, t.x + 0.5 + t.face[0], t.y + 0.5 + t.face[1], t.z + 0.5 + t.face[2]));
+    }
     if (this.breaking.progress >= 1) {
       this.breakBlock(t.x, t.y, t.z, t.id, tool);
       this.breaking = null;
@@ -106,7 +117,7 @@ export class Interaction {
     g.world.setBlockUrgent(x, y, z, B.AIR);
     if (g.onBlockBroken) g.onBlockBroken(x, y, z, id, meta);
     g.audio.play('break_' + BLOCKS[id].sound, [x + 0.5, y + 0.5, z + 0.5]);
-    g.particles && g.particles.blockBreak(x, y, z, id);
+    g.particles && g.particles.blockBreak(x, y, z, id, particleLight(g, x + 0.5, y + 0.5, z + 0.5));
     for (const drop of blockDrops(id, tool)) g.entities.spawnItem(x + 0.5, y + 0.3, z + 0.5, drop);
     // Ice melts into water when broken above a solid block
     if (id === B.ICE && SOLID[g.world.getBlock(x, y - 1, z)]) {
@@ -133,7 +144,7 @@ export class Interaction {
     }
     p.hunger.addExhaustion(EXHAUSTION.ATTACK);
     p.attackTicks = 0;
-    this.swing = 6;
+    this.swing = SWING_TICKS;
   }
 
   eat(st) {
@@ -216,7 +227,7 @@ export class Interaction {
       p.inventory.slots[p.inventory.selected] = { id: I.BUCKET, count: 1, damage: 0 };
       p.inventory.changed();
     } else p.inventory.removeFromSlot(p.inventory.selected, 1);
-    this.swing = 6;
+    this.swing = SWING_TICKS;
     return true;
   }
 

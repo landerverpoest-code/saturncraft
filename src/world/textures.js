@@ -364,18 +364,42 @@ function metalBlock(c, base) {
   }
 }
 
-function destroyStage(c, stage) {
-  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
-  const rng = mulberry32(1234);
-  const cracks = 2 + stage * 2;
-  for (let k = 0; k < cracks; k++) {
-    let x = 8 + Math.floor((rng() - 0.5) * (4 + stage)), y = 8 + Math.floor((rng() - 0.5) * (4 + stage));
-    const len = 3 + stage;
-    for (let s = 0; s < len; s++) {
-      c.set(x, y, [20, 20, 20], 200);
-      x += Math.floor(rng() * 3) - 1; y += Math.floor(rng() * 3) - 1;
-    }
+// Break-progress cracks. One fixed crack pattern grows from the middle of the
+// face; stage n draws a longer prefix of it than stage n-1, so the cracks
+// spread continuously while a block is mined.
+const CRACK_PATH = (() => {
+  const rng = mulberry32(99), seen = new Set(), path = [], walkers = [];
+  for (let k = 0; k < 5; k++) walkers.push({ x: 7.5 + (rng() - 0.5), y: 7.5 + (rng() - 0.5), a: (k / 5) * Math.PI * 2 + rng() * 0.6 });
+  for (let step = 0; step < 500 && walkers.length; step++) {
+    const w = walkers[step % walkers.length];
+    w.a += (rng() - 0.5) * 0.6;
+    w.x += Math.cos(w.a) * 0.8; w.y += Math.sin(w.a) * 0.8;
+    const px = Math.round(w.x), py = Math.round(w.y);
+    if (px < 0 || py < 0 || px > 15 || py > 15) { walkers.splice(walkers.indexOf(w), 1); continue; }
+    const key = px + py * 16;
+    if (!seen.has(key)) { seen.add(key); path.push(key); }
+    if (rng() < 0.05 && walkers.length < 10) walkers.push({ x: w.x, y: w.y, a: w.a + (rng() < 0.5 ? 1 : -1) * (0.7 + rng() * 0.5) });
   }
+  return path;
+})();
+
+// Encoded for multiply blending (result = 2 * crack * block): 128 grey leaves
+// the block unchanged, darker values cut cracks into it, lighter ones chip it.
+function destroyStage(c, stage) {
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [128, 128, 128], 0);
+  const n = Math.round(CRACK_PATH.length * Math.pow((stage + 1) / 10, 1.25));
+  for (let i = 0; i < n; i++) {
+    const x = CRACK_PATH[i] & 15, y = CRACK_PATH[i] >> 4;
+    c.set(x, y, [30, 30, 30], 255);
+    // a lighter chipped edge below/right of each crack pixel
+    for (const [dx, dy] of [[1, 0], [0, 1]]) if (x + dx < 16 && y + dy < 16 && c.get(x + dx, y + dy)[3] === 0 && c.h(x, y, dx) < 0.45) c.set(x + dx, y + dy, [158, 158, 158], 255);
+  }
+}
+
+function paint(c, name) {
+  if (name.startsWith('destroy_')) destroyStage(c, +name.slice(8));
+  else if (GEN[name]) GEN[name](c);
+  else c.noiseFill(P.stone);
 }
 
 /** Pixel data for all layers: Uint8Array(16*16*4*N) */
@@ -384,9 +408,7 @@ export function generateTextureData() {
   const out = new Uint8Array(TEX_SIZE * TEX_SIZE * 4 * n);
   TEX_NAMES.forEach((name, i) => {
     const c = new Canvas16(name);
-    if (name.startsWith('destroy_')) destroyStage(c, +name.slice(8));
-    else if (GEN[name]) GEN[name](c);
-    else c.noiseFill(P.stone);
+    paint(c, name);
     out.set(c.data, i * 256 * 4);
   });
   return out;
@@ -394,7 +416,7 @@ export function generateTextureData() {
 
 export function texturePixels(name) {
   const c = new Canvas16(name);
-  if (GEN[name]) GEN[name](c);
+  paint(c, name);
   return c.data;
 }
 
