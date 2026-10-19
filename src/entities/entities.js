@@ -231,7 +231,7 @@ export class EntityManager {
   tick() {
     const g = this.game, p = g.player;
     for (const e of this.list) {
-      if (e.dead) continue;
+      if (e.dead || this.frozen(e)) continue;
       e.tick(g);
       if (e.kind === 'item' && !e.dead && e.pickupDelay === 0 && !p.dead) {
         const b = p.body.box();

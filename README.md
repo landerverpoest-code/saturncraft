@@ -1,0 +1,356 @@
+# Saturncraft
+
+A single-player, browser-based voxel survival sandbox written from scratch in
+JavaScript + WebGL ([three.js](https://threejs.org)). It reproduces the
+observable mechanics of the classic block-survival genre's reference game
+(version 1.21) — block behaviour, physics, survival, mobs, drops, spawn rules,
+crafting progression — but on a moon with **three suns** and a **ringed gas
+giant** hanging in the sky.
+
+Every name, texture, model, sound and UI element is original and generated
+procedurally at runtime: there are no image or audio files in the project.
+Documented numbers (hardness, tool multipliers, drop chances, spawn weights,
+light levels, damage, hunger values, movement speeds) come from the reference
+game's public community wiki. In this document **"vanilla"** means that
+reference game.
+
+| Day under two suns | Night with the gas giant |
+|---|---|
+| ![day](docs/screenshots/day.png) | ![night](docs/screenshots/night.png) |
+| **Twin sunset (Hearth + Ember)** | **The mob roster** |
+| ![sunset](docs/screenshots/sunset.png) | ![mobs](docs/screenshots/mobs.png) |
+
+## Quick start
+
+```bash
+npm install
+npm run dev        # http://localhost:5173
+npm test           # unit tests (vitest)
+npm run build      # production build in dist/
+```
+
+Requires a WebGL2 browser (any current Chrome, Edge, Firefox or Safari).
+Click the canvas to capture the mouse. The world is saved to IndexedDB every
+minute and on *Save & Quit*; *Continue World* on the title screen resumes it.
+
+Handy URL parameters for development: `?autostart=1&seed=123&rd=8`
+(`&continue=1` to resume the save). `window.__game` exposes the running game
+in the console.
+
+## Controls
+
+| Action | Keys / mouse |
+|---|---|
+| Move | `W` `A` `S` `D` (or arrow keys) |
+| Jump / swim up | `Space` |
+| Sneak (stops at ledges) | `Shift` |
+| Sprint | `Ctrl` or `R`, or double-tap `W` |
+| Look | Mouse |
+| Mine / attack | Left mouse button (hold to mine) |
+| Place block / use item / eat / draw bow | Right mouse button (hold to eat or draw) |
+| Open workbench / furnace | Right-click the block (sneak to place against it instead) |
+| Pick block into hand | Middle mouse button |
+| Select hotbar slot | `1`–`9` or mouse wheel |
+| Inventory (2×2 crafting) | `E` |
+| Drop item (stack with `Ctrl`) | `Q` |
+| Pause menu / close screen | `Esc` |
+| Debug overlay (fps, position, light, suns) | `F3` |
+| Hide HUD | `F1` |
+
+Inventory screens: left-click picks up / places a stack, right-click splits a
+stack or places one item, `Shift`+click moves a stack between sections,
+`Shift`+click on a crafting result crafts as many as possible.
+
+## Project layout
+
+```
+src/
+  main.js                  title screen, settings, start/continue
+  game.js                  20 TPS fixed-step loop, interpolated rendering, furnaces, autosave
+  world/                   ── voxel world ──
+    blocks.js items.js     block & item registries (hardness, tools, food, fuel…)
+    generator.js           noise terrain, biomes, caves, ores, trees (runs in workers)
+    worker.js              Web Worker: generation + initial light, section meshing
+    world.js lighting.js   chunk storage, block edits, flood-fill sky/block light
+    mesher.js              face-culled section mesher with smooth light + AO
+    fluids.js              water / lava flow; gravity blocks live in world.js
+    mining.js              break times and block drops
+    textures.js            procedural pixel art for every block face
+    save.js                IndexedDB persistence (RLE-compressed chunks)
+  physics/                 constants.js (vanilla values), body.js (AABB, step-up, fluids)
+  player/                  player.js, survival.js (hunger), inventory.js, crafting.js, interaction.js
+  mobs/                    mobTypes.js, mob.js (AI), models.js, pathfinding.js,
+                           spawnRules.js, spawner.js, drops.js
+  entities/                items, falling blocks, arrows, explosions
+  sky/                     suns.js (pure orbital model), sky.js (lights, shadows, colours),
+                           skyShader.js (atmosphere, suns, planet), gasGiant.js (ring mesh + particles)
+  render/                  chunkRenderer.js, terrainMaterial.js, overlays.js, particles.js
+  ui/                      hud.js, screens.js, icons.js, input.js, style.css
+  audio/                   audio.js (procedural Web Audio effects)
+tests/                     vitest suites (95 tests)
+```
+
+## The world
+
+* **Chunks** are 16×16 columns, 384 blocks tall (y = −64 … 319), sea level 63.
+  Generation and initial lighting run in a pool of Web Workers; light is then
+  stitched across chunk borders on the main thread.
+* **Meshing** is face-culled per 16³ section (in workers), with vanilla-style
+  smooth lighting and ambient occlusion, then merged into two draw calls per
+  chunk (opaque + translucent). Player edits are re-meshed synchronously so
+  there is no flicker. Textures live in a mip-mapped texture array.
+* **Terrain**: continentalness / erosion / ridge noise splines for height,
+  3-D density noise for overhangs, temperature and humidity for 11 biomes
+  (ocean, frozen ocean, beach, plains, forest, birch forest, taiga, snowy
+  plains, desert, stony peaks, snowy peaks), smooth grass/foliage tinting,
+  bare rock on steep slopes.
+* **Caves**: "cheese" caverns and "spaghetti" tunnels from interpolated 3-D
+  noise; lava fills cave air below y = −55; deepstone below y = 0 with a
+  dithered transition; bedrock floor.
+* **Ores** use the vanilla per-chunk feature table (counts, uniform/triangle
+  height distributions, vein sizes, air-exposure discard) — e.g. diamonds peak
+  near y = −59, iron has its mountain band, beryl only in mountains.
+* **Blocks** break with vanilla hardness, tool multipliers, harvest tiers,
+  the ×5 penalties for mining in water or while airborne, and the 5-tick delay
+  between breaks. Sand and gravel fall; plants, torches and cacti pop off when
+  unsupported. Water spreads 7 blocks every 5 ticks, lava 3 blocks every 30
+  ticks, with downhill seeking, infinite sources and lava/water hardening
+  (obsidian / cobblestone / stone).
+
+## Physics
+
+The player and every mob run the vanilla movement integration at 20 ticks per
+second: acceleration → swept AABB collision (Y first, then the larger
+horizontal axis) → gravity 0.08 and drag 0.98 → friction (block slipperiness ×
+0.91 on ground, 0.91 in air). Rendering interpolates between ticks.
+
+| Quantity | Value | Measured in tests |
+|---|---|---|
+| Walk / sprint / sneak speed | 0.1 attribute, ×1.3, ×0.3 | 4.317 / 5.612 / 1.295 m/s |
+| Jump | 0.42 b/t initial velocity | apex 1.2522 blocks, 12 ticks airtime |
+| Sprint-jump boost | +0.2 in facing direction | |
+| Terminal velocity | | 3.92 b/t |
+| Step-up height | 0.6 | |
+| Player box / eye | 0.6 × 1.8, eye 1.62 (sneak 1.5 / 1.27) | |
+| Fall damage | ⌈distance − 3⌉ | 10-block fall = 7 |
+| Water / lava | 0.02 accel, ×0.8 / ×0.5 drag, buoyant jumping | |
+
+Survival: 20 health, 20 food, 5 initial saturation; exhaustion from sprinting,
+jumping, swimming, attacking, mining and taking damage; regeneration every 80
+ticks at ≥ 18 food or every 10 ticks with saturation at full food; starvation
+down to half a heart (Normal difficulty). Drowning after 15 s of air (2 damage
+per second), lava 4 damage + 15 s of fire, fire 1 damage per second, cactus
+contact damage, the 10-tick invulnerability window with damage replacement,
+knockback, the attack-cooldown damage curve and critical hits.
+
+## Three suns
+
+The sky has three suns, each defined by its own orbital period, starting phase,
+rise azimuth, orbital tilt, declination offset, colour temperature, intensity
+and apparent size (`src/sky/suns.js`):
+
+| Sun | Period (ticks) | Phase | Rises at | Tilt | Colour | Intensity |
+|---|---|---|---|---|---|---|
+| **Hearth** | 24 000 | 0.02 | 90° (east) | 20° | 5600 K, yellow-white | 1.00 |
+| **Pale Warden** | 37 200 | 0.60 | 62° | 38° | 11 000 K, blue-white | 0.55 |
+| **Ember** | 15 400 | 0.33 | 128° | 52° | 2700 K, red-orange (large disc) | 0.45 |
+
+* **Day** = at least one sun above the horizon; **twilight** = exactly one sun
+  up; **night** = all three below. Because the periods are incommensurable the
+  pattern never repeats exactly: nights last roughly 1–7 minutes and occupy
+  ~15 % of the time.
+* **Combined light**: each sun contributes `intensity × smoothstep(elevation)`;
+  the combination `1 − Π(1 − fᵢ)` drives the 0…11 sky-darkening value, exactly
+  where vanilla uses its single sun. Effective sky light = raw sky light −
+  darkening, so a lone Ember or Pale Warden gives a dim (light 9–10) "twilight
+  day" where surface monsters still cannot spawn, while a fully dark sky gives
+  light 4 like a vanilla night.
+* **Mobs use the combined light**: hostile spawning uses the vanilla light test
+  with the combined darkening, undead burn only when the combined sunlight
+  counts as "day" (darkening < 4) and the brightness at their head exceeds 0.5,
+  spiders turn neutral in bright combined light, voidwalkers flee daylight.
+* **Rendering**: each sun has its own disc, glare and horizon scattering; where
+  suns appear together their glows add and the scene light colour is the
+  intensity-weighted blend of the visible suns. Each sun owns one
+  shadow-casting directional light (three shadow maps in total); shadow maps
+  are refreshed round-robin (brightest sun every other frame) and lights below
+  the horizon are switched off.
+
+## Ringed gas giant
+
+The world is a tidally locked moon, so the gas giant hangs almost fixed in the
+southern sky with a slow libration.
+
+* Ray-traced sphere in the sky shader with a **banded, animated atmosphere**
+  (fbm noise with latitude-dependent differential rotation, polar hoods and a
+  drifting storm oval), **soft limb glow** and a **subtle aurora** on the polar
+  night side.
+* **Rings** are a real mesh (`RingGeometry`) with a procedural density shader
+  — broad bands, fine ringlets, a division gap — where **each radius rotates at
+  its own Keplerian speed** (ω ∝ r^−1.5), plus 6 000 orbiting ice particles that
+  follow the same law. Rings are **translucent** (back-lit side dimmer),
+  show **specular glints**, receive the **planet's shadow** and cast their own
+  shadow onto the cloud tops; the planet occludes the far side of the rings.
+* **Lighting follows the actual sun directions**, so the planet shows phases,
+  can be lit by suns that are below your horizon, and fades into the daytime sky.
+
+## Survival content
+
+### Mobs
+
+| Mob | Vanilla role | Health | Speed | Size | Notes |
+|---|---|---|---|---|---|
+| Bristleback | pig | 10 | 0.25 | 0.9×0.9 | |
+| Mooxen | cow | 10 | 0.20 | 0.9×1.4 | |
+| Fleecer | sheep | 8 | 0.23 | 0.9×1.3 | |
+| Cluckling | chicken | 4 | 0.25 | 0.4×0.7 | slow fall, lays eggs every 5–10 min |
+| Shambler | zombie | 20 | 0.23 | 0.6×1.95 | melee 3, armour 2, burns in sunlight |
+| Rattler | skeleton | 20 | 0.25 | 0.6×1.99 | bow every 40 ticks, strafes, burns in sunlight |
+| Fizzler | creeper | 20 | 0.25 | 0.6×1.7 | 30-tick fuse within 3 blocks, power-3 explosion |
+| Skitterer | spider | 16 | 0.30 | 1.4×0.9 | climbs walls, leaps, neutral in bright light |
+| Voidwalker | enderman | 40 | 0.30 (+0.15 angry) | 0.6×2.9 | angered by eye contact, teleports, hurt by water, dodges arrows |
+
+Mob movement uses the same physics with vanilla's mob acceleration (speed²),
+A* pathfinding over walkable cells, panic when hurt (passives), melee reach
+`(2·width)² + target width`, the skeleton's bow logic and the fuse/swell logic.
+
+**Drops** (no Looting): Bristleback 1–3 pork chops; Mooxen 0–2 leather + 1–3
+beef; Fleecer 1 wool + 1–2 mutton; Cluckling 0–2 feathers + 1 raw fowl (meat
+drops cooked if the mob was burning); Shambler 0–2 rotten flesh + 2.5 % rare
+drop on player kills; Rattler 0–2 arrows + 0–2 bones; Fizzler 0–2 blast powder;
+Skitterer 0–2 string + 1/3 chance of an eye on player kills; Voidwalker 0–1
+void pearl.
+
+**Spawning** follows the vanilla natural-spawn algorithm: each tick one attempt
+per chunk within 8 chunks at a random height below the heightmap; packs of up
+to 3 groups × up to 4 tries with ±5 jitter; at least 24 blocks from the
+player; mob caps of 70 hostile / 10 passive scaled by chunk count / 289;
+passive attempts only every 400 ticks plus 10 % chance of a herd when a chunk is
+first generated; biome spawn weights (monsters: Skitterer 100, Shambler 100,
+Rattler 100, Fizzler 100, Voidwalker 10; animals in grassy biomes: Fleecer 12,
+Bristleback 10, Cluckling 10, Mooxen 8). Monsters need block light 0, raw
+sky light ≤ rand(32) and combined light ≤ rand(0…7); animals need grass and
+light > 8. Hostiles despawn instantly beyond 128 blocks and with 1/800 chance
+per tick beyond 32 blocks after 30 s without interaction; animals persist (also
+across chunk unloads and saves).
+
+### Items and progression
+
+Logs → planks → sticks / workbench → wooden, stone, iron, golden and diamond
+pickaxes, axes, shovels and swords (vanilla speeds, damage, attack speed and
+durability) → furnace (200-tick smelting, vanilla fuel values) → ingots, glass,
+stone, cooked food; torches, buckets (water/lava pick-up and placement),
+bow and arrows, storage blocks, wool, sandstone, stone bricks. Food values
+(hunger/saturation) and side effects (hunger from rotten flesh and raw fowl,
+poison from eyes) follow the documented table.
+
+## Implemented vs. not yet implemented
+
+**Implemented** (vanilla features)
+
+* Chunked 384-high world, worker generation, biomes, caves, ore distribution, trees, plants
+* Mining with hardness/tool tiers/durability, block drops, placing, pick-block
+* Sky light + block light with smooth lighting and AO; torches, lava, lit furnace glow
+* Gravity blocks, water and lava flow, source creation, obsidian/cobblestone/stone formation
+* Player physics, sprinting, sneaking (ledge stop), swimming, step-up, fall damage
+* Health, hunger, saturation, exhaustion, regeneration, starvation, drowning, fire, lava, cactus
+* Attack cooldown, critical hits, knockback, armour formula for mobs, invulnerability frames
+* 9 mobs with AI, pathfinding, drops, natural spawning, caps and despawning
+* Explosions (ray-based block destruction with blast resistance, exposure-scaled damage, 1/power drop survival)
+* Inventory, hotbar, 2×2 and 3×3 shaped/shapeless crafting, furnace smelting
+* Bow and arrows (player and Rattler), arrow pick-up
+* Death screen, item drop on death, respawn; pause menu with settings
+* Procedural sound effects with stereo panning; world saving
+
+**Not yet implemented**
+
+* Experience orbs and enchanting, armour items, shields, potions and status-effect UI (only hunger/poison effects exist)
+* Farming (seeds, wheat, bread), breeding/taming, shearing, sheep colours
+* Villages, other structures, the other dimensions, redstone-style circuitry
+* Chests and other storage containers, doors, slabs, stairs, fences, beds (spawn is fixed)
+* Wall-mounted torches, fire blocks and fire spread, weather (rain/snow/thunder), clouds
+* Slimes, witches, drowned, husks/strays as separate variants, baby mobs, mob equipment
+* Difficulty levels (fixed at Normal), creative mode, commands, multiplayer
+* Sprint-swimming/crawling poses, ladders, boats, minecarts, elytra
+
+## Deliberate deviations
+
+* **Original names and art** for every mob, item and block that is
+  distinctive to the reference game (e.g. Deepstone, Cinnabar, Azurite, Beryl,
+  Workbench, Blast Powder, Void Pearl). Monster spawn weights of variants
+  that do not exist here are merged into their base mob (husk → Shambler,
+  stray → Rattler, zombie villager → Shambler); slime/witch weights are omitted.
+* **Three suns instead of one sun + moon**: day/night is irregular. Sky
+  darkening is derived from the combined light of the suns (see above) instead
+  of the fixed 24 000-tick cycle; there are no moon phases (the gas giant
+  shows phases instead) and no sleeping.
+* **Hostile mobs can spawn under twilight skies only if the combined light is
+  low enough**; with only the dim suns up, the surface stays at light 9–10,
+  which is too bright for spawning but not "day" for burning — a state that has
+  no vanilla equivalent.
+* **Rare Shambler drop**: vanilla picks one of iron ingot / carrot / potato; only
+  the ingot exists here, so it drops with 2.5 % × 1/3.
+* **Lighting**: sky light is stored per block and darkened in the shader by the
+  combined sun light; the light curve blends vanilla's brightness formula with
+  its default gamma. Fog is spherical. Leaves cast full shadows only where
+  their texture is opaque.
+* **Mob AI** is a simplified goal system (no goal priority selectors; a
+  bounded A* of 250 nodes; panicking animals steer directly). Mobs do not seek
+  shade from the suns, and there are no doors, wolves or cats to react to.
+* **Water physics**: no flowing-water push currents; fluid surfaces are flat
+  per block (no sloped corner heights); no bubble columns.
+* **Explosions** do not set fire and do not knock items back.
+* **Torches** can only be placed on the top of blocks.
+* **Furnace** state is stored by block position rather than as a block entity;
+  breaking a furnace drops its contents.
+* **Render/entity distance**: entities render up to 64 blocks away and only
+  cast shadows within 24 blocks; three shadow maps update round-robin.
+* **Item stacks** drop as sprites rather than spinning 3-D models.
+* **Step-up** (0.6 blocks) is implemented, but without slabs or stairs in the
+  block set it rarely comes into play; full blocks always need a jump.
+* **Saving** keeps modified chunks, the player, time, furnaces and animals;
+  hostile mobs, dropped items and in-flight fluids are not saved.
+
+## Performance
+
+* Target: stable 60 fps at render distance 8 on a mid-range laptop GPU.
+* Terrain at render distance 8 is ~1.9 M opaque triangles in ~580 draw calls
+  before frustum culling (2 per chunk); typically a third is in view.
+* Generation (~15 ms/chunk) and meshing (~1.5 ms/section) run in a worker pool
+  (`hardwareConcurrency − 1`, 2–6 workers); main-thread chunk work is budgeted to
+  ~6 ms per frame; the simulation tick costs ~0.1–1 ms.
+* Shadows: three 1024² maps over a ±44-block area, one or two refreshed per
+  frame. Turn them off in the pause menu on weak GPUs; lower the render
+  distance for integrated graphics.
+* Pixel ratio is capped at 1.25 (`pixelRatioCap` in the settings).
+
+## Tests
+
+`npm test` runs 95 unit tests:
+
+* **physics** — constants, walk/sprint/sneak speeds, jump apex and duration,
+  sprint-jump, terminal velocity, fall damage, collision, step-up, ledge
+  sneaking, swimming
+* **suns** — distinct periods/phases/azimuths, periodicity, rise points,
+  daylight fractions, day/twilight/night classification, combined light and
+  darkening, colour blending
+* **spawning** — table weights and weighted picks, group sizes, caps, spawn and
+  despawn radii, monster/animal light tests (Monte-Carlo vs analytic),
+  three-sun night/day spawning, sunlight burning probability
+* **drops** — mob drop ranges and distributions, player-kill conditions,
+  cooked meat, block drops by tool tier, ore count ranges, flint chance
+* **mining / survival / crafting / world** — break times against the
+  documented table, tool stats, hunger/regeneration/starvation, recipes and
+  smelting, deterministic generation, bedrock/water/ore placement, canopy
+  continuity across chunk borders, lighting and cross-chunk light, water and
+  lava spread distances, infinite sources, obsidian, falling sand, explosion
+  damage, save encoding
+
+## Build history (vertical slices)
+
+1. **Playable slice** — worker terrain generation, lighting and meshing,
+   vanilla physics, mining/placing, the three-sun sky with shadows and the
+   ringed gas giant.
+2. **Mobs** — models, AI, pathfinding, spawning rules, drops, combat, explosions.
+3. **Remaining mechanics** — hunger and damage sources, inventory, crafting,
+   furnace, fluids and gravity blocks, audio, saving, tests and polish.

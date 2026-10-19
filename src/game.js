@@ -23,7 +23,12 @@ import { Audio } from './audio/audio.js';
 import { explode } from './entities/explosion.js';
 import { saveGame, applySave, applyPlayerSave } from './world/save.js';
 
-export const DEFAULT_SETTINGS = { renderDistance: 8, fov: 75, sensitivity: 100, volume: 0.5, shadows: true, shadowMapSize: 1024 };
+// Spherical (radial distance) fog instead of view-depth fog, so chunk edges never show at screen corners
+THREE.ShaderChunk.fog_vertex = `#ifdef USE_FOG
+  vFogDepth = length(mvPosition.xyz);
+#endif`;
+
+export const DEFAULT_SETTINGS = { renderDistance: 8, fov: 75, sensitivity: 100, volume: 0.5, shadows: true, shadowMapSize: 1024, pixelRatioCap: 1.25 };
 
 export class Game {
   constructor(canvas, seed, settings, hooks = {}, saveData = null) {
@@ -43,7 +48,7 @@ export class Game {
   async start(onProgress) {
     const s = this.settings;
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: false, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.settings.pixelRatioCap));
     this.renderer.setSize(window.innerWidth, window.innerHeight, false);
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -243,7 +248,10 @@ export class Game {
     const blocking = this.ui.blocking;
     const mv = blocking ? { forward: 0, strafe: 0, jump: false, sneak: false, sprint: false } : inp.movement();
     this.world.tick();
-    this.player.tick(this.world, mv);
+    // Hold the player in place until the terrain under them has loaded (spawn, respawn, teleports)
+    const p = this.player;
+    if (this.chunks.isAreaReady(p.x, p.z, 0)) this.player.tick(this.world, mv);
+    else p.prev = { x: p.x, y: p.y, z: p.z };
     if (!blocking) {
       this.interaction.tick({
         left: inp.mouse.left, right: inp.mouse.right,
@@ -278,6 +286,10 @@ export class Game {
     if (inp.wasPressed('inventory')) {
       if (this.ui.open === 'inventory' || this.ui.open === 'workbench' || this.ui.open === 'furnace') this.ui.close();
       else if (!this.ui.blocking) { this.input.unlock(); this.ui.openInventory(); }
+    }
+    if (inp.wasPressed('pause') && this.ui.blocking) {
+      if (this.ui.open === 'pause') { this.ui.open = null; this.ui.clear(); this.onUIClosed(); }
+      else this.ui.close();
     }
     if (inp.wasPressed('debug')) { this.hud.showDebug = !this.hud.showDebug; this.hud.debugEl.classList.toggle('hidden', !this.hud.showDebug); }
     if (inp.wasPressed('hud')) this.hud.setVisible(!this.hud.visible);
@@ -341,7 +353,7 @@ export class Game {
     this.scene.fog.color.copy(fogCol);
     if (b.eyeInWater) { this.scene.fog.color.setRGB(0.03, 0.1, 0.3); this.scene.fog.near = 1; this.scene.fog.far = 18; }
     else if (b.eyeInLava) { this.scene.fog.color.setRGB(0.6, 0.15, 0.02); this.scene.fog.near = 0; this.scene.fog.far = 2; }
-    else { this.scene.fog.near = R * 0.55; this.scene.fog.far = R * 0.95; }
+    else { this.scene.fog.near = R * 0.65; this.scene.fog.far = R; }
     this.sky.uniforms.uUnderwater.value = b.eyeInWater ? 1 : 0;
     this.audio.setListener(x, y + eye, z, p.yaw);
 

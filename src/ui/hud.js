@@ -56,6 +56,11 @@ export class HUD {
     this.toastEl = this.root.querySelector('#toast');
     this.itemNameEl = this.root.querySelector('#item-name');
     this.attackEl = this.root.querySelector('#attack-indicator');
+    this.ov = {
+      water: this.root.querySelector('#overlay-water'), lava: this.root.querySelector('#overlay-lava'),
+      fire: this.root.querySelector('#overlay-fire'), vign: this.root.querySelector('#overlay-vignette'),
+    };
+    this.frame = 0;
     this.lastHotbarKey = '';
     this.lastSel = -1;
     this.showDebug = false;
@@ -124,7 +129,9 @@ export class HUD {
     const showAir = p.air < 300 || p.body.eyeInWater;
     const bubbles = Math.ceil(Math.max(0, p.air) * 10 / 300);
     [...this.airEl.children].forEach((img, i) => {
-      img.src = ICON.bubble; img.style.visibility = showAir && i < bubbles ? 'visible' : 'hidden';
+      if (!img._src) { img.src = ICON.bubble; img._src = true; }
+      const v = showAir && i < bubbles ? 'visible' : 'hidden';
+      if (img.style.visibility !== v) img.style.visibility = v;
     });
     // attack cooldown indicator
     const cd = g.interaction ? g.interaction.attackCooldownProgress() : 1;
@@ -132,13 +139,13 @@ export class HUD {
     this.attackEl.firstChild.style.width = `${cd * 100}%`;
     // overlays
     const b = p.body;
-    this.root.querySelector('#overlay-water').classList.toggle('hidden', !b.eyeInWater);
-    this.root.querySelector('#overlay-lava').classList.toggle('hidden', !b.eyeInLava);
-    this.root.querySelector('#overlay-fire').classList.toggle('hidden', !(p.fireTicks > 0 && !b.inWater));
-    const vign = this.root.querySelector('#overlay-vignette');
+    this.ov.water.classList.toggle('hidden', !b.eyeInWater);
+    this.ov.lava.classList.toggle('hidden', !b.eyeInLava);
+    this.ov.fire.classList.toggle('hidden', !(p.fireTicks > 0 && !b.inWater));
+    const vign = this.ov.vign;
     vign.style.background = p.hurtTime > 0 ? `radial-gradient(ellipse at center, transparent 50%, rgba(200,0,0,${p.hurtTime / 22}) 100%)` : (p.health <= 4 ? 'radial-gradient(ellipse at center, transparent 60%, rgba(120,0,0,.35) 100%)' : '');
-    this.drawSky();
-    if (this.showDebug) this.debugEl.textContent = g.debugText();
+    if (this.frame++ % 10 === 0) this.drawSky();
+    if (this.showDebug && this.frame % 6 === 0) this.debugEl.textContent = g.debugText();
   }
 
   drawSky() {

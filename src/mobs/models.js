@@ -237,7 +237,7 @@ export function animateModel(root, mob, alpha, L, sec) {
     }
   }
   if (parts.head) parts.head.rotation.x = mob.headPitch || 0;
-  // creeper-style swelling + flashing
+  // fuse swelling + flashing
   let flash = 0;
   if (mob.type === 'fizzler') {
     const f = (mob.prevFuse + (mob.fuse - mob.prevFuse) * alpha) / mob.def.fuse;

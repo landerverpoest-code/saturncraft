@@ -88,7 +88,7 @@ void main() {
   float h = dir.y;
   // Atmosphere gradient
   vec3 col = mix(uHorizon, uZenith, pow(clamp(h, 0.0, 1.0), 0.45));
-  if (h < 0.0) col = mix(uHorizon, uHorizon * 0.35, clamp(-h * 3.0, 0.0, 1.0));
+  if (h < 0.0) col = mix(uHorizon, uHorizon * 0.55, clamp((-h - 0.3) * 2.0, 0.0, 1.0)); // matches the terrain fog colour near the horizon
 
   // Stars (fade with combined daylight)
   float starVis = clamp(1.0 - uCombined * 2.2, 0.0, 1.0) * smoothstep(-0.05, 0.15, h);

@@ -154,6 +154,14 @@ export class TerrainGenerator {
     return bot;
   }
 
+  /** Steep slopes keep bare stone instead of soil (deterministic, used for trees too). */
+  isSteep(x, z, top, biome) {
+    if (top <= SEA_LEVEL + 4 || biome === BIOME.DESERT || biome === BIOME.BEACH) return false;
+    const h = (dx, dz) => this.column(x + dx, z + dz, this._tmpCol || (this._tmpCol = {})).height;
+    const sx = Math.abs(h(1, 0) - h(-1, 0)), sz = Math.abs(h(0, 1) - h(0, -1));
+    return Math.max(sx, sz) / 2 >= 2.2;
+  }
+
   biomeFor(col, top) {
     const t = col.temp, h = col.humid;
     if (col.cont < -0.18 && top < SEA_LEVEL) return t < 0.15 ? BIOME.FROZEN_OCEAN : BIOME.OCEAN;
@@ -221,6 +229,8 @@ export class TerrainGenerator {
       const g = grassColor(biome === BIOME.DESERT ? 1 : tNorm, biome === BIOME.DESERT ? 0 : hNorm);
       const f = foliageColor(tNorm, hNorm);
       colors.set([g[0], g[1], g[2], f[0], f[1], f[2]], ci * 6);
+      // Steep faces show bare rock, as in the reference game's mountain surface rules
+      if (this.isSteep(x0 + x, z0 + z, top, biome)) continue;
       this.applySurface(blocks, x, z, top, biome, x0 + x, z0 + z);
     }
 
@@ -446,6 +456,7 @@ export class TerrainGenerator {
       const biome = this.biomeFor(col, top);
       if (r > this.treeDensity(biome)) continue;
       if (biome === BIOME.STONY_PEAKS || biome === BIOME.SNOWY_PEAKS) { if (top >= 118) continue; }
+      if (!inside && this.isSteep(wx, wz, top, biome)) continue;
       if (!inside) {
         // Reject if a cave mouth removed the ground there
         const cv = this.caveNoiseAt(wx, top, wz);
