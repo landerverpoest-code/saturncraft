@@ -22,6 +22,11 @@ export class Chunk {
       for (let i = 0; i < 4096; i++) if (this.blocks[base + i]) n++;
       this.sectionNonAir[s] = n;
     }
+    // monster spawner positions (for the spawner logic)
+    this.spawners = new Set();
+    for (let i = 0; i < this.blocks.length; i++) if (this.blocks[i] === B.SPAWNER) {
+      this.spawners.add(`${cx * 16 + (i & 15)},${MIN_Y + (i >> 8)},${cz * 16 + ((i >> 4) & 15)}`);
+    }
     this.dirty = new Set();
     for (let s = 0; s < SECTION_COUNT; s++) this.dirty.add(s);
     this.meshed = false;
@@ -130,6 +135,8 @@ export class World {
     if (old === id && c.meta[i] === meta) return false;
     c.blocks[i] = id;
     c.meta[i] = meta;
+    if (old === B.SPAWNER) c.spawners.delete(`${x},${y},${z}`);
+    if (id === B.SPAWNER) c.spawners.add(`${x},${y},${z}`);
     c.modified = true;
     const s = (y - MIN_Y) >> 4;
     if (!old && id) c.sectionNonAir[s]++;

@@ -284,6 +284,7 @@ poison from eyes) follow the documented table.
 * Shears (2 iron) shear sheep for 1–3 wool; sheep regrow it by eating grass
 * Carrots: a crop planted on farmland (2–5 per ripe plant), food, and part of the Shambler's rare drop
 * Fences (oak/spruce/birch) that connect to fences, gates and full blocks, with 1.5-block collision so nothing jumps over; oak fence gates that open and close
+* Dungeons: mossy cobblestone rooms (5–7 × 4 × 5–7 inside, 14 attempts per chunk, 1–5 openings into caves) with a monster spawner (Shambler 50 %, Rattler/Skitterer 25 % each; active within 16 blocks, 4 spawn attempts every 10–40 s, at most 6 nearby, light ≤ 11) and up to two loot chests; mined spawners give 15–43 XP
 * Slabs and stairs in oak, cobblestone, stone brick and sandstone: bottom/top/double slabs (merge by placing), stairs facing away from the player and upside down when placed high; walkable with the 0.6 step-up; they block light like full blocks
 * Oak doors (two blocks, 3/16-thick collision box, open/close with right-click), ladders (climb 0.2/tick, fall capped at 0.15, sneak to hold on), torches on walls
 * Chests (27 slots, shift-click transfer, contents drop when broken, saved with the world); furnaces and chests face the player when placed
@@ -301,7 +302,7 @@ poison from eyes) follow the documented table.
 
 * Enchanting, anvils, shields, potions and status-effect UI (only hunger/poison effects exist); armour is not drawn on the third-person player model
 * Taming, sheep colours and dyes, potatoes/beetroot, bone meal
-* Villages, other structures, the other dimensions, redstone-style circuitry
+* Villages, strongholds and other large structures, the other dimensions, redstone-style circuitry
 * Double chests and other storage containers, walls, trapdoors, corner-shaped stairs
 * Fire blocks and fire spread, thunderstorms and lightning, snow layers
 * Slimes, witches, drowned, husks/strays as separate variants, baby mobs, mob equipment
@@ -379,7 +380,7 @@ poison from eyes) follow the documented table.
 
 ## Tests
 
-`npm test` runs 125 unit tests:
+`npm test` runs 128 unit tests:
 
 * **physics** — constants, walk/sprint/sneak speeds, jump apex and duration,
   sprint-jump, terminal velocity, fall damage, collision, step-up, ledge

@@ -19,6 +19,7 @@ import { Chat } from './ui/chat.js';
 import { effectiveSkyLight, skyState } from './sky/suns.js';
 import { SIDE_DIRS, BED_HEAD } from './world/shapes.js';
 import { CATEGORY } from './mobs/mobTypes.js';
+import { SpawnerBlocks, dungeonLoot } from './mobs/spawnerBlocks.js';
 import { newXp, deathXp } from './player/experience.js';
 import { Player } from './player/player.js';
 import { Interaction } from './player/interaction.js';
@@ -95,6 +96,7 @@ export class Game {
     this.player.isPlayer = true;
     this.entities = new EntityManager(this);
     this.spawner = new MobSpawner(this);
+    this.spawnerBlocks = new SpawnerBlocks(this);
     this.interaction = new Interaction(this);
     this.input = new Input(this.canvas);
     this.input.sensitivity = 0.0022 * s.sensitivity / 100;
@@ -318,17 +320,26 @@ export class Game {
     return f;
   }
 
-  getChest(x, y, z) {
+  getChest(x, y, z, metaHint) {
     const k = `${x},${y},${z}`;
     let c = this.chests.get(k);
-    if (!c) { c = { x, y, z, slots: new Array(27).fill(null) }; this.chests.set(k, c); }
+    if (!c) {
+      c = { x, y, z, slots: new Array(27).fill(null) };
+      this.chests.set(k, c);
+      // dungeon chests roll their loot the first time they are opened or broken
+      const meta = metaHint ?? this.world.getMeta(x, y, z);
+      if (meta & 8) {
+        c.slots = dungeonLoot();
+        if (this.world.getBlock(x, y, z) === B.CHEST) this.world.setBlockUrgent(x, y, z, B.CHEST, meta & 3, false);
+      }
+    }
     return c;
   }
 
-  onBlockBroken(x, y, z, id) {
+  onBlockBroken(x, y, z, id, meta = 0) {
     if (id === B.CHEST) {
       const k = `${x},${y},${z}`;
-      const c = this.chests.get(k);
+      const c = (meta & 8) ? this.getChest(x, y, z, meta) : this.chests.get(k);
       if (c) {
         for (const st of c.slots) if (st) this.entities.spawnItem(x + 0.5, y + 0.5, z + 0.5, st);
         this.chests.delete(k);
@@ -402,6 +413,7 @@ export class Game {
     this.mouseLatch = { left: false, right: false, middle: false };
     this.entities.tick();
     this.spawner.tick();
+    this.spawnerBlocks.tick();
     this.tickFurnaces();
     this.particles.tick();
     if (this.ticks % 1200 === 0) this.save(); // autosave every minute

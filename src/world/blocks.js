@@ -30,6 +30,7 @@ export const B = {
   OAK_SLAB: 68, COBBLESTONE_SLAB: 69, STONE_BRICK_SLAB: 70, SANDSTONE_SLAB: 71,
   OAK_STAIRS: 72, COBBLESTONE_STAIRS: 73, STONE_BRICK_STAIRS: 74, SANDSTONE_STAIRS: 75,
   CARROTS: 76, OAK_FENCE: 77, SPRUCE_FENCE: 78, BIRCH_FENCE: 79, OAK_FENCE_GATE: 80,
+  SPAWNER: 81, MOSSY_COBBLESTONE: 82,
 };
 
 const defaults = {
@@ -152,6 +153,10 @@ def(B.OAK_FENCE, 'Oak Fence', { ...wood, shape: SHAPE.FENCE, tex: { all: 'oak_pl
 def(B.SPRUCE_FENCE, 'Spruce Fence', { ...wood, shape: SHAPE.FENCE, tex: { all: 'spruce_planks' } });
 def(B.BIRCH_FENCE, 'Birch Fence', { ...wood, shape: SHAPE.FENCE, tex: { all: 'birch_planks' } });
 def(B.OAK_FENCE_GATE, 'Oak Fence Gate', { ...wood, shape: SHAPE.GATE, tex: { all: 'oak_planks' } });
+
+// Monster spawner: meta = mob kind (0 Shambler, 1 Rattler, 2 Skitterer); found in dungeons.
+def(B.SPAWNER, 'Monster Spawner', { hardness: 5, resistance: 5, tool: TOOL.PICKAXE, tier: TIER.WOOD, opaque: false, layer: LAYER.CUTOUT, drops: null, sound: 'metal' });
+def(B.MOSSY_COBBLESTONE, 'Mossy Cobblestone', { hardness: 2, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD });
 
 export const NUM_BLOCKS = BLOCKS.length;
 

@@ -19,7 +19,7 @@ export const SWING_TICKS = 6;
 const ORE_XP = {
   [B.COAL_ORE]: [0, 2], [B.DEEP_COAL_ORE]: [0, 2], [B.DIAMOND_ORE]: [3, 7], [B.DEEP_DIAMOND_ORE]: [3, 7],
   [B.BERYL_ORE]: [3, 7], [B.AZURITE_ORE]: [2, 5], [B.DEEP_AZURITE_ORE]: [2, 5],
-  [B.CINNABAR_ORE]: [1, 5], [B.DEEP_CINNABAR_ORE]: [1, 5],
+  [B.CINNABAR_ORE]: [1, 5], [B.DEEP_CINNABAR_ORE]: [1, 5], [B.SPAWNER]: [15, 43],
 };
 const BREAK_DELAY = 5;
 const USE_DELAY = 4;

@@ -442,6 +442,22 @@ const GEN = {
     for (let y = 0; y < 16; y++) { c.set(2, y, w); c.set(3, y, shade(w, 0.8)); c.set(12, y, w); c.set(13, y, shade(w, 0.8)); }
     for (const ry of [1, 5, 9, 13]) for (let x = 4; x < 12; x++) { c.set(x, ry, shade(w, 1.1)); c.set(x, ry + 1, shade(w, 0.75)); }
   },
+  mossy_cobblestone: (c) => {
+    GEN.cobblestone(c);
+    const moss = ['#4f7a2e', '#5f8f36', '#3f6a26'].map(hex);
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const n = c.h(x >> 1, y >> 1, 31) * 0.6 + c.h(x, y, 32) * 0.4;
+      if (n > 0.58) c.set(x, y, moss[Math.floor(c.h(x, y, 33) * 3)]);
+    }
+  },
+  monster_spawner: (c) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
+    const bar = hex('#2a3038'), hi = hex('#4a5560');
+    for (let i = 0; i < 16; i++) {
+      for (const k of [0, 15]) { c.set(i, k, bar); c.set(k, i, bar); }
+      for (const k of [4, 8, 11]) { c.set(k, i, i % 3 ? bar : hi); c.set(i, k, i % 3 ? bar : hi); }
+    }
+  },
   furnace_top: (c) => c.noiseFill(['#6e6e70', '#7c7c7e', '#626264'].map(hex), 0.3),
   furnace_side: (c) => {
     c.noiseFill(['#6e6e70', '#7c7c7e', '#626264'].map(hex), 0.3);

@@ -290,6 +290,9 @@ export class TerrainGenerator {
       }
     }
 
+    // 6b. Dungeons (monster rooms)
+    for (let k = 0; k < 14; k++) this.tryDungeon(blocks, meta, rng); // 10 + 4 attempts like the reference
+
     // 7. Water
     for (let z = 0; z < 16; z++) for (let x = 0; x < 16; x++) {
       const top = heightmap[x + z * 16];
@@ -348,6 +351,49 @@ export class TerrainGenerator {
         if (top < SEA_LEVEL - 1) { for (let d = 0; d < 3; d++) set(top - d, B.DIRT); break; }
         set(top, B.GRASS); for (let d = 1; d < dirtDepth; d++) set(top - d, B.DIRT);
     }
+  }
+
+  /**
+   * Monster room as in the reference generator: a cobblestone box (mossy
+   * floor) with a 5-7 x 4 x 5-7 interior, a spawner in the middle and up to
+   * two chests by the walls. It must sit in solid ground with 1-5 openings
+   * into caves. Kept inside the chunk.
+   */
+  tryDungeon(blocks, meta, rng) {
+    const rx = rng() < 0.5 ? 2 : 3, rz = rng() < 0.5 ? 2 : 3;
+    const cx = rx + 1 + Math.floor(rng() * (14 - 2 * rx)), cz = rz + 1 + Math.floor(rng() * (14 - 2 * rz));
+    const y = MIN_Y + 6 + Math.floor(rng() * 150);
+    const SOLID_AT = (x, yy, z) => { const id = blocks[cidx(x, yy, z)]; return id !== 0 && id !== B.WATER && id !== B.LAVA; };
+    let openings = 0;
+    for (let x = cx - rx - 1; x <= cx + rx + 1; x++) for (let z = cz - rz - 1; z <= cz + rz + 1; z++) {
+      if (!SOLID_AT(x, y - 1, z) || !SOLID_AT(x, y + 4, z)) return;
+      const wall = x === cx - rx - 1 || x === cx + rx + 1 || z === cz - rz - 1 || z === cz + rz + 1;
+      if (wall && !blocks[cidx(x, y, z)] && !blocks[cidx(x, y + 1, z)]) openings++;
+    }
+    if (openings < 1 || openings > 5) return;
+    for (let x = cx - rx - 1; x <= cx + rx + 1; x++) for (let z = cz - rz - 1; z <= cz + rz + 1; z++) for (let yy = y - 1; yy <= y + 4; yy++) {
+      const i = cidx(x, yy, z);
+      const wall = x === cx - rx - 1 || x === cx + rx + 1 || z === cz - rz - 1 || z === cz + rz + 1;
+      if (yy === y - 1) blocks[i] = rng() < 0.75 ? B.MOSSY_COBBLESTONE : B.COBBLESTONE;
+      else if (yy === y + 4) { if (SOLID_AT(x, yy, z)) blocks[i] = B.COBBLESTONE; }
+      else if (wall) { if (blocks[i] && SOLID_AT(x, yy, z)) blocks[i] = rng() < 0.2 ? B.MOSSY_COBBLESTONE : B.COBBLESTONE; }
+      else blocks[i] = 0;
+      if (blocks[i] !== B.CHEST) meta[i] = 0;
+    }
+    // chests against a wall (meta: facing into the room | 8 = loot not rolled yet)
+    for (let c = 0; c < 2; c++) {
+      for (let tries = 0; tries < 3; tries++) {
+        const x = cx - rx + Math.floor(rng() * (2 * rx + 1)), z = cz - rz + Math.floor(rng() * (2 * rz + 1));
+        const walls = [[0, -1, 2], [1, 0, 3], [0, 1, 0], [-1, 0, 1]].filter(([dx, dz]) => SOLID_AT(x + dx, y, z + dz));
+        if (walls.length !== 1 || blocks[cidx(x, y, z)]) continue;
+        blocks[cidx(x, y, z)] = B.CHEST;
+        meta[cidx(x, y, z)] = walls[0][2] | 8;
+        break;
+      }
+    }
+    const r = rng();
+    blocks[cidx(cx, y, cz)] = B.SPAWNER;
+    meta[cidx(cx, y, cz)] = r < 0.5 ? 0 : r < 0.75 ? 1 : 2;
   }
 
   placeVein(blocks, rng, f, ox, oy, oz) {
