@@ -6,6 +6,7 @@ import { skyVertex, skyFragment } from './skyShader.js';
 import { RingSystem } from './gasGiant.js';
 
 const DEG = Math.PI / 180;
+const FLASH = new THREE.Color(0.75, 0.8, 1.0);
 
 export const PLANET = {
   azimuth: 200 * DEG,
@@ -121,6 +122,10 @@ export class Sky {
       const lum = c.r * 0.3 + c.g * 0.59 + c.b * 0.11;
       c.setRGB(c.r + (lum * 0.62 - c.r) * rain * 0.85, c.g + (lum * 0.64 - c.g) * rain * 0.85, c.b + (lum * 0.7 - c.b) * rain * 0.85);
     }
+    // thunderstorms darken it further; a lightning flash lights it up
+    const thunder = this.thunder || 0, flash = this.flash || 0;
+    if (thunder > 0) for (const c of [this.zenith, this.horizon]) c.multiplyScalar(1 - 0.45 * thunder);
+    if (flash > 0) for (const c of [this.zenith, this.horizon]) c.lerp(FLASH, flash * 0.6);
     u.uRain.value = rain;
     u.uZenith.value.copy(this.zenith);
     u.uHorizon.value.copy(this.horizon);
@@ -147,7 +152,7 @@ export class Sky {
     const planetShine = 0.06 * (1 - day);
     this.hemi.color.setRGB(this.zenith.r * 0.6 + lc[0] * 0.4 * day, this.zenith.g * 0.6 + lc[1] * 0.4 * day, this.zenith.b * 0.6 + lc[2] * 0.4 * day);
     this.hemi.groundColor.setRGB(0.3 * day + 0.03, 0.27 * day + 0.03, 0.22 * day + 0.04);
-    this.hemi.intensity = (0.45 + 1.05 * day + planetShine * 10) * (1 - 0.3 * rain);
+    this.hemi.intensity = (0.45 + 1.05 * day + planetShine * 10) * (1 - 0.3 * rain) * (1 - 0.4 * thunder) + flash * 2.5;
 
     // Directional sun lights following the focus point
     const snap = (this.shadowExtent * 2) / this.shadowSize;
@@ -155,7 +160,7 @@ export class Sky {
       const l = this.lights[i];
       const f = s.factor * s.sun.shadowStrength;
       l.color.setRGB(s.color[0], s.color[1], s.color[2]);
-      l.intensity = f * 3.4 * (s.elevation > 0 ? 1 : 0) * (1 - 0.8 * rain);
+      l.intensity = f * 3.4 * (s.elevation > 0 ? 1 : 0) * (1 - 0.8 * rain) * (1 - 0.5 * thunder);
       const fx = Math.round(focus.x / snap) * snap, fy = Math.round(focus.y / snap) * snap, fz = Math.round(focus.z / snap) * snap;
       l.target.position.set(fx, fy, fz);
       l.position.set(fx + s.dir[0] * 200, fy + s.dir[1] * 200, fz + s.dir[2] * 200);

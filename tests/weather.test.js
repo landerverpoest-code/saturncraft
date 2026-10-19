@@ -18,6 +18,17 @@ describe('weather', () => {
     for (const s of spells.clear.slice(1)) { expect(s).toBeGreaterThanOrEqual(CLEAR_TICKS[0]); expect(s).toBeLessThanOrEqual(CLEAR_TICKS[1]); }
   });
 
+  it('thunder only darkens the sky while it also rains', () => {
+    const w = new Weather(rng(2));
+    w.thundering = true; w.thunderTimer = 99999; w.timer = 99999;
+    for (let k = 0; k < 120; k++) w.tick();
+    expect(w.storm).toBe(0);
+    w.raining = true;
+    for (let k = 0; k < 120; k++) w.tick();
+    expect(w.storm).toBe(1);
+    expect(w.save().thundering).toBe(true);
+  });
+
   it('fades in over 100 ticks', () => {
     const w = new Weather(rng(1));
     w.raining = true; w.timer = 99999;

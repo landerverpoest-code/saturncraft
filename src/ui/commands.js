@@ -45,7 +45,7 @@ function nextTime(t0, pred) {
 export const HELP = [
   '/gamemode <survival|creative>  (or /gm 0|1)',
   '/time set <day|night|noon|midnight|ticks>,  /time add <ticks>,  /time query',
-  '/weather <clear|rain> [ticks]',
+  '/weather <clear|rain|thunder> [ticks]',
   '/tp <x> <y> <z>  (~ for relative)',
   '/give <item> [count]',
   '/summon <mob> [x y z]',
@@ -87,9 +87,10 @@ export function runCommand(game, text) {
     case 'weather': {
       const v = (args[0] || '').toLowerCase(), w = game.weather;
       const dur = Number(args[1]) || (v === 'clear' ? 12000 + Math.floor(Math.random() * 168000) : 12000 + Math.floor(Math.random() * 12000));
-      if (v === 'clear') { w.raining = false; w.timer = dur; return 'Set the weather to clear'; }
-      if (v === 'rain' || v === 'thunder') { w.raining = true; w.timer = dur; return 'Set the weather to rain'; }
-      return 'Usage: /weather <clear|rain> [ticks]';
+      if (v === 'clear') { w.raining = false; w.timer = dur; w.thundering = false; w.thunderTimer = dur; return 'Set the weather to clear'; }
+      if (v === 'rain') { w.raining = true; w.timer = dur; w.thundering = false; w.thunderTimer = dur; return 'Set the weather to rain'; }
+      if (v === 'thunder') { w.raining = true; w.timer = dur; w.thundering = true; w.thunderTimer = dur; return 'Set the weather to rain & thunder'; }
+      return 'Usage: /weather <clear|rain|thunder> [ticks]';
     }
     case 'tp': case 'teleport': {
       const x = coord(args[0], p.x), y = coord(args[1], p.y), z = coord(args[2], p.z);
@@ -116,6 +117,13 @@ export function runCommand(game, text) {
       return `Gave ${total} [${ITEMS[id].name}]`;
     }
     case 'summon': {
+      if (/^lightning(_bolt)?$/i.test(args[0] || '')) {
+        const [dx, , dz] = p.lookDir();
+        const x = args[1] !== undefined ? coord(args[1], p.x) : p.x + dx * 6, z = args[3] !== undefined ? coord(args[3], p.z) : p.z + dz * 6;
+        const y = args[2] !== undefined ? coord(args[2], p.y) : game.world.heightAt(Math.floor(x), Math.floor(z)) + 1;
+        game.strikeLightning(Math.floor(x), Math.floor(y), Math.floor(z));
+        return 'Summoned new Lightning Bolt';
+      }
       const type = mobByName(args[0] || '');
       if (!type) return `Unknown mob '${args[0] || ''}'. Mobs: ${MOB_KEYS.join(', ')}`;
       const [dx, , dz] = p.lookDir();

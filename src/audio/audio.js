@@ -59,6 +59,7 @@ export class Audio {
   noise(t0, dur, freq, q, gain, out, type = 'bandpass') {
     const src = this.ctx.createBufferSource();
     src.buffer = this.noiseBuf;
+    src.loop = true; // long sounds (thunder) outlast the 1 s buffer
     src.playbackRate.value = 0.5 + Math.random();
     const f = this.ctx.createBiquadFilter();
     f.type = type; f.frequency.value = freq; f.Q.value = q;
@@ -135,6 +136,8 @@ export class Audio {
       case 'equip': this.noise(t, 0.15, 2500, 2, 0.25 * gain, out); this.tone(t, 0.1, 500, 700, 0.1 * gain, out, 'square'); break;
       case 'ignite': this.noise(t, 0.05, 3000, 4, 0.3 * gain, out); this.tone(t, 0.04, 1800, 1200, 0.1 * gain, out, 'square'); this.noise(t + 0.06, 0.35, 900, 0.7, 0.2 * gain, out); break;
       case 'fire': this.noise(t, 0.9, 700, 0.6, 0.12 * gain, out, 'lowpass'); for (let k = 0; k < 4; k++) this.noise(t + Math.random() * 0.8, 0.02, 2500, 5, 0.12 * gain, out); break;
+      case 'thunder': this.noise(t, 0.6, 400, 0.5, 0.9 * gain, out, 'lowpass'); this.noise(t + 0.3, 4, 110, 0.4, 1.2 * gain, out, 'lowpass'); this.noise(t + 1.2, 3, 70, 0.4, 0.9 * gain, out, 'lowpass'); break;
+      case 'lightning': this.noise(t, 0.25, 6000, 0.3, 0.8 * gain, out, 'highpass'); this.noise(t, 0.6, 1500, 0.4, 0.6 * gain, out); break;
       case 'shear': this.noise(t, 0.06, 4000, 3, 0.25 * gain, out); this.noise(t + 0.08, 0.06, 3500, 3, 0.25 * gain, out); break;
       case 'hmm': this.tone(t, 0.12, 180, 210, 0.2 * gain, out, 'sawtooth'); this.tone(t + 0.13, 0.22, 210, 150, 0.2 * gain, out, 'sawtooth'); break;
       case 'chest_open': this.tone(t, 0.25, 180, 240, 0.18 * gain, out, 'sawtooth'); this.noise(t, 0.2, 700, 2, 0.15 * gain, out); break;

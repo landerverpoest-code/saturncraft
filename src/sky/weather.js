@@ -8,6 +8,9 @@ import { BIOMES } from '../world/biomes.js';
 
 export const CLEAR_TICKS = [12000, 180000];
 export const RAIN_TICKS = [12000, 24000];
+// Thunder runs on its own timer and only shows while it is also raining.
+export const CLEAR_THUNDER_TICKS = [12000, 180000];
+export const THUNDER_TICKS = [3600, 15600];
 
 const randRange = (rng, [a, b]) => a + Math.floor(rng() * (b - a));
 
@@ -17,6 +20,9 @@ export class Weather {
     this.raining = false;
     this.timer = randRange(rng, CLEAR_TICKS);
     this.level = 0;
+    this.thundering = false;
+    this.thunderTimer = randRange(rng, CLEAR_THUNDER_TICKS);
+    this.thunderLevel = 0;
   }
 
   tick() {
@@ -25,7 +31,15 @@ export class Weather {
       this.timer = randRange(this.rng, this.raining ? RAIN_TICKS : CLEAR_TICKS);
     }
     this.level = Math.max(0, Math.min(1, this.level + (this.raining ? 0.01 : -0.01)));
+    if (--this.thunderTimer <= 0) {
+      this.thundering = !this.thundering;
+      this.thunderTimer = randRange(this.rng, this.thundering ? THUNDER_TICKS : CLEAR_THUNDER_TICKS);
+    }
+    this.thunderLevel = Math.max(0, Math.min(1, this.thunderLevel + (this.thundering && this.raining ? 0.01 : -0.01)));
   }
+
+  /** How stormy it is (0..1): thunder only counts while it rains. */
+  get storm() { return this.thunderLevel * this.level; }
 
   /** 'rain', 'snow' or null for a biome. */
   static precipitation(biomeId) {
@@ -42,8 +56,12 @@ export class Weather {
     return world.heightAt(bx, bz) < Math.floor(y);
   }
 
-  save() { return { raining: this.raining, timer: this.timer, level: this.level }; }
-  load(d) { if (d) { this.raining = d.raining; this.timer = d.timer; this.level = d.level; } }
+  save() { return { raining: this.raining, timer: this.timer, level: this.level, thundering: this.thundering, thunderTimer: this.thunderTimer, thunderLevel: this.thunderLevel }; }
+  load(d) {
+    if (!d) return;
+    this.raining = d.raining; this.timer = d.timer; this.level = d.level;
+    if (d.thunderTimer !== undefined) { this.thundering = d.thundering; this.thunderTimer = d.thunderTimer; this.thunderLevel = d.thunderLevel; }
+  }
 }
 
 const R = 9;        // column radius around the player

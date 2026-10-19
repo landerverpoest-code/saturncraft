@@ -15,6 +15,8 @@ import { PlayerModel } from './render/playerModel.js';
 import { Sky } from './sky/sky.js';
 import { Clouds } from './sky/clouds.js';
 import { Weather, WeatherRenderer } from './sky/weather.js';
+import { Lightning } from './sky/lightning.js';
+import { canLight, FIRE_DELAY } from './world/fire.js';
 import { Chat } from './ui/chat.js';
 import { Music } from './audio/music.js';
 import { Milestones } from './player/milestones.js';
@@ -93,6 +95,7 @@ export class Game {
     this.world.rainingAt = (x, y, z) => this.weather.level >= 0.2 && Weather.precipitation(this.world.biomeAt(x, z)) === 'rain' && this.world.heightAt(x, z) <= y;
     this.chat = this.chat || new Chat(this);
     this.weatherFx = new WeatherRenderer(this.scene);
+    this.lightning = new Lightning(this.scene);
     this.particles = new Particles(this.scene);
     this.playerModel = new PlayerModel(this.scene);
     this.perspective = 0; // 0 first person, 1 behind, 2 in front (F5)
@@ -423,6 +426,30 @@ export class Game {
     }
   }
 
+  /** Thunderstorms: every ~20 s a bolt hits a random rainy spot within 64 blocks. */
+  tickThunder() {
+    if (this.weather.storm < 0.9 || Math.random() >= 1 / 400) return;
+    const p = this.player;
+    const x = Math.floor(p.x + (Math.random() - 0.5) * 128), z = Math.floor(p.z + (Math.random() - 0.5) * 128);
+    if (!this.world.isLoaded(x, z) || Weather.precipitation(this.world.biomeAt(x, z)) !== 'rain') return;
+    this.strikeLightning(x, this.world.heightAt(x, z) + 1, z);
+  }
+
+  /** A lightning bolt at block x,y,z: flash, thunder, fire, and 5 damage + burning within 3 blocks. */
+  strikeLightning(x, y, z) {
+    const w = this.world, p = this.player;
+    this.lightning.strike(x + 0.5, y, z + 0.5);
+    const dist = Math.hypot(p.x - x, p.z - z);
+    this.audio.play('thunder', null, Math.max(0.25, 1 - dist / 160));
+    if (dist < 40) this.audio.play('lightning', [x + 0.5, y, z + 0.5]);
+    const light = (fx, fy, fz) => { if (canLight(w, fx, fy, fz)) { w.setBlockUrgent(fx, fy, fz, B.FIRE); w.scheduleTick(fx, fy, fz, FIRE_DELAY); } };
+    light(x, y, z);
+    for (let k = 0; k < 4; k++) light(x + Math.floor(Math.random() * 3) - 1, y + Math.floor(Math.random() * 3) - 1, z + Math.floor(Math.random() * 3) - 1);
+    const near = (e) => Math.hypot(e.x - (x + 0.5), e.y - y, e.z - (z + 0.5)) < 3;
+    for (const e of this.entities.list) if (e.kind === 'mob' && e.deathTime === 0 && near(e)) { e.fireTicks = Math.max(e.fireTicks, 160); e.hurt(5, 'lightning', null, 0); }
+    if (!p.dead && near(p) && !p.creative) { p.fireTicks = Math.max(p.fireTicks, 160); p.hurt(5, 'lightning'); }
+  }
+
   explode(x, y, z, power, source) { explode(this, x, y, z, power, source); }
 
   // -------------------------------------------------------------------------
@@ -435,6 +462,8 @@ export class Game {
     this.world.tick();
     this.weather.tick();
     this.tickRain();
+    this.lightning.tick();
+    this.tickThunder();
     runRandomTicks(this.world, Math.floor(this.player.x / 16), Math.floor(this.player.z / 16), Math.min(this.chunks.renderDistance, 6));
     // Hold the player in place until the terrain under them has loaded (spawn, respawn, teleports)
     const p = this.player;
@@ -567,6 +596,8 @@ export class Game {
     if (this.chunks.edited) { this.chunks.edited = false; this.sky.refreshShadows(); }
     const smoothTime = this.time + alpha;
     this.sky.rain = this.weather.level;
+    this.sky.thunder = this.weather.storm;
+    this.sky.flash = this.lightning.flash;
     const st = this.sky.update(smoothTime, sec, this.camera, new THREE.Vector3(x, y, z));
     this.weatherFx.update(this.world, this.camera, p.yaw, this.weather.level, sec, Math.min(1, st.combined) * 0.85 + 0.15);
     this.audio.setRain(this.weather.level * (Weather.precipitation(this.world.biomeAt(Math.floor(x), Math.floor(z))) === 'rain' ? 1 : 0),
