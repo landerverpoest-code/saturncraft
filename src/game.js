@@ -10,6 +10,7 @@ import { terrainUniforms, createTextureArray } from './render/terrainMaterial.js
 import { Particles } from './render/particles.js';
 import { HeldItem, BlockOverlay } from './render/overlays.js';
 import { Sky } from './sky/sky.js';
+import { Clouds } from './sky/clouds.js';
 import { effectiveSkyLight } from './sky/suns.js';
 import { Player } from './player/player.js';
 import { Interaction } from './player/interaction.js';
@@ -74,6 +75,7 @@ export class Game {
     this.chunks = new ChunkRenderer(this.world, this.scene, this.seed, { renderDistance: s.renderDistance });
     this.sky = new Sky(this.scene, this.renderer, { shadowMapSize: s.shadowMapSize });
     this.sky.setShadowsEnabled(s.shadows);
+    this.clouds = new Clouds(this.scene, this.seed);
     this.particles = new Particles(this.scene);
     this.player = new Player();
     this.player.isPlayer = true;
@@ -359,6 +361,7 @@ export class Game {
     const st = this.sky.update(smoothTime, sec, this.camera, new THREE.Vector3(x, y, z));
     terrainUniforms.uTime.value = sec;
     const R = this.chunks.renderDistance * 16;
+    this.clouds.update(this.camera, smoothTime, this.sky, Math.max(192, R * 1.8));
     const fogCol = this.sky.horizon;
     this.scene.fog.color.copy(fogCol);
     if (b.eyeInWater) { this.scene.fog.color.setRGB(0.03, 0.1, 0.3); this.scene.fog.near = 1; this.scene.fog.far = 18; }

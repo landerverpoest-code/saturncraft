@@ -266,6 +266,7 @@ poison from eyes) follow the documented table.
 * Bow and arrows (player and Rattler), arrow pick-up
 * Death screen, item drop on death, respawn; pause menu with settings
 * Procedural sound effects with stereo panning; world saving
+* Blocky cloud layer (12×12 cells, 4 thick, y=192, drifting 0.03 blocks/tick), coloured by the suns
 
 **Not yet implemented**
 
@@ -273,7 +274,7 @@ poison from eyes) follow the documented table.
 * Farming (seeds, wheat, bread), breeding/taming, shearing, sheep colours
 * Villages, other structures, the other dimensions, redstone-style circuitry
 * Chests and other storage containers, doors, slabs, stairs, fences, beds (spawn is fixed)
-* Wall-mounted torches, fire blocks and fire spread, weather (rain/snow/thunder), clouds
+* Wall-mounted torches, fire blocks and fire spread, weather (rain/snow/thunder)
 * Slimes, witches, drowned, husks/strays as separate variants, baby mobs, mob equipment
 * Difficulty levels (fixed at Normal), creative mode, commands, multiplayer
 * Sprint-swimming/crawling poses, ladders, boats, minecarts, elytra
