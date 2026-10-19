@@ -73,10 +73,11 @@ export function explode(game, x, y, z, power, source) {
   // Blocks
   for (const [bx, by, bz, id] of blocks) {
     if (BLOCKS[id].hardness < 0) continue;
+    const meta = w.getMeta(bx, by, bz);
     w.setBlock(bx, by, bz, B.AIR);
     if (Math.random() < 1 / power) {
       const ideal = { type: BLOCKS[id].tool, tier: 99, speed: 1 };
-      for (const st of blockDrops(id, ideal)) game.entities.spawnItem(bx + 0.5, by + 0.5, bz + 0.5, st);
+      for (const st of blockDrops(id, ideal, Math.random, meta)) game.entities.spawnItem(bx + 0.5, by + 0.5, bz + 0.5, st);
     }
     if (id === B.FURNACE || id === B.FURNACE_LIT || id === B.CHEST) game.onBlockBroken(bx, by, bz, id);
   }

@@ -18,6 +18,8 @@ for (const b of BLOCKS) {
   if (b.tex.front) addTex(b.tex.front);
 }
 addTex('furnace_side');
+addTex('farmland_moist');
+for (let i = 0; i < 8; i++) addTex('wheat_' + i);
 addTex('water_flow');
 addTex('lava_flow');
 for (let i = 0; i < 10; i++) addTex('destroy_' + i);
@@ -148,6 +150,33 @@ function leavesTex(c, density = 0.78) {
   }
 }
 
+// Tilled soil: furrows across the face, darker when moist.
+function farmland(c, moist) {
+  const pal = moist ? ['#3f2a19', '#4a321e', '#36241a', '#52381f'] : ['#6e4c2e', '#7d5836', '#634329', '#8a633e'];
+  c.noiseFill(pal.map(hex), 0.3);
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    if (y % 4 === 3) c.set(x, y, shade(c.get(x, y), 0.7));
+    else if (y % 4 === 0) c.set(x, y, shade(c.get(x, y), 1.12));
+  }
+}
+
+// Wheat crop stage 0..7: taller stalks, turning from green to gold, ears at the end.
+function wheat(c, stage) {
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
+  const h = 3 + Math.round(stage * 12 / 7);
+  const green = hex('#3e8a24'), gold = hex('#c9a640'), col = mix(green, gold, Math.max(0, (stage - 3) / 4));
+  for (const sx of [1, 4, 7, 10, 13]) {
+    const lean = c.h(sx, stage, 9) < 0.5 ? 0 : 1;
+    const hh = h - Math.floor(c.h(sx, 1, 5) * 3);
+    for (let k = 0; k < hh; k++) c.set(sx + (k > hh * 0.6 ? lean : 0), 15 - k, shade(col, 0.85 + c.h(sx, k) * 0.25));
+    if (stage >= 5) for (let k = 0; k < 3; k++) {
+      const ey = 15 - hh + k;
+      c.set(sx + lean - 1, ey, shade(hex(stage === 7 ? '#b98a2a' : '#8fa040'), 0.9 + c.h(sx, ey) * 0.2));
+      c.set(sx + lean + 1, ey + 1, shade(hex(stage === 7 ? '#d6ac44' : '#a4b048'), 0.9));
+    }
+  }
+}
+
 function crossPlant(c, stem, petals, center) {
   for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
   const s = hex(stem);
@@ -168,6 +197,8 @@ const GEN = {
   andesite: (c) => c.noiseFill(['#848486', '#8f8f91', '#7a7a7c', '#9a9a9c'].map(hex), 0.3),
   tuff: (c) => c.noiseFill(['#5f6159', '#6c6e64', '#575951', '#787a6f'].map(hex), 0.5),
   dirt: (c) => c.noiseFill(P.dirt, 0.4),
+  farmland: (c) => farmland(c, false),
+  farmland_moist: (c) => farmland(c, true),
   grass_top: (c) => c.noiseFill(P.grassGray, 0.3),
   grass_side: (c) => {
     c.noiseFill(P.dirt, 0.4);
@@ -418,6 +449,7 @@ function destroyStage(c, stage) {
 
 function paint(c, name) {
   if (name.startsWith('destroy_')) destroyStage(c, +name.slice(8));
+  else if (name.startsWith('wheat_')) wheat(c, +name.slice(6));
   else if (GEN[name]) GEN[name](c);
   else c.noiseFill(P.stone);
 }

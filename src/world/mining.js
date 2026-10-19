@@ -46,7 +46,7 @@ export function breakTicks(blockId, tool = HAND, ctx = {}) {
 const randInt = (rng, min, max) => min + Math.floor(rng() * (max - min + 1));
 
 /** Items dropped by a broken block. Returns [{id, count}]. */
-export function blockDrops(blockId, tool = HAND, rng = Math.random) {
+export function blockDrops(blockId, tool = HAND, rng = Math.random, meta = 0) {
   const b = BLOCKS[blockId];
   if (!b || b.drops === null || !canHarvest(blockId, tool)) return [];
   const d = b.drops;
@@ -63,6 +63,14 @@ export function blockDrops(blockId, tool = HAND, rng = Math.random) {
     case 'beryl': return [{ id: I.BERYL, count: 1 }];
     case 'clay': return [{ id: I.CLAY_BALL, count: 4 }];
     case 'gravel': return rng() < 0.1 ? [{ id: I.FLINT, count: 1 }] : [{ id: B.GRAVEL, count: 1 }];
+    case 'seeds': return rng() < 0.125 ? [{ id: I.WHEAT_SEEDS, count: 1 }] : [];
+    case 'wheat': {
+      // mature: 1 wheat + 1 seed + binomial(3, 4/7) seeds; otherwise just the seed back
+      if ((meta & 7) < 7) return [{ id: I.WHEAT_SEEDS, count: 1 }];
+      let seeds = 1;
+      for (let k = 0; k < 3; k++) if (rng() < 4 / 7) seeds++;
+      return [{ id: I.WHEAT, count: 1 }, { id: I.WHEAT_SEEDS, count: seeds }];
+    }
     case 'dead_bush': { const n = randInt(rng, 0, 2); return n ? [{ id: I.STICK, count: n }] : []; }
     case 'oak_leaves':
     case 'leaves': {

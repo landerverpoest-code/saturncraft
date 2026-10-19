@@ -21,6 +21,7 @@ const TOOL_COMBAT = {
   axe:     { wood: [7, 0.8], stone: [9, 0.8], iron: [9, 0.9], gold: [7, 1.0], diamond: [9, 1.0] },
   pickaxe: { wood: [2, 1.2], stone: [3, 1.2], iron: [4, 1.2], gold: [2, 1.2], diamond: [5, 1.2] },
   shovel:  { wood: [2.5, 1], stone: [3.5, 1], iron: [4.5, 1], gold: [2.5, 1], diamond: [5.5, 1] },
+  hoe:     { wood: [1, 1],   stone: [1, 2],   iron: [1, 3],   gold: [1, 1],   diamond: [1, 4] },
 };
 
 let nextId = 256;
@@ -79,10 +80,13 @@ item('bucket', 'Bucket', { stack: 16 });
 item('water_bucket', 'Water Bucket', { stack: 1, places: B.WATER });
 item('lava_bucket', 'Lava Bucket', { stack: 1, places: B.LAVA, fuel: 20000 });
 item('bow', 'Bow', { stack: 1, durability: 384, bow: true });
+item('wheat_seeds', 'Wheat Seeds', { places: B.WHEAT });
+item('wheat', 'Wheat');
+item('bread', 'Bread', { food: { hunger: 5, saturation: 6 } });
 
 // Tools
 for (const mat of Object.keys(MATERIALS)) {
-  for (const type of ['pickaxe', 'axe', 'shovel', 'sword']) {
+  for (const type of ['pickaxe', 'axe', 'shovel', 'sword', 'hoe']) {
     const m = MATERIALS[mat];
     const [damage, attackSpeed] = TOOL_COMBAT[type][mat];
     const name = `${mat === 'wood' ? 'Wooden' : mat === 'gold' ? 'Golden' : mat[0].toUpperCase() + mat.slice(1)} ${type[0].toUpperCase() + type.slice(1)}`;

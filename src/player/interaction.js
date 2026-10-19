@@ -118,7 +118,7 @@ export class Interaction {
     if (g.onBlockBroken) g.onBlockBroken(x, y, z, id, meta);
     g.audio.play('break_' + BLOCKS[id].sound, [x + 0.5, y + 0.5, z + 0.5]);
     g.particles && g.particles.blockBreak(x, y, z, id, particleLight(g, x + 0.5, y + 0.5, z + 0.5));
-    for (const drop of blockDrops(id, tool)) g.entities.spawnItem(x + 0.5, y + 0.3, z + 0.5, drop);
+    for (const drop of blockDrops(id, tool, Math.random, meta)) g.entities.spawnItem(x + 0.5, y + 0.3, z + 0.5, drop);
     // Ice melts into water when broken above a solid block
     if (id === B.ICE && SOLID[g.world.getBlock(x, y - 1, z)]) {
       g.world.setBlockUrgent(x, y, z, B.WATER, 0);
@@ -204,6 +204,14 @@ export class Interaction {
       if (t.id === B.CHEST) { g.ui.openChest(t.x, t.y, t.z); g.audio.play('chest_open', [t.x + 0.5, t.y + 0.5, t.z + 0.5]); return true; }
     }
     if (!st) return false;
+    // Hoes till grass and dirt into farmland (not from below, and only with air above)
+    if (d.tool && d.tool.type === 'hoe' && (t.id === B.GRASS || t.id === B.DIRT || t.id === B.SNOWY_GRASS) && t.face[1] !== -1 && !w.getBlock(t.x, t.y + 1, t.z)) {
+      w.setBlockUrgent(t.x, t.y, t.z, B.FARMLAND, 0);
+      g.audio.play('place_gravel', [t.x + 0.5, t.y + 1, t.z + 0.5]);
+      p.inventory.damageSelected(1);
+      this.swing = SWING_TICKS;
+      return true;
+    }
     let placeId = isBlockItem(st.id) ? st.id : d.places;
     if (placeId === undefined) return false;
     // Place location: replace soft blocks, else the adjacent cell
@@ -224,7 +232,7 @@ export class Interaction {
     w.setBlockUrgent(px, py, pz, placeId, meta);
     if (isFluid(placeId)) w.scheduleTick(px, py, pz, 5);
     g.audio.play('place_' + BLOCKS[placeId].sound, [px + 0.5, py + 0.5, pz + 0.5]);
-    if (d.places) {
+    if (d.places === B.WATER || d.places === B.LAVA) {
       p.inventory.slots[p.inventory.selected] = { id: I.BUCKET, count: 1, damage: 0 };
       p.inventory.changed();
     } else p.inventory.removeFromSlot(p.inventory.selected, 1);

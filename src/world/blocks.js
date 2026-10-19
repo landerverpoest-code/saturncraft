@@ -8,7 +8,7 @@ export const TOOL = { NONE: null, PICKAXE: 'pickaxe', AXE: 'axe', SHOVEL: 'shove
 export const TIER = { ANY: -1, WOOD: 0, STONE: 1, IRON: 2, DIAMOND: 3 };
 
 // Render shapes understood by the mesher
-export const SHAPE = { NONE: 0, CUBE: 1, CROSS: 2, LIQUID: 3, TORCH: 4, CACTUS: 5 };
+export const SHAPE = { NONE: 0, CUBE: 1, CROSS: 2, LIQUID: 3, TORCH: 4, CACTUS: 5, CROP: 6 };
 
 // Render layers
 export const LAYER = { OPAQUE: 0, CUTOUT: 1, TRANSLUCENT: 2 };
@@ -26,6 +26,7 @@ export const B = {
   OBSIDIAN: 48, WOOL: 49, COAL_BLOCK: 50, IRON_BLOCK: 51, GOLD_BLOCK: 52,
   DIAMOND_BLOCK: 53, GRANITE: 54, DIORITE: 55, ANDESITE: 56, TUFF: 57, SNOWY_GRASS: 58,
   SPRUCE_PLANKS: 59, BIRCH_PLANKS: 60, STONE_BRICKS: 61, CHEST: 62,
+  FARMLAND: 63, WHEAT: 64,
 };
 
 const defaults = {
@@ -92,7 +93,7 @@ def(B.SNOW_BLOCK, 'Snow Block', { hardness: 0.2, resistance: 0.2, tool: TOOL.SHO
 def(B.ICE, 'Ice', { hardness: 0.5, resistance: 0.5, tool: TOOL.PICKAXE, opaque: false, opacity: 1, layer: LAYER.TRANSLUCENT, drops: null, slipperiness: 0.98, sound: 'glass' });
 def(B.CLAY, 'Clay', { hardness: 0.6, resistance: 0.6, tool: TOOL.SHOVEL, drops: 'clay', sound: 'gravel' });
 def(B.CACTUS, 'Cactus', { hardness: 0.4, resistance: 0.4, opaque: false, shape: SHAPE.CACTUS, layer: LAYER.CUTOUT, sound: 'wool', needsSupport: true, tex: { top: 'cactus_top', bottom: 'cactus_bottom', side: 'cactus_side' } });
-def(B.TALL_GRASS, 'Tall Grass', { ...plant, replaceable: true, tint: 'grass', drops: null });
+def(B.TALL_GRASS, 'Tall Grass', { ...plant, replaceable: true, tint: 'grass', drops: 'seeds' });
 def(B.SUNPETAL, 'Sunpetal', plant);
 def(B.REDBLOOM, 'Redbloom', plant);
 def(B.DEAD_BUSH, 'Dead Bush', { ...plant, replaceable: true, drops: 'dead_bush' });
@@ -117,6 +118,10 @@ def(B.BIRCH_PLANKS, 'Birch Planks', { hardness: 2, resistance: 3, tool: TOOL.AXE
 def(B.STONE_BRICKS, 'Stone Bricks', { hardness: 1.5, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD });
 // tex.front: shown on the side facing the player when placed (meta 0..3)
 def(B.CHEST, 'Chest', { hardness: 2.5, resistance: 2.5, tool: TOOL.AXE, sound: 'wood', flammable: true, container: true, tex: { top: 'chest_top', bottom: 'chest_top', side: 'chest_side', front: 'chest_front' } });
+
+// Farmland: meta = moisture 0..7 (moist when > 0). Wheat: meta = growth stage 0..7.
+def(B.FARMLAND, 'Farmland', { hardness: 0.6, resistance: 0.6, tool: TOOL.SHOVEL, drops: B.DIRT, sound: 'gravel', tex: { top: 'farmland', bottom: 'dirt', side: 'dirt' } });
+def(B.WHEAT, 'Wheat Crops', { ...plant, shape: SHAPE.CROP, drops: 'wheat', tex: { all: 'wheat_7' } });
 
 export const NUM_BLOCKS = BLOCKS.length;
 

@@ -263,6 +263,8 @@ poison from eyes) follow the documented table.
 * 9 mobs with AI, pathfinding, drops, natural spawning, caps and despawning
 * Explosions (ray-based block destruction with blast resistance, exposure-scaled damage, 1/power drop survival)
 * Inventory, hotbar, 2×2 and 3×3 shaped/shapeless crafting, furnace smelting
+* Farming: hoes till grass/dirt; tall grass drops seeds (1/8); wheat grows through 8 stages on random ticks (3 per section per tick) with the reference growth-speed formula, needs light ≥ 9; farmland is moistened by water within 4 blocks, dries out, reverts to dirt and can be trampled; bread from 3 wheat
+* Grass spreads to nearby dirt in light ≥ 9
 * Chests (27 slots, shift-click transfer, contents drop when broken, saved with the world); furnaces and chests face the player when placed
 * Bow and arrows (player and Rattler), arrow pick-up
 * Death screen, item drop on death, respawn; pause menu with settings
@@ -272,7 +274,7 @@ poison from eyes) follow the documented table.
 **Not yet implemented**
 
 * Experience orbs and enchanting, armour items, shields, potions and status-effect UI (only hunger/poison effects exist)
-* Farming (seeds, wheat, bread), breeding/taming, shearing, sheep colours
+* Breeding/taming, shearing, sheep colours, other crops, bone meal
 * Villages, other structures, the other dimensions, redstone-style circuitry
 * Double chests and other storage containers, doors, slabs, stairs, fences, beds (spawn is fixed)
 * Wall-mounted torches, fire blocks and fire spread, weather (rain/snow/thunder)

@@ -36,6 +36,8 @@ for (const f of FACES) {
 
 const FOLIAGE_FIXED = { [B.BIRCH_LEAVES]: [128, 167, 85], [B.SPRUCE_LEAVES]: [97, 153, 97] };
 const FURNACE_FRONT_DIR = [5, 0, 4, 1];
+const WHEAT_TILES = [0, 1, 2, 3, 4, 5, 6, 7].map((i) => texId('wheat_' + i));
+const FARMLAND_MOIST = texId('farmland_moist');
 
 class Buf {
   constructor(cap = 16384) { this.alloc(cap); this.n = 0; this.ni = 0; this.yBase = 0; }
@@ -126,6 +128,7 @@ export function meshSection(sec) {
           if (d === FURNACE_FRONT_DIR[meta[i] & 3]) tile = texId(id === B.FURNACE ? 'furnace_front' : 'furnace_front_lit');
           else if (d !== 2 && d !== 3) tile = texId('furnace_side');
         } else if (FRONT_TILE[id] >= 0 && d === FURNACE_FRONT_DIR[meta[i] & 3]) tile = FRONT_TILE[id];
+        else if (id === B.FARMLAND && d === 2 && meta[i] > 0) tile = FARMLAND_MOIST;
         let r = 255, g = 255, b2 = 255;
         if ((id === B.GRASS && d === 2)) { r = colors[ci]; g = colors[ci + 1]; b2 = colors[ci + 2]; }
         else if (id === B.OAK_LEAVES) { r = colors[ci + 3]; g = colors[ci + 4]; b2 = colors[ci + 5]; }
@@ -165,6 +168,23 @@ export function meshSection(sec) {
               swapVert(buf, n - 4 + k, n - 1 - k);
             }
           }
+        }
+      }
+    } else if (shape === SHAPE.CROP) {
+      // four planes in a # pattern, both sides
+      const l = light[i];
+      const tile = WHEAT_TILES[meta[i] & 7];
+      const sky = (l >> 4) * 17, blk = (l & 15) * 17;
+      const quads = [[x + 0.25, z, x + 0.25, z + 1], [x + 0.75, z, x + 0.75, z + 1], [x, z + 0.25, x + 1, z + 0.25], [x, z + 0.75, x + 1, z + 0.75]];
+      buf.ensure(32);
+      for (const [x1, z1, x2, z2] of quads) {
+        for (let side = 0; side < 2; side++) {
+          buf.vert(x1, y, z1, 0, 1, 0, 0, 1, 255, 255, 255, sky, blk, 0, tile);
+          buf.vert(x2, y, z2, 0, 1, 0, 1, 1, 255, 255, 255, sky, blk, 0, tile);
+          buf.vert(x2, y + 1, z2, 0, 1, 0, 1, 0, 255, 255, 255, sky, blk, 0, tile);
+          buf.vert(x1, y + 1, z1, 0, 1, 0, 0, 0, 255, 255, 255, sky, blk, 0, tile);
+          buf.quad(false);
+          if (side === 0) { const n = buf.n; for (let k = 0; k < 2; k++) swapVert(buf, n - 4 + k, n - 1 - k); }
         }
       }
     } else if (shape === SHAPE.TORCH) {

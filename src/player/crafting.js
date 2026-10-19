@@ -26,6 +26,7 @@ shapeless([B.BIRCH_LOG], B.BIRCH_PLANKS, 4);
 shaped(['P', 'P'], { P: 'planks' }, I.STICK, 4);
 shaped(['PP', 'PP'], { P: 'planks' }, B.WORKBENCH, 1);
 shaped(['PPP', 'P P', 'PPP'], { P: 'planks' }, B.CHEST, 1);
+shaped(['WWW'], { W: I.WHEAT }, I.BREAD, 1);
 shaped(['C', 'S'], { C: I.COAL, S: I.STICK }, B.TORCH, 4);
 shaped(['CCC', 'C C', 'CCC'], { C: 'stone_mat' }, B.FURNACE, 1);
 shaped(['SS', 'SS'], { S: B.STONE }, B.STONE_BRICKS, 4);
@@ -44,6 +45,7 @@ for (const [mat, ing] of Object.entries(TOOL_MATS)) {
   shaped(['XX', 'XS', ' S'], { X: ing, S: I.STICK }, I[`${mat}_axe`.toUpperCase()]);
   shaped(['X', 'S', 'S'], { X: ing, S: I.STICK }, I[`${mat}_shovel`.toUpperCase()]);
   shaped(['X', 'X', 'S'], { X: ing, S: I.STICK }, I[`${mat}_sword`.toUpperCase()]);
+  shaped(['XX', ' S', ' S'], { X: ing, S: I.STICK }, I[`${mat}_hoe`.toUpperCase()]);
 }
 
 /**

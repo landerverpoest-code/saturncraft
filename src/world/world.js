@@ -173,6 +173,8 @@ export class World {
       if (!this.hasSupport(x, y, z, id)) this.breakBlock(x, y, z, true);
     } else if (id === B.GRASS && OPAQUE[this.getBlock(x, y + 1, z)]) {
       this.setBlock(x, y, z, B.DIRT, 0, false);
+    } else if (id === B.FARMLAND && SOLID[this.getBlock(x, y + 1, z)]) {
+      this.setBlock(x, y, z, B.DIRT, 0);
     }
   }
 
@@ -185,6 +187,7 @@ export class World {
     }
     if (id === B.TORCH) return SOLID[below] && OPAQUE[below];
     if (id === B.DEAD_BUSH) return below === B.SAND || below === B.DIRT || below === B.GRASS;
+    if (id === B.WHEAT) return below === B.FARMLAND;
     return below === B.GRASS || below === B.DIRT || below === B.SNOWY_GRASS;
   }
 
@@ -192,8 +195,9 @@ export class World {
   breakBlock(x, y, z, drop) {
     const id = this.getBlock(x, y, z);
     if (!id) return;
+    const meta = this.getMeta(x, y, z);
     this.setBlock(x, y, z, B.AIR);
-    if (drop) this.emit('dropItems', x, y, z, id);
+    if (drop) this.emit('dropItems', x, y, z, id, meta);
   }
 
   /** Run scheduled block ticks that are due. */

@@ -2,7 +2,9 @@
 import * as THREE from 'three';
 import { World } from './world/world.js';
 import { B, BLOCKS } from './world/blocks.js';
-import { ITEMS, I } from './world/items.js';
+import { ITEMS, I, toolOf } from './world/items.js';
+import { blockDrops } from './world/mining.js';
+import { runRandomTicks } from './world/randomTicks.js';
 import { biomeName } from './world/biomes.js';
 import { MIN_Y, TICK_MS } from './world/constants.js';
 import { ChunkRenderer } from './render/chunkRenderer.js';
@@ -93,10 +95,8 @@ export class Game {
     this.overlay = new BlockOverlay(this.scene);
 
     this.world.on('fallingBlock', (x, y, z, id) => this.entities.spawnFallingBlock(x, y, z, id));
-    this.world.on('dropItems', (x, y, z, id) => {
-      const d = BLOCKS[id];
-      const drop = d.drops === 'self' ? id : typeof d.drops === 'number' ? d.drops : null;
-      if (drop !== null && id !== B.TALL_GRASS) this.entities.spawnItem(x + 0.5, y + 0.3, z + 0.5, { id: drop, count: 1 });
+    this.world.on('dropItems', (x, y, z, id, meta) => {
+      for (const st of blockDrops(id, toolOf(null), Math.random, meta)) this.entities.spawnItem(x + 0.5, y + 0.3, z + 0.5, st);
     });
     this.chunks.onChunkLoaded = (cx, cz) => this.spawner.onChunkLoaded(cx, cz);
     this.chunks.onChunkUnloaded = (cx, cz) => this.spawner.onChunkUnloaded(cx, cz);
@@ -276,6 +276,7 @@ export class Game {
     const blocking = this.ui.blocking;
     const mv = blocking ? { forward: 0, strafe: 0, jump: false, sneak: false, sprint: false } : inp.movement();
     this.world.tick();
+    runRandomTicks(this.world, Math.floor(this.player.x / 16), Math.floor(this.player.z / 16), Math.min(this.chunks.renderDistance, 6));
     // Hold the player in place until the terrain under them has loaded (spawn, respawn, teleports)
     const p = this.player;
     if (this.chunks.isAreaReady(p.x, p.z, 0)) this.player.tick(this.world, mv);
@@ -299,6 +300,11 @@ export class Game {
       if (id) this.audio.play('step_' + BLOCKS[id].sound);
     }
     if (this.player.landedFrom > 1.5) { this.audio.play('land'); }
+    // landing on farmland can trample it back to dirt (chance = fall distance - 0.5)
+    if (this.player.landedFrom > 0.5) {
+      const p = this.player, fx = Math.floor(p.x), fy = Math.floor(p.y - 0.2), fz = Math.floor(p.z);
+      if (this.world.getBlock(fx, fy, fz) === B.FARMLAND && Math.random() < this.player.landedFrom - 0.5) this.world.setBlockUrgent(fx, fy, fz, B.DIRT);
+    }
     this.player.landedFrom = 0;
   }
 
