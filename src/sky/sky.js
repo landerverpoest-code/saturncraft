@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { SUNS, skyState } from './suns.js';
 import { skyVertex, skyFragment } from './skyShader.js';
+import { RingSystem } from './gasGiant.js';
 
 const DEG = Math.PI / 180;
 
@@ -53,6 +54,7 @@ export class Sky {
     this.mesh.renderOrder = -1000;
     this.mesh.frustumCulled = false;
     scene.add(this.mesh);
+    this.rings = new RingSystem(scene, this, PLANET.ringInner, PLANET.ringOuter);
 
     // Lights
     this.hemi = new THREE.HemisphereLight(0xbcd4ff, 0x4a4030, 1);
@@ -125,6 +127,7 @@ export class Sky {
     const axis = up.clone().multiplyScalar(Math.sin(PLANET.axisTiltToView)).addScaledVector(pd, -Math.cos(PLANET.axisTiltToView));
     axis.applyAxisAngle(pd, PLANET.axisRoll).normalize();
     u.uPlanetAxis.value.copy(axis);
+    this.rings.update(camera, pd, axis, PLANET.angularRadius, u.uSunDir.value, u.uSunColor.value, u.uSunIntensity.value, seconds, st.combined);
 
     this.mesh.position.copy(camera.position);
 

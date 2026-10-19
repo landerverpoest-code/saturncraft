@@ -215,8 +215,8 @@ const GEN = {
   sandstone_bottom: (c) => c.noiseFill(P.sand, 0.6),
   water: (c) => {
     for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
-      const w = Math.sin((x + y * 0.5) * 0.8) * 0.5 + 0.5;
-      c.set(x, y, mix(hex('#2856c4'), hex('#4a7ee0'), w * 0.5 + c.h(x, y) * 0.3), 180);
+      const w = Math.sin((x + y * 0.5) * 0.8 + Math.sin(y * 0.7) * 1.5) * 0.5 + 0.5;
+      c.set(x, y, mix(hex('#173a8c'), hex('#2a5cbc'), w * 0.45 + c.h(x >> 1, y >> 1) * 0.35), 150);
     }
   },
   water_flow: (c) => GEN.water(c),

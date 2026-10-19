@@ -56,9 +56,9 @@ export class HeldItem {
     this.mesh = null;
     // first-person arm: a sleeve with a bare hand at the end
     this.hand = new THREE.Group();
-    const sleeve = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.42), new THREE.MeshLambertMaterial({ color: 0x3a5a7a }));
-    const palm = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.14, 0.16), new THREE.MeshLambertMaterial({ color: 0xc9946a }));
-    sleeve.position.z = 0.1; palm.position.z = -0.19;
+    const sleeve = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.36, 0.15), new THREE.MeshLambertMaterial({ color: 0x3a5a7a }));
+    const palm = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.14, 0.14), new THREE.MeshLambertMaterial({ color: 0xc9946a }));
+    sleeve.position.y = -0.1; palm.position.y = 0.15;
     this.hand.add(sleeve, palm);
     this.equipAnim = 0;
   }
@@ -68,7 +68,7 @@ export class HeldItem {
   build(id) {
     this.group.clear();
     this.mesh = null;
-    if (id == null) { this.group.add(this.hand); this.hand.position.set(0.56, -0.5, -0.95); this.hand.rotation.set(0.25, 0.4, 0.05); this.hand.scale.setScalar(0.8); return; }
+    if (id == null) { this.group.add(this.hand); this.hand.position.set(0.52, -0.48, -0.8); this.hand.rotation.set(-0.55, 0.2, 0.32); return; }
     const d = ITEMS[id];
     if (d.block !== undefined && BLOCKS[d.block].shape !== SHAPE.CROSS && BLOCKS[d.block].shape !== SHAPE.TORCH) {
       const b = BLOCKS[d.block];

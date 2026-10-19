@@ -2,6 +2,7 @@
 import './ui/style.css';
 import { Game, DEFAULT_SETTINGS } from './game.js';
 import { stringToSeed } from './world/noise.js';
+import { loadGame, deleteSave } from './world/save.js';
 
 function loadSettings() {
   try { return { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem('saturncraft.settings') || '{}') }; } catch { return { ...DEFAULT_SETTINGS }; }
@@ -19,9 +20,19 @@ rd.addEventListener('input', () => { document.getElementById('t-rdv').textConten
 
 let game = null;
 
-async function start() {
+let existing = null;
+loadGame().then((d) => {
+  existing = d;
+  if (!d) return;
+  const btn = document.getElementById('continue');
+  btn.classList.remove('hidden');
+  btn.textContent = `Continue World (seed ${d.seed}, saved ${new Date(d.savedAt).toLocaleString()})`;
+});
+
+async function start(saveData = null) {
   const seedText = document.getElementById('seed').value.trim();
-  const seed = seedText ? stringToSeed(seedText) : (Math.random() * 2 ** 31) | 0;
+  const seed = saveData ? saveData.seed : seedText ? stringToSeed(seedText) : (Math.random() * 2 ** 31) | 0;
+  if (!saveData) await deleteSave();
   settings.renderDistance = +rd.value;
   settings.shadows = sh.checked;
   saveSettings(settings);
@@ -31,17 +42,22 @@ async function start() {
   game = new Game(canvas, seed, settings, {
     saveSettings,
     quit: () => { location.reload(); },
-  });
+  }, saveData);
   window.__game = game;
   await game.start((f) => { loading.querySelector('.bar > div').style.width = `${Math.round(f * 100)}%`; });
   loading.classList.add('hidden');
   game.hud.toast('Click to play · E for inventory · F3 debug');
 }
 
-document.getElementById('play').addEventListener('click', start);
+document.getElementById('play').addEventListener('click', () => {
+  if (existing && !confirm('Creating a new world replaces your saved world. Continue?')) return;
+  start();
+});
+document.getElementById('continue').addEventListener('click', () => start(existing));
 const params = new URLSearchParams(location.search);
 if (params.has('autostart')) {
   if (params.get('seed')) document.getElementById('seed').value = params.get('seed');
   if (params.get('rd')) rd.value = params.get('rd');
-  start();
+  if (params.has('continue')) loadGame().then((d) => start(d));
+  else start();
 }

@@ -21,12 +21,14 @@ import { UI } from './ui/screens.js';
 import { Input } from './ui/input.js';
 import { Audio } from './audio/audio.js';
 import { explode } from './entities/explosion.js';
+import { saveGame, applySave, applyPlayerSave } from './world/save.js';
 
 export const DEFAULT_SETTINGS = { renderDistance: 8, fov: 75, sensitivity: 100, volume: 0.5, shadows: true, shadowMapSize: 1024 };
 
 export class Game {
-  constructor(canvas, seed, settings, hooks = {}) {
+  constructor(canvas, seed, settings, hooks = {}, saveData = null) {
     this.canvas = canvas;
+    this.saveData = saveData;
     this.seed = seed;
     this.settings = { ...DEFAULT_SETTINGS, ...settings };
     this.hooks = hooks;
@@ -84,11 +86,17 @@ export class Game {
     this.player.listeners.hurt.push(() => this.audio.play('hurt'));
     this.player.listeners.death.push((cause) => this.onDeath(cause));
 
+    if (this.saveData) {
+      applySave(this, this.saveData);
+      applyPlayerSave(this, this.saveData.player);
+    }
     // Spawn point
-    const sp = this.world.gen.findSpawn();
-    this.player.spawn = { x: sp.x, y: sp.y + 1, z: sp.z };
-    this.player.setPosition(sp.x, sp.y + 1, sp.z);
-    this.player.yaw = Math.PI * 0.75;
+    const sp = this.saveData ? this.saveData.player.spawn : this.world.gen.findSpawn();
+    if (!this.saveData) {
+      this.player.spawn = { x: sp.x, y: sp.y + 1, z: sp.z };
+      this.player.setPosition(sp.x, sp.y + 1, sp.z);
+      this.player.yaw = Math.PI * 0.75;
+    }
 
     this.input.onLockChange = (locked) => {
       if (!locked && !this.ui.blocking && this.running) { this.ui.showPause(); }
@@ -121,22 +129,19 @@ export class Game {
       };
       step();
     });
-    // Put the player on the surface
-    const px = Math.floor(this.player.x), pz = Math.floor(this.player.z);
-    let y = this.world.heightAt(px, pz) + 1;
-    while (y < 300 && (this.world.getBlock(px, y, pz) || this.world.getBlock(px, y + 1, pz))) y++;
-    this.player.spawn = { x: px + 0.5, y, z: pz + 0.5 };
-    this.player.setPosition(px + 0.5, y, pz + 0.5);
-    this.giveStarterKit();
+    if (!this.saveData) {
+      // Put the player on the surface
+      const px = Math.floor(this.player.x), pz = Math.floor(this.player.z);
+      let y = this.world.heightAt(px, pz) + 1;
+      while (y < 300 && (this.world.getBlock(px, y, pz) || this.world.getBlock(px, y + 1, pz))) y++;
+      this.player.spawn = { x: px + 0.5, y, z: pz + 0.5 };
+      this.player.setPosition(px + 0.5, y, pz + 0.5);
+    }
 
     this.running = true;
     this.lastTime = performance.now();
     this.acc = 0;
     requestAnimationFrame((t) => this.frame(t));
-  }
-
-  giveStarterKit() {
-    // Nothing but a few torches' worth of help: survival starts empty-handed like the reference game.
   }
 
   setSetting(k, v) {
@@ -151,8 +156,13 @@ export class Game {
 
   onUIClosed() { this.input.lock(); }
 
-  quitToTitle() {
+  async save() {
+    try { await saveGame(this); return true; } catch (e) { console.warn('save failed', e); return false; }
+  }
+
+  async quitToTitle() {
     this.running = false;
+    await this.save();
     this.input.unlock();
     this.chunks.dispose();
     window.removeEventListener('resize', this._onResize);
@@ -245,6 +255,7 @@ export class Game {
     this.spawner.tick();
     this.tickFurnaces();
     this.particles.tick();
+    if (this.ticks % 1200 === 0) this.save(); // autosave every minute
     // footsteps
     const b = this.player.body;
     if (b.onGround && (Math.abs(b.vx) + Math.abs(b.vz)) > 0.05 && this.ticks % (this.player.sprinting ? 6 : 8) === 0) {

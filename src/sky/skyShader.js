@@ -1,7 +1,7 @@
 // Sky dome fragment shader: atmosphere gradient, three suns with glare and
-// twilight scattering, stars, and a ray-traced ringed gas giant with banded
-// animated atmosphere, limb glow, polar aurora, Keplerian rings, ring glints,
-// planet shadow on the rings and ring shadow on the planet.
+// twilight scattering, stars, and a ray-traced gas giant with a banded
+// animated atmosphere, limb glow, polar aurora and the rings' shadow on its
+// cloud tops. The rings themselves are a mesh + particles (gasGiant.js).
 
 export const skyVertex = /* glsl */ `
 varying vec3 vDir;
@@ -120,14 +120,16 @@ void main() {
     float facing = pow(max(c * 0.5 + 0.5, 0.0), 5.0);
     col += sc * vec3(1.0, 0.62, 0.38) * twilight * facing * exp(-max(h, 0.0) * 5.0) * 0.9 * uSunIntensity[i];
     // Mie-like glare
-    float glare = pow(max(c, 0.0), 12.0) * 0.18 + pow(max(c, 0.0), 180.0) * 0.6;
+    float glare = pow(max(c, 0.0), 14.0) * 0.12 + pow(max(c, 0.0), 260.0) * 0.35;
     col += sc * glare * above * uSunIntensity[i];
     // disc with limb darkening
     float rad = 0.0185 * uSunSize[i];
     float ang = acos(clamp(c, -1.0, 1.0));
     float disc = smoothstep(rad, rad * 0.82, ang);
-    float limb = 1.0 - 0.5 * pow(clamp(ang / rad, 0.0, 1.0), 2.0);
-    col = mix(col, sc * 3.0 * limb, disc * smoothstep(-0.03, 0.01, h));
+    float limb = 1.0 - 0.45 * pow(clamp(ang / rad, 0.0, 1.0), 2.0);
+    // keep the disc in its own colour: saturated body, small hot core
+    vec3 discCol = sc * 1.05 * limb + vec3(0.25) * smoothstep(rad * 0.45, 0.0, ang);
+    col = mix(col, discCol, disc * smoothstep(-0.03, 0.01, h));
   }
 
   // Gas giant (centre at unit distance along uPlanetDir)
@@ -136,39 +138,7 @@ void main() {
   float tP = sphereHit(vec3(0.0), dir, C, R);
   vec3 axis = uPlanetAxis;
   vec3 e1; vec3 e2 = ringFrameDir(axis, e1);
-  float denom = dot(dir, axis);
-  float tR = abs(denom) > 1e-5 ? dot(C, axis) / denom : -1.0;
   float vis = (1.0 - 0.72 * clamp(uCombined, 0.0, 1.0)) * smoothstep(-0.12, 0.02, h);
-
-  vec4 ringLayer = vec4(0.0);
-  if (tR > 0.0) {
-    vec3 q = dir * tR;
-    vec3 rv = (q - C) / R;
-    float rho = length(rv);
-    float phi = atan(dot(rv, e2), dot(rv, e1));
-    // Keplerian differential rotation: omega ~ rho^-1.5
-    float omega = 0.035 * pow(rho, -1.5);
-    float phiRot = phi - uTime * omega;
-    float dens = ringDensity(rho, phiRot);
-    if (dens > 0.0) {
-      vec3 lit = vec3(0.0);
-      for (int i = 0; i < 3; i++) {
-        vec3 sd = uSunDir[i];
-        // planet shadow on the rings
-        float sh = sphereHit(q, sd, C, R) > 0.0 ? 0.0 : 1.0;
-        float facingSide = sign(dot(sd, axis)) == sign(dot(-dir, axis)) ? 1.0 : 0.35; // lit vs back-lit translucency
-        float tilt = 0.25 + 0.75 * abs(dot(sd, axis));
-        lit += uSunColor[i] * uSunIntensity[i] * sh * facingSide * tilt;
-        // specular glints from icy particles
-        vec3 hv = normalize(sd - dir);
-        float spec = pow(max(abs(dot(hv, axis)), 0.0), 60.0);
-        float sparkle = step(0.985, hash12(floor(vec2(rho * 900.0, phiRot * 2400.0))));
-        lit += uSunColor[i] * uSunIntensity[i] * sh * (spec * 1.6 + sparkle * spec * 6.0 + sparkle * 0.35 * tilt);
-      }
-      vec3 ringCol = mix(vec3(0.82, 0.74, 0.62), vec3(0.95, 0.9, 0.82), vnoise(vec2(rho * 30.0, 1.0)));
-      ringLayer = vec4(ringCol * (lit + 0.03), dens * 0.88);
-    }
-  }
 
   if (tP > 0.0) {
     vec3 p = dir * tP;
@@ -221,16 +191,9 @@ void main() {
     float curtain = fbm(vec2(lon * 9.0 + uTime * 0.12, abs(lat) * 18.0 - uTime * 0.05));
     float aur = auroraLat * smoothstep(0.42, 0.75, curtain) * (0.25 + 0.75 * night);
     pc += mix(vec3(0.15, 1.0, 0.55), vec3(0.65, 0.3, 1.0), smoothstep(1.1, 1.3, abs(lat))) * aur * 0.55;
-    vec4 planetLayer = vec4(pc, 1.0);
-    // composite: ring in front of planet or hidden behind it
-    vec3 pcol = planetLayer.rgb;
-    if (ringLayer.a > 0.0 && tR < tP) pcol = mix(pcol, ringLayer.rgb, ringLayer.a);
-    // planet edge anti-aliasing
-    float edgeAA = smoothstep(0.0, 0.0025, R - length(cross(dir, C)) );
-    col = mix(col, pcol + col * 0.25 * uCombined, vis * edgeAA);
-    if (ringLayer.a > 0.0 && tR > tP && edgeAA < 1.0) col = mix(col, ringLayer.rgb + col * 0.3, ringLayer.a * vis * (1.0 - edgeAA));
-  } else if (ringLayer.a > 0.0) {
-    col = mix(col, ringLayer.rgb + col * 0.3, ringLayer.a * vis);
+    // planet edge anti-aliasing (the ring mesh and ice particles are drawn on top by RingSystem)
+    float edgeAA = smoothstep(0.0, 0.0025, R - length(cross(dir, C)));
+    col = mix(col, pc + col * 0.25 * uCombined, vis * edgeAA);
   }
 
   if (uUnderwater > 0.5) col = mix(col, vec3(0.05, 0.15, 0.4), 0.7);

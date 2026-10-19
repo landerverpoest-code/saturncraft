@@ -187,3 +187,13 @@ describe('explosions', () => {
     expect(explosionBlocks(hard, 0.5, 0.5, 0.5, 3, rng(1)).length).toBe(0);
   });
 });
+
+describe('save format', () => {
+  it('run-length encoding round-trips chunk arrays', async () => {
+    const { rleEncode, rleDecode } = await import('../src/world/save.js');
+    const c = gen.generate(1, 1);
+    const enc = rleEncode(c.blocks);
+    expect(enc.length).toBeLessThan(c.blocks.length / 4);
+    expect(Buffer.from(rleDecode(enc, c.blocks.length)).equals(Buffer.from(c.blocks))).toBe(true);
+  });
+});
