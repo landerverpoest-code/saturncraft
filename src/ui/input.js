@@ -58,7 +58,11 @@ export class Input {
     window.addEventListener('wheel', (e) => { if (this.locked) this.wheel += Math.sign(e.deltaY); }, { passive: true });
   }
 
-  lock() { if (!this.locked) this.canvas.requestPointerLock?.(); }
+  lock() {
+    if (this.locked || !this.canvas.requestPointerLock) return;
+    // Browsers refuse to re-lock for ~1 s after Esc; the next click locks instead.
+    try { const r = this.canvas.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch { /* ignored */ }
+  }
   unlock() { if (document.pointerLockElement) document.exitPointerLock(); }
 
   is(action) { return KEYS[action].some((k) => this.down.has(k)); }
