@@ -10,6 +10,8 @@ import { rollDrops } from './drops.js';
 import { findPath } from './pathfinding.js';
 import { shouldDespawn, shouldBurnInSun } from './spawnRules.js';
 import { buildModel, animateModel } from './models.js';
+import { randomSheepColor, WOOL_RGB } from '../world/colors.js';
+import { WOOL_ITEMS } from '../world/items.js';
 
 let nextMobId = 1_000_000;
 const TAU = Math.PI * 2;
@@ -46,6 +48,7 @@ export class Mob {
     // breeding: age < 0 is a baby growing up, age > 0 a breeding cooldown
     this.age = 0; this.loveTicks = 0; this.breedTime = 0;
     this.sheared = false; this.eatTimer = 0;
+    this.woolColor = type === 'fleecer' ? randomSheepColor() : 0;
   }
 
   get baby() { return this.age < 0; }
@@ -57,11 +60,12 @@ export class Mob {
   }
 
   /** State kept when the mob is saved with its chunk. */
-  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared }; }
+  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor }; }
   loadData(s) {
     this.health = s.health; this.yaw = s.yaw;
     if (s.age < 0) { this.setBaby(true); this.age = s.age; } else this.age = s.age || 0;
     this.sheared = !!s.sheared;
+    if (s.woolColor !== undefined) this.woolColor = s.woolColor;
   }
 
   /** Fed its breeding food: babies grow 10 % faster, adults fall in love. */
@@ -92,6 +96,7 @@ export class Mob {
   breed(g, mate) {
     const baby = g.spawner.spawnMob(this.type, (this.x + mate.x) / 2, Math.max(this.y, mate.y), (this.z + mate.z) / 2);
     baby.setBaby(true);
+    baby.woolColor = Math.random() < 0.5 ? this.woolColor : mate.woolColor; // (the reference blends dye colours)
     baby.yaw = this.yaw;
     for (const m of [this, mate]) { m.loveTicks = 0; m.age = 6000; m.breedTime = 0; }
     this.hearts(g, 7);
@@ -153,6 +158,7 @@ export class Mob {
     if (killedByPlayer) g.player.stats.kills++;
     if (this.age < 0) { this.killedByPlayer = false; return; } // babies drop nothing
     for (const d of rollDrops(this.type, { killedByPlayer, onFire: this.fireTicks > 0, sheared: this.sheared })) {
+      if (d.id === B.WOOL) d.id = WOOL_ITEMS[this.woolColor || 0];
       g.entities.spawnItem(this.x, this.y + 0.5, this.z, d);
     }
   }
@@ -564,7 +570,14 @@ export class Mob {
     m.position.set(px, py, pz);
     m.scale.setScalar(this.age < 0 ? 0.5 : 1);
     const parts = m.userData.parts;
-    if (parts && parts.wool) { parts.wool.visible = !this.sheared; parts.tuft.visible = !this.sheared; }
+    if (parts && parts.wool) {
+      parts.wool.visible = !this.sheared; parts.tuft.visible = !this.sheared;
+      const rgb = WOOL_RGB[this.woolColor || 0], mat = parts.wool.children[0].material;
+      if (mat.userData.color !== this.woolColor) {
+        mat.userData.color = this.woolColor;
+        mat.userData.base.setRGB(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255).convertSRGBToLinear();
+      }
+    }
     const yaw = this.prevYaw + wrap(this.yaw - this.prevYaw) * alpha;
     m.rotation.set(0, yaw, 0);
     if (this.deathTime > 0) m.rotation.z = Math.min(1, (this.deathTime + alpha) / 10) * Math.PI / 2;

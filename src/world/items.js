@@ -2,6 +2,7 @@
 // pure items. Tool stats, food values and fuel times mirror the documented
 // reference numbers.
 import { BLOCKS, B, TOOL, TIER } from './blocks.js';
+import { COLORS } from './colors.js';
 
 export const ITEMS = [];
 export const I = {};
@@ -87,6 +88,16 @@ item('wheat', 'Wheat');
 item('bread', 'Bread', { food: { hunger: 5, saturation: 6 } });
 item('carrot', 'Carrot', { food: { hunger: 3, saturation: 3.6 }, places: B.CARROTS });
 item('shears', 'Shears', { stack: 1, durability: 238, shears: true });
+item('paper', 'Paper');
+item('book', 'Book');
+item('brick', 'Brick');
+item('bone_meal', 'Bone Meal', { boneMeal: true });
+// dyes and coloured wool (white wool is the plain Wool block item)
+export const DYES = [], WOOL_ITEMS = [];
+COLORS.forEach(([key, name], c) => {
+  DYES[c] = c === 0 ? null : item(`${key}_dye`, `${name} Dye`, { dye: c }).id;
+  WOOL_ITEMS[c] = c === 0 ? B.WOOL : item(`${key}_wool`, `${name} Wool`, { places: B.WOOL, placeMeta: c, woolColor: c }).id;
+});
 
 // Tools
 for (const mat of Object.keys(MATERIALS)) {

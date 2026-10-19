@@ -1,7 +1,7 @@
 // Player interaction with the world: mining (with break progress), placing,
 // attacking with the attack cooldown, eating, buckets and containers.
-import { B, BLOCKS, SOLID, SHAPE, isFluid } from '../world/blocks.js';
-import { ITEMS, I, toolOf, isBlockItem } from '../world/items.js';
+import { B, BLOCKS, SOLID, SHAPE, isFluid, CROPS } from '../world/blocks.js';
+import { ITEMS, I, toolOf, isBlockItem, WOOL_ITEMS } from '../world/items.js';
 import { breakProgressPerTick, blockDrops, canHarvest } from '../world/mining.js';
 import { PHYS } from '../physics/constants.js';
 import { EXHAUSTION } from './survival.js';
@@ -251,6 +251,12 @@ export class Interaction {
       if (t.id === B.CHEST) { g.ui.openChest(t.x, t.y, t.z); g.audio.play('chest_open', [t.x + 0.5, t.y + 0.5, t.z + 0.5]); return true; }
     }
     if (!st) return false;
+    // Bone meal: crops grow 2-5 stages; on grass it sprouts tall grass and flowers around
+    if (d.boneMeal && this.boneMeal(t)) {
+      p.inventory.removeFromSlot(p.inventory.selected, 1);
+      this.swing = SWING_TICKS;
+      return true;
+    }
     // Hoes till grass and dirt into farmland (not from below, and only with air above)
     if (d.tool && d.tool.type === 'hoe' && (t.id === B.GRASS || t.id === B.DIRT || t.id === B.SNOWY_GRASS) && t.face[1] !== -1 && !w.getBlock(t.x, t.y + 1, t.z)) {
       w.setBlockUrgent(t.x, t.y, t.z, B.FARMLAND, 0);
@@ -280,7 +286,7 @@ export class Interaction {
     if (pshape === SHAPE.SLAB && cur === placeId && w.getMeta(px, py, pz) !== SLAB_DOUBLE) return this.finishPlace(px, py, pz, placeId, SLAB_DOUBLE);
     if (cur && !BLOCKS[cur].replaceable) return false;
     if (SOLID[placeId] && (p.intersectsBlock(px, py, pz) || g.entities.blockOccupied(px, py, pz))) return false;
-    let meta = 0;
+    let meta = d.placeMeta || 0;
     const upper = t.face[1] === -1 || (t.face[1] === 0 && hitY - Math.floor(hitY) > 0.5);
     if (pshape === SHAPE.SLAB) meta = upper ? SLAB_TOP : 0;
     if (pshape === SHAPE.STAIRS || pshape === SHAPE.GATE) {
@@ -310,14 +316,46 @@ export class Interaction {
     return true;
   }
 
+  boneMeal(t) {
+    const g = this.game, w = g.world;
+    const burst = (x, y, z) => { for (let k = 0; k < 10; k++) g.particles.emit(x + Math.random(), y + Math.random() * 0.6, z + Math.random(), 0, 0.02, 0, 0.4, 0.9, 0.3, 20, -0.001); };
+    if (CROPS.has(t.id)) {
+      const m = w.getMeta(t.x, t.y, t.z);
+      if (m >= 7) return false;
+      w.setBlockUrgent(t.x, t.y, t.z, t.id, Math.min(7, m + 2 + Math.floor(Math.random() * 4)));
+      burst(t.x, t.y, t.z);
+      return true;
+    }
+    if (t.id === B.GRASS && !w.getBlock(t.x, t.y + 1, t.z)) {
+      for (let k = 0; k < 24; k++) {
+        const x = t.x + Math.round((Math.random() - Math.random()) * 3), z = t.z + Math.round((Math.random() - Math.random()) * 3);
+        for (const y of [t.y, t.y + 1, t.y - 1]) {
+          if (w.getBlock(x, y, z) !== B.GRASS || w.getBlock(x, y + 1, z)) continue;
+          const r = Math.random();
+          w.setBlockUrgent(x, y + 1, z, r < 0.08 ? B.SUNPETAL : r < 0.16 ? B.REDBLOOM : B.TALL_GRASS);
+          burst(x, y + 1, z);
+          break;
+        }
+      }
+      return true;
+    }
+    return false;
+  }
+
   /** Feed / breed / shear a passive mob. Returns true if something happened. */
   interactMob(mob) {
     const g = this.game, p = g.player, st = p.inventory.selectedStack, d = st && ITEMS[st.id];
     if (!d || mob.deathTime > 0 || mob.def.category !== 'creature') return false;
+    if (d.dye && mob.type === 'fleecer' && mob.woolColor !== d.dye) {
+      mob.woolColor = d.dye;
+      p.inventory.removeFromSlot(p.inventory.selected, 1);
+      this.swing = SWING_TICKS;
+      return true;
+    }
     if (d.shears && mob.type === 'fleecer' && !mob.sheared && mob.age >= 0) {
       mob.sheared = true;
       const n = 1 + Math.floor(Math.random() * 3);
-      for (let k = 0; k < n; k++) g.entities.spawnItem(mob.x, mob.y + 1, mob.z, { id: B.WOOL, count: 1 }, [(Math.random() - Math.random()) * 0.1, Math.random() * 0.05 + 0.1, (Math.random() - Math.random()) * 0.1]);
+      for (let k = 0; k < n; k++) g.entities.spawnItem(mob.x, mob.y + 1, mob.z, { id: WOOL_ITEMS[mob.woolColor || 0], count: 1 }, [(Math.random() - Math.random()) * 0.1, Math.random() * 0.05 + 0.1, (Math.random() - Math.random()) * 0.1]);
       p.inventory.damageSelected(1);
       g.audio.play('shear', [mob.x, mob.y + 1, mob.z]);
       this.swing = SWING_TICKS;

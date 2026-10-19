@@ -285,6 +285,9 @@ poison from eyes) follow the documented table.
 * Carrots: a crop planted on farmland (2–5 per ripe plant), food, and part of the Shambler's rare drop
 * Fences (oak/spruce/birch) that connect to fences, gates and full blocks, with 1.5-block collision so nothing jumps over; oak fence gates that open and close
 * Dungeons: mossy cobblestone rooms (5–7 × 4 × 5–7 inside, 14 attempts per chunk, 1–5 openings into caves) with a monster spawner (Shambler 50 %, Rattler/Skitterer 25 % each; active within 16 blocks, 4 spawn attempts every 10–40 s, at most 6 nearby, light ≤ 11) and up to two loot chests; mined spawners give 15–43 XP
+* Sugar cane on shores (grows to 3 blocks next to water) → paper → books → bookshelves; clay → bricks; glass panes that connect
+* 16 dye colours: bone meal (white), flowers (yellow/red), azurite (blue), cactus in a furnace (green), coal (black) and mixes; dyed wool; sheep come in natural colours (white, black, grays, brown, rare pink), can be dyed and drop/shear their colour
+* Bone meal grows crops 2–5 stages and sprouts grass and flowers
 * Slabs and stairs in oak, cobblestone, stone brick and sandstone: bottom/top/double slabs (merge by placing), stairs facing away from the player and upside down when placed high; walkable with the 0.6 step-up; they block light like full blocks
 * Oak doors (two blocks, 3/16-thick collision box, open/close with right-click), ladders (climb 0.2/tick, fall capped at 0.15, sneak to hold on), torches on walls
 * Chests (27 slots, shift-click transfer, contents drop when broken, saved with the world); furnaces and chests face the player when placed
@@ -301,7 +304,7 @@ poison from eyes) follow the documented table.
 **Not yet implemented**
 
 * Enchanting, anvils, shields, potions and status-effect UI (only hunger/poison effects exist); armour is not drawn on the third-person player model
-* Taming, sheep colours and dyes, potatoes/beetroot, bone meal
+* Taming, potatoes/beetroot, saplings, cocoa and ink sacs
 * Villages, strongholds and other large structures, the other dimensions, redstone-style circuitry
 * Double chests and other storage containers, walls, trapdoors, corner-shaped stairs
 * Fire blocks and fire spread, thunderstorms and lightning, snow layers
@@ -326,6 +329,7 @@ poison from eyes) follow the documented table.
   no vanilla equivalent.
 * **Rare Shambler drop**: vanilla picks one of iron ingot / carrot / potato; only
   the ingot exists here, so it drops with 2.5 % × 1/3.
+* **Dyes**: black dye comes from coal (the reference uses ink sacs) and brown dye is mixed from red + green (the reference uses cocoa beans), since neither source exists here; lambs take one parent's colour instead of blending.
 * **Lighting**: sky light is stored per block and darkened in the shader by the
   combined sun light; the light curve blends vanilla's brightness formula with
   its default gamma. Fog is spherical. Leaves cast full shadows only where

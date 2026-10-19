@@ -8,7 +8,7 @@ export const TOOL = { NONE: null, PICKAXE: 'pickaxe', AXE: 'axe', SHOVEL: 'shove
 export const TIER = { ANY: -1, WOOD: 0, STONE: 1, IRON: 2, DIAMOND: 3 };
 
 // Render shapes understood by the mesher
-export const SHAPE = { NONE: 0, CUBE: 1, CROSS: 2, LIQUID: 3, TORCH: 4, CACTUS: 5, CROP: 6, DOOR: 7, LADDER: 8, BED: 9, SLAB: 10, STAIRS: 11, FENCE: 12, GATE: 13 };
+export const SHAPE = { NONE: 0, CUBE: 1, CROSS: 2, LIQUID: 3, TORCH: 4, CACTUS: 5, CROP: 6, DOOR: 7, LADDER: 8, BED: 9, SLAB: 10, STAIRS: 11, FENCE: 12, GATE: 13, PANE: 14 };
 
 // Render layers
 export const LAYER = { OPAQUE: 0, CUTOUT: 1, TRANSLUCENT: 2 };
@@ -30,7 +30,7 @@ export const B = {
   OAK_SLAB: 68, COBBLESTONE_SLAB: 69, STONE_BRICK_SLAB: 70, SANDSTONE_SLAB: 71,
   OAK_STAIRS: 72, COBBLESTONE_STAIRS: 73, STONE_BRICK_STAIRS: 74, SANDSTONE_STAIRS: 75,
   CARROTS: 76, OAK_FENCE: 77, SPRUCE_FENCE: 78, BIRCH_FENCE: 79, OAK_FENCE_GATE: 80,
-  SPAWNER: 81, MOSSY_COBBLESTONE: 82,
+  SPAWNER: 81, MOSSY_COBBLESTONE: 82, SUGAR_CANE: 83, BOOKSHELF: 84, BRICKS: 85, GLASS_PANE: 86,
 };
 
 const defaults = {
@@ -106,7 +106,7 @@ def(B.FURNACE, 'Furnace', { hardness: 3.5, resistance: 3.5, tool: TOOL.PICKAXE, 
 def(B.FURNACE_LIT, 'Lit Furnace', { hardness: 3.5, resistance: 3.5, tool: TOOL.PICKAXE, tier: TIER.WOOD, emit: 13, drops: B.FURNACE, tex: { top: 'furnace_top', bottom: 'furnace_top', side: 'furnace_front_lit' } });
 def(B.TORCH, 'Torch', { hardness: 0, resistance: 0, solid: false, opaque: false, shape: SHAPE.TORCH, layer: LAYER.CUTOUT, emit: 14, sound: 'wood', needsSupport: true });
 def(B.OBSIDIAN, 'Obsidian', { hardness: 50, resistance: 1200, tool: TOOL.PICKAXE, tier: TIER.DIAMOND });
-def(B.WOOL, 'Wool', { hardness: 0.8, resistance: 0.8, sound: 'wool', flammable: true });
+def(B.WOOL, 'Wool', { hardness: 0.8, resistance: 0.8, sound: 'wool', flammable: true, drops: 'wool' }); // meta = colour
 const metal = { hardness: 5, resistance: 6, tool: TOOL.PICKAXE, sound: 'metal' };
 def(B.COAL_BLOCK, 'Coal Block', { ...metal, tier: TIER.WOOD, flammable: true });
 def(B.IRON_BLOCK, 'Iron Block', { ...metal, tier: TIER.STONE });
@@ -157,6 +157,12 @@ def(B.OAK_FENCE_GATE, 'Oak Fence Gate', { ...wood, shape: SHAPE.GATE, tex: { all
 // Monster spawner: meta = mob kind (0 Shambler, 1 Rattler, 2 Skitterer); found in dungeons.
 def(B.SPAWNER, 'Monster Spawner', { hardness: 5, resistance: 5, tool: TOOL.PICKAXE, tier: TIER.WOOD, opaque: false, layer: LAYER.CUTOUT, drops: null, sound: 'metal' });
 def(B.MOSSY_COBBLESTONE, 'Mossy Cobblestone', { hardness: 2, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD });
+
+// Sugar cane: meta = growth age 0..15 (grows a block when it reaches 15, up to 3 tall).
+def(B.SUGAR_CANE, 'Sugar Cane', { ...plant, sound: 'grass' });
+def(B.BOOKSHELF, 'Bookshelf', { hardness: 1.5, resistance: 1.5, tool: TOOL.AXE, sound: 'wood', flammable: true, drops: 'bookshelf', tex: { top: 'oak_planks', bottom: 'oak_planks', side: 'bookshelf' } });
+def(B.BRICKS, 'Bricks', { hardness: 2, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD });
+def(B.GLASS_PANE, 'Glass Pane', { hardness: 0.3, resistance: 0.3, opaque: false, shape: SHAPE.PANE, layer: LAYER.CUTOUT, drops: null, sound: 'glass', tex: { all: 'glass' } });
 
 export const NUM_BLOCKS = BLOCKS.length;
 

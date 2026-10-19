@@ -60,6 +60,15 @@ export function randomTickBlock(world, x, y, z, id, rng = Math.random) {
     if (farmlandHydrated(world, x, y, z)) { if (m !== 7) world.setBlock(x, y, z, B.FARMLAND, 7); }
     else if (m > 0) world.setBlock(x, y, z, B.FARMLAND, m - 1);
     else if (!CROPS.has(world.getBlock(x, y + 1, z))) world.setBlock(x, y, z, B.DIRT);
+  } else if (id === B.SUGAR_CANE) {
+    // the top of a stack under 3 blocks grows a new block every 16 random ticks
+    if (world.getBlock(x, y + 1, z)) return;
+    let h = 1;
+    while (world.getBlock(x, y - h, z) === B.SUGAR_CANE) h++;
+    if (h >= 3) return;
+    const age = world.getMeta(x, y, z);
+    if (age >= 15) { world.setBlock(x, y + 1, z, B.SUGAR_CANE, 0); world.setBlock(x, y, z, B.SUGAR_CANE, 0); }
+    else world.setBlock(x, y, z, B.SUGAR_CANE, age + 1);
   } else if (CROPS.has(id)) {
     const stage = world.getMeta(x, y, z);
     if (stage >= 7 || rawLight(world, x, y + 1, z) < 9) return;
@@ -69,7 +78,7 @@ export function randomTickBlock(world, x, y, z, id, rng = Math.random) {
 
 /** Ids that react to random ticks (fast pre-filter). */
 export const RANDOM_TICKS = new Uint8Array(256);
-for (const id of [B.GRASS, B.FARMLAND, ...CROPS]) RANDOM_TICKS[id] = 1;
+for (const id of [B.GRASS, B.FARMLAND, B.SUGAR_CANE, ...CROPS]) RANDOM_TICKS[id] = 1;
 
 /** Run one tick's worth of random ticks in all chunks within `radius` chunks of (cx, cz). */
 export function runRandomTicks(world, cx, cz, radius, rng = Math.random) {

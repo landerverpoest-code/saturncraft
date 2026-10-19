@@ -471,7 +471,16 @@ export class TerrainGenerator {
         const grassP = biome === BIOME.PLAINS ? 0.22 : biome === BIOME.TAIGA ? 0.07 : 0.1;
         if (r < 0.015) blocks[above] = hashf(this.seed, x0 + x, z0 + z, 42) < 0.5 ? B.SUNPETAL : B.REDBLOOM;
         else if (r < 0.015 + grassP) blocks[above] = B.TALL_GRASS;
-      } else if (ground === B.SAND && biome === BIOME.DESERT) {
+      }
+      // sugar cane on the shore: grass, dirt or sand next to water
+      if ((ground === B.GRASS || ground === B.SAND || ground === B.DIRT) && top === SEA_LEVEL && hashf(this.seed, x0 + x, z0 + z, 44) < 0.12) {
+        const wet = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => { const xx = x + dx, zz = z + dz; return xx >= 0 && zz >= 0 && xx < 16 && zz < 16 && blocks[cidx(xx, top, zz)] === B.WATER; });
+        if (wet && !blocks[above]) {
+          const h = 1 + Math.floor(hashf(this.seed, x0 + x, z0 + z, 45) * 3);
+          for (let k = 1; k <= h; k++) blocks[cidx(x, top + k, z)] = B.SUGAR_CANE;
+        }
+      }
+      if (ground === B.SAND && biome === BIOME.DESERT) {
         if (r < 0.006) blocks[above] = B.DEAD_BUSH;
         else if (r < 0.011) {
           const free = (dx, dz) => { const xx = x + dx, zz = z + dz; return xx < 0 || zz < 0 || xx > 15 || zz > 15 || !blocks[cidx(xx, top + 1, zz)]; };

@@ -458,6 +458,35 @@ const GEN = {
       for (const k of [4, 8, 11]) { c.set(k, i, i % 3 ? bar : hi); c.set(i, k, i % 3 ? bar : hi); }
     }
   },
+  sugar_cane: (c) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
+    const g = hex('#8ac85a'), d = hex('#5f9a3a'), j = hex('#c8e8a0');
+    for (const sx of [3, 8, 12]) for (let y = 0; y < 16; y++) {
+      const joint = (y + sx) % 6 === 0;
+      c.set(sx, y, joint ? j : g); c.set(sx + 1, y, joint ? j : d);
+    }
+    c.set(5, 4, g); c.set(6, 3, g); c.set(10, 9, g); c.set(11, 8, d);
+  },
+  bookshelf: (c) => {
+    planks(c, '#a7834e');
+    const cols = ['#8a2a2a', '#2a4a8a', '#2a6a3a', '#8a6a2a', '#5a2a6a', '#3a3a3a'].map(hex);
+    for (const [y0, y1] of [[1, 7], [9, 15]]) {
+      for (let x = 1; x < 15;) {
+        const w = 1 + Math.floor(c.h(x, y0, 61) * 2), col = cols[Math.floor(c.h(x, y0, 62) * cols.length)];
+        const top = y0 + Math.floor(c.h(x, y0, 63) * 2);
+        for (let xx = x; xx < Math.min(15, x + w); xx++) for (let y = top; y < y1; y++) c.set(xx, y, shade(col, y === top ? 1.25 : 0.9 + c.h(xx, y) * 0.15));
+        x += w + (c.h(x, y0, 64) < 0.2 ? 1 : 0);
+      }
+    }
+  },
+  bricks: (c) => {
+    const b = hex('#9a4a3a'), m = hex('#c8bcb0');
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const row = y >> 2, off = row % 2 ? 4 : 0;
+      const mortar = y % 4 === 3 || (x + off) % 8 === 7;
+      c.set(x, y, mortar ? shade(m, 0.9 + c.h(x, y) * 0.1) : shade(b, 0.85 + c.h(x >> 1, y >> 1, 3) * 0.3));
+    }
+  },
   furnace_top: (c) => c.noiseFill(['#6e6e70', '#7c7c7e', '#626264'].map(hex), 0.3),
   furnace_side: (c) => {
     c.noiseFill(['#6e6e70', '#7c7c7e', '#626264'].map(hex), 0.3);

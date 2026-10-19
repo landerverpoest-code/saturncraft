@@ -216,6 +216,12 @@ export class World {
     }
     if (id === B.DEAD_BUSH) return below === B.SAND || below === B.DIRT || below === B.GRASS;
     if (id === B.WHEAT || id === B.CARROTS) return below === B.FARMLAND;
+    if (id === B.SUGAR_CANE) {
+      if (below === B.SUGAR_CANE) return true;
+      if (below !== B.GRASS && below !== B.DIRT && below !== B.SAND) return false;
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const n = this.getBlock(x + dx, y - 1, z + dz); if (n === B.WATER || n === B.ICE) return true; }
+      return false;
+    }
     return below === B.GRASS || below === B.DIRT || below === B.SNOWY_GRASS;
   }
 

@@ -115,6 +115,27 @@ export function gateRenderBoxes(meta) {
   }
   return boxes;
 }
+/** Glass panes connect to panes and to full blocks (glass included). */
+export function paneConnects(id) {
+  const d = BLOCKS[id];
+  return !!d && (d.shape === SHAPE.PANE || (d.solid && d.shape === SHAPE.CUBE && (d.opaque || id === B.GLASS)));
+}
+export function paneMask(get, x, y, z) {
+  let m = 0;
+  for (let s = 0; s < 4; s++) if (paneConnects(get(x + SIDE_DIRS[s][0], y, z + SIDE_DIRS[s][2]))) m |= 1 << s;
+  return m;
+}
+/** Thin full-height post plus an arm per connected side. */
+export function paneBoxes(mask) {
+  const A = 7 / 16, Z = 9 / 16;
+  const out = [[A, 0, A, Z, 1, Z]];
+  if (mask & 1) out.push([A, 0, 0, Z, 1, A]);
+  if (mask & 2) out.push([Z, 0, A, 1, 1, Z]);
+  if (mask & 4) out.push([A, 0, Z, Z, 1, 1]);
+  if (mask & 8) out.push([0, 0, A, A, 1, Z]);
+  return out;
+}
+
 export function gateCollision(meta) {
   if (meta & GATE_OPEN) return [];
   return [(meta & 1) === 0 ? [0, 0, 6 / 16, 1, 1.5, 10 / 16] : [6 / 16, 0, 0, 10 / 16, 1.5, 1]];
@@ -127,6 +148,7 @@ export const BED_BOX = [0, 0, 0, 1, 9 / 16, 1];
 export const SHAPED_COLLISION = new Uint8Array(256);
 SHAPED_COLLISION[B.DOOR] = 1;
 SHAPED_COLLISION[B.BED] = 1;
+SHAPED_COLLISION[B.GLASS_PANE] = 1;
 for (const id of [B.OAK_FENCE, B.SPRUCE_FENCE, B.BIRCH_FENCE, B.OAK_FENCE_GATE]) SHAPED_COLLISION[id] = 1;
 for (const id of [B.OAK_SLAB, B.COBBLESTONE_SLAB, B.STONE_BRICK_SLAB, B.SANDSTONE_SLAB, B.OAK_STAIRS, B.COBBLESTONE_STAIRS, B.STONE_BRICK_STAIRS, B.SANDSTONE_STAIRS]) SHAPED_COLLISION[id] = 1;
 
@@ -139,6 +161,7 @@ export function collisionBoxes(id, meta, world, x, y, z) {
   const shp = BLOCKS[id].shape;
   if (shp === SHAPE.FENCE) return fenceBoxes(world ? fenceMask((a, b, c) => world.getBlock(a, b, c), x, y, z) : 0, 1.5);
   if (shp === SHAPE.GATE) return gateCollision(meta);
+  if (shp === SHAPE.PANE) return paneBoxes(world ? paneMask((a, b, c) => world.getBlock(a, b, c), x, y, z) : 0);
   if (id === B.BED) return [BED_BOX];
   const sh = BLOCKS[id].shape;
   if (sh === SHAPE.SLAB) return [slabBox(meta)];
@@ -150,6 +173,7 @@ export function collisionBoxes(id, meta, world, x, y, z) {
 export function selectionBox(id, meta) {
   if (id === B.DOOR) return doorBox(meta);
   if (BLOCKS[id].shape === SHAPE.FENCE) return [P0, 0, P0, P1, 1, P1];
+  if (BLOCKS[id].shape === SHAPE.PANE) return [7 / 16, 0, 7 / 16, 9 / 16, 1, 9 / 16];
   if (BLOCKS[id].shape === SHAPE.GATE) return (meta & 1) === 0 ? [0, 0, 6 / 16, 1, 1, 10 / 16] : [6 / 16, 0, 0, 10 / 16, 1, 1];
   if (id === B.BED) return BED_BOX;
   if (BLOCKS[id].shape === SHAPE.SLAB) return slabBox(meta);

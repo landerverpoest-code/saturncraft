@@ -3,6 +3,7 @@
 import { BLOCKS, SHAPE } from '../world/blocks.js';
 import { ITEMS, MATERIALS, ARMOR_MATERIALS } from '../world/items.js';
 import { texturePixels } from '../world/textures.js';
+import { COLORS, WOOL_RGB } from '../world/colors.js';
 
 const cache = new Map();
 
@@ -23,7 +24,7 @@ function texCanvas(name, tint) {
 
 const GRASS_TINT = [110, 180, 70], LEAF_TINT = [80, 150, 50];
 
-function blockIcon(b) {
+function blockIcon(b, forceTint = null) {
   const c = document.createElement('canvas'); c.width = c.height = 32;
   const ctx = c.getContext('2d');
   ctx.imageSmoothingEnabled = false;
@@ -37,11 +38,11 @@ function blockIcon(b) {
     for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) if (tpl[y][x] === 'h') { ctx.fillStyle = (x + y) % 5 ? col : lighten(col, 0.8); ctx.fillRect(x * 2, y * 2, 2, 2); }
     return c;
   }
-  if (b.shape === SHAPE.CROSS || b.shape === SHAPE.TORCH || b.shape === SHAPE.LADDER) {
+  if (b.shape === SHAPE.CROSS || b.shape === SHAPE.TORCH || b.shape === SHAPE.LADDER || b.shape === SHAPE.PANE) {
     ctx.drawImage(texCanvas(b.tex.side, b.tint ? GRASS_TINT : null), 0, 0, 32, 32);
     return c;
   }
-  const top = texCanvas(b.tex.top, tint('top')), side = texCanvas(b.tex.side, tint('side'));
+  const top = texCanvas(b.tex.top, forceTint || tint('top')), side = texCanvas(b.tex.side, forceTint || tint('side'));
   const front = b.tex.front ? texCanvas(b.tex.front) : side;
   // top face
   ctx.save(); ctx.setTransform(1, 0.5, -1, 0.5, 16, 1); ctx.drawImage(top, 0, 0, 16, 16); ctx.restore();
@@ -86,6 +87,8 @@ const T = {
   boots: ['................', '................', '................', '................', '................', '...hhh...hhh....', '...hHh...hHh....', '...hhh...hhh....', '...hhh...hhh....', '..hhhh..hhhh....', '.hhhhh.hhhhh....', '.hhhhh.hhhhh....', '................', '................', '................', '................'],
   carrot: ['................', '...........ss...', '..........ss.s..', '.........sssss..', '........hhss....', '.......hHhh.....', '......hHhh......', '.....hhhh.......', '....hhhh........', '...hhhh.........', '..hhh...........', '.hh.............', '................', '................', '................', '................'],
   shears: ['................', '................', '..ss.......ss...', '..s.s.....s.s...', '..ss.s...s.ss...', '.....shh.s......', '.......hh.......', '......hHhh......', '.....hh..hh.....', '....hh....hh....', '...hh......hh...', '..hh........h...', '................', '................', '................', '................'],
+  paper: ['................', '................', '...hhhhhhhhh....', '...hHHHHHHHh....', '...hhhhhhhhh....', '...hssssssh.....', '...hhhhhhhhh....', '...hssssssh.....', '...hhhhhhhhh....', '...hsssssh......', '...hhhhhhhhh....', '...hhhhhhhhh....', '................', '................', '................', '................'],
+  book: ['................', '................', '....hhhhhhhh....', '...hHHHHHHHhw...', '...hhhhhhhhhw...', '...hhhhhhhhhw...', '...hhwwwwhhhw...', '...hhhhhhhhhw...', '...hhhhhhhhhw...', '...hhhhhhhhhw...', '...hhhhhhhhhw...', '...hhhhhhhhw....', '................', '................', '................', '................'],
   egg: ['................', '................', '......hhh.......', '.....hHhhh......', '....hHhhhhh.....', '....hhhhhhh.....', '...hhhhhhhhh....', '...hhhhhhhhh....', '...hhhhhhhhh....', '....hhhhhhh.....', '.....hhhhh......', '................', '................', '................', '................', '................'],
 };
 
@@ -113,6 +116,9 @@ const ITEM_STYLE = {
   bed: ['bed', { h: '#b02a2a', w: '#e8e6e0', s: '#7a5530' }],
   oak_door: ['door', { h: '#9c7444', H: '#b88a55', w: '#5a3d1e' }],
   wheat_seeds: ['seeds', { h: '#3e8a24', H: '#2a6a18' }], wheat: ['wheat', { h: '#d6ac44', H: '#f0d070', s: '#a88a30' }],
+  bone_meal: ['dust', { h: '#f2f0e8' }],
+  paper: ['paper', { h: '#f4f0e4', H: '#ffffff', s: '#c8c0b0' }], book: ['book', { h: '#8a4a2a', H: '#a8603a', w: '#f0eadc' }],
+  brick: ['ingot', { h: '#b25a3e' }],
   carrot: ['carrot', { h: '#e8862a', H: '#ffb060', s: '#3f9a2a' }],
   shears: ['shears', { h: '#d8d8d8', s: '#6a4a2a' }],
   bread: ['bread', { h: '#b8783a', H: '#d89a50', w: '#8a5426' }],
@@ -123,6 +129,11 @@ function itemIcon(d) {
   if (d.tool) {
     tpl = T[d.tool.type];
     colors = { h: MATERIALS[d.tool.material].color, s: '#7a5a32' };
+  } else if (d.woolColor) {
+    return blockIcon(BLOCKS[d.places], WOOL_RGB[d.woolColor]);
+  } else if (d.dye) {
+    const [r, g, b] = COLORS[d.dye][2];
+    tpl = T.dust; colors = { h: '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('') };
   } else if (d.armor) {
     tpl = T[d.armor.piece];
     colors = { h: ARMOR_MATERIALS[d.armor.material].color };

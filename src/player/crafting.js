@@ -1,6 +1,7 @@
 // Shaped/shapeless crafting and furnace smelting recipes.
 import { B } from '../world/blocks.js';
-import { I } from '../world/items.js';
+import { I, DYES, WOOL_ITEMS } from '../world/items.js';
+import { COLOR } from '../world/colors.js';
 
 const TAGS = {
   planks: [B.OAK_PLANKS, B.SPRUCE_PLANKS, B.BIRCH_PLANKS],
@@ -27,6 +28,25 @@ shaped(['P', 'P'], { P: 'planks' }, I.STICK, 4);
 shaped(['PP', 'PP'], { P: 'planks' }, B.WORKBENCH, 1);
 shaped(['PPP', 'P P', 'PPP'], { P: 'planks' }, B.CHEST, 1);
 shaped(['WWW'], { W: I.WHEAT }, I.BREAD, 1);
+shaped(['SSS'], { S: B.SUGAR_CANE }, I.PAPER, 3);
+shapeless([I.PAPER, I.PAPER, I.PAPER, I.LEATHER], I.BOOK, 1);
+shaped(['PPP', 'BBB', 'PPP'], { P: 'planks', B: I.BOOK }, B.BOOKSHELF, 1);
+shaped(['BB', 'BB'], { B: I.BRICK }, B.BRICKS, 1);
+shaped(['GGG', 'GGG'], { G: B.GLASS }, B.GLASS_PANE, 16);
+// dyes: from bones, flowers, azurite and coal (black; the reference uses ink sacs), then mixed
+const D = (c) => DYES[COLOR[c]];
+shapeless([I.BONE], I.BONE_MEAL, 3);
+shapeless([B.SUNPETAL], D('YELLOW'), 1);
+shapeless([B.REDBLOOM], D('RED'), 1);
+shapeless([I.AZURITE], D('BLUE'), 1);
+shapeless([I.COAL], D('BLACK'), 1);
+for (const [a, b, out, n] of [
+  ['RED', 'YELLOW', 'ORANGE', 2], ['RED', 'WHITE', 'PINK', 2], ['BLUE', 'WHITE', 'LIGHT_BLUE', 2], ['RED', 'BLUE', 'PURPLE', 2],
+  ['PURPLE', 'PINK', 'MAGENTA', 2], ['BLACK', 'WHITE', 'GRAY', 2], ['GRAY', 'WHITE', 'LIGHT_GRAY', 2], ['BLUE', 'GREEN', 'CYAN', 2],
+  ['GREEN', 'WHITE', 'LIME', 2], ['RED', 'GREEN', 'BROWN', 2],
+]) shapeless([a === 'WHITE' ? I.BONE_MEAL : D(a), b === 'WHITE' ? I.BONE_MEAL : D(b)], D(out), n);
+// dyeing white wool
+for (let c = 1; c < 16; c++) shapeless([DYES[c], B.WOOL], WOOL_ITEMS[c], 1);
 shaped([' I', 'I '], { I: I.IRON_INGOT }, I.SHEARS, 1);
 for (const [planks, fence] of [[B.OAK_PLANKS, B.OAK_FENCE], [B.SPRUCE_PLANKS, B.SPRUCE_FENCE], [B.BIRCH_PLANKS, B.BIRCH_FENCE]]) shaped(['PSP', 'PSP'], { P: planks, S: I.STICK }, fence, 3);
 shaped(['SPS', 'SPS'], { P: 'planks', S: I.STICK }, B.OAK_FENCE_GATE, 1);
@@ -163,7 +183,7 @@ export const SMELT_TIME = 200;
 export const SMELTING = {
   [I.RAW_IRON]: I.IRON_INGOT, [I.RAW_GOLD]: I.GOLD_INGOT, [I.RAW_COPPER]: I.COPPER_INGOT,
   [B.IRON_ORE]: I.IRON_INGOT, [B.GOLD_ORE]: I.GOLD_INGOT,
-  [B.SAND]: B.GLASS, [B.COBBLESTONE]: B.STONE, [B.COBBLED_DEEPSTONE]: B.DEEPSTONE,
+  [B.SAND]: B.GLASS, [I.CLAY_BALL]: I.BRICK, [B.CLAY]: B.BRICKS, [B.CACTUS]: DYES[COLOR.GREEN], [B.COBBLESTONE]: B.STONE, [B.COBBLED_DEEPSTONE]: B.DEEPSTONE,
   [I.RAW_PORK]: I.COOKED_PORK, [I.RAW_BEEF]: I.STEAK, [I.RAW_CHICKEN]: I.COOKED_CHICKEN,
   [I.RAW_MUTTON]: I.COOKED_MUTTON, [B.OAK_LOG]: I.COAL, [B.SPRUCE_LOG]: I.COAL, [B.BIRCH_LOG]: I.COAL,
 };
