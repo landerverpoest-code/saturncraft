@@ -439,6 +439,7 @@ export class UI {
       <div class="field"><label>Field of view: <b id="fovv">${g.settings.fov}</b></label><input type="range" min="50" max="110" value="${g.settings.fov}" id="fov"></div>
       <div class="field"><label>Mouse sensitivity: <b id="msv">${g.settings.sensitivity}</b></label><input type="range" min="10" max="200" value="${g.settings.sensitivity}" id="ms"></div>
       <div class="field"><label>Volume: <b id="volv">${Math.round(g.settings.volume * 100)}</b>%</label><input type="range" min="0" max="100" value="${Math.round(g.settings.volume * 100)}" id="vol"></div>
+      <div class="field"><label>Music: <b id="musv">${Math.round((g.settings.music ?? 0.5) * 100)}</b>%</label><input type="range" min="0" max="100" value="${Math.round((g.settings.music ?? 0.5) * 100)}" id="mus"></div>
       <div class="field"><label><input type="checkbox" id="sh" ${g.settings.shadows ? 'checked' : ''}> Sun shadows (3 shadow-casting lights)</label></div>
       <button class="btn" data-a="title">Save &amp; Quit to Title</button>
     </div>`);
@@ -447,6 +448,7 @@ export class UI {
     bind('fov', 'fovv', (v) => { g.setSetting('fov', v); return v; });
     bind('ms', 'msv', (v) => { g.setSetting('sensitivity', v); return v; });
     bind('vol', 'volv', (v) => { g.setSetting('volume', v / 100); return v; });
+    bind('mus', 'musv', (v) => { g.setSetting('music', v / 100); return v; });
     s.querySelector('#sh').addEventListener('change', (e) => g.setSetting('shadows', e.target.checked));
     s.querySelector('[data-a=resume]').onclick = () => { this.open = null; this.clear(); g.onUIClosed(); };
     s.querySelector('[data-a=title]').onclick = () => g.quitToTitle();

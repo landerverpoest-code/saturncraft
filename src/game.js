@@ -16,6 +16,7 @@ import { Sky } from './sky/sky.js';
 import { Clouds } from './sky/clouds.js';
 import { Weather, WeatherRenderer } from './sky/weather.js';
 import { Chat } from './ui/chat.js';
+import { Music } from './audio/music.js';
 import { effectiveSkyLight, skyState } from './sky/suns.js';
 import { SIDE_DIRS, BED_HEAD } from './world/shapes.js';
 import { CATEGORY } from './mobs/mobTypes.js';
@@ -47,7 +48,7 @@ THREE.ShaderChunk.fog_vertex = `#ifdef USE_FOG
     'directLight.color *= ( directLight.visible && receiveShadow && SUN_MASK && dot( directLight.color, vec3( 1.0 ) ) > 0.0 && dot( geometryNormal, directLight.direction ) > 0.0 ) ? getShadow(');
 }
 
-export const DEFAULT_SETTINGS = { renderDistance: 8, fov: 75, sensitivity: 100, volume: 0.5, shadows: true, shadowMapSize: 1024, pixelRatioCap: 1.25 };
+export const DEFAULT_SETTINGS = { renderDistance: 8, fov: 75, sensitivity: 100, volume: 0.5, music: 0.5, shadows: true, shadowMapSize: 1024, pixelRatioCap: 1.25 };
 
 export class Game {
   constructor(canvas, seed, settings, hooks = {}, saveData = null) {
@@ -102,6 +103,8 @@ export class Game {
     this.input.sensitivity = 0.0022 * s.sensitivity / 100;
     this.audio = new Audio();
     this.audio.setVolume(s.volume);
+    this.music = new Music(this.audio);
+    this.music.setVolume(s.music ?? 0.5);
     this.hud = new HUD(this);
     this.ui = new UI(this);
     this.held = new HeldItem(this);
@@ -190,6 +193,7 @@ export class Game {
     if (k === 'fov') { this.camera.fov = v; this.camera.updateProjectionMatrix(); }
     if (k === 'sensitivity') this.input.sensitivity = 0.0022 * v / 100;
     if (k === 'volume') this.audio.setVolume(v);
+    if (k === 'music') this.music.setVolume(v);
     if (k === 'shadows') this.sky.setShadowsEnabled(v);
     if (this.hooks.saveSettings) this.hooks.saveSettings(this.settings);
   }
@@ -417,6 +421,13 @@ export class Game {
     this.tickFurnaces();
     this.particles.tick();
     if (this.ticks % 1200 === 0) this.save(); // autosave every minute
+    if (this.ticks % 20 === 0) {
+      // music mood: underground, night (all suns down) or day
+      const px = Math.floor(p.x), py = Math.floor(p.y + 1), pz = Math.floor(p.z);
+      const sky = this.world.skyLight(px, py, pz), under = sky === 0 && py < this.world.heightAt(px, pz) - 4;
+      const mood = under ? 'cave' : this.sky.state.aboveCount === 0 ? 'night' : 'day';
+      this.music.update(1, mood, under && this.world.blockLight(px, py, pz) < 4);
+    }
     // footsteps
     const b = this.player.body;
     if (b.onGround && (Math.abs(b.vx) + Math.abs(b.vz)) > 0.05 && this.ticks % (this.player.sprinting ? 6 : 8) === 0) {
