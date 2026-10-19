@@ -284,6 +284,7 @@ poison from eyes) follow the documented table.
 * Animals follow a player holding their food (cows/sheep wheat, chickens seeds, pigs carrots); feeding two adults makes them breed (a baby that grows up in 20 minutes, 5-minute cooldown, 1–7 XP); feeding babies speeds up growth
 * Shears (2 iron) shear sheep for 1–3 wool; sheep regrow it by eating grass
 * Carrots: a crop planted on farmland (2–5 per ripe plant), food, and part of the Shambler's rare drop
+* Potatoes (2–5 per ripe plant, 2 % poisonous potato; bake them in a furnace) and beetroots (beetroot + seeds; 6 beetroots + bowl = beetroot soup, which gives the bowl back); both grow in village farms, are sold by farmers and feed pigs/chickens
 * Fences (oak/spruce/birch) that connect to fences, gates and full blocks, with 1.5-block collision so nothing jumps over; oak fence gates that open and close
 * Villages (one per 320 × 320-block region at most, in plains, desert, taiga and snowy plains): a well, four dirt-path roads and houses (log/plank, sandstone or spruce/cobblestone styles, with doors, windows, a bed and a workbench or chest), farms of wheat or carrots and lamp posts; `/locate village` finds the nearest
 * Settlers live in the village houses: farmer, librarian, smith, shepherd or butcher (robe colour); they flee Shamblers, stay near home and go inside at night; right-click to trade goods for beryl and beryl for goods (12 uses per offer, restocked every half day, XP for trading)
@@ -315,7 +316,7 @@ poison from eyes) follow the documented table.
 **Not yet implemented**
 
 * Enchanting, anvils, shields, potions and status-effect UI (only hunger/poison effects exist); armour is not drawn on the third-person player model
-* Taming, potatoes/beetroot, cocoa and ink sacs
+* Taming, cocoa and ink sacs
 * Strongholds and other large structures, villager breeding and job sites, the other dimensions, redstone-style circuitry
 * Double chests and other storage containers, walls, trapdoors, corner-shaped stairs
 * Snow layers

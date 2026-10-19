@@ -32,7 +32,7 @@ export const B = {
   CARROTS: 76, OAK_FENCE: 77, SPRUCE_FENCE: 78, BIRCH_FENCE: 79, OAK_FENCE_GATE: 80,
   SPAWNER: 81, MOSSY_COBBLESTONE: 82, SUGAR_CANE: 83, BOOKSHELF: 84, BRICKS: 85, GLASS_PANE: 86, DIRT_PATH: 87,
   PUMPKIN: 88, JACK_O_LANTERN: 89, MELON: 90, FIRE: 91,
-  OAK_SAPLING: 92, BIRCH_SAPLING: 93, SPRUCE_SAPLING: 94,
+  OAK_SAPLING: 92, BIRCH_SAPLING: 93, SPRUCE_SAPLING: 94, POTATOES: 95, BEETROOTS: 96,
 };
 
 const defaults = {
@@ -129,7 +129,9 @@ def(B.CHEST, 'Chest', { hardness: 2.5, resistance: 2.5, tool: TOOL.AXE, sound: '
 def(B.FARMLAND, 'Farmland', { hardness: 0.6, resistance: 0.6, tool: TOOL.SHOVEL, drops: B.DIRT, sound: 'gravel', tex: { top: 'farmland', bottom: 'dirt', side: 'dirt' } });
 def(B.WHEAT, 'Wheat Crops', { ...plant, shape: SHAPE.CROP, drops: 'wheat', tex: { all: 'wheat_7' } });
 def(B.CARROTS, 'Carrots', { ...plant, shape: SHAPE.CROP, drops: 'carrots', tex: { all: 'carrots_3' } });
-export const CROPS = new Set([B.WHEAT, B.CARROTS]);
+def(B.POTATOES, 'Potatoes', { ...plant, shape: SHAPE.CROP, drops: 'potatoes', tex: { all: 'potatoes_3' } });
+def(B.BEETROOTS, 'Beetroots', { ...plant, shape: SHAPE.CROP, drops: 'beetroots', tex: { all: 'beetroots_3' } });
+export const CROPS = new Set([B.WHEAT, B.CARROTS, B.POTATOES, B.BEETROOTS]);
 
 // Door: two blocks, meta bits in shapes.js. Ladder: meta = side of its wall.
 def(B.DOOR, 'Oak Door', { hardness: 3, resistance: 3, tool: TOOL.AXE, sound: 'wood', flammable: true, opaque: false, shape: SHAPE.DOOR, layer: LAYER.CUTOUT, drops: 'door', needsSupport: true, tex: { all: 'door_lower' } });

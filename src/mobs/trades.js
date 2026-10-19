@@ -7,7 +7,7 @@ import { B } from '../world/blocks.js';
 const BUY = 'buy', SELL = 'sell';
 // [kind, give item, give count, get item, get count]
 const OFFERS = {
-  farmer: [[BUY, I.WHEAT, 20, I.BERYL, 1], [BUY, I.CARROT, 22, I.BERYL, 1], [SELL, I.BERYL, 1, I.BREAD, 6], [SELL, I.BERYL, 1, I.APPLE, 4], [SELL, I.BERYL, 1, I.CARROT, 5]],
+  farmer: [[BUY, I.WHEAT, 20, I.BERYL, 1], [BUY, I.CARROT, 22, I.BERYL, 1], [BUY, I.POTATO, 26, I.BERYL, 1], [BUY, I.BEETROOT, 15, I.BERYL, 1], [SELL, I.BERYL, 1, I.BREAD, 6], [SELL, I.BERYL, 1, I.APPLE, 4], [SELL, I.BERYL, 1, I.CARROT, 5], [SELL, I.BERYL, 1, I.BAKED_POTATO, 4], [SELL, I.BERYL, 1, I.BEETROOT_SEEDS, 6]],
   librarian: [[BUY, I.PAPER, 24, I.BERYL, 1], [BUY, I.BOOK, 4, I.BERYL, 1], [SELL, I.BERYL, 9, B.BOOKSHELF, 1], [SELL, I.BERYL, 1, B.GLASS, 4], [SELL, I.BERYL, 1, B.LADDER, 4]],
   smith: [[BUY, I.COAL, 15, I.BERYL, 1], [BUY, I.IRON_INGOT, 4, I.BERYL, 1], [SELL, I.BERYL, 5, I.IRON_HELMET, 1], [SELL, I.BERYL, 9, I.IRON_CHESTPLATE, 1], [SELL, I.BERYL, 7, I.IRON_LEGGINGS, 1], [SELL, I.BERYL, 4, I.IRON_BOOTS, 1], [SELL, I.BERYL, 3, I.IRON_PICKAXE, 1]],
   shepherd: [[BUY, B.WOOL, 18, I.BERYL, 1], [SELL, I.BERYL, 2, I.SHEARS, 1], [SELL, I.BERYL, 3, I.BED, 1], [SELL, I.BERYL, 1, WOOL_ITEMS[14], 1], [SELL, I.BERYL, 1, WOOL_ITEMS[11], 1]],

@@ -91,3 +91,25 @@ describe('farming', () => {
     expect(craft([P, P, null, null, S, null, null, S, null].map(s), 3)).toEqual({ id: I.WOOD_HOE, count: 1 });
   });
 });
+
+describe('potatoes and beetroots', () => {
+  it('ripe potatoes drop 2-5 potatoes and rarely a poisonous one', () => {
+    const r = rng(4);
+    let poison = 0;
+    for (let k = 0; k < 2000; k++) {
+      const d = blockDrops(B.POTATOES, toolOf(null), r, 7);
+      expect(d[0].count).toBeGreaterThanOrEqual(2); expect(d[0].count).toBeLessThanOrEqual(5);
+      if (d[1]) poison++;
+    }
+    expect(poison / 2000).toBeGreaterThan(0.01); expect(poison / 2000).toBeLessThan(0.03);
+    expect(blockDrops(B.POTATOES, toolOf(null), r, 3)).toEqual([{ id: I.POTATO, count: 1 }]);
+  });
+
+  it('beetroots give a beetroot and seeds; soup from six beetroots and a bowl', () => {
+    const d = blockDrops(B.BEETROOTS, toolOf(null), rng(1), 7);
+    expect(d[0]).toEqual({ id: I.BEETROOT, count: 1 });
+    expect(d[1].id).toBe(I.BEETROOT_SEEDS);
+    const grid = [I.BOWL, ...Array(6).fill(I.BEETROOT), 0, 0].map((id) => (id ? { id, count: 1 } : null));
+    expect(craft(grid, 3)?.id).toBe(I.BEETROOT_SOUP);
+  });
+});

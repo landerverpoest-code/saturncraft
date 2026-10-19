@@ -39,7 +39,8 @@ for (const f of FACES) {
 const FOLIAGE_FIXED = { [B.BIRCH_LEAVES]: [128, 167, 85], [B.SPRUCE_LEAVES]: [97, 153, 97] };
 const FURNACE_FRONT_DIR = [5, 0, 4, 1];
 // crop textures per growth stage 0..7 (carrots have 4 visual stages)
-const CROP_TILES = { [B.WHEAT]: [0, 1, 2, 3, 4, 5, 6, 7].map((i) => texId('wheat_' + i)), [B.CARROTS]: [0, 0, 1, 1, 2, 2, 2, 3].map((i) => texId('carrots_' + i)) };
+const CROP_TILES = { [B.WHEAT]: [0, 1, 2, 3, 4, 5, 6, 7].map((i) => texId('wheat_' + i)), [B.CARROTS]: [0, 0, 1, 1, 2, 2, 2, 3].map((i) => texId('carrots_' + i)),
+  [B.POTATOES]: [0, 0, 1, 1, 2, 2, 2, 3].map((i) => texId('potatoes_' + i)), [B.BEETROOTS]: [0, 0, 1, 1, 2, 2, 2, 3].map((i) => texId('beetroots_' + i)) };
 const FARMLAND_MOIST = texId('farmland_moist');
 const DOOR_LOWER = texId('door_lower'), DOOR_UPPER_TILE = texId('door_upper');
 const BED_TOPS = [0, 1, 2, 3].map((r) => [texId('bed_foot_top_' + r), texId('bed_head_top_' + r)]);

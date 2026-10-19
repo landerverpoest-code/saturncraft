@@ -9,7 +9,7 @@ export const MOBS = {
   bristleback: {
     name: 'Bristleback', role: 'pig', category: CATEGORY.CREATURE,
     health: 10, speed: 0.25, width: 0.9, height: 0.9, panicSpeed: 1.25, sound: 'oink',
-    drops: [{ id: I.RAW_PORK, min: 1, max: 3, cooked: I.COOKED_PORK }], food: [I.CARROT],
+    drops: [{ id: I.RAW_PORK, min: 1, max: 3, cooked: I.COOKED_PORK }], food: [I.CARROT, I.POTATO, I.BEETROOT],
   },
   mooxen: {
     name: 'Mooxen', role: 'cow', category: CATEGORY.CREATURE,
@@ -24,7 +24,7 @@ export const MOBS = {
   cluckling: {
     name: 'Cluckling', role: 'chicken', category: CATEGORY.CREATURE,
     health: 4, speed: 0.25, width: 0.4, height: 0.7, panicSpeed: 1.4, sound: 'cluck', noFallDamage: true,
-    drops: [{ id: I.FEATHER, min: 0, max: 2 }, { id: I.RAW_CHICKEN, min: 1, max: 1, cooked: I.COOKED_CHICKEN }], food: [I.WHEAT_SEEDS],
+    drops: [{ id: I.FEATHER, min: 0, max: 2 }, { id: I.RAW_CHICKEN, min: 1, max: 1, cooked: I.COOKED_CHICKEN }], food: [I.WHEAT_SEEDS, I.BEETROOT_SEEDS],
   },
   shambler: {
     name: 'Shambler', role: 'zombie', category: CATEGORY.MONSTER,
@@ -32,7 +32,7 @@ export const MOBS = {
     burnsInSun: true, sound: 'grunt',
     drops: [{ id: I.ROTTEN_FLESH, min: 0, max: 2 }],
     // rare player-kill drop (2.5%): iron ingot, carrot or potato (no potatoes here)
-    rare: { chance: 0.025, ids: [I.IRON_INGOT, I.CARROT] },
+    rare: { chance: 0.025, ids: [I.IRON_INGOT, I.CARROT, I.POTATO] },
   },
   rattler: {
     name: 'Rattler', role: 'skeleton', category: CATEGORY.MONSTER,

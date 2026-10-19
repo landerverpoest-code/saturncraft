@@ -24,6 +24,7 @@ addTex('pumpkin_face');
 for (let r = 0; r < 4; r++) { addTex('bed_head_top_' + r); addTex('bed_foot_top_' + r); }
 for (let i = 0; i < 8; i++) addTex('wheat_' + i);
 for (let i = 0; i < 4; i++) addTex('carrots_' + i);
+for (let i = 0; i < 4; i++) { addTex('potatoes_' + i); addTex('beetroots_' + i); }
 addTex('water_flow');
 for (let i = 0; i < 8; i++) addTex('fire_' + i);
 addTex('lava_flow');
@@ -216,6 +217,21 @@ function carrots(c, stage) {
     }
     if (stage === 3) { c.set(sx, 15, orange); c.set(sx + 1, 15, shade(orange, 0.85)); c.set(sx, 14, shade(orange, 1.1)); }
   }
+}
+
+// Potatoes / beetroots: bushy leaves (beetroot leaves have red veins), with the
+// crop showing at the bottom when ripe.
+function rootCrop(c, stage, leaf, vein, crop, size) {
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
+  const l = hex(leaf), v = hex(vein), cr = hex(crop);
+  const h = 3 + stage * 2.5;
+  for (const sx of [3, 8, 12]) {
+    for (let k = 0; k < h; k++) {
+      const y = 15 - k, w = k > h * 0.4 ? 2 : 1;
+      for (let dx = -w; dx <= w; dx++) if (c.h(sx + dx, y) < 0.75) c.set(sx + dx, y, dx === 0 ? v : shade(l, 0.8 + c.h(dx, k) * 0.35));
+    }
+  }
+  if (stage === 3) for (const sx of [3, 8, 12]) for (let dy = 0; dy < size; dy++) for (let dx = 0; dx < size; dx++) c.set(sx - 1 + dx, 15 - dy, shade(cr, 0.85 + c.h(dx, dy, 5) * 0.3));
 }
 
 function sapling(c, leaf, dark, stem, conifer) {
@@ -655,6 +671,8 @@ function paint(c, name) {
   else if (name.startsWith('fire_')) fire(c, +name.slice(5));
   else if (name.startsWith('wheat_')) wheat(c, +name.slice(6));
   else if (name.startsWith('carrots_')) carrots(c, +name.slice(8));
+  else if (name.startsWith('potatoes_')) rootCrop(c, +name.slice(9), '#4a9a34', '#2f7424', '#c8a25a', 3);
+  else if (name.startsWith('beetroots_')) rootCrop(c, +name.slice(10), '#3f8a2a', '#9a2a3a', '#8a1e2e', 2);
   else if (name.startsWith('bed_head_top_') || name.startsWith('bed_foot_top_')) bedTop(c, name.startsWith('bed_head'), +name.slice(-1));
   else if (GEN[name]) GEN[name](c);
   else c.noiseFill(P.stone);

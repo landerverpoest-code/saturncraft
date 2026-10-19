@@ -1,6 +1,6 @@
 // Main-thread authoritative world: chunk storage, block/light access,
 // edits with light updates, scheduled block ticks and raycasting.
-import { B, BLOCKS, SOLID, OPAQUE, isFluid } from './blocks.js';
+import { B, BLOCKS, SOLID, OPAQUE, isFluid, CROPS } from './blocks.js';
 import { LightEngine } from './lighting.js';
 import { MIN_Y, MAX_Y, WORLD_HEIGHT, SECTION_COUNT, cidx } from './constants.js';
 import { TerrainGenerator } from './generator.js';
@@ -218,7 +218,7 @@ export class World {
       return !!SOLID[below] && below !== B.DOOR && this.getBlock(x, y + 1, z) === B.DOOR;
     }
     if (id === B.DEAD_BUSH) return below === B.SAND || below === B.DIRT || below === B.GRASS;
-    if (id === B.WHEAT || id === B.CARROTS) return below === B.FARMLAND;
+    if (CROPS.has(id)) return below === B.FARMLAND;
     if (id === B.SUGAR_CANE) {
       if (below === B.SUGAR_CANE) return true;
       if (below !== B.GRASS && below !== B.DIRT && below !== B.SAND) return false;

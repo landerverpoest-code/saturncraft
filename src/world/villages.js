@@ -157,7 +157,8 @@ const BUILDERS = {
   farm(p, st, set, rng) {
     const y = p.y - 1;
     const alongX = p.x1 - p.x0 > p.z1 - p.z0;
-    const crop = rng() < 0.6 ? B.WHEAT : B.CARROTS;
+    const cr = rng();
+    const crop = cr < 0.45 ? B.WHEAT : cr < 0.65 ? B.CARROTS : cr < 0.85 ? B.POTATOES : B.BEETROOTS;
     for (let x = p.x0; x <= p.x1; x++) for (let z = p.z0; z <= p.z1; z++) {
       const border = x === p.x0 || x === p.x1 || z === p.z0 || z === p.z1;
       const mid = alongX ? z === Math.floor((p.z0 + p.z1) / 2) : x === Math.floor((p.x0 + p.x1) / 2);

@@ -195,6 +195,7 @@ export class Interaction {
     p.hunger.eat(f.hunger, f.saturation);
     if (f.effect && Math.random() < f.effect.chance) p.addEffect(f.effect.type, f.effect.ticks);
     p.inventory.removeFromSlot(p.inventory.selected, 1);
+    if (f.leaves) p.inventory.add({ id: I.BOWL, count: 1, damage: 0 }); // soup leaves its bowl
     g.audio.play('burp');
   }
 
@@ -484,7 +485,7 @@ export class Interaction {
 
   pickBlock(id) {
     const inv = this.game.player.inventory;
-    const asItem = { [B.DOOR]: I.OAK_DOOR, [B.BED]: I.BED, [B.WHEAT]: I.WHEAT_SEEDS, [B.CARROTS]: I.CARROT, [B.FURNACE_LIT]: B.FURNACE, [B.FARMLAND]: B.DIRT };
+    const asItem = { [B.DOOR]: I.OAK_DOOR, [B.BED]: I.BED, [B.WHEAT]: I.WHEAT_SEEDS, [B.CARROTS]: I.CARROT, [B.POTATOES]: I.POTATO, [B.BEETROOTS]: I.BEETROOT_SEEDS, [B.FURNACE_LIT]: B.FURNACE, [B.FARMLAND]: B.DIRT };
     const want = asItem[id] ?? id;
     for (let i = 0; i < 9; i++) if (inv.slots[i] && inv.slots[i].id === want) { inv.selected = i; return; }
     if (this.game.player.creative && ITEMS[want]) {

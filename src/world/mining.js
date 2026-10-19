@@ -78,6 +78,21 @@ export function blockDrops(blockId, tool = HAND, rng = Math.random, meta = 0) {
       for (let k = 0; k < 3; k++) if (rng() < 4 / 7) n++;
       return [{ id: I.CARROT, count: n }];
     }
+    case 'potatoes': {
+      // mature: 1 + 1 + binomial(3, 4/7) potatoes and a 2 % chance of a poisonous one
+      if ((meta & 7) < 7) return [{ id: I.POTATO, count: 1 }];
+      let n = 2;
+      for (let k = 0; k < 3; k++) if (rng() < 4 / 7) n++;
+      const out = [{ id: I.POTATO, count: n }];
+      if (rng() < 0.02) out.push({ id: I.POISONOUS_POTATO, count: 1 });
+      return out;
+    }
+    case 'beetroots': {
+      if ((meta & 7) < 7) return [{ id: I.BEETROOT_SEEDS, count: 1 }];
+      let seeds = 1;
+      for (let k = 0; k < 3; k++) if (rng() < 4 / 7) seeds++;
+      return [{ id: I.BEETROOT, count: 1 }, { id: I.BEETROOT_SEEDS, count: seeds }];
+    }
     case 'wheat': {
       // mature: 1 wheat + 1 seed + binomial(3, 4/7) seeds; otherwise just the seed back
       if ((meta & 7) < 7) return [{ id: I.WHEAT_SEEDS, count: 1 }];
