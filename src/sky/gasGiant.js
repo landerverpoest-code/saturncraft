@@ -20,6 +20,7 @@ uniform float uTime;
 uniform float uInner;
 uniform float uOuter;
 uniform float uDay;
+uniform float uRain;
 float sphereHit(vec3 o, vec3 d, vec3 c, float r) {
   vec3 oc = o - c;
   float b = dot(oc, d);
@@ -83,7 +84,7 @@ void main() {
     lit += uSunColor[i] * uSunIntensity[i] * sh * (sameSide * tilt + spec * 1.4 + sparkle * spec * 4.0 + sparkle * 0.12 * tilt);
   }
   vec3 col = mix(vec3(0.82, 0.74, 0.62), vec3(0.95, 0.9, 0.82), vnoise(vec2(rho * 30.0, 1.0)));
-  float vis = 1.0 - 0.72 * clamp(uDay, 0.0, 1.0);
+  float vis = (1.0 - 0.72 * clamp(uDay, 0.0, 1.0)) * (1.0 - 0.85 * uRain);
   gl_FragColor = vec4(col * (lit + 0.03), dens * 0.88 * vis);
   #include <colorspace_fragment>
 }
@@ -111,7 +112,7 @@ void main() {
     lit += uSunColor[i] * uSunIntensity[i] * sh;
   }
   vCol = vec3(0.9, 0.92, 1.0) * (lit * 0.6 + glint * 3.0);
-  vAlpha = hidden * (0.12 + glint) * (1.0 - 0.8 * clamp(uDay, 0.0, 1.0));
+  vAlpha = hidden * (0.12 + glint) * (1.0 - 0.8 * clamp(uDay, 0.0, 1.0)) * (1.0 - uRain);
   vec4 mv = viewMatrix * vec4(p + cameraPosition, 1.0);
   gl_Position = projectionMatrix * mv;
   gl_Position.z = gl_Position.w * 0.99999;
@@ -144,6 +145,7 @@ export class RingSystem {
       uInner: { value: inner },
       uOuter: { value: outer },
       uDay: { value: 0 },
+      uRain: { value: 0 },
     };
     // Ring mesh in the ring plane (unit = planet radius, scaled at runtime)
     const geo = new THREE.RingGeometry(inner, outer, 256, 6);

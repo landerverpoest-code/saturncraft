@@ -30,6 +30,7 @@ uniform float uPlanetRadius;
 uniform float uRingInner;
 uniform float uRingOuter;
 uniform float uUnderwater;
+uniform float uRain;
 
 float hash12(vec2 p) {
   vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -91,7 +92,7 @@ void main() {
   if (h < 0.0) col = mix(uHorizon, uHorizon * 0.55, clamp((-h - 0.3) * 2.0, 0.0, 1.0)); // matches the terrain fog colour near the horizon
 
   // Stars (fade with combined daylight)
-  float starVis = clamp(1.0 - uCombined * 2.2, 0.0, 1.0) * smoothstep(-0.05, 0.15, h);
+  float starVis = clamp(1.0 - uCombined * 2.2, 0.0, 1.0) * smoothstep(-0.05, 0.15, h) * (1.0 - uRain);
   if (starVis > 0.0) {
     vec3 sd = dir * 280.0;
     vec3 cell = floor(sd);
@@ -118,10 +119,11 @@ void main() {
     // horizon glow strongest when the sun is near the horizon
     float twilight = exp(-abs(elev) * 7.0) * above;
     float facing = pow(max(c * 0.5 + 0.5, 0.0), 5.0);
-    col += sc * vec3(1.0, 0.62, 0.38) * twilight * facing * exp(-max(h, 0.0) * 5.0) * 0.9 * uSunIntensity[i];
+    float clear = 1.0 - 0.85 * uRain;
+    col += sc * vec3(1.0, 0.62, 0.38) * twilight * facing * exp(-max(h, 0.0) * 5.0) * 0.9 * uSunIntensity[i] * clear;
     // Mie-like glare
     float glare = pow(max(c, 0.0), 14.0) * 0.12 + pow(max(c, 0.0), 260.0) * 0.35;
-    col += sc * glare * above * uSunIntensity[i];
+    col += sc * glare * above * uSunIntensity[i] * clear;
     // disc with limb darkening
     float rad = 0.0185 * uSunSize[i];
     float ang = acos(clamp(c, -1.0, 1.0));
@@ -129,7 +131,7 @@ void main() {
     float limb = 1.0 - 0.45 * pow(clamp(ang / rad, 0.0, 1.0), 2.0);
     // keep the disc in its own colour: saturated body, small hot core
     vec3 discCol = sc * 1.05 * limb + vec3(0.25) * smoothstep(rad * 0.45, 0.0, ang);
-    col = mix(col, discCol, disc * smoothstep(-0.03, 0.01, h));
+    col = mix(col, discCol, disc * smoothstep(-0.03, 0.01, h) * (1.0 - 0.92 * uRain));
   }
 
   // Gas giant (centre at unit distance along uPlanetDir)
@@ -138,7 +140,7 @@ void main() {
   float tP = sphereHit(vec3(0.0), dir, C, R);
   vec3 axis = uPlanetAxis;
   vec3 e1; vec3 e2 = ringFrameDir(axis, e1);
-  float vis = (1.0 - 0.72 * clamp(uCombined, 0.0, 1.0)) * smoothstep(-0.12, 0.02, h);
+  float vis = (1.0 - 0.72 * clamp(uCombined, 0.0, 1.0)) * smoothstep(-0.12, 0.02, h) * (1.0 - 0.85 * uRain);
 
   if (tP > 0.0) {
     vec3 p = dir * tP;

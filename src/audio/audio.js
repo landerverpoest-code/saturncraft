@@ -24,6 +24,24 @@ export class Audio {
   }
 
   setVolume(v) { this.volume = v; if (this.master) this.master.gain.value = v; }
+
+  /** Continuous rain hiss; `level` 0..1, muffled when the listener is under cover. */
+  setRain(level, covered) {
+    if (!this.ctx) return;
+    if (!this.rainGain) {
+      const src = this.ctx.createBufferSource();
+      src.buffer = this.noiseBuf; src.loop = true;
+      this.rainFilter = this.ctx.createBiquadFilter();
+      this.rainFilter.type = 'lowpass';
+      this.rainGain = this.ctx.createGain();
+      this.rainGain.gain.value = 0;
+      src.connect(this.rainFilter); this.rainFilter.connect(this.rainGain); this.rainGain.connect(this.master);
+      src.start();
+    }
+    const t = this.ctx.currentTime;
+    this.rainGain.gain.setTargetAtTime(level * (covered ? 0.12 : 0.22), t, 0.3);
+    this.rainFilter.frequency.setTargetAtTime(covered ? 500 : 2600, t, 0.3);
+  }
   setListener(x, y, z, yaw) { this.listener = [x, y, z, yaw]; }
 
   // spatial: returns [gain, pan]

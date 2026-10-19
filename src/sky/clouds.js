@@ -110,7 +110,7 @@ export class Clouds {
     }
     const st = sky.state, lc = st.lightColor, day = Math.min(1, st.combined);
     // white by day (slightly tinted by the blend of visible suns), dark blue-grey at night
-    const k = 0.1 + 0.9 * Math.pow(day, 0.8);
+    const k = (0.1 + 0.9 * Math.pow(day, 0.8)) * (1 - 0.5 * (sky.rain || 0)); // grey rain clouds
     this.uniforms.uColor.value.setRGB(
       k * (0.75 + 0.25 * lc[0]) + 0.02, k * (0.75 + 0.25 * lc[1]) + 0.025, k * (0.75 + 0.25 * lc[2]) + 0.04);
     this.uniforms.uFog.value.copy(sky.horizon);

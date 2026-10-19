@@ -13,6 +13,7 @@ import { Particles } from './render/particles.js';
 import { HeldItem, BlockOverlay } from './render/overlays.js';
 import { Sky } from './sky/sky.js';
 import { Clouds } from './sky/clouds.js';
+import { Weather, WeatherRenderer } from './sky/weather.js';
 import { effectiveSkyLight, skyState } from './sky/suns.js';
 import { SIDE_DIRS, BED_HEAD } from './world/shapes.js';
 import { CATEGORY } from './mobs/mobTypes.js';
@@ -82,6 +83,8 @@ export class Game {
     this.sky = new Sky(this.scene, this.renderer, { shadowMapSize: s.shadowMapSize });
     this.sky.setShadowsEnabled(s.shadows);
     this.clouds = new Clouds(this.scene, this.seed);
+    this.weather = new Weather();
+    this.weatherFx = new WeatherRenderer(this.scene);
     this.particles = new Particles(this.scene);
     this.player = new Player();
     this.player.isPlayer = true;
@@ -215,6 +218,20 @@ export class Game {
     }
     this.player.respawn();
     this.input.lock();
+  }
+
+  /** Rain on the ground: splashes near the player; puts out burning things. */
+  tickRain() {
+    const wth = this.weather, p = this.player;
+    if (wth.level < 0.2) return;
+    if (p.fireTicks > 0 && wth.rainingAt(this.world, p.x, p.y + 1, p.z)) p.fireTicks = 0;
+    for (let k = 0; k < Math.round(wth.level * 6); k++) {
+      const x = Math.floor(p.x + (Math.random() - 0.5) * 16), z = Math.floor(p.z + (Math.random() - 0.5) * 16);
+      if (Weather.precipitation(this.world.biomeAt(x, z)) !== 'rain') continue;
+      const y = this.world.heightAt(x, z) + 1;
+      if (Math.abs(y - p.y) > 12) continue;
+      this.particles.emit(x + Math.random(), y + 0.02, z + Math.random(), 0, 0.06, 0, 0.45, 0.55, 0.75, 4, 0.03);
+    }
   }
 
   // ---- beds & sleeping -------------------------------------------------------
@@ -355,6 +372,8 @@ export class Game {
     const blocking = this.ui.blocking;
     const mv = blocking ? { forward: 0, strafe: 0, jump: false, sneak: false, sprint: false } : inp.movement();
     this.world.tick();
+    this.weather.tick();
+    this.tickRain();
     runRandomTicks(this.world, Math.floor(this.player.x / 16), Math.floor(this.player.z / 16), Math.min(this.chunks.renderDistance, 6));
     // Hold the player in place until the terrain under them has loaded (spawn, respawn, teleports)
     const p = this.player;
@@ -461,7 +480,11 @@ export class Game {
     this.chunks.update(x, z, 6);
     if (this.chunks.edited) { this.chunks.edited = false; this.sky.refreshShadows(); }
     const smoothTime = this.time + alpha;
+    this.sky.rain = this.weather.level;
     const st = this.sky.update(smoothTime, sec, this.camera, new THREE.Vector3(x, y, z));
+    this.weatherFx.update(this.world, this.camera, p.yaw, this.weather.level, sec, Math.min(1, st.combined) * 0.85 + 0.15);
+    this.audio.setRain(this.weather.level * (Weather.precipitation(this.world.biomeAt(Math.floor(x), Math.floor(z))) === 'rain' ? 1 : 0),
+      this.world.heightAt(Math.floor(x), Math.floor(z)) > y + eye);
     terrainUniforms.uTime.value = sec;
     const R = this.chunks.renderDistance * 16;
     this.clouds.update(this.camera, smoothTime, this.sky, Math.max(192, R * 1.8));

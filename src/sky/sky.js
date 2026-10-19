@@ -45,6 +45,7 @@ export class Sky {
       uRingInner: { value: PLANET.ringInner },
       uRingOuter: { value: PLANET.ringOuter },
       uUnderwater: { value: 0 },
+      uRain: { value: 0 },
     };
     const mat = new THREE.ShaderMaterial({
       uniforms: this.uniforms, vertexShader: skyVertex, fragmentShader: skyFragment,
@@ -114,6 +115,13 @@ export class Sky {
       mix(nightH[1], dayH[1], d) + warm * 0.14,
       mix(nightH[2], dayH[2], d) * (1 - warm * 0.4),
     );
+    // overcast: rain greys and darkens the sky
+    const rain = this.rain || 0;
+    if (rain > 0) for (const c of [this.zenith, this.horizon]) {
+      const lum = c.r * 0.3 + c.g * 0.59 + c.b * 0.11;
+      c.setRGB(c.r + (lum * 0.62 - c.r) * rain * 0.85, c.g + (lum * 0.64 - c.g) * rain * 0.85, c.b + (lum * 0.7 - c.b) * rain * 0.85);
+    }
+    u.uRain.value = rain;
     u.uZenith.value.copy(this.zenith);
     u.uHorizon.value.copy(this.horizon);
 
@@ -131,6 +139,7 @@ export class Sky {
     axis.applyAxisAngle(pd, PLANET.axisRoll).normalize();
     u.uPlanetAxis.value.copy(axis);
     this.rings.update(camera, pd, axis, PLANET.angularRadius, u.uSunDir.value, u.uSunColor.value, u.uSunIntensity.value, seconds, st.combined);
+    this.rings.uniforms.uRain.value = rain;
 
     this.mesh.position.copy(camera.position);
 
@@ -138,7 +147,7 @@ export class Sky {
     const planetShine = 0.06 * (1 - day);
     this.hemi.color.setRGB(this.zenith.r * 0.6 + lc[0] * 0.4 * day, this.zenith.g * 0.6 + lc[1] * 0.4 * day, this.zenith.b * 0.6 + lc[2] * 0.4 * day);
     this.hemi.groundColor.setRGB(0.3 * day + 0.03, 0.27 * day + 0.03, 0.22 * day + 0.04);
-    this.hemi.intensity = 0.45 + 1.05 * day + planetShine * 10;
+    this.hemi.intensity = (0.45 + 1.05 * day + planetShine * 10) * (1 - 0.3 * rain);
 
     // Directional sun lights following the focus point
     const snap = (this.shadowExtent * 2) / this.shadowSize;
@@ -146,7 +155,7 @@ export class Sky {
       const l = this.lights[i];
       const f = s.factor * s.sun.shadowStrength;
       l.color.setRGB(s.color[0], s.color[1], s.color[2]);
-      l.intensity = f * 3.4 * (s.elevation > 0 ? 1 : 0);
+      l.intensity = f * 3.4 * (s.elevation > 0 ? 1 : 0) * (1 - 0.8 * rain);
       const fx = Math.round(focus.x / snap) * snap, fy = Math.round(focus.y / snap) * snap, fz = Math.round(focus.z / snap) * snap;
       l.target.position.set(fx, fy, fz);
       l.position.set(fx + s.dir[0] * 200, fy + s.dir[1] * 200, fz + s.dir[2] * 200);

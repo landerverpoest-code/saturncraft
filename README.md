@@ -273,6 +273,7 @@ poison from eyes) follow the documented table.
 * Bow and arrows (player and Rattler), arrow pick-up
 * Death screen, item drop on death, respawn; pause menu with settings
 * Procedural sound effects with stereo panning; world saving
+* Weather: rain spells (12 000–24 000 ticks) after clear spells (12 000–180 000), fading in/out at 0.01 per tick; rain or snow by biome (none in deserts), stopped by roofs; overcast sky, weaker sun light, grey clouds, splashes and rain sound; rain puts out burning players and mobs and undead do not catch fire in it
 * Blocky cloud layer (12×12 cells, 4 thick, y=192, drifting 0.03 blocks/tick), coloured by the suns
 
 **Not yet implemented**
@@ -281,7 +282,7 @@ poison from eyes) follow the documented table.
 * Breeding/taming, shearing, sheep colours, other crops, bone meal
 * Villages, other structures, the other dimensions, redstone-style circuitry
 * Double chests and other storage containers, slabs, stairs, fences, trapdoors
-* Fire blocks and fire spread, snow/thunder
+* Fire blocks and fire spread, thunderstorms and lightning, snow layers
 * Slimes, witches, drowned, husks/strays as separate variants, baby mobs, mob equipment
 * Difficulty levels (fixed at Normal), creative mode, commands, multiplayer
 * Sprint-swimming/crawling poses, boats, minecarts, elytra
@@ -357,7 +358,7 @@ poison from eyes) follow the documented table.
 
 ## Tests
 
-`npm test` runs 117 unit tests:
+`npm test` runs 121 unit tests:
 
 * **physics** — constants, walk/sprint/sneak speeds, jump apex and duration,
   sprint-jump, terminal velocity, fall damage, collision, step-up, ledge

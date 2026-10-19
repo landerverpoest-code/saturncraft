@@ -209,7 +209,9 @@ export class Mob {
       const bx = Math.floor(this.x), by = Math.floor(this.eyeY), bz = Math.floor(this.z);
       const raw = w.skyLight(bx, by, bz), blk = w.blockLight(bx, by, bz);
       const effective = Math.max(raw - st.skyDarken, blk);
-      if (shouldBurnInSun({ sunlit: st.sunlit, effectiveLevel: effective, canSeeSky: raw === 15 && w.heightAt(bx, bz) < by, inWater: b.inWater })) {
+      const inRain = g.weather && g.weather.rainingAt(w, this.x, this.y + this.height, this.z);
+      if (inRain) this.fireTicks = 0;
+      if (!inRain && shouldBurnInSun({ sunlit: st.sunlit, effectiveLevel: effective, canSeeSky: raw === 15 && w.heightAt(bx, bz) < by, inWater: b.inWater })) {
         this.fireTicks = Math.max(this.fireTicks, 160);
       }
     }

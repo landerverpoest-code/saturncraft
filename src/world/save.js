@@ -84,6 +84,7 @@ export async function saveGame(game) {
     furnaces: [...game.furnaces.values()],
     chests: [...game.chests.values()],
     worldSpawn: game.worldSpawn,
+    weather: game.weather.save(),
     generated: [...game.spawner.generated],
     savedMobs, liveMobs, chunks,
   };
@@ -114,6 +115,7 @@ export async function deleteSave() {
 export function applySave(game, data) {
   for (const [k, p] of Object.entries(data.chunks)) game.world.saved.set(+k, unpackChunk(p));
   game.time = data.time;
+  game.weather.load(data.weather);
   for (const f of data.furnaces) game.furnaces.set(`${f.x},${f.y},${f.z}`, f);
   for (const c of data.chests || []) game.chests.set(`${c.x},${c.y},${c.z}`, c);
   for (const k of data.generated) game.spawner.generated.add(k);
