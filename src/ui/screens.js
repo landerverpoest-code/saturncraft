@@ -89,6 +89,7 @@ export class UI {
     const st = get();
     if (shift && st && opts.quickMove) { opts.quickMove(); return; }
     const c = this.cursor;
+    if (c && opts.filter && !opts.filter(c)) return; // e.g. only armour of the right kind fits an armour slot
     if (opts.takeOnly) { if (st && (!c || (c.id === st.id && c.count + st.count <= maxStack(st.id)))) { this.cursor = c ? { ...c, count: c.count + st.count } : st; set(null); } return; }
     if (!right) {
       if (!c) { this.cursor = st; set(null); }
@@ -122,6 +123,9 @@ export class UI {
     const quick = (i) => () => {
       const st = inv.slots[i];
       if (!st) return;
+      // armour goes straight to its (empty) armour slot
+      const ad = ITEMS[st.id].armor;
+      if (!container && ad && !inv.armor[ad.slot]) { inv.armor[ad.slot] = st; inv.slots[i] = null; this.game.audio.play('equip'); return; }
       if (container && container.accept) {
         const r = container.accept(st); // true: all taken, 'partial': some taken (st.count reduced)
         if (r === true) { inv.slots[i] = null; return; }
@@ -201,9 +205,29 @@ export class UI {
     this.layer.appendChild(screen);
   }
 
+  /** Four armour slots (helmet .. boots) that only accept matching armour. */
+  armorColumn() {
+    const inv = this.game.player.inventory;
+    const col = el('<div class="grid armor-slots" style="grid-template-columns:var(--slot)"></div>');
+    const labels = ['Helmet', 'Chestplate', 'Leggings', 'Boots'];
+    for (let i = 0; i < 4; i++) {
+      const s = this.makeSlot(() => inv.armor[i], (v) => { inv.armor[i] = v; if (v) this.game.audio.play('equip'); }, {
+        filter: (st) => !!(ITEMS[st.id].armor && ITEMS[st.id].armor.slot === i),
+        quickMove: () => { const st = inv.armor[i]; if (st && !inv.add(st)) inv.armor[i] = null; },
+      });
+      s.title = labels[i];
+      s.classList.add('armor-slot', 'armor-' + i);
+      col.appendChild(s);
+    }
+    return col;
+  }
+
   openInventory() {
     this.showContainer('inventory', 'Inventory', (panel) => {
-      panel.appendChild(this.craftingSection(2));
+      const top = el('<div style="display:flex;gap:28px;align-items:center;justify-content:center"></div>');
+      top.appendChild(this.armorColumn());
+      top.appendChild(this.craftingSection(2));
+      panel.appendChild(top);
       panel.appendChild(this.inventoryGrid());
       panel.appendChild(el('<div class="recipes-hint">Tip: logs → planks → sticks / workbench. Shift-click moves stacks, right-click splits.</div>'));
     });

@@ -2,7 +2,7 @@
 // attacking with the attack cooldown, eating, buckets and containers.
 import { B, BLOCKS, SOLID, SHAPE, isFluid } from '../world/blocks.js';
 import { ITEMS, I, toolOf, isBlockItem } from '../world/items.js';
-import { breakProgressPerTick, blockDrops } from '../world/mining.js';
+import { breakProgressPerTick, blockDrops, canHarvest } from '../world/mining.js';
 import { PHYS } from '../physics/constants.js';
 import { EXHAUSTION } from './survival.js';
 import { lightAt } from '../entities/entities.js';
@@ -15,6 +15,12 @@ function particleLight(g, x, y, z) {
 
 export const EAT_TICKS = 32;
 export const SWING_TICKS = 6;
+// Experience from ores whose drop is not the block itself: [min, max]
+const ORE_XP = {
+  [B.COAL_ORE]: [0, 2], [B.DEEP_COAL_ORE]: [0, 2], [B.DIAMOND_ORE]: [3, 7], [B.DEEP_DIAMOND_ORE]: [3, 7],
+  [B.BERYL_ORE]: [3, 7], [B.AZURITE_ORE]: [2, 5], [B.DEEP_AZURITE_ORE]: [2, 5],
+  [B.CINNABAR_ORE]: [1, 5], [B.DEEP_CINNABAR_ORE]: [1, 5],
+};
 const BREAK_DELAY = 5;
 const USE_DELAY = 4;
 
@@ -119,6 +125,8 @@ export class Interaction {
     if (g.onBlockBroken) g.onBlockBroken(x, y, z, id, meta);
     g.audio.play('break_' + BLOCKS[id].sound, [x + 0.5, y + 0.5, z + 0.5]);
     g.particles && g.particles.blockBreak(x, y, z, id, particleLight(g, x + 0.5, y + 0.5, z + 0.5));
+    const xp = ORE_XP[id];
+    if (xp && canHarvest(id, tool)) g.entities.spawnXp(x + 0.5, y + 0.5, z + 0.5, xp[0] + Math.floor(Math.random() * (xp[1] - xp[0] + 1)));
     for (const drop of blockDrops(id, tool, Math.random, meta)) g.entities.spawnItem(x + 0.5, y + 0.3, z + 0.5, drop);
     // Ice melts into water when broken above a solid block
     if (id === B.ICE && SOLID[g.world.getBlock(x, y - 1, z)]) {
@@ -179,6 +187,16 @@ export class Interaction {
     const g = this.game, p = g.player, w = g.world;
     const st = p.inventory.selectedStack;
     const d = st && ITEMS[st.id];
+    // Armour: right-click puts it on (swapping with what is worn), unless aiming at something usable
+    const usable = this.target && [B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.CHEST, B.DOOR, B.BED].includes(this.target.id);
+    if (d && d.armor && !usable) {
+      const inv = p.inventory, worn = inv.armor[d.armor.slot];
+      inv.armor[d.armor.slot] = st;
+      inv.slots[inv.selected] = worn;
+      inv.changed();
+      g.audio.play('equip');
+      return true;
+    }
     // Buckets
     if (st && (st.id === I.BUCKET)) {
       const [ex, ey, ez] = p.eyePos();

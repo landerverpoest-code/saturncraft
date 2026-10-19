@@ -1,7 +1,7 @@
 // Inventory icons: isometric mini-cubes for blocks (from the block textures)
 // and hand-drawn pixel templates for items.
 import { BLOCKS, SHAPE } from '../world/blocks.js';
-import { ITEMS, MATERIALS } from '../world/items.js';
+import { ITEMS, MATERIALS, ARMOR_MATERIALS } from '../world/items.js';
 import { texturePixels } from '../world/textures.js';
 
 const cache = new Map();
@@ -72,6 +72,10 @@ const T = {
   bread: ['................', '................', '................', '................', '....hhhhhhhh....', '..hhHHhHHhHHhh..', '.hHHhhHhhHhhHHh.', '.hhhhhhhhhhhhhh.', '.hhhhhhhhhhhhhh.', '.wwwwwwwwwwwwww.', '..wwwwwwwwwwww..', '................', '................', '................', '................', '................'],
   door: ['................', '....wwwwwwww....', '....whhhhhhw....', '....wh.hh.hw....', '....wh.hh.hw....', '....whhhhhhw....', '....whhhhhhw....', '....whhhhhhw....', '....whhhhhhw....', '....whhhhhww....', '....whhhhhhw....', '....whhhhhhw....', '....whhhhhhw....', '....whhhhhhw....', '....wwwwwwww....', '................'],
   bed: ['................', '................', '................', '................', '................', '.........hhhhhh.', '.wwww...hhhhhhhh', 'swwwwhhhhhhhhhhs', 'shhhhhhhhhhhhhhs', 'ssssssssssssssss', 's..............s', 's..............s', '................', '................', '................', '................'],
+  helmet: ['................', '................', '................', '....hhhhhhhh....', '...hHHHHHHHhh...', '...hHhhhhhhhh...', '...hh......hh...', '...hh......hh...', '...hh......hh...', '................', '................', '................', '................', '................', '................', '................'],
+  chestplate: ['................', '..hhh....hhh....', '.hHHhh..hhhhh...', '.hHhhhhhhhhhh...', '.hhhhhhhhhhhh...', '..hhhHhhhhhh....', '...hhHhhhhh.....', '...hhhhhhhh.....', '...hhhhhhhh.....', '...hhhhhhhh.....', '...hhhhhhhh.....', '...hhhhhhhh.....', '................', '................', '................', '................'],
+  leggings: ['................', '...hhhhhhhhh....', '...hHHHHHHHh....', '...hHhhhhhhh....', '...hhhh.hhhh....', '...hhh...hhh....', '...hhh...hhh....', '...hhh...hhh....', '...hhh...hhh....', '...hhh...hhh....', '...hhh...hhh....', '...hhh...hhh....', '................', '................', '................', '................'],
+  boots: ['................', '................', '................', '................', '................', '...hhh...hhh....', '...hHh...hHh....', '...hhh...hhh....', '...hhh...hhh....', '..hhhh..hhhh....', '.hhhhh.hhhhh....', '.hhhhh.hhhhh....', '................', '................', '................', '................'],
   egg: ['................', '................', '......hhh.......', '.....hHhhh......', '....hHhhhhh.....', '....hhhhhhh.....', '...hhhhhhhhh....', '...hhhhhhhhh....', '...hhhhhhhhh....', '....hhhhhhh.....', '.....hhhhh......', '................', '................', '................', '................', '................'],
 };
 
@@ -107,6 +111,9 @@ function itemIcon(d) {
   if (d.tool) {
     tpl = T[d.tool.type];
     colors = { h: MATERIALS[d.tool.material].color, s: '#7a5a32' };
+  } else if (d.armor) {
+    tpl = T[d.armor.piece];
+    colors = { h: ARMOR_MATERIALS[d.armor.material].color };
   } else {
     const st = ITEM_STYLE[d.key] || ['lump', { h: '#ff00ff' }];
     tpl = T[st[0]]; colors = st[1];

@@ -2,6 +2,8 @@
 // cooldown, sky compass and the F3 debug overlay.
 import { iconURL } from './icons.js';
 import { ITEMS } from '../world/items.js';
+import { armorTotals } from '../player/armor.js';
+import { xpToNextLevel } from '../player/experience.js';
 
 const svg = (inner) => `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" shape-rendering="crispEdges">${inner}</svg>`)}`;
 const heartPath = 'M9 16 L2 9 Q0 6 2 3.5 Q4.5 1 7 3 L9 5 L11 3 Q13.5 1 16 3.5 Q18 6 16 9 Z';
@@ -14,6 +16,9 @@ const ICON = {
   foodFull: svg(`<rect x="3" y="5" width="12" height="10" rx="3" fill="#d88a2a" stroke="#000"/><rect x="5" y="2" width="8" height="4" fill="#f2d48a" stroke="#000"/><rect x="5" y="7" width="3" height="2" fill="#ffd27a"/>`),
   foodHalf: svg(`<defs><clipPath id="c"><rect x="9" y="0" width="9" height="18"/></clipPath></defs><rect x="3" y="5" width="12" height="10" rx="3" fill="#2a2214" stroke="#000"/><rect x="3" y="5" width="12" height="10" rx="3" fill="#d88a2a" clip-path="url(#c)"/>`),
   foodHunger: svg(`<rect x="3" y="5" width="12" height="10" rx="3" fill="#6a8a2a" stroke="#000"/><rect x="5" y="2" width="8" height="4" fill="#9aba5a" stroke="#000"/>`),
+  armorEmpty: svg(`<path d="M3 3 L7 2 L9 4 L11 2 L15 3 L15 9 L12 10 L12 16 L6 16 L6 10 L3 9 Z" fill="#26262c" stroke="#000" stroke-width="1.1"/>`),
+  armorFull: svg(`<path d="M3 3 L7 2 L9 4 L11 2 L15 3 L15 9 L12 10 L12 16 L6 16 L6 10 L3 9 Z" fill="#c8ccd4" stroke="#000" stroke-width="1.1"/><path d="M5 4 L7 3.5" stroke="#fff" stroke-width="1.2"/>`),
+  armorHalf: svg(`<defs><clipPath id="c"><rect x="0" y="0" width="9" height="18"/></clipPath></defs><path d="M3 3 L7 2 L9 4 L11 2 L15 3 L15 9 L12 10 L12 16 L6 16 L6 10 L3 9 Z" fill="#26262c" stroke="#000" stroke-width="1.1"/><path d="M3 3 L7 2 L9 4 L11 2 L15 3 L15 9 L12 10 L12 16 L6 16 L6 10 L3 9 Z" fill="#c8ccd4" clip-path="url(#c)"/>`),
   bubble: svg(`<circle cx="9" cy="9" r="6" fill="#4a8ae8" stroke="#0a1a4a" stroke-width="1.5"/><circle cx="7" cy="7" r="1.6" fill="#e6f2ff"/>`),
 };
 
@@ -33,8 +38,9 @@ export class HUD {
       <div id="toast"></div>
       <div id="item-name"></div>
       <div id="bottom">
+        <div id="bars2" style="width:calc(var(--slot) * 9 + 8px);display:flex;justify-content:space-between"><div class="bar" id="armor"></div><div class="bar right" id="air"></div></div>
         <div id="bars"><div class="bar" id="health"></div><div class="bar right" id="food"></div></div>
-        <div id="bars2" style="width:calc(var(--slot) * 9 + 8px);display:flex;justify-content:flex-end"><div class="bar right" id="air"></div></div>
+        <div id="xpbar"><div id="xpfill"></div><span id="xplevel"></span></div>
         <div class="hotbar" id="hotbar"></div>
       </div>`;
     this.hotbar = this.root.querySelector('#hotbar');
@@ -48,6 +54,10 @@ export class HUD {
     this.healthEl = this.root.querySelector('#health');
     this.foodEl = this.root.querySelector('#food');
     this.airEl = this.root.querySelector('#air');
+    this.armorEl = this.root.querySelector('#armor');
+    this.makeIcons(this.armorEl, 10);
+    this.xpFill = this.root.querySelector('#xpfill');
+    this.xpLevel = this.root.querySelector('#xplevel');
     this.makeIcons(this.healthEl, 10); this.makeIcons(this.foodEl, 10); this.makeIcons(this.airEl, 10);
     this.debugEl = this.root.querySelector('#debug');
     this.skyCanvas = this.root.querySelector('#skyinfo canvas');
@@ -133,6 +143,20 @@ export class HUD {
       const v = showAir && i < bubbles ? 'visible' : 'hidden';
       if (img.style.visibility !== v) img.style.visibility = v;
     });
+    // armour (2 points per icon, shown only when wearing some)
+    const { points } = armorTotals(inv.armor);
+    [...this.armorEl.children].forEach((img, i) => {
+      const v = points - i * 2;
+      const src = v >= 2 ? ICON.armorFull : v === 1 ? ICON.armorHalf : ICON.armorEmpty;
+      if (img._src !== src) { img.src = src; img._src = src; }
+      const vis = points > 0 ? 'visible' : 'hidden';
+      if (img.style.visibility !== vis) img.style.visibility = vis;
+    });
+    // experience
+    const xp = p.xp, frac = xp.points / xpToNextLevel(xp.level);
+    this.xpFill.style.width = `${Math.min(1, frac) * 100}%`;
+    const lv = xp.level > 0 ? String(xp.level) : '';
+    if (this.xpLevel.textContent !== lv) this.xpLevel.textContent = lv;
     // attack cooldown indicator
     const cd = g.interaction ? g.interaction.attackCooldownProgress() : 1;
     this.attackEl.classList.toggle('hidden', cd >= 1);

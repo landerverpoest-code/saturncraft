@@ -7,6 +7,7 @@ export function sameItem(a, b) { return a && b && a.id === b.id && !(ITEMS[a.id]
 export class Inventory {
   constructor(size = 36) {
     this.slots = new Array(size).fill(null);
+    this.armor = [null, null, null, null]; // helmet, chestplate, leggings, boots
     this.selected = 0;
     this.listeners = [];
   }
@@ -62,5 +63,5 @@ export class Inventory {
     return false;
   }
 
-  clear() { this.slots.fill(null); this.changed(); }
+  clear() { this.slots.fill(null); this.armor.fill(null); this.changed(); }
 }

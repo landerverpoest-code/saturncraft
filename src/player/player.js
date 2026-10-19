@@ -5,6 +5,8 @@ import { HungerManager, EXHAUSTION, MAX_HEALTH, MAX_AIR, SPRINT_MIN_FOOD } from 
 import { Inventory } from './inventory.js';
 import { B, SOLID } from '../world/blocks.js';
 import { MIN_Y } from '../world/constants.js';
+import { armorReduce, armorTotals, wearArmor, BYPASSES_ARMOR } from './armor.js';
+import { newXp } from './experience.js';
 
 export class Player {
   constructor() {
@@ -28,6 +30,8 @@ export class Player {
     this.attackTicks = 100;     // ticks since last swing (attack cooldown)
     this.listeners = { hurt: [], death: [] };
     this.stats = { blocksMined: 0, kills: 0 };
+    this.xp = newXp();
+    this.xpDelay = 0;           // ticks until the next orb can be absorbed
   }
 
   get x() { return this.body.x; } get y() { return this.body.y; } get z() { return this.body.z; }
@@ -58,6 +62,15 @@ export class Player {
       this.lastHurt = amount;
       this.invulnerable = 20;
       this.hurtTime = 10;
+    }
+    if (!BYPASSES_ARMOR.has(source)) {
+      const { points, toughness } = armorTotals(this.inventory.armor);
+      if (points > 0) {
+        const broke = wearArmor(this.inventory.armor, amount);
+        if (broke.length) for (const f of this.listeners.armorBroke || []) f(broke);
+        amount = armorReduce(amount, points, toughness);
+        this.inventory.changed();
+      }
     }
     this.health = Math.max(0, this.health - amount);
     this.hunger.addExhaustion(EXHAUSTION.DAMAGE);
@@ -103,6 +116,7 @@ export class Player {
     this.prev = { x: b.x, y: b.y, z: b.z };
     if (this.dead) return;
     if (this.invulnerable > 0) this.invulnerable--;
+    if (this.xpDelay > 0) this.xpDelay--;
     if (this.hurtTime > 0) this.hurtTime--;
     this.attackTicks++;
 

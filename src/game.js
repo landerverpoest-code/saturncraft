@@ -16,6 +16,7 @@ import { Clouds } from './sky/clouds.js';
 import { effectiveSkyLight, skyState } from './sky/suns.js';
 import { SIDE_DIRS, BED_HEAD } from './world/shapes.js';
 import { CATEGORY } from './mobs/mobTypes.js';
+import { newXp, deathXp } from './player/experience.js';
 import { Player } from './player/player.js';
 import { Interaction } from './player/interaction.js';
 import { SMELTING, SMELT_TIME } from './player/crafting.js';
@@ -196,6 +197,9 @@ export class Game {
       const st = p.inventory.slots[i];
       if (st) this.entities.spawnItem(p.x, p.y + 1, p.z, st, [(Math.random() - 0.5) * 0.5, 0.2, (Math.random() - 0.5) * 0.5]);
     }
+    for (const st of p.inventory.armor) if (st) this.entities.spawnItem(p.x, p.y + 1, p.z, st, [(Math.random() - 0.5) * 0.5, 0.2, (Math.random() - 0.5) * 0.5]);
+    this.entities.spawnXp(p.x, p.y + 0.5, p.z, deathXp(p.xp.level));
+    p.xp = newXp();
     p.inventory.clear();
     this.input.unlock();
     this.ui.showDeath(cause);

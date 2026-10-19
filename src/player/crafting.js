@@ -51,6 +51,14 @@ for (const [mat, ing] of Object.entries(TOOL_MATS)) {
   shaped(['XX', ' S', ' S'], { X: ing, S: I.STICK }, I[`${mat}_hoe`.toUpperCase()]);
 }
 
+const ARMOR_MATS = { leather: I.LEATHER, iron: I.IRON_INGOT, gold: I.GOLD_INGOT, diamond: I.DIAMOND };
+for (const [mat, ing] of Object.entries(ARMOR_MATS)) {
+  shaped(['XXX', 'X X'], { X: ing }, I[`${mat}_helmet`.toUpperCase()]);
+  shaped(['X X', 'XXX', 'XXX'], { X: ing }, I[`${mat}_chestplate`.toUpperCase()]);
+  shaped(['XXX', 'X X', 'X X'], { X: ing }, I[`${mat}_leggings`.toUpperCase()]);
+  shaped(['X X', 'X X'], { X: ing }, I[`${mat}_boots`.toUpperCase()]);
+}
+
 /**
  * Find the crafting result for a grid.
  * @param {Array<{id:number}|null>} grid row-major

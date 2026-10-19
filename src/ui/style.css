@@ -83,3 +83,8 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 .progress { width: 44px; height: 14px; background: #5a554b; border-radius: 3px; overflow: hidden; }
 .progress > div { height: 100%; background: #f2f2f2; }
 .recipes-hint { font-size: 12px; color: #5a554b; margin-top: 8px; max-width: 420px; }
+
+#xpbar { position: relative; width: calc(var(--slot) * 9 + 2px); height: 7px; background: rgba(0,0,0,.55); border: 1px solid #000; border-radius: 2px; }
+#xpfill { height: 100%; width: 0; background: linear-gradient(#b6f05a, #5fb81e); border-radius: 1px; }
+#xplevel { position: absolute; left: 50%; top: -13px; transform: translateX(-50%); color: #8cf43a; font: bold 14px monospace; text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000; }
+.armor-slot:empty::after { content: ''; position: absolute; inset: 6px; opacity: .22; background: #000; border-radius: 3px; }

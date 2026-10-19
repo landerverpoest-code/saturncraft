@@ -89,6 +89,7 @@ export class Mob {
     this.health = 0;
     if (!g) return;
     const killedByPlayer = this.lastHurtByPlayer > 0;
+    this.killedByPlayer = killedByPlayer;
     if (killedByPlayer) g.player.stats.kills++;
     for (const d of rollDrops(this.type, { killedByPlayer, onFire: this.fireTicks > 0 })) {
       g.entities.spawnItem(this.x, this.y + 0.5, this.z, d);
@@ -154,6 +155,8 @@ export class Mob {
       b.move(g.world, b.vx, b.vy, b.vz);
       if (this.deathTime >= 20) {
         this.removed = true; this.dead = true;
+        // experience when killed by the player: monsters 5, animals 1-3
+        if (this.killedByPlayer) g.entities.spawnXp(this.x, this.y + 0.3, this.z, this.def.category === 'monster' ? 5 : 1 + Math.floor(Math.random() * 3));
         g.particles.smoke(this.x, this.y + this.height / 2, this.z, 14, this.width);
       }
       return;

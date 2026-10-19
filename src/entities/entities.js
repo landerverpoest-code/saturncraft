@@ -7,6 +7,7 @@ import { ITEMS, I, maxStack } from '../world/items.js';
 import { itemCanvas } from '../ui/icons.js';
 import { texturePixels } from '../world/textures.js';
 import { MIN_Y } from '../world/constants.js';
+import { addXp, splitOrbs } from '../player/experience.js';
 
 let nextEntityId = 1;
 export const ENTITY_RENDER_DIST = 64;
@@ -73,6 +74,58 @@ export class ItemEntity {
     b.vx *= f; b.vz *= f; b.vy *= 0.98;
     if (b.onGround) b.vy *= -0.5;
     if (b.inLava) { this.dead = true; return; }
+    if (++this.age >= 6000 || b.y < MIN_Y - 64) this.dead = true;
+  }
+}
+
+// Experience orb: drifts towards a player within 8 blocks and is absorbed on contact.
+let orbTexture = null;
+function xpOrbTexture() {
+  if (orbTexture) return orbTexture;
+  const c = document.createElement('canvas'); c.width = c.height = 16;
+  const ctx = c.getContext('2d');
+  const px = ['......', '..oo..', '.oHho.', '.ohho.', '..oo..', '......'];
+  const col = { o: '#3d8a14', h: '#b8f03a', H: '#f4ffb0' };
+  for (let y = 0; y < 6; y++) for (let x = 0; x < 6; x++) { const ch = px[y][x]; if (ch !== '.') { ctx.fillStyle = col[ch]; ctx.fillRect(2 + x * 2, 2 + y * 2, 2, 2); } }
+  orbTexture = new THREE.CanvasTexture(c);
+  orbTexture.magFilter = THREE.NearestFilter; orbTexture.minFilter = THREE.NearestFilter; orbTexture.colorSpace = THREE.SRGBColorSpace;
+  return orbTexture;
+}
+
+export class XPOrb {
+  constructor(x, y, z, value) {
+    this.id = nextEntityId++;
+    this.kind = 'xp';
+    this.value = value;
+    this.body = new Body(0.5, 0.5);
+    this.body.stepHeight = 0;
+    this.body.setPos(x, y, z);
+    this.body.vx = (Math.random() * 0.2 - 0.1) * 2; this.body.vy = Math.random() * 0.2 * 2; this.body.vz = (Math.random() * 0.2 - 0.1) * 2;
+    this.age = 0;
+    this.dead = false;
+    this.prev = [x, y, z];
+    this.phase = Math.random() * 6.28;
+  }
+  get x() { return this.body.x; } get y() { return this.body.y; } get z() { return this.body.z; }
+
+  tick(game) {
+    const b = this.body, p = game.player;
+    this.prev = [b.x, b.y, b.z];
+    b.vy -= 0.03;
+    // follow the player (reference: within 8 blocks, pull scales with (1 - d/8)^2)
+    if (!p.dead) {
+      const dx = p.x - b.x, dy = p.y + p.eyeHeight / 2 - b.y, dz = p.z - b.z;
+      const d = Math.hypot(dx, dy, dz) / 8;
+      if (d < 1) {
+        const f = (1 - d) * (1 - d) * 0.1;
+        b.vx += dx / (d * 8 || 1) * f; b.vy += dy / (d * 8 || 1) * f; b.vz += dz / (d * 8 || 1) * f;
+      }
+    }
+    b.move(game.world, b.vx, b.vy, b.vz);
+    let f = 0.98;
+    if (b.onGround) f = b.groundSlipperiness(game.world) * 0.98;
+    b.vx *= f; b.vz *= f; b.vy *= 0.98;
+    if (b.onGround) b.vy *= -0.9;
     if (++this.age >= 6000 || b.y < MIN_Y - 64) this.dead = true;
   }
 }
@@ -189,6 +242,10 @@ export class EntityManager {
     else { e.body.vx = (Math.random() - 0.5) * 0.2; e.body.vy = 0.2; e.body.vz = (Math.random() - 0.5) * 0.2; }
     return this.add(e);
   }
+  /** Drop experience as one or more orbs. */
+  spawnXp(x, y, z, amount) {
+    for (const v of splitOrbs(Math.round(amount))) this.add(new XPOrb(x, y, z, v));
+  }
   spawnFallingBlock(x, y, z, id) { return this.add(new FallingBlock(x, y, z, id)); }
   spawnArrow(x, y, z, vx, vy, vz, shooter, crit) { return this.add(new Arrow(x, y, z, vx, vy, vz, shooter, crit)); }
 
@@ -233,6 +290,15 @@ export class EntityManager {
     for (const e of this.list) {
       if (e.dead || this.frozen(e)) continue;
       e.tick(g);
+      if (e.kind === 'xp' && !e.dead && !p.dead && p.xpDelay === 0) {
+        const b = p.body.box();
+        if (e.x > b[0] - 0.5 && e.x < b[3] + 0.5 && e.y > b[1] - 0.5 && e.y < b[4] + 0.5 && e.z > b[2] - 0.5 && e.z < b[5] + 0.5) {
+          p.xpDelay = 2;
+          const levelled = addXp(p.xp, e.value);
+          g.audio.play(levelled && p.xp.level % 5 === 0 ? 'levelup' : 'orb');
+          e.dead = true;
+        }
+      }
       if (e.kind === 'item' && !e.dead && e.pickupDelay === 0 && !p.dead) {
         const b = p.body.box();
         if (e.x > b[0] - 1 && e.x < b[3] + 1 && e.y > b[1] - 0.5 && e.y < b[4] + 0.5 && e.z > b[2] - 1 && e.z < b[5] + 1) {
@@ -292,6 +358,10 @@ export class EntityManager {
       if (e.kind === 'item') {
         m.position.set(px, py + 0.15 + Math.sin(timeSec * 2.5 + e.bob) * 0.05, pz);
         m.material.color.setScalar(L);
+      } else if (e.kind === 'xp') {
+        m.position.set(px, py + 0.2, pz);
+        const k = 0.5 + 0.5 * Math.sin(timeSec * 6 + e.phase);
+        m.material.color.setRGB(0.8 + 0.2 * k, 1, 0.55 + 0.45 * k); // pulses from green to pale yellow; orbs glow
       } else if (e.kind === 'falling') {
         m.position.set(px, py + 0.5, pz);
         for (const mat of m.material) mat.color.setScalar(L);
@@ -310,6 +380,11 @@ export class EntityManager {
       const mat = new THREE.SpriteMaterial({ map: iconTexture(e.stack.id), alphaTest: 0.3 });
       const s = new THREE.Sprite(mat);
       s.scale.setScalar(0.38);
+      return s;
+    }
+    if (e.kind === 'xp') {
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: xpOrbTexture(), alphaTest: 0.3 }));
+      s.scale.setScalar(0.18 + Math.min(0.2, Math.log2(e.value + 1) * 0.03));
       return s;
     }
     if (e.kind === 'falling') {

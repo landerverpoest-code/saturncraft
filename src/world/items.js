@@ -101,6 +101,24 @@ for (const mat of Object.keys(MATERIALS)) {
   }
 }
 
+// Armour: defence per piece (helmet, chestplate, leggings, boots), durability
+// multiplier (x 11/16/15/13) and toughness, as documented for the reference game.
+export const ARMOR_MATERIALS = {
+  leather: { defense: [1, 3, 2, 1], durability: 5, toughness: 0, color: '#9a5f32', name: 'Leather' },
+  gold:    { defense: [2, 5, 3, 1], durability: 7, toughness: 0, color: '#f2d24b', name: 'Golden' },
+  iron:    { defense: [2, 6, 5, 2], durability: 15, toughness: 0, color: '#dcdcdc', name: 'Iron' },
+  diamond: { defense: [3, 8, 6, 3], durability: 33, toughness: 2, color: '#5fe6dc', name: 'Diamond' },
+};
+const ARMOR_PIECES = [['helmet', 'Helmet', 11], ['chestplate', 'Chestplate', 16], ['leggings', 'Leggings', 15], ['boots', 'Boots', 13]];
+for (const [mat, m] of Object.entries(ARMOR_MATERIALS)) {
+  ARMOR_PIECES.forEach(([piece, pname, base], slot) => {
+    item(`${mat}_${piece}`, `${m.name} ${pname}`, {
+      stack: 1, durability: base * m.durability,
+      armor: { slot, piece, material: mat, defense: m.defense[slot], toughness: m.toughness },
+    });
+  });
+}
+
 // Fuel for block items
 for (const id of [B.OAK_PLANKS, B.SPRUCE_PLANKS, B.BIRCH_PLANKS, B.OAK_LOG, B.BIRCH_LOG, B.SPRUCE_LOG, B.WORKBENCH]) ITEMS[id].fuel = 300;
 ITEMS[B.COAL_BLOCK].fuel = 16000;
