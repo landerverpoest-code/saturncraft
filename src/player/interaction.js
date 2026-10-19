@@ -53,6 +53,8 @@ export class Interaction {
     this.target = g.world.raycast(ex, ey, ez, dx, dy, dz, PHYS.REACH);
     this.mobTarget = g.entities ? g.entities.raycastMob(ex, ey, ez, dx, dy, dz, 3.0) : null;
     if (this.mobTarget && this.target && this.target.dist < this.mobTarget.dist) this.mobTarget = null;
+    this.boatTarget = g.entities ? g.entities.raycastBoat(ex, ey, ez, dx, dy, dz, 3.0) : null;
+    if (this.boatTarget && ((this.target && this.target.dist < this.boatTarget.dist) || this.boatTarget.boat === p.riding)) this.boatTarget = null;
   }
 
   tick(input) {
@@ -64,6 +66,22 @@ export class Interaction {
     if (this.swing > 0) this.swing--;
 
     // Attack / mine
+    // boats: left-click hits (three hits break it), right-click gets in
+    if (this.boatTarget && !this.mobTarget) {
+      const boat = this.boatTarget.boat;
+      if (input.leftPressed) {
+        this.swing = SWING_TICKS;
+        boat.hits++; boat.hitTime = 10;
+        g.audio.play('hit_wood', [boat.x, boat.y, boat.z]);
+        if (boat.hits >= 3 || p.creative) {
+          boat.dead = true;
+          if (boat.rider) g.dismount();
+          if (!p.creative) g.entities.spawnItem(boat.x, boat.y + 0.5, boat.z, { id: I.OAK_BOAT, count: 1 });
+        }
+        return;
+      }
+      if (input.rightPressed && !boat.rider && !p.riding) { g.mount(boat); return; }
+    }
     if (input.leftPressed && this.mobTarget) {
       this.attack(this.mobTarget.mob);
     } else if (input.left && this.target && !this.mobTarget) {
@@ -225,6 +243,19 @@ export class Interaction {
         return true;
       }
       return false;
+    }
+    if (d && d.boat) {
+      // on the water surface (looked at through the water) or on top of a block
+      const [ex, ey, ez] = p.eyePos(), [dx, dy, dz] = p.lookDir();
+      const wh = w.raycast(ex, ey, ez, dx, dy, dz, PHYS.REACH, true);
+      let pos = null;
+      if (wh && wh.id === B.WATER) pos = [wh.x + 0.5, wh.y + 0.75, wh.z + 0.5];
+      else if (this.target && this.target.face[1] === 1) pos = [this.target.x + 0.5, this.target.y + 1, this.target.z + 0.5];
+      if (!pos) return false;
+      g.entities.spawnBoat(pos[0], pos[1], pos[2], p.yaw);
+      p.inventory.removeFromSlot(p.inventory.selected, 1);
+      this.swing = SWING_TICKS;
+      return true;
     }
     const t = this.target;
     if (!t) return false;

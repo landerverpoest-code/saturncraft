@@ -130,6 +130,59 @@ export class XPOrb {
   }
 }
 
+// Boat: floats on water, steered by its rider (W/S thrust, A/D turn).
+export class Boat {
+  constructor(x, y, z, yaw = 0) {
+    this.id = nextEntityId++;
+    this.kind = 'boat';
+    this.body = new Body(1.375, 0.5625);
+    this.body.stepHeight = 0;
+    this.body.setPos(x, y, z);
+    this.yaw = yaw; this.prevYaw = yaw;
+    this.rider = null;
+    this.hits = 0; this.hitTime = 0;
+    this.dead = false;
+    this.prev = [x, y, z];
+  }
+  get x() { return this.body.x; } get y() { return this.body.y; } get z() { return this.body.z; }
+  get width() { return 1.375; } get height() { return 0.5625; }
+
+  /** Height of the water surface under the boat, or null on land. */
+  waterLevel(world) {
+    const b = this.body, x = Math.floor(b.x), z = Math.floor(b.z);
+    for (let y = Math.floor(b.y + 0.6); y >= Math.floor(b.y - 0.6); y--) {
+      if (world.getBlock(x, y, z) === B.WATER) return y + (world.getBlock(x, y + 1, z) === B.WATER ? 1 : 0.89);
+    }
+    return null;
+  }
+
+  tick(game, input) {
+    const b = this.body, w = game.world;
+    this.prev = [b.x, b.y, b.z];
+    this.prevYaw = this.yaw;
+    if (this.hitTime > 0 && --this.hitTime === 0) this.hits = 0;
+    if (this.rider && input) {
+      // reference speeds: 0.04 forward, 0.005 backward, about 1 degree of turn per tick while moving
+      this.yaw -= (input.strafe || 0) * 0.05;
+      const thrust = input.forward > 0 ? 0.04 : input.forward < 0 ? -0.005 : 0;
+      b.vx += -Math.sin(this.yaw) * thrust; b.vz += -Math.cos(this.yaw) * thrust;
+    }
+    const level = this.waterLevel(w);
+    if (level !== null) {
+      b.vy += (level - 0.12 - b.y) * 0.25; // bob up to the surface
+      b.vy *= 0.65;
+      b.vx *= 0.9; b.vz *= 0.9;
+    } else {
+      b.vy -= 0.04;
+      const slip = b.onGround ? b.groundSlipperiness(w) : 0.98;
+      const f = slip >= 0.9 ? 0.9 : 0.5; // on land a boat barely moves (ice excepted)
+      b.vx *= f; b.vz *= f;
+    }
+    b.move(w, b.vx, b.vy, b.vz);
+    if (b.y < MIN_Y - 64) this.dead = true;
+  }
+}
+
 export class FallingBlock {
   constructor(x, y, z, blockId) {
     this.id = nextEntityId++;
@@ -246,6 +299,7 @@ export class EntityManager {
   spawnXp(x, y, z, amount) {
     for (const v of splitOrbs(Math.round(amount))) this.add(new XPOrb(x, y, z, v));
   }
+  spawnBoat(x, y, z, yaw) { return this.add(new Boat(x, y, z, yaw)); }
   spawnFallingBlock(x, y, z, id) { return this.add(new FallingBlock(x, y, z, id)); }
   spawnArrow(x, y, z, vx, vy, vz, shooter, crit) { return this.add(new Arrow(x, y, z, vx, vy, vz, shooter, crit)); }
 
@@ -256,6 +310,17 @@ export class EntityManager {
       if (e.x - hw < x + 1 && e.x + hw > x && e.y < y + 1 && e.y + e.height > y && e.z - hw < z + 1 && e.z + hw > z) return true;
     }
     return false;
+  }
+
+  /** First boat hit by a ray. */
+  raycastBoat(ox, oy, oz, dx, dy, dz, maxDist) {
+    let best = null;
+    for (const e of this.list) {
+      if (e.kind !== 'boat' || e.dead) continue;
+      const t = rayAABB(ox, oy, oz, dx, dy, dz, e.x - 0.7, e.y, e.z - 0.7, e.x + 0.7, e.y + 0.6, e.z + 0.7);
+      if (t !== null && t <= maxDist && (!best || t < best.dist)) best = { boat: e, dist: t };
+    }
+    return best;
   }
 
   /** First mob hit by a ray (player attacks). */
@@ -289,6 +354,7 @@ export class EntityManager {
     const g = this.game, p = g.player;
     for (const e of this.list) {
       if (e.dead || this.frozen(e)) continue;
+      if (e.kind === 'boat') { e.tick(g, e.rider ? g.boatInput : null); continue; }
       e.tick(g);
       if (e.kind === 'xp' && !e.dead && !p.dead && p.xpDelay === 0) {
         const b = p.body.box();
@@ -358,6 +424,11 @@ export class EntityManager {
       if (e.kind === 'item') {
         m.position.set(px, py + 0.15 + Math.sin(timeSec * 2.5 + e.bob) * 0.05, pz);
         m.material.color.setScalar(L);
+      } else if (e.kind === 'boat') {
+        m.position.set(px, py, pz);
+        let dy = e.yaw - e.prevYaw; while (dy > Math.PI) dy -= Math.PI * 2; while (dy < -Math.PI) dy += Math.PI * 2;
+        m.rotation.set(0, e.prevYaw + dy * alpha, e.hitTime > 0 ? Math.sin(e.hitTime) * 0.1 : 0);
+        m.userData.mats[0].color.setScalar(L);
       } else if (e.kind === 'xp') {
         m.position.set(px, py + 0.2, pz);
         const k = 0.5 + 0.5 * Math.sin(timeSec * 6 + e.phase);
@@ -381,6 +452,18 @@ export class EntityManager {
       const s = new THREE.Sprite(mat);
       s.scale.setScalar(0.38);
       return s;
+    }
+    if (e.kind === 'boat') {
+      const g = new THREE.Group();
+      const mat = new THREE.MeshLambertMaterial({ map: blockFaceTexture('oak_planks') });
+      const box = (w, h, d, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); m.castShadow = true; g.add(m); };
+      box(1.25, 0.1, 1.9, 0, 0.05, 0);            // bottom
+      box(0.1, 0.4, 1.9, -0.62, 0.3, 0); box(0.1, 0.4, 1.9, 0.62, 0.3, 0); // sides
+      box(1.25, 0.4, 0.1, 0, 0.3, -0.95); box(1.25, 0.4, 0.1, 0, 0.3, 0.95); // ends
+      box(1.2, 0.08, 0.3, 0, 0.32, 0.2);          // seat
+      g.userData.mats = [mat];
+      g.userData.dispose = () => { g.traverse((o) => { if (o.geometry) o.geometry.dispose(); }); mat.dispose(); };
+      return g;
     }
     if (e.kind === 'xp') {
       const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: xpOrbTexture(), alphaTest: 0.3 }));

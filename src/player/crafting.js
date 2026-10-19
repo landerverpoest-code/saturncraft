@@ -60,6 +60,7 @@ for (const [mat, slab, stairs] of [[B.COBBLESTONE, B.COBBLESTONE_SLAB, B.COBBLES
   shaped(['X  ', 'XX ', 'XXX'], { X: mat }, stairs, 4);
 }
 shaped(['PP', 'PP', 'PP'], { P: 'planks' }, I.OAK_DOOR, 3);
+shaped(['P P', 'PPP'], { P: 'planks' }, I.OAK_BOAT, 1);
 shaped(['WWW', 'PPP'], { W: B.WOOL, P: 'planks' }, I.BED, 1);
 shaped(['S S', 'SSS', 'S S'], { S: I.STICK }, B.LADDER, 3);
 shaped(['C', 'S'], { C: I.COAL, S: I.STICK }, B.TORCH, 4);

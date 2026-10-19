@@ -84,6 +84,7 @@ item('bow', 'Bow', { stack: 1, durability: 384, bow: true });
 item('wheat_seeds', 'Wheat Seeds', { places: B.WHEAT });
 item('oak_door', 'Oak Door', { door: true });
 item('bed', 'Bed', { stack: 1, bed: true });
+item('oak_boat', 'Oak Boat', { stack: 1, boat: true });
 item('wheat', 'Wheat');
 item('bread', 'Bread', { food: { hunger: 5, saturation: 6 } });
 item('carrot', 'Carrot', { food: { hunger: 3, saturation: 3.6 }, places: B.CARROTS });

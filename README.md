@@ -64,6 +64,7 @@ in the console.
 | Debug overlay (fps, position, light, suns) | `F3` |
 | Camera: first person / behind / in front | `F5` |
 | Hide HUD | `F1` |
+| Boat: board / steer / get out / break | Right-click it / `W` `S` `A` `D` / `Shift` / three hits |
 
 Inventory screens: left-click picks up / places a stack, right-click splits a
 stack or places one item, `Shift`+click moves a stack between sections,
@@ -302,6 +303,7 @@ poison from eyes) follow the documented table.
 * Weather: rain spells (12 000–24 000 ticks) after clear spells (12 000–180 000), fading in/out at 0.01 per tick; rain or snow by biome (none in deserts), stopped by roofs; overcast sky, weaker sun light, grey clouds, splashes and rain sound; rain puts out burning players and mobs and undead do not catch fire in it
 * Creative mode: flight, instant breaking without drops, no damage (except the void) or hunger, unlimited blocks, item catalogue with search; hostile mobs ignore creative players
 * Chat with commands (see Controls)
+* Oak boats (5 planks): placed on water, bob on the surface, accelerate to about 8 blocks/s, steer with A/D, break after three hits and drop themselves; saved with the world
 * 18 milestones (the reference game's advancements, with Saturncraft's own names) with a toast when reached and an overview in the pause menu, saved per world
 * Third-person cameras (F5, behind and in front, pulled in by walls) with an animated player model holding the selected item
 * Animated title screen (stars, ringed giant, three suns, scrolling landscape) with splash texts
@@ -316,7 +318,7 @@ poison from eyes) follow the documented table.
 * Fire blocks and fire spread, thunderstorms and lightning, snow layers
 * Slimes, witches, drowned, husks/strays as separate variants, baby mobs, mob equipment
 * Difficulty levels (fixed at Normal), spectator/adventure modes, multiplayer
-* Sprint-swimming/crawling poses, boats, minecarts, elytra
+* Sprint-swimming/crawling poses, minecarts, elytra
 
 ## Deliberate deviations
 

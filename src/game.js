@@ -256,6 +256,31 @@ export class Game {
     }
   }
 
+  // ---- boats --------------------------------------------------------------------
+  mount(boat) {
+    const p = this.player;
+    boat.rider = p; p.riding = boat;
+    this.seatPlayer();
+  }
+
+  dismount() {
+    const p = this.player, boat = p.riding;
+    if (!boat) return;
+    boat.rider = null; p.riding = null;
+    const bx = Math.floor(boat.x), by = Math.floor(boat.y + 0.5), bz = Math.floor(boat.z);
+    const spot = this.standNextTo(bx, by, bz);
+    if (spot) p.setPosition(spot.x, spot.y, spot.z);
+    else p.setPosition(boat.x, boat.y + 0.6, boat.z);
+  }
+
+  /** Keep the rider on the seat. */
+  seatPlayer() {
+    const p = this.player, b = p.riding.body;
+    p.body.setPos(b.x, b.y - 0.3, b.z);
+    p.body.vx = p.body.vy = p.body.vz = 0;
+    p.body.fallDistance = 0;
+  }
+
   // ---- beds & sleeping -------------------------------------------------------
   /** Right-click on a bed: set the respawn point and sleep if it is night and safe. */
   trySleep(x, y, z) {
@@ -411,7 +436,10 @@ export class Game {
     // Hold the player in place until the terrain under them has loaded (spawn, respawn, teleports)
     const p = this.player;
     if (p.sleeping) this.tickSleep();
-    if (this.chunks.isAreaReady(p.x, p.z, 0)) this.player.tick(this.world, p.sleeping ? { forward: 0, strafe: 0, jump: false, sneak: false, sprint: false } : mv);
+    if (p.riding && (mv.sneak || p.riding.dead || p.dead)) this.dismount();
+    this.boatInput = p.riding ? mv : null;
+    const still = { forward: 0, strafe: 0, jump: false, sneak: false, sprint: false };
+    if (this.chunks.isAreaReady(p.x, p.z, 0)) this.player.tick(this.world, p.sleeping || p.riding ? still : mv);
     else p.prev = { x: p.x, y: p.y, z: p.z };
     if (!blocking) {
       this.interaction.tick({
@@ -421,6 +449,7 @@ export class Game {
     } else this.interaction.breaking = null;
     this.mouseLatch = { left: false, right: false, middle: false };
     this.entities.tick();
+    if (p.riding) this.seatPlayer();
     this.spawner.tick();
     this.spawnerBlocks.tick();
     this.tickFurnaces();
