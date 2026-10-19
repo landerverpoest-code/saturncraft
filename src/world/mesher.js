@@ -3,7 +3,7 @@
 // neighbours) so it can run inside a worker without access to the world.
 import { B, OPAQUE, SHAPES, LAYERS, SHAPE, LAYER } from './blocks.js';
 import { FACE_TILE, FRONT_TILE, texId } from './textures.js';
-import { doorBox, ladderBox, SIDE_DIRS, DOOR_UPPER, BED_HEAD, BED_BOX, slabBox, stairBoxes } from './shapes.js';
+import { doorBox, ladderBox, SIDE_DIRS, DOOR_UPPER, BED_HEAD, BED_BOX, slabBox, stairBoxes, fenceConnects, fenceRenderBoxes, gateRenderBoxes } from './shapes.js';
 
 export const PAD = 18;
 export const PAD_VOL = PAD * PAD * PAD;
@@ -213,6 +213,15 @@ export function meshSection(sec) {
       const tiles = [0, 1, 2, 3, 4, 5].map((d) => FACE_TILE[id * 6 + d]);
       const boxes = shape === SHAPE.SLAB ? [slabBox(meta[i])] : stairBoxes(meta[i]);
       for (const b of boxes) emitBox(buf, x, y, z, b[0], b[1], b[2], b[3], b[4], b[5], tiles, sk * 17, bk * 17, 'box');
+    } else if (shape === SHAPE.FENCE || shape === SHAPE.GATE) {
+      const l = light[i], tile = FACE_TILE[id * 6 + 2];
+      let boxes;
+      if (shape === SHAPE.FENCE) {
+        let mask = 0;
+        for (let s = 0; s < 4; s++) if (fenceConnects(blocks[i + SIDE_DIRS[s][0] + SIDE_DIRS[s][2] * PAD])) mask |= 1 << s;
+        boxes = fenceRenderBoxes(mask);
+      } else boxes = gateRenderBoxes(meta[i]);
+      for (const b of boxes) emitBox(buf, x, y, z, b[0], b[1], b[2], b[3], b[4], b[5], tile, (l >> 4) * 17, (l & 15) * 17, 'box');
     } else if (shape === SHAPE.BED) {
       const l = light[i], m = meta[i], top = BED_TOPS[m & 3][m & BED_HEAD ? 1 : 0];
       emitBox(buf, x, y, z, ...BED_BOX, [BED_SIDE, BED_SIDE, top, BED_BOTTOM, BED_SIDE, BED_SIDE], (l >> 4) * 17, (l & 15) * 17, 'box');

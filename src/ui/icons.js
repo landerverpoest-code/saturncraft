@@ -29,6 +29,14 @@ function blockIcon(b) {
   ctx.imageSmoothingEnabled = false;
   const tint = (face) => (b.tint === 'grass' && face === 'top') || b.tint === 'foliage' ? (b.tint === 'grass' ? GRASS_TINT : LEAF_TINT)
     : b.tint === 'birch' ? [128, 167, 85] : b.tint === 'spruce' ? [97, 153, 97] : null;
+  if (b.shape === SHAPE.FENCE || b.shape === SHAPE.GATE) {
+    const col = { 'Oak Fence': '#a7834e', 'Spruce Fence': '#6b4e2e', 'Birch Fence': '#c8b27a' }[b.name] || '#a7834e';
+    const tpl = b.shape === SHAPE.FENCE
+      ? ['................', '..hh........hh..', '..hh........hh..', '..hhhhhhhhhhhh..', '..hhhhhhhhhhhh..', '..hh........hh..', '..hh........hh..', '..hhhhhhhhhhhh..', '..hhhhhhhhhhhh..', '..hh........hh..', '..hh........hh..', '..hh........hh..', '..hh........hh..', '................', '................', '................']
+      : ['................', '.hh..........hh.', '.hh..........hh.', '.hhhhhhhhhhhhhh.', '.hhhhhhhhhhhhhh.', '.hh...hhhh...hh.', '.hh...hhhh...hh.', '.hhhhhhhhhhhhhh.', '.hhhhhhhhhhhhhh.', '.hh..........hh.', '.hh..........hh.', '................', '................', '................', '................', '................'];
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) if (tpl[y][x] === 'h') { ctx.fillStyle = (x + y) % 5 ? col : lighten(col, 0.8); ctx.fillRect(x * 2, y * 2, 2, 2); }
+    return c;
+  }
   if (b.shape === SHAPE.CROSS || b.shape === SHAPE.TORCH || b.shape === SHAPE.LADDER) {
     ctx.drawImage(texCanvas(b.tex.side, b.tint ? GRASS_TINT : null), 0, 0, 32, 32);
     return c;

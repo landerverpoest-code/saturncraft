@@ -38,7 +38,7 @@ export class Body {
     for (let x = x0; x <= x1; x++) for (let z = z0; z <= z1; z++) for (let y = y0; y <= y1; y++) {
       const id = world.getBlock(x, y, z);
       if (!SOLID[id]) continue;
-      const shaped = SHAPED_COLLISION[id] ? collisionBoxes(id, world.getMeta(x, y, z)) : null;
+      const shaped = SHAPED_COLLISION[id] ? collisionBoxes(id, world.getMeta(x, y, z), world, x, y, z) : null;
       if (shaped) for (const s of shaped) out.push(x + s[0], y + s[1], z + s[2], x + s[3], y + s[4], z + s[5]);
       else out.push(x, y, z, x + 1, y + 1, z + 1);
     }

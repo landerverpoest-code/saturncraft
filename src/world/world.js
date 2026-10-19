@@ -302,7 +302,7 @@ export class World {
         for (let z = Math.floor(minZ); z <= Math.floor(maxZ - 1e-7); z++)
           if (SOLID[this.getBlock(x, y, z)]) {
             const id = this.getBlock(x, y, z);
-            const shaped = SHAPED_COLLISION[id] ? collisionBoxes(id, this.getMeta(x, y, z)) : null;
+            const shaped = SHAPED_COLLISION[id] ? collisionBoxes(id, this.getMeta(x, y, z), this, x, y, z) : null;
             if (!shaped) return true;
             for (const s of shaped) {
               if (maxX > x + s[0] && minX < x + s[3] && maxY > y + s[1] && minY < y + s[4] && maxZ > z + s[2] && minZ < z + s[5]) return true;

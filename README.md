@@ -281,6 +281,7 @@ poison from eyes) follow the documented table.
 * Animals follow a player holding their food (cows/sheep wheat, chickens seeds, pigs carrots); feeding two adults makes them breed (a baby that grows up in 20 minutes, 5-minute cooldown, 1–7 XP); feeding babies speeds up growth
 * Shears (2 iron) shear sheep for 1–3 wool; sheep regrow it by eating grass
 * Carrots: a crop planted on farmland (2–5 per ripe plant), food, and part of the Shambler's rare drop
+* Fences (oak/spruce/birch) that connect to fences, gates and full blocks, with 1.5-block collision so nothing jumps over; oak fence gates that open and close
 * Slabs and stairs in oak, cobblestone, stone brick and sandstone: bottom/top/double slabs (merge by placing), stairs facing away from the player and upside down when placed high; walkable with the 0.6 step-up; they block light like full blocks
 * Oak doors (two blocks, 3/16-thick collision box, open/close with right-click), ladders (climb 0.2/tick, fall capped at 0.15, sneak to hold on), torches on walls
 * Chests (27 slots, shift-click transfer, contents drop when broken, saved with the world); furnaces and chests face the player when placed
@@ -299,7 +300,7 @@ poison from eyes) follow the documented table.
 * Enchanting, anvils, shields, potions and status-effect UI (only hunger/poison effects exist); armour is not drawn on the third-person player model
 * Taming, sheep colours and dyes, potatoes/beetroot, bone meal
 * Villages, other structures, the other dimensions, redstone-style circuitry
-* Double chests and other storage containers, fences, walls, trapdoors, corner-shaped stairs
+* Double chests and other storage containers, walls, trapdoors, corner-shaped stairs
 * Fire blocks and fire spread, thunderstorms and lightning, snow layers
 * Slimes, witches, drowned, husks/strays as separate variants, baby mobs, mob equipment
 * Difficulty levels (fixed at Normal), spectator/adventure modes, multiplayer

@@ -28,6 +28,8 @@ shaped(['PP', 'PP'], { P: 'planks' }, B.WORKBENCH, 1);
 shaped(['PPP', 'P P', 'PPP'], { P: 'planks' }, B.CHEST, 1);
 shaped(['WWW'], { W: I.WHEAT }, I.BREAD, 1);
 shaped([' I', 'I '], { I: I.IRON_INGOT }, I.SHEARS, 1);
+for (const [planks, fence] of [[B.OAK_PLANKS, B.OAK_FENCE], [B.SPRUCE_PLANKS, B.SPRUCE_FENCE], [B.BIRCH_PLANKS, B.BIRCH_FENCE]]) shaped(['PSP', 'PSP'], { P: planks, S: I.STICK }, fence, 3);
+shaped(['SPS', 'SPS'], { P: 'planks', S: I.STICK }, B.OAK_FENCE_GATE, 1);
 shaped(['PPP'], { P: 'planks' }, B.OAK_SLAB, 6);
 shaped(['P  ', 'PP ', 'PPP'], { P: 'planks' }, B.OAK_STAIRS, 4);
 for (const [mat, slab, stairs] of [[B.COBBLESTONE, B.COBBLESTONE_SLAB, B.COBBLESTONE_STAIRS], [B.STONE_BRICKS, B.STONE_BRICK_SLAB, B.STONE_BRICK_STAIRS], [B.SANDSTONE, B.SANDSTONE_SLAB, B.SANDSTONE_STAIRS]]) {

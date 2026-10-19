@@ -6,7 +6,7 @@ import { breakProgressPerTick, blockDrops, canHarvest } from '../world/mining.js
 import { PHYS } from '../physics/constants.js';
 import { EXHAUSTION } from './survival.js';
 import { lightAt } from '../entities/entities.js';
-import { sideOf, SIDE_DIRS, DOOR_OPEN, DOOR_UPPER, BED_HEAD, SLAB_TOP, SLAB_DOUBLE, STAIRS_UPSIDE } from '../world/shapes.js';
+import { sideOf, SIDE_DIRS, DOOR_OPEN, DOOR_UPPER, BED_HEAD, SLAB_TOP, SLAB_DOUBLE, STAIRS_UPSIDE, GATE_OPEN } from '../world/shapes.js';
 
 /** Brightness for block particles: local light, dimmed with the combined sunlight (as the held item). */
 function particleLight(g, x, y, z) {
@@ -200,7 +200,7 @@ export class Interaction {
     const st = p.inventory.selectedStack;
     const d = st && ITEMS[st.id];
     // Armour: right-click puts it on (swapping with what is worn), unless aiming at something usable
-    const usable = this.target && [B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.CHEST, B.DOOR, B.BED].includes(this.target.id);
+    const usable = this.target && ([B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.CHEST, B.DOOR, B.BED].includes(this.target.id) || BLOCKS[this.target.id].shape === SHAPE.GATE);
     if (d && d.armor && !usable) {
       const inv = p.inventory, worn = inv.armor[d.armor.slot];
       inv.armor[d.armor.slot] = st;
@@ -233,6 +233,13 @@ export class Interaction {
       if (t.id === B.WORKBENCH) { g.ui.openWorkbench(); return true; }
       if (t.id === B.FURNACE || t.id === B.FURNACE_LIT) { g.ui.openFurnace(t.x, t.y, t.z); return true; }
       if (t.id === B.BED) { g.trySleep(t.x, t.y, t.z); return true; }
+      if (BLOCKS[t.id].shape === SHAPE.GATE) {
+        const m = w.getMeta(t.x, t.y, t.z);
+        w.setBlockUrgent(t.x, t.y, t.z, t.id, m ^ GATE_OPEN);
+        g.audio.play(m & GATE_OPEN ? 'door_close' : 'door_open', [t.x + 0.5, t.y + 0.5, t.z + 0.5]);
+        this.swing = SWING_TICKS;
+        return true;
+      }
       if (t.id === B.DOOR) {
         // open/close both halves together
         const m = w.getMeta(t.x, t.y, t.z), by = m & DOOR_UPPER ? t.y - 1 : t.y;
@@ -276,9 +283,9 @@ export class Interaction {
     let meta = 0;
     const upper = t.face[1] === -1 || (t.face[1] === 0 && hitY - Math.floor(hitY) > 0.5);
     if (pshape === SHAPE.SLAB) meta = upper ? SLAB_TOP : 0;
-    if (pshape === SHAPE.STAIRS) {
+    if (pshape === SHAPE.STAIRS || pshape === SHAPE.GATE) {
       const s = Math.abs(ldx) > Math.abs(ldz) ? (ldx > 0 ? 1 : 3) : (ldz > 0 ? 2 : 0);
-      meta = s | (upper ? STAIRS_UPSIDE : 0);
+      meta = s | (upper && pshape === SHAPE.STAIRS ? STAIRS_UPSIDE : 0);
     }
     if (placeId === B.TORCH || placeId === B.LADDER) {
       // torches stand on floors or hang on walls; ladders only hang on walls

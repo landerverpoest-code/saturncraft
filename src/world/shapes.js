@@ -57,6 +57,69 @@ export function stairBoxes(meta) {
   return [up ? [0, 0.5, 0, 1, 1, 1] : [0, 0, 0, 1, 0.5, 1], sideSlab(meta & 3, 0.5, up ? 0 : 0.5, up ? 0.5 : 1)];
 }
 
+// ---- fences and gates -------------------------------------------------------
+export const GATE_OPEN = 4;
+const P0 = 6 / 16, P1 = 10 / 16;
+/** Does a fence connect towards a neighbouring block? */
+export function fenceConnects(id) {
+  const d = BLOCKS[id];
+  return !!d && (d.shape === SHAPE.FENCE || d.shape === SHAPE.GATE || (d.opaque && d.solid && d.shape === SHAPE.CUBE));
+}
+/** Connection mask (bit per side 0..3) of the fence at x,y,z from a block getter. */
+export function fenceMask(get, x, y, z) {
+  let m = 0;
+  for (let s = 0; s < 4; s++) if (fenceConnects(get(x + SIDE_DIRS[s][0], y, z + SIDE_DIRS[s][2]))) m |= 1 << s;
+  return m;
+}
+/** Post plus one arm per connected side; `h` is the height (1.5 for collision). */
+export function fenceBoxes(mask, h = 1) {
+  const out = [[P0, 0, P0, P1, h, P1]];
+  for (let s = 0; s < 4; s++) {
+    if (!(mask & (1 << s))) continue;
+    if (s === 0) out.push([P0, 0, 0, P1, h, P0]);
+    else if (s === 1) out.push([P1, 0, P0, 1, h, P1]);
+    else if (s === 2) out.push([P0, 0, P1, P1, h, 1]);
+    else out.push([0, 0, P0, P0, h, P1]);
+  }
+  return out;
+}
+/** Rails for rendering a fence: posts and two bars per connected side. */
+export function fenceRenderBoxes(mask) {
+  const out = [[P0, 0, P0, P1, 1, P1]];
+  const R0 = 7 / 16, R1 = 9 / 16;
+  for (let s = 0; s < 4; s++) {
+    if (!(mask & (1 << s))) continue;
+    for (const [y0, y1] of [[6 / 16, 9 / 16], [12 / 16, 15 / 16]]) {
+      if (s === 0) out.push([R0, y0, 0, R1, y1, P0]);
+      else if (s === 1) out.push([P1, y0, R0, 1, y1, R1]);
+      else if (s === 2) out.push([R0, y0, P1, R1, y1, 1]);
+      else out.push([0, y0, R0, P0, y1, R1]);
+    }
+  }
+  return out;
+}
+/** Gate across the block (perpendicular to its facing); open gates fold back along the posts. */
+export function gateRenderBoxes(meta) {
+  const alongX = (meta & 1) === 0; // facing -z/+z: the gate spans x
+  const open = meta & GATE_OPEN;
+  const C0 = 7 / 16, C1 = 9 / 16;
+  const boxes = [];
+  const box = (a0, y0, b0, a1, y1, b1) => boxes.push(alongX ? [a0, y0, b0, a1, y1, b1] : [b0, y0, a0, b1, y1, a1]);
+  box(0, 5 / 16, C0, 2 / 16, 1, C1); box(14 / 16, 5 / 16, C0, 1, 1, C1);   // posts
+  if (!open) {
+    for (const [y0, y1] of [[6 / 16, 9 / 16], [12 / 16, 15 / 16]]) box(2 / 16, y0, C0, 14 / 16, y1, C1);
+    box(6 / 16, 9 / 16, C0, 8 / 16, 12 / 16, C1); box(8 / 16, 9 / 16, C0, 10 / 16, 12 / 16, C1);
+  } else {
+    const dir = (meta & 3) < 2 ? -1 : 1, z0 = dir < 0 ? 0 : C1, z1 = dir < 0 ? C0 : 1; // folded towards the facing side
+    for (const [y0, y1] of [[6 / 16, 9 / 16], [12 / 16, 15 / 16]]) { box(0, y0, z0, 2 / 16, y1, z1); box(14 / 16, y0, z0, 1, y1, z1); }
+  }
+  return boxes;
+}
+export function gateCollision(meta) {
+  if (meta & GATE_OPEN) return [];
+  return [(meta & 1) === 0 ? [0, 0, 6 / 16, 1, 1.5, 10 / 16] : [6 / 16, 0, 0, 10 / 16, 1.5, 1]];
+}
+
 export const BED_HEAD = 8;
 export const BED_BOX = [0, 0, 0, 1, 9 / 16, 1];
 
@@ -64,14 +127,18 @@ export const BED_BOX = [0, 0, 0, 1, 9 / 16, 1];
 export const SHAPED_COLLISION = new Uint8Array(256);
 SHAPED_COLLISION[B.DOOR] = 1;
 SHAPED_COLLISION[B.BED] = 1;
+for (const id of [B.OAK_FENCE, B.SPRUCE_FENCE, B.BIRCH_FENCE, B.OAK_FENCE_GATE]) SHAPED_COLLISION[id] = 1;
 for (const id of [B.OAK_SLAB, B.COBBLESTONE_SLAB, B.STONE_BRICK_SLAB, B.SANDSTONE_SLAB, B.OAK_STAIRS, B.COBBLESTONE_STAIRS, B.STONE_BRICK_STAIRS, B.SANDSTONE_STAIRS]) SHAPED_COLLISION[id] = 1;
 
 /**
  * Collision boxes of a solid non-cube block, or null for an ordinary full
  * cube. (Ladders and torches are not solid and never collide.)
  */
-export function collisionBoxes(id, meta) {
+export function collisionBoxes(id, meta, world, x, y, z) {
   if (id === B.DOOR) return [doorBox(meta)];
+  const shp = BLOCKS[id].shape;
+  if (shp === SHAPE.FENCE) return fenceBoxes(world ? fenceMask((a, b, c) => world.getBlock(a, b, c), x, y, z) : 0, 1.5);
+  if (shp === SHAPE.GATE) return gateCollision(meta);
   if (id === B.BED) return [BED_BOX];
   const sh = BLOCKS[id].shape;
   if (sh === SHAPE.SLAB) return [slabBox(meta)];
@@ -82,6 +149,8 @@ export function collisionBoxes(id, meta) {
 /** Selection (outline / raycast) box, or null for a full cube. */
 export function selectionBox(id, meta) {
   if (id === B.DOOR) return doorBox(meta);
+  if (BLOCKS[id].shape === SHAPE.FENCE) return [P0, 0, P0, P1, 1, P1];
+  if (BLOCKS[id].shape === SHAPE.GATE) return (meta & 1) === 0 ? [0, 0, 6 / 16, 1, 1, 10 / 16] : [6 / 16, 0, 0, 10 / 16, 1, 1];
   if (id === B.BED) return BED_BOX;
   if (BLOCKS[id].shape === SHAPE.SLAB) return slabBox(meta);
   if (id === B.LADDER) return ladderBox(meta);
