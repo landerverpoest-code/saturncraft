@@ -22,6 +22,9 @@ reference game.
 
 ## Quick start
 
+**Play online:** https://landerverpoest-code.github.io/saturncraft/ (deployed
+by `.github/workflows/pages.yml` on every push to `main`).
+
 ```bash
 npm install
 npm run dev        # http://localhost:5173
