@@ -1,7 +1,7 @@
 // Menus and container screens (inventory, workbench, furnace).
 import { iconURL } from './icons.js';
 import { ITEMS, maxStack } from '../world/items.js';
-import { craft } from '../player/crafting.js';
+import { craft, RECIPES, recipeLayout, chooseIngredients } from '../player/crafting.js';
 import { B } from '../world/blocks.js';
 
 function el(html) { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstChild; }
@@ -161,6 +161,7 @@ export class UI {
     box.appendChild(el('<div class="arrow">➜</div>'));
     const result = () => craft(this.craftGrid, w);
     const consume = () => { for (let i = 0; i < this.craftGrid.length; i++) { const s = this.craftGrid[i]; if (s) { s.count--; if (s.count <= 0) this.craftGrid[i] = null; } } };
+    this.side = this.recipeBook(w);
     box.appendChild(this.makeSlot(result, () => {}, {
       onClick: (e) => {
         const r = result();
@@ -187,14 +188,67 @@ export class UI {
     return box;
   }
 
+  /** Recipe book beside a crafting grid: green = craftable now; click lays the ingredients in. */
+  recipeBook(w) {
+    const inv = this.game.player.inventory;
+    const book = el('<div class="panel recipe-book"><h3>Recipes</h3></div>');
+    const opt = el('<label class="recipe-opt"><input type="checkbox" checked> Craftable only</label>');
+    const list = el('<div class="grid recipe-list" style="grid-template-columns:repeat(5,var(--slot))"></div>');
+    book.append(opt, list);
+    const fits = RECIPES.map((r) => ({ r, layout: recipeLayout(r, w) })).filter((e) => e.layout);
+    const available = () => [...inv.slots, ...this.craftGrid];
+    const render = () => {
+      list.innerHTML = '';
+      const only = opt.firstChild.checked;
+      for (const { r, layout } of fits) {
+        const ok = !!chooseIngredients(layout, available());
+        if (only && !ok) continue;
+        const s = el(`<div class="slot recipe ${ok ? 'craftable' : 'missing'}">${this.slotHTML({ id: r.result, count: r.count })}</div>`);
+        s.addEventListener('mouseenter', () => { this.tooltipEl.textContent = ITEMS[r.result].name + (ok ? '' : ' (missing ingredients)'); this.tooltipEl.classList.remove('hidden'); });
+        s.addEventListener('mouseleave', () => this.tooltipEl.classList.add('hidden'));
+        s.addEventListener('mousedown', (e) => { e.preventDefault(); this.fillRecipe(layout, e.shiftKey ? 64 : 1); this.refreshAll(); });
+        list.appendChild(s);
+      }
+    };
+    opt.firstChild.addEventListener('change', render);
+    const refresh = () => { const key = available().map((s) => (s ? s.id + ':' + s.count : '-')).join(); if (key !== refresh.key) { refresh.key = key; render(); } };
+    this.refreshers.push(refresh);
+    render();
+    return book;
+  }
+
+  /** Move the grid back to the inventory and lay out `times` sets of a recipe's ingredients. */
+  fillRecipe(layout, times) {
+    const g = this.game, inv = g.player.inventory;
+    for (let i = 0; i < this.craftGrid.length; i++) if (this.craftGrid[i]) { const left = inv.add(this.craftGrid[i]); if (left) g.entities.spawnItem(g.player.x, g.player.y + 1, g.player.z, { ...this.craftGrid[i], count: left }); this.craftGrid[i] = null; }
+    for (let n = 0; n < times; n++) {
+      const pick = chooseIngredients(layout, inv.slots);
+      if (!pick) break;
+      if (pick.some((id, i) => id != null && this.craftGrid[i] && this.craftGrid[i].count >= maxStack(id))) break;
+      pick.forEach((id, i) => {
+        if (id == null) return;
+        const k = inv.slots.findIndex((s) => s && s.id === id);
+        inv.slots[k].count--;
+        if (inv.slots[k].count <= 0) inv.slots[k] = null;
+        if (this.craftGrid[i]) this.craftGrid[i].count++; else this.craftGrid[i] = { id, count: 1, damage: 0 };
+      });
+    }
+    g.audio.play('click');
+  }
+
   showContainer(kind, title, inner) {
     this.clear();
     this.refreshers = [];
     this.open = kind;
     const panel = el(`<div class="panel"><h3>${title}</h3></div>`);
     const screen = el('<div class="screen" style="background:rgba(0,0,0,.35)"></div>');
+    this.side = null;
     inner(panel);
-    screen.appendChild(panel);
+    if (this.side) {
+      const row = el('<div style="display:flex;gap:10px;align-items:stretch"></div>');
+      row.append(this.side, panel);
+      screen.appendChild(row);
+    } else screen.appendChild(panel);
     screen.addEventListener('mousedown', (e) => {
       // clicking outside the panel drops the cursor stack
       if (e.target === screen && this.cursor) {

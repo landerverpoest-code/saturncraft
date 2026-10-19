@@ -67,7 +67,9 @@ in the console.
 
 Inventory screens: left-click picks up / places a stack, right-click splits a
 stack or places one item, `Shift`+click moves a stack between sections,
-`Shift`+click on a crafting result crafts as many as possible.
+`Shift`+click on a crafting result crafts as many as possible. The recipe book
+beside every crafting grid lists the recipes (green = craftable with what you carry);
+clicking one lays its ingredients into the grid (`Shift`+click: as many sets as possible).
 
 Commands: `/gamemode survival|creative` (`/gm 0|1`), `/time set day|night|noon|midnight|<ticks>`,
 `/time add <ticks>`, `/weather clear|rain`, `/tp x y z` (`~` = relative), `/give <item> [count]`
@@ -272,7 +274,7 @@ poison from eyes) follow the documented table.
 * Attack cooldown, critical hits, knockback, armour formula for mobs, invulnerability frames
 * 9 mobs with AI, pathfinding, drops, natural spawning, caps and despawning
 * Explosions (ray-based block destruction with blast resistance, exposure-scaled damage, 1/power drop survival)
-* Inventory, hotbar, 2×2 and 3×3 shaped/shapeless crafting, furnace smelting
+* Inventory, hotbar, 2×2 and 3×3 shaped/shapeless crafting with a recipe book, furnace smelting
 * Farming: hoes till grass/dirt; tall grass drops seeds (1/8); wheat grows through 8 stages on random ticks (3 per section per tick) with the reference growth-speed formula, needs light ≥ 9; farmland is moistened by water within 4 blocks, dries out, reverts to dirt and can be trampled; bread from 3 wheat
 * Grass spreads to nearby dirt in light ≥ 9
 * Armour: leather/golden/iron/diamond helmets, chestplates, leggings and boots with the reference defence points, toughness, durability and damage formula (falls, drowning, burning, starvation and poison bypass it); armour slots in the inventory, right-click or shift-click to wear; armour bar

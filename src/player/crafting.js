@@ -115,6 +115,49 @@ export function craft(grid, w) {
   return null;
 }
 
+// ---- recipe book helpers ----------------------------------------------------
+
+/** Ingredient per grid cell (row-major, `w` wide) for laying a recipe out, or null if it does not fit. */
+export function recipeLayout(r, w) {
+  if (r.type === 'shapeless') {
+    if (r.ings.length > w * w) return null;
+    const cells = new Array(w * w).fill(null);
+    r.ings.forEach((ing, i) => { cells[i] = ing; });
+    return cells;
+  }
+  const pw = Math.max(...r.pattern.map((row) => row.length)), ph = r.pattern.length;
+  if (pw > w || ph > w) return null;
+  const cells = new Array(w * w).fill(null);
+  for (let y = 0; y < ph; y++) for (let x = 0; x < pw; x++) {
+    const ch = r.pattern[y][x] || ' ';
+    if (ch !== ' ') cells[y * w + x] = r.key[ch];
+  }
+  return cells;
+}
+
+/**
+ * Pick inventory items for each ingredient of a layout. `stacks` is a list of
+ * {id, count} available; returns the chosen id per cell, or null if short.
+ */
+export function chooseIngredients(layout, stacks) {
+  const left = new Map();
+  for (const st of stacks) if (st) left.set(st.id, (left.get(st.id) || 0) + st.count);
+  const out = layout.map(() => null);
+  for (let i = 0; i < layout.length; i++) {
+    const ing = layout[i];
+    if (ing == null) continue;
+    let pick = null;
+    for (const [id, n] of left) if (n > 0 && matches(ing, id)) { pick = id; break; }
+    if (pick == null) return null;
+    left.set(pick, left.get(pick) - 1);
+    out[i] = pick;
+  }
+  return out;
+}
+
+/** A representative item id for an ingredient (tags show their first member). */
+export function ingredientIcon(ing) { return typeof ing === 'string' ? TAGS[ing][0] : ing; }
+
 // Smelting: input -> output; 200 ticks per item (10 s)
 export const SMELT_TIME = 200;
 export const SMELTING = {
