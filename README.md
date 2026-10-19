@@ -304,6 +304,7 @@ poison from eyes) follow the documented table.
 * Creative mode: flight, instant breaking without drops, no damage (except the void) or hunger, unlimited blocks, item catalogue with search; hostile mobs ignore creative players
 * Chat with commands (see Controls)
 * Fire: flint and steel (iron ingot + flint, 64 uses) lights fires that animate, crackle and give light 15; fire ages, burns up flammable blocks (planks, logs, leaves, wool, bookshelves, plants with the reference encouragement/flammability odds), spreads through the air up to 4 blocks up, dies out without fuel and is put out by rain; lava sets fire to nearby flammable blocks; standing in fire sets you alight; punch it to put it out
+* Saplings (oak, birch, spruce): leaves drop them 1 in 20; planted on grass or dirt they grow in two steps (1 in 7 per random tick in light ≥ 9; bone meal 45 %) into the same trees as world generation, if there is room; natural leaves with no log within 4 blocks decay and drop saplings/sticks/apples, placed leaves stay
 * Oak boats (5 planks): placed on water, bob on the surface, accelerate to about 8 blocks/s, steer with A/D, break after three hits and drop themselves; saved with the world
 * 18 milestones (the reference game's advancements, with Saturncraft's own names) with a toast when reached and an overview in the pause menu, saved per world
 * Third-person cameras (F5, behind and in front, pulled in by walls) with an animated player model holding the selected item
@@ -313,7 +314,7 @@ poison from eyes) follow the documented table.
 **Not yet implemented**
 
 * Enchanting, anvils, shields, potions and status-effect UI (only hunger/poison effects exist); armour is not drawn on the third-person player model
-* Taming, potatoes/beetroot, saplings, cocoa and ink sacs
+* Taming, potatoes/beetroot, cocoa and ink sacs
 * Strongholds and other large structures, villager breeding and job sites, the other dimensions, redstone-style circuitry
 * Double chests and other storage containers, walls, trapdoors, corner-shaped stairs
 * Thunderstorms and lightning, snow layers

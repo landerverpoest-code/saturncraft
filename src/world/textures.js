@@ -218,6 +218,33 @@ function carrots(c, stage) {
   }
 }
 
+function sapling(c, leaf, dark, stem, conifer) {
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
+  const s = hex(stem), l = hex(leaf), d = hex(dark);
+  for (let y = 9; y < 16; y++) c.set(7 + (y > 12 ? 0 : (y & 1) * 0), y, s);
+  if (conifer) {
+    // stacked triangles
+    for (let tier = 0; tier < 3; tier++) {
+      const top = 1 + tier * 4, w = 2 + tier * 2;
+      for (let y = 0; y < 5; y++) for (let x = -w; x <= w; x++) {
+        if (Math.abs(x) > (y * w) / 4 + 0.5) continue;
+        c.set(7 + x, top + y, c.h(x, y, tier) < 0.35 ? d : l);
+      }
+    }
+    return;
+  }
+  // a leafy bush: a few overlapping blobs
+  for (const [cx, cy, r] of [[7, 5, 4.2], [4, 8, 3], [10.5, 7.5, 3.2], [7.5, 2.5, 2.5]]) {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      if ((x - cx) ** 2 + (y - cy) ** 2 > r * r) continue;
+      if (c.h(x, y, 3) < 0.18) continue;
+      c.set(x, y, c.h(x, y) < 0.3 ? d : l);
+    }
+  }
+  for (let y = 7; y < 12; y++) c.set(7, y, s);
+  c.set(6, 9, s); c.set(8, 8, s);
+}
+
 function crossPlant(c, stem, petals, center) {
   for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
   const s = hex(stem);
@@ -407,6 +434,9 @@ const GEN = {
       }
     }
   },
+  oak_sapling: (c) => sapling(c, '#4f9a2a', '#2f6a1a', '#6a4a2a', false),
+  birch_sapling: (c) => sapling(c, '#7aae4a', '#4a7a2a', '#d8d8cc', false),
+  spruce_sapling: (c) => sapling(c, '#3f6a3a', '#24452a', '#4a3420', true),
   sunpetal: (c) => crossPlant(c, '#3f8a2a', '#ffd23a', '#e08a10'),
   redbloom: (c) => crossPlant(c, '#3f8a2a', '#d42a2a', '#2a1a10'),
   dead_bush: (c) => {

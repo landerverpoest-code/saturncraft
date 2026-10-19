@@ -1,6 +1,7 @@
 // Deterministic terrain generator. Runs inside Web Workers (see gen.worker.js)
 // but is a pure module so it can be unit-tested and used for spawn search.
 import { stampVillages } from './villages.js';
+import { treeShape, LEAVES } from './trees.js';
 import { B, DEEP_VARIANT } from './blocks.js';
 import { Simplex, hash4, hashf, mulberry32 } from './noise.js';
 import { BIOME } from './biomes.js';
@@ -536,45 +537,14 @@ export class TerrainGenerator {
   }
 
   placeTree(blocks, kind, lx, y, lz, r) {
-    const set = (x, yy, z, b, force) => {
-      if (x < 0 || z < 0 || x > 15 || z > 15 || yy <= MIN_Y || yy >= MIN_Y + WORLD_HEIGHT) return;
+    for (const [dx, dy, dz, b, force] of treeShape(kind, r)) {
+      const x = lx + dx, yy = y + dy, z = lz + dz;
+      if (x < 0 || z < 0 || x > 15 || z > 15 || yy <= MIN_Y || yy >= MIN_Y + WORLD_HEIGHT) continue;
       const i = cidx(x, yy, z);
       const cur = blocks[i];
       if (force || cur === B.AIR || cur === B.TALL_GRASS || cur === B.SUNPETAL || cur === B.REDBLOOM) blocks[i] = b;
-      else if (cur === B.OAK_LEAVES || cur === B.BIRCH_LEAVES || cur === B.SPRUCE_LEAVES) { if (b !== B.OAK_LEAVES && b !== B.BIRCH_LEAVES && b !== B.SPRUCE_LEAVES) blocks[i] = b; }
-    };
-    if (kind === 'spruce') {
-      const h = 6 + Math.floor(r * 4);
-      const leafStart = 2 + Math.floor(r * 2);
-      let radius = 0;
-      for (let k = h; k >= leafStart; k--) {
-        const yy = y + k;
-        for (let dx = -radius; dx <= radius; dx++) for (let dz = -radius; dz <= radius; dz++) {
-          if (Math.abs(dx) + Math.abs(dz) > radius + (radius > 1 ? 1 : 0)) continue;
-          set(lx + dx, yy, lz + dz, B.SPRUCE_LEAVES);
-        }
-        radius = radius >= 2 ? (k % 2 ? 1 : 2) : radius + 1;
-        if (k > h - 2) radius = Math.min(radius, 1);
-      }
-      set(lx, y + h + 1, lz, B.SPRUCE_LEAVES);
-      for (let k = 0; k < h; k++) set(lx, y + k, lz, B.SPRUCE_LOG, true);
-      set(lx, y - 1, lz, B.DIRT, true);
-      return;
+      else if (LEAVES.has(cur) && !LEAVES.has(b)) blocks[i] = b;
     }
-    const log = kind === 'birch' ? B.BIRCH_LOG : B.OAK_LOG;
-    const leaf = kind === 'birch' ? B.BIRCH_LEAVES : B.OAK_LEAVES;
-    const h = (kind === 'birch' ? 5 : 4) + Math.floor(r * 3);
-    for (let yy = y + h - 3; yy <= y + h; yy++) {
-      const layer = yy - (y + h);
-      const radius = layer >= -1 ? 1 : 2;
-      for (let dx = -radius; dx <= radius; dx++) for (let dz = -radius; dz <= radius; dz++) {
-        const corner = Math.abs(dx) === radius && Math.abs(dz) === radius;
-        if (corner && (layer === 0 || hashf(dx, yy - y, dz, Math.floor(r * 1e6)) < 0.5)) continue;
-        set(lx + dx, yy, lz + dz, leaf);
-      }
-    }
-    for (let k = 0; k < h; k++) set(lx, y + k, lz, log, true);
-    set(lx, y - 1, lz, B.DIRT, true);
   }
 
   /** Find a dry land spawn column near the origin. */

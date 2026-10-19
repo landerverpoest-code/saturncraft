@@ -5,6 +5,7 @@
 import { B, OPAQUE, CROPS } from './blocks.js';
 import { MIN_Y, SECTION_COUNT, cidx } from './constants.js';
 import { lavaIgnite, FIRE_DELAY } from './fire.js';
+import { LEAVES, SAPLING_TREE, growTree, leavesConnected } from './trees.js';
 
 export const RANDOM_TICK_SPEED = 3;
 
@@ -70,6 +71,13 @@ export function randomTickBlock(world, x, y, z, id, rng = Math.random) {
     const age = world.getMeta(x, y, z);
     if (age >= 15) { world.setBlock(x, y + 1, z, B.SUGAR_CANE, 0); world.setBlock(x, y, z, B.SUGAR_CANE, 0); }
     else world.setBlock(x, y, z, B.SUGAR_CANE, age + 1);
+  } else if (SAPLING_TREE[id]) {
+    // reference: light >= 9 and a 1-in-7 chance per random tick; stage 0 -> 1, then the tree
+    if (rawLight(world, x, y + 1, z) < 9 || rng() >= 1 / 7) return;
+    if (world.getMeta(x, y, z) === 0) world.setBlock(x, y, z, id, 1);
+    else growTree(world, x, y, z, SAPLING_TREE[id], rng);
+  } else if (LEAVES.has(id)) {
+    if (world.getMeta(x, y, z) === 0 && !leavesConnected(world, x, y, z)) world.breakBlock(x, y, z, true);
   } else if (id === B.LAVA) {
     lavaIgnite(world, x, y, z, rng);
   } else if (id === B.FIRE) {
@@ -83,7 +91,7 @@ export function randomTickBlock(world, x, y, z, id, rng = Math.random) {
 
 /** Ids that react to random ticks (fast pre-filter). */
 export const RANDOM_TICKS = new Uint8Array(256);
-for (const id of [B.GRASS, B.FARMLAND, B.SUGAR_CANE, B.LAVA, B.FIRE, ...CROPS]) RANDOM_TICKS[id] = 1;
+for (const id of [B.GRASS, B.FARMLAND, B.SUGAR_CANE, B.LAVA, B.FIRE, ...CROPS, ...LEAVES, ...Object.keys(SAPLING_TREE).map(Number)]) RANDOM_TICKS[id] = 1;
 
 /** Run one tick's worth of random ticks in all chunks within `radius` chunks of (cx, cz). */
 export function runRandomTicks(world, cx, cz, radius, rng = Math.random) {

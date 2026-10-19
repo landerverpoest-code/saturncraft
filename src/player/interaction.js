@@ -7,6 +7,7 @@ import { PHYS } from '../physics/constants.js';
 import { EXHAUSTION } from './survival.js';
 import { lightAt } from '../entities/entities.js';
 import { canLight, FIRE_DELAY } from '../world/fire.js';
+import { LEAVES, SAPLING_TREE, growTree } from '../world/trees.js';
 import { sideOf, SIDE_DIRS, DOOR_OPEN, DOOR_UPPER, BED_HEAD, SLAB_TOP, SLAB_DOUBLE, STAIRS_UPSIDE, GATE_OPEN } from '../world/shapes.js';
 
 /** Brightness for block particles: local light, dimmed with the combined sunlight (as the held item). */
@@ -371,6 +372,15 @@ export class Interaction {
       burst(t.x, t.y, t.z);
       return true;
     }
+    if (SAPLING_TREE[t.id]) {
+      // 45 % chance to advance the sapling a stage
+      if (Math.random() < 0.45) {
+        if (w.getMeta(t.x, t.y, t.z) === 0) w.setBlockUrgent(t.x, t.y, t.z, t.id, 1);
+        else { w.urgentEdits = true; try { growTree(w, t.x, t.y, t.z, SAPLING_TREE[t.id]); } finally { w.urgentEdits = false; } }
+      }
+      burst(t.x, t.y, t.z);
+      return true;
+    }
     if (t.id === B.GRASS && !w.getBlock(t.x, t.y + 1, t.z)) {
       for (let k = 0; k < 24; k++) {
         const x = t.x + Math.round((Math.random() - Math.random()) * 3), z = t.z + Math.round((Math.random() - Math.random()) * 3);
@@ -420,6 +430,7 @@ export class Interaction {
   finishPlace(x, y, z, id, meta) {
     const g = this.game, p = g.player;
     if (p.intersectsBlock(x, y, z) && meta === SLAB_DOUBLE) return false;
+    if (LEAVES.has(id)) meta = 1; // placed leaves never decay
     g.world.setBlockUrgent(x, y, z, id, meta);
     g.audio.play('place_' + BLOCKS[id].sound, [x + 0.5, y + 0.5, z + 0.5]);
     p.inventory.removeFromSlot(p.inventory.selected, 1);

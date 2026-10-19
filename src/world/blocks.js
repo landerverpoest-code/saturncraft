@@ -32,6 +32,7 @@ export const B = {
   CARROTS: 76, OAK_FENCE: 77, SPRUCE_FENCE: 78, BIRCH_FENCE: 79, OAK_FENCE_GATE: 80,
   SPAWNER: 81, MOSSY_COBBLESTONE: 82, SUGAR_CANE: 83, BOOKSHELF: 84, BRICKS: 85, GLASS_PANE: 86, DIRT_PATH: 87,
   PUMPKIN: 88, JACK_O_LANTERN: 89, MELON: 90, FIRE: 91,
+  OAK_SAPLING: 92, BIRCH_SAPLING: 93, SPRUCE_SAPLING: 94,
 };
 
 const defaults = {
@@ -167,6 +168,10 @@ def(B.PUMPKIN, 'Pumpkin', { hardness: 1, resistance: 1, tool: TOOL.AXE, sound: '
 def(B.JACK_O_LANTERN, 'Pumpkin Lantern', { hardness: 1, resistance: 1, tool: TOOL.AXE, sound: 'wood', emit: 15, tex: { top: 'pumpkin_top', bottom: 'pumpkin_top', side: 'pumpkin_side', front: 'pumpkin_lantern' } });
 def(B.MELON, 'Melon', { hardness: 1, resistance: 1, tool: TOOL.AXE, sound: 'wood', drops: 'melon', tex: { top: 'melon_top', bottom: 'melon_top', side: 'melon_side' } });
 def(B.BRICKS, 'Bricks', { hardness: 2, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD });
+// Saplings: meta = growth stage (0/1); the second successful growth tick grows the tree.
+def(B.OAK_SAPLING, 'Oak Sapling', { ...plant });
+def(B.BIRCH_SAPLING, 'Birch Sapling', { ...plant });
+def(B.SPRUCE_SAPLING, 'Spruce Sapling', { ...plant });
 // Fire: meta = age 0..15; spreads to and burns flammable blocks (see fire.js).
 def(B.FIRE, 'Fire', { hardness: 0, resistance: 0, solid: false, opaque: false, shape: SHAPE.FIRE, layer: LAYER.CUTOUT, emit: 15, replaceable: true, drops: null, sound: 'wool', tex: { all: 'fire' } });
 def(B.GLASS_PANE, 'Glass Pane', { hardness: 0.3, resistance: 0.3, opaque: false, shape: SHAPE.PANE, layer: LAYER.CUTOUT, drops: null, sound: 'glass', tex: { all: 'glass' } });

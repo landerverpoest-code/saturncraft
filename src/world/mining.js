@@ -1,6 +1,7 @@
 // Block breaking speed and block drop rules (pure functions, unit tested).
 import { BLOCKS, B, TIER, TOOL } from './blocks.js';
 import { I, HAND, WOOL_ITEMS } from './items.js';
+import { LEAF_SAPLING } from './trees.js';
 
 /** True if this tool type is the efficient one for the block. */
 export function isCorrectToolType(block, tool) {
@@ -88,6 +89,7 @@ export function blockDrops(blockId, tool = HAND, rng = Math.random, meta = 0) {
     case 'oak_leaves':
     case 'leaves': {
       const out = [];
+      if (rng() < 0.05) out.push({ id: LEAF_SAPLING[blockId], count: 1 });
       if (rng() < 0.02) out.push({ id: I.STICK, count: randInt(rng, 1, 2) });
       if (d === 'oak_leaves' && rng() < 0.005) out.push({ id: I.APPLE, count: 1 });
       return out;
