@@ -56,6 +56,11 @@ export const MOBS = {
     health: 40, speed: 0.3, width: 0.6, height: 2.9, attack: 7, followRange: 64, neutral: true, sound: 'warble',
     drops: [{ id: I.VOID_PEARL, min: 0, max: 1 }],
   },
+  settler: {
+    name: 'Settler', role: 'villager', category: CATEGORY.CREATURE, villager: true,
+    health: 20, speed: 0.3, width: 0.6, height: 1.95, panicSpeed: 1.6, sound: 'hmm',
+    drops: [],
+  },
 };
 
 export const MOB_KEYS = Object.keys(MOBS);

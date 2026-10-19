@@ -237,6 +237,11 @@ const GEN = {
   tuff: (c) => c.noiseFill(['#5f6159', '#6c6e64', '#575951', '#787a6f'].map(hex), 0.5),
   dirt: (c) => c.noiseFill(P.dirt, 0.4),
   farmland: (c) => farmland(c, false),
+  dirt_path: (c) => c.noiseFill(['#9a7a48', '#8a6c3e', '#a8865a', '#7e6238'].map(hex), 0.35),
+  dirt_path_side: (c) => {
+    c.noiseFill(P.dirt, 0.4);
+    for (let y = 0; y < 3; y++) for (let x = 0; x < 16; x++) c.set(x, y, shade(hex('#9a7a48'), 0.9 + c.h(x, y) * 0.2));
+  },
   farmland_moist: (c) => farmland(c, true),
   grass_top: (c) => c.noiseFill(P.grassGray, 0.3),
   grass_side: (c) => {

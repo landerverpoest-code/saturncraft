@@ -3,6 +3,7 @@ import { iconURL } from './icons.js';
 import { ITEMS, maxStack } from '../world/items.js';
 import { craft, RECIPES, recipeLayout, chooseIngredients } from '../player/crafting.js';
 import { B } from '../world/blocks.js';
+import { canTrade, doTrade, MAX_USES } from '../mobs/trades.js';
 
 function el(html) { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstChild; }
 
@@ -407,6 +408,49 @@ export class UI {
       panel.appendChild(hot);
       setTimeout(() => search.focus(), 0);
     });
+  }
+
+  /** Trading with a settler: each offer row shows price -> goods; click to trade. */
+  openTrade(mob) {
+    this.game.input.unlock();
+    const g = this.game, inv = g.player.inventory;
+    const title = `${mob.profession[0].toUpperCase() + mob.profession.slice(1)} Settler`;
+    this.showContainer('trade', title, (panel) => {
+      const list = el('<div class="trade-list"></div>');
+      mob.trades.forEach((o) => {
+        const row = el(`<div class="trade-row">
+          <div class="slot">${this.slotHTML({ id: o.give, count: o.giveCount })}</div>
+          <div class="arrow">➜</div>
+          <div class="slot">${this.slotHTML({ id: o.get, count: o.getCount })}</div>
+          <span class="trade-name"></span><button class="btn trade-btn">Trade</button></div>`);
+        row.querySelector('.trade-name').textContent = ITEMS[o.get].name;
+        const btn = row.querySelector('button');
+        btn.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          const times = e.shiftKey ? 64 : 1;
+          let done = 0;
+          for (let k = 0; k < times && canTrade(o, inv); k++) {
+            const got = doTrade(o, inv);
+            const left = inv.add(got);
+            if (left) g.entities.spawnItem(g.player.x, g.player.y + 1, g.player.z, { ...got, count: left });
+            done++;
+          }
+          if (done) { g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); g.entities.spawnXp(g.player.x, g.player.y + 1, g.player.z, 3 * done); }
+          this.refreshAll();
+        });
+        this.refreshers.push(() => {
+          const ok = canTrade(o, inv);
+          btn.disabled = !ok;
+          row.classList.toggle('sold-out', o.uses >= MAX_USES);
+          btn.textContent = o.uses >= MAX_USES ? 'Sold out' : 'Trade';
+        });
+        list.appendChild(row);
+      });
+      panel.appendChild(list);
+      panel.appendChild(el('<div class="recipes-hint">Shift-click trades as often as you can afford. Offers restock every half day.</div>'));
+      panel.appendChild(this.inventoryGrid());
+    });
+    this.refreshAll();
   }
 
   /** Sleeping: the screen fades to black; "Leave Bed" (or Esc) gets up early. */

@@ -345,6 +345,7 @@ export class Interaction {
   /** Feed / breed / shear a passive mob. Returns true if something happened. */
   interactMob(mob) {
     const g = this.game, p = g.player, st = p.inventory.selectedStack, d = st && ITEMS[st.id];
+    if (mob.def.villager && mob.deathTime === 0 && mob.trades.length && !(d && d.food && mob.def.food)) { g.ui.openTrade(mob); g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); return true; }
     if (!d || mob.deathTime > 0 || mob.def.category !== 'creature') return false;
     if (d.dye && mob.type === 'fleecer' && mob.woolColor !== d.dye) {
       mob.woolColor = d.dye;

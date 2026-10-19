@@ -454,7 +454,7 @@ export class Game {
     if (this.ui.open === 'death' || this.ui.open === 'chat') { inp.consumeMouse(); inp.endFrame(); return; }
     if (inp.flyToggle) { inp.flyToggle = false; if (p.creative && !this.ui.blocking) { p.flying = !p.flying; p.flyGrace = 10; } }
     if (inp.wasPressed('inventory')) {
-      if (['inventory', 'workbench', 'furnace', 'chest', 'creative'].includes(this.ui.open)) this.ui.close();
+      if (['inventory', 'workbench', 'furnace', 'chest', 'creative', 'trade'].includes(this.ui.open)) this.ui.close();
       else if (!this.ui.blocking) { this.input.unlock(); if (p.creative) this.ui.openCreative(); else this.ui.openInventory(); }
     }
     if (inp.wasPressed('pause') && this.ui.blocking) {

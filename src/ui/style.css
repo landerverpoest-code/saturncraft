@@ -114,3 +114,11 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 .slot.recipe { cursor: pointer; }
 .slot.recipe.craftable { background: rgba(80, 170, 70, .35); }
 .slot.recipe.missing { background: rgba(170, 60, 60, .25); opacity: .7; }
+
+.trade-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.trade-row { display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,.08); padding: 4px 8px; border-radius: 4px; }
+.trade-row .arrow { font-size: 20px; color: #555; }
+.trade-row .trade-name { flex: 1; font-size: 13px; color: #333; }
+.trade-row .trade-btn { padding: 4px 14px; min-width: 0; width: auto; font-size: 13px; }
+.trade-row .trade-btn:disabled { opacity: .45; cursor: default; }
+.trade-row.sold-out { opacity: .55; }

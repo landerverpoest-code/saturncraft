@@ -1,5 +1,6 @@
 // Deterministic terrain generator. Runs inside Web Workers (see gen.worker.js)
 // but is a pure module so it can be unit-tested and used for spawn search.
+import { stampVillages } from './villages.js';
 import { B, DEEP_VARIANT } from './blocks.js';
 import { Simplex, hash4, hashf, mulberry32 } from './noise.js';
 import { BIOME } from './biomes.js';
@@ -305,6 +306,9 @@ export class TerrainGenerator {
 
     // 8. Decoration
     this.decorate(blocks, meta, biomes, heightmap, cx, cz, cols);
+
+    // 9. Villages
+    stampVillages(this, blocks, meta, cx, cz);
 
     // Final heightmap: highest non-air block
     for (let z = 0; z < 16; z++) for (let x = 0; x < 16; x++) {

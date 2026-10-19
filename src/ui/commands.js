@@ -4,6 +4,7 @@ import { BLOCKS } from '../world/blocks.js';
 import { MOBS, MOB_KEYS } from '../mobs/mobTypes.js';
 import { skyState } from '../sky/suns.js';
 import { addXp } from '../player/experience.js';
+import { villageInRegion, VILLAGE_REGION } from '../world/villages.js';
 
 /** item lookup by key ("diamond_sword", "oak_planks", "grass_block") and by display name */
 let ITEM_KEYS = null;
@@ -49,6 +50,7 @@ export const HELP = [
   '/give <item> [count]',
   '/summon <mob> [x y z]',
   '/xp <amount> [levels]',
+  '/locate village',
   '/kill,  /clear,  /spawnpoint,  /seed,  /heal',
 ];
 
@@ -135,6 +137,20 @@ export function runCommand(game, text) {
     case 'clear': p.inventory.clear(); return 'Cleared the inventory';
     case 'spawnpoint': p.spawn = { x: p.x, y: p.y, z: p.z }; p.bed = null; return `Set spawn point to ${Math.floor(p.x)}, ${Math.floor(p.y)}, ${Math.floor(p.z)}`;
     case 'seed': return `Seed: [${game.seed}]`;
+    case 'locate': {
+      if ((args[0] || '').toLowerCase() !== 'village') return 'Usage: /locate village';
+      const R = VILLAGE_REGION, prx = Math.floor(p.x / R), prz = Math.floor(p.z / R);
+      let best = null;
+      // search rings of regions outwards; one ring past the first find, since a neighbour can be closer
+      let stopAt = 6;
+      for (let r = 0; r <= stopAt; r++) for (let rx = prx - r; rx <= prx + r; rx++) for (let rz = prz - r; rz <= prz + r; rz++) {
+        if (Math.max(Math.abs(rx - prx), Math.abs(rz - prz)) !== r) continue;
+        const v = villageInRegion(game.world.gen, rx, rz);
+        if (v && (!best || Math.hypot(v.cx - p.x, v.cz - p.z) < Math.hypot(best.cx - p.x, best.cz - p.z))) { best = v; stopAt = Math.min(stopAt, r + 1); }
+      }
+      if (!best) return 'No village found nearby';
+      return `The nearest village is at ${best.cx}, ${best.y}, ${best.cz} (${Math.round(Math.hypot(best.cx - p.x, best.cz - p.z))} blocks away)`;
+    }
     case '': return null;
     default: return `Unknown command '/${cmd}'. Type /help for a list.`;
   }

@@ -12,6 +12,7 @@ import { shouldDespawn, shouldBurnInSun } from './spawnRules.js';
 import { buildModel, animateModel } from './models.js';
 import { randomSheepColor, WOOL_RGB } from '../world/colors.js';
 import { WOOL_ITEMS } from '../world/items.js';
+import { RESTOCK_TICKS } from './trades.js';
 
 let nextMobId = 1_000_000;
 const TAU = Math.PI * 2;
@@ -49,6 +50,8 @@ export class Mob {
     this.age = 0; this.loveTicks = 0; this.breedTime = 0;
     this.sheared = false; this.eatTimer = 0;
     this.woolColor = type === 'fleecer' ? randomSheepColor() : 0;
+    // settlers: profession, trade offers and the house they live in
+    this.profession = null; this.trades = []; this.home = null; this.lastRestock = 0;
   }
 
   get baby() { return this.age < 0; }
@@ -60,12 +63,43 @@ export class Mob {
   }
 
   /** State kept when the mob is saved with its chunk. */
-  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor }; }
+  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor, profession: this.profession, trades: this.trades, home: this.home, lastRestock: this.lastRestock }; }
   loadData(s) {
     this.health = s.health; this.yaw = s.yaw;
     if (s.age < 0) { this.setBaby(true); this.age = s.age; } else this.age = s.age || 0;
     this.sheared = !!s.sheared;
     if (s.woolColor !== undefined) this.woolColor = s.woolColor;
+    if (s.profession) { this.profession = s.profession; this.trades = s.trades || []; this.home = s.home || null; this.lastRestock = s.lastRestock || 0; }
+  }
+
+  /** Settlers flee Shamblers, keep near their house (inside it at night), restock, and watch nearby players. */
+  settlerAI(g, p, pdist) {
+    if (g.time - this.lastRestock > RESTOCK_TICKS) { this.lastRestock = g.time; for (const o of this.trades) o.uses = 0; }
+    if (this.panicTicks > 0) return this.passiveAI(g);
+    // flee from Shamblers within 8 blocks
+    for (const e of g.entities.list) {
+      if (e.kind !== 'mob' || e.type !== 'shambler' || e.dead) continue;
+      const dx = this.x - e.x, dz = this.z - e.z;
+      if (dx * dx + dz * dz < 64) { this.steer(this.x + dx * 4, this.z + dz * 4, this.def.panicSpeed); return; }
+    }
+    const h = this.home;
+    const night = g.sky.state.aboveCount === 0;
+    if (h) {
+      const dh = Math.hypot(h.x - this.x, h.z - this.z);
+      if (dh > (night ? 1.5 : 24)) {
+        if (!this.path || g.ticks % 40 === 0) this.pathTo(g, Math.floor(h.x), Math.floor(h.y), Math.floor(h.z));
+        if (!this.followPath(g, 1)) this.steer(h.x, h.z, 1);
+        return;
+      }
+      if (night) return;
+    }
+    if (pdist < 4 && !p.dead) {
+      this.yaw = Math.atan2(-(p.x - this.x), -(p.z - this.z));
+      this.headPitch = Math.atan2(p.y + p.eyeHeight - this.eyeY, Math.max(0.5, pdist)) * 0.8;
+      return;
+    }
+    this.headPitch = 0;
+    this.wanderAI(g, 0.8);
   }
 
   /** Fed its breeding food: babies grow 10 % faster, adults fall in love. */
@@ -301,6 +335,7 @@ export class Mob {
 
   // ---------------------------------------------------------------------------
   ai(g, p, pdist) {
+    if (this.def.villager) return this.settlerAI(g, p, pdist);
     if (this.def.category === CATEGORY.CREATURE) return this.passiveAI(g);
     switch (this.type) {
       case 'shambler': return this.meleeAI(g, p, pdist);
@@ -570,6 +605,11 @@ export class Mob {
     m.position.set(px, py, pz);
     m.scale.setScalar(this.age < 0 ? 0.5 : 1);
     const parts = m.userData.parts;
+    if (parts && parts.robe && this.profession && m.userData.prof !== this.profession) {
+      m.userData.prof = this.profession;
+      const col = { farmer: '#8a6a3a', librarian: '#e4dccb', smith: '#34343a', shepherd: '#9a9a88', butcher: '#c8c4b4' }[this.profession];
+      parts.robe.children[0].material.userData.base.set(col);
+    }
     if (parts && parts.wool) {
       parts.wool.visible = !this.sheared; parts.tuft.visible = !this.sheared;
       const rgb = WOOL_RGB[this.woolColor || 0], mat = parts.wool.children[0].material;

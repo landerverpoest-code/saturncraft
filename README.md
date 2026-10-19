@@ -284,6 +284,8 @@ poison from eyes) follow the documented table.
 * Shears (2 iron) shear sheep for 1–3 wool; sheep regrow it by eating grass
 * Carrots: a crop planted on farmland (2–5 per ripe plant), food, and part of the Shambler's rare drop
 * Fences (oak/spruce/birch) that connect to fences, gates and full blocks, with 1.5-block collision so nothing jumps over; oak fence gates that open and close
+* Villages (one per 320 × 320-block region at most, in plains, desert, taiga and snowy plains): a well, four dirt-path roads and houses (log/plank, sandstone or spruce/cobblestone styles, with doors, windows, a bed and a workbench or chest), farms of wheat or carrots and lamp posts; `/locate village` finds the nearest
+* Settlers live in the village houses: farmer, librarian, smith, shepherd or butcher (robe colour); they flee Shamblers, stay near home and go inside at night; right-click to trade goods for beryl and beryl for goods (12 uses per offer, restocked every half day, XP for trading)
 * Dungeons: mossy cobblestone rooms (5–7 × 4 × 5–7 inside, 14 attempts per chunk, 1–5 openings into caves) with a monster spawner (Shambler 50 %, Rattler/Skitterer 25 % each; active within 16 blocks, 4 spawn attempts every 10–40 s, at most 6 nearby, light ≤ 11) and up to two loot chests; mined spawners give 15–43 XP
 * Sugar cane on shores (grows to 3 blocks next to water) → paper → books → bookshelves; clay → bricks; glass panes that connect
 * 16 dye colours: bone meal (white), flowers (yellow/red), azurite (blue), cactus in a furnace (green), coal (black) and mixes; dyed wool; sheep come in natural colours (white, black, grays, brown, rare pink), can be dyed and drop/shear their colour
@@ -306,7 +308,7 @@ poison from eyes) follow the documented table.
 
 * Enchanting, anvils, shields, potions and status-effect UI (only hunger/poison effects exist); armour is not drawn on the third-person player model
 * Taming, potatoes/beetroot, saplings, cocoa and ink sacs
-* Villages, strongholds and other large structures, the other dimensions, redstone-style circuitry
+* Strongholds and other large structures, villager breeding and job sites, the other dimensions, redstone-style circuitry
 * Double chests and other storage containers, walls, trapdoors, corner-shaped stairs
 * Fire blocks and fire spread, thunderstorms and lightning, snow layers
 * Slimes, witches, drowned, husks/strays as separate variants, baby mobs, mob equipment
@@ -385,7 +387,7 @@ poison from eyes) follow the documented table.
 
 ## Tests
 
-`npm test` runs 128 unit tests:
+`npm test` runs 132 unit tests:
 
 * **physics** — constants, walk/sprint/sneak speeds, jump apex and duration,
   sprint-jump, terminal velocity, fall damage, collision, step-up, ledge

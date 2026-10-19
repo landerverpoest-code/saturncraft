@@ -1,5 +1,7 @@
 // Natural mob spawning around the player, chunk-generation animal herds,
 // passive-mob persistence across chunk unloads and mob caps.
+import { villagesNear, houseHome } from '../world/villages.js';
+import { makeTrades } from './trades.js';
 import { Mob } from './mob.js';
 import { MOBS, CATEGORY } from './mobTypes.js';
 import {
@@ -123,6 +125,16 @@ export class MobSpawner {
     }
     if (this.generated.has(k)) return;
     this.generated.add(k);
+    // settlers of village houses in this chunk
+    for (const v of villagesNear(this.game.world.gen, cx * 16, cz * 16, cx * 16 + 15, cz * 16 + 15)) {
+      for (const p of v.pieces) {
+        if (p.type !== 'house') continue;
+        const h = houseHome(p);
+        if (Math.floor(h.x / 16) !== cx || Math.floor(h.z / 16) !== cz) continue;
+        const m = this.spawnMob('settler', h.x, h.y, h.z);
+        m.profession = p.profession; m.home = h; m.trades = makeTrades(p.profession); m.lastRestock = this.game.time;
+      }
+    }
     // Herds placed at chunk generation time
     const w = this.game.world;
     while (Math.random() < CHUNK_GEN_CREATURE_CHANCE) {

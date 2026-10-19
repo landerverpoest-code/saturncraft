@@ -147,6 +147,18 @@ const MODELS = {
   },
 };
 
+// Settlers: big-nosed villagers in a robe whose colour shows the profession.
+MODELS.settler = {
+  parts: [
+    ['head', [8, 10, 8], [0, 24, 0], [0, 5, 0], '#b8835a', { face: 'settler' }],
+    ['nose', [2, 4, 2], [0, 24, 0], [0, 2, -5], '#a87350'],
+    ['robe', [8, 12, 6], [0, 18, 0], [0, 0, 0], '#8a6a3a'],
+    ['arms', [8, 4, 4], [0, 20, -1], [0, -1, -3.5], '#8a6a3a'],
+    ['legR', [4, 12, 4], [2, 12, 0], [0, -6, 0], '#3a2a20', { anim: 'legB' }],
+    ['legL', [4, 12, 4], [-2, 12, 0], [0, -6, 0], '#3a2a20', { anim: 'legA' }],
+  ],
+};
+
 // The player as seen in third-person views (faces -z like the mobs; its right arm is +x).
 MODELS.player = {
   parts: [
@@ -161,6 +173,9 @@ MODELS.player = {
 };
 
 const FACES = {
+  settler: (c) => {
+    px(c, '#3a2a1a', [[1, 3, 14, 1]]); px(c, '#ffffff', [[3, 5, 3, 2], [10, 5, 3, 2]]); px(c, '#2a6a3a', [[4, 5, 2, 2], [11, 5, 2, 2]]);
+  },
   player: (c) => {
     px(c, '#4a3220', [[0, 0, 16, 3], [0, 3, 2, 3], [14, 3, 2, 3]]);
     px(c, '#ffffff', [[3, 7, 3, 2], [10, 7, 3, 2]]); px(c, '#3a5ab0', [[4, 7, 2, 2], [11, 7, 2, 2]]);
