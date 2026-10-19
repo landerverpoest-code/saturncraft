@@ -54,7 +54,12 @@ export class HeldItem {
     this.scene.add(this.group);
     this.currentId = -1;
     this.mesh = null;
-    this.hand = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.22, 0.7), new THREE.MeshLambertMaterial({ color: 0xc9946a }));
+    // first-person arm: a sleeve with a bare hand at the end
+    this.hand = new THREE.Group();
+    const sleeve = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.42), new THREE.MeshLambertMaterial({ color: 0x3a5a7a }));
+    const palm = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.14, 0.16), new THREE.MeshLambertMaterial({ color: 0xc9946a }));
+    sleeve.position.z = 0.1; palm.position.z = -0.19;
+    this.hand.add(sleeve, palm);
     this.equipAnim = 0;
   }
 
@@ -63,7 +68,7 @@ export class HeldItem {
   build(id) {
     this.group.clear();
     this.mesh = null;
-    if (id == null) { this.group.add(this.hand); this.hand.position.set(0.55, -0.55, -0.7); this.hand.rotation.set(-0.3, 0.2, 0.1); return; }
+    if (id == null) { this.group.add(this.hand); this.hand.position.set(0.56, -0.5, -0.95); this.hand.rotation.set(0.25, 0.4, 0.05); this.hand.scale.setScalar(0.8); return; }
     const d = ITEMS[id];
     if (d.block !== undefined && BLOCKS[d.block].shape !== SHAPE.CROSS && BLOCKS[d.block].shape !== SHAPE.TORCH) {
       const b = BLOCKS[d.block];
@@ -99,7 +104,7 @@ export class HeldItem {
     this.group.position.set(Math.sin(sec * 9) * 0.02 * walk - swing * 0.15 - (it.eating ? 0.25 : 0), -Math.abs(Math.cos(sec * 9)) * 0.02 * walk - this.equipAnim * 0.5 + eat + (it.eating ? 0.1 : 0), 0);
     this.group.rotation.set(-swing * 0.8, swing * 0.3, 0);
     const L = lightAt(g, p.x, p.y + 1.6, p.z) * (0.4 + 0.6 * Math.min(1, g.sky.state.combined + 0.25));
-    this.scene.children[0].intensity = 0.4 + 1.8 * L;
+    this.scene.children[0].intensity = 0.1 + 1.9 * L;
     this.scene.children[1].intensity = 1.6 * L;
     renderer.clearDepth();
     renderer.render(this.scene, this.camera);

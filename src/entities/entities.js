@@ -9,6 +9,8 @@ import { texturePixels } from '../world/textures.js';
 import { MIN_Y } from '../world/constants.js';
 
 let nextEntityId = 1;
+export const ENTITY_RENDER_DIST = 64;
+const SHADOW_CAST_DIST = 24;
 const texCache = new Map();
 function iconTexture(id) {
   if (texCache.has(id)) return texCache.get(id);
@@ -270,9 +272,19 @@ export class EntityManager {
 
   render(alpha, timeSec) {
     const g = this.game;
+    const cam = g.camera.position;
     for (const e of this.list) {
+      const dist2 = (e.x - cam.x) ** 2 + (e.y - cam.y) ** 2 + (e.z - cam.z) ** 2;
       let m = this.meshes.get(e.id);
+      // entity render distance (64 blocks for mobs, 32 for small entities)
+      const maxD = e.kind === 'mob' ? ENTITY_RENDER_DIST : ENTITY_RENDER_DIST / 2;
+      if (dist2 > maxD * maxD) { if (m) m.visible = false; continue; }
       if (!m) { m = this.createMesh(e); if (!m) continue; this.meshes.set(e.id, m); this.scene.add(m); }
+      m.visible = true;
+      if (e.kind === 'mob') {
+        const shadow = dist2 < SHADOW_CAST_DIST * SHADOW_CAST_DIST;
+        if (m.userData.castShadow !== shadow) { m.userData.castShadow = shadow; m.traverse((o) => { if (o.isMesh) o.castShadow = shadow; }); }
+      }
       const px = e.prev[0] + (e.x - e.prev[0]) * alpha;
       const py = e.prev[1] + (e.y - e.prev[1]) * alpha;
       const pz = e.prev[2] + (e.z - e.prev[2]) * alpha;
