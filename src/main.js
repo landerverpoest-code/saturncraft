@@ -3,6 +3,10 @@ import './ui/style.css';
 import { Game, DEFAULT_SETTINGS } from './game.js';
 import { stringToSeed } from './world/noise.js';
 import { loadGame, deleteSave } from './world/save.js';
+import { startTitleScene, SPLASHES } from './ui/titleScene.js';
+
+const stopTitleScene = startTitleScene(document.getElementById('title-bg'));
+document.getElementById('splash').textContent = SPLASHES[Math.floor(Math.random() * SPLASHES.length)];
 
 function loadSettings() {
   try { return { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem('saturncraft.settings') || '{}') }; } catch { return { ...DEFAULT_SETTINGS }; }
@@ -37,6 +41,7 @@ async function start(saveData = null) {
   settings.shadows = sh.checked;
   saveSettings(settings);
   title.classList.add('hidden');
+  stopTitleScene();
   loading.classList.remove('hidden');
   const canvas = document.getElementById('game');
   game = new Game(canvas, seed, settings, {

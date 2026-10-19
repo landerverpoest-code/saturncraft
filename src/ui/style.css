@@ -98,3 +98,12 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 .creative-grid { max-height: calc(var(--slot) * 5 + 30px); overflow-y: auto; margin-bottom: 10px; padding-right: 4px; }
 .creative-search { width: 100%; box-sizing: border-box; padding: 5px 8px; margin-bottom: 8px; border-radius: 3px; border: 1px solid rgba(0,0,0,.3); font: inherit; }
 #hud.creative #health, #hud.creative #food, #hud.creative #armor, #hud.creative #xpbar { visibility: hidden; }
+
+#title-bg { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; image-rendering: pixelated; }
+#title-screen { isolation: isolate; }
+#title-screen > *:not(canvas) { position: relative; }
+.title-wrap { position: relative; }
+#title-screen h1 { font-family: 'Courier New', monospace; font-weight: 900; font-size: clamp(40px, 9vw, 92px); letter-spacing: 6px; color: #f4dca8;
+  text-shadow: 3px 3px 0 #8a6a3a, 6px 6px 0 #5a4024, 9px 9px 0 #2a1a0c, 0 0 30px rgba(255, 190, 110, .35); }
+#splash { position: absolute; right: -40px; bottom: -6px; color: #ffff3a; font: bold 20px monospace; text-shadow: 2px 2px 0 #3f3f00; transform: rotate(-18deg); animation: splash .5s ease-in-out infinite alternate; white-space: nowrap; pointer-events: none; }
+@keyframes splash { from { transform: rotate(-18deg) scale(1); } to { transform: rotate(-18deg) scale(1.08); } }

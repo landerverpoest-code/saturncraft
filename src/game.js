@@ -11,6 +11,7 @@ import { ChunkRenderer } from './render/chunkRenderer.js';
 import { terrainUniforms, createTextureArray } from './render/terrainMaterial.js';
 import { Particles } from './render/particles.js';
 import { HeldItem, BlockOverlay } from './render/overlays.js';
+import { PlayerModel } from './render/playerModel.js';
 import { Sky } from './sky/sky.js';
 import { Clouds } from './sky/clouds.js';
 import { Weather, WeatherRenderer } from './sky/weather.js';
@@ -88,6 +89,8 @@ export class Game {
     this.chat = this.chat || new Chat(this);
     this.weatherFx = new WeatherRenderer(this.scene);
     this.particles = new Particles(this.scene);
+    this.playerModel = new PlayerModel(this.scene);
+    this.perspective = 0; // 0 first person, 1 behind, 2 in front (F5)
     this.player = new Player();
     this.player.isPlayer = true;
     this.entities = new EntityManager(this);
@@ -437,6 +440,7 @@ export class Game {
     }
     if (inp.wasPressed('debug')) { this.hud.showDebug = !this.hud.showDebug; this.hud.debugEl.classList.toggle('hidden', !this.hud.showDebug); }
     if (inp.wasPressed('hud')) this.hud.setVisible(!this.hud.visible);
+    if (inp.wasPressed('perspective')) { this.perspective = (this.perspective + 1) % 3; document.getElementById('crosshair').style.visibility = this.perspective === 2 ? 'hidden' : ''; }
     if (!this.ui.blocking) {
       const m = inp.consumeMouse();
       p.yaw -= m.dx * inp.sensitivity;
@@ -483,6 +487,16 @@ export class Game {
     const bob = b.onGround ? Math.sin(sec * 9) * Math.min(0.06, speed * 0.25) : 0;
     this.camera.position.set(x, y + eye + Math.abs(bob) * 0.6, z);
     this.camera.rotation.set(p.pitch, p.yaw, 0, 'YXZ');
+    if (this.perspective && !p.dead) {
+      // third person: 4 blocks behind (or in front of) the eyes, pulled in where blocks are in the way
+      const [ldx, ldy, ldz] = p.lookDir(), s = this.perspective === 1 ? -1 : 1;
+      const c = this.camera.position;
+      const hit = this.world.raycast(c.x, c.y, c.z, ldx * s, ldy * s, ldz * s, 4);
+      const dist = hit ? Math.max(0.3, hit.dist - 0.3) : 4;
+      this.cameraDist = dist;
+      c.set(c.x + ldx * s * dist, c.y + ldy * s * dist, c.z + ldz * s * dist);
+      if (this.perspective === 2) this.camera.rotation.set(-p.pitch, p.yaw + Math.PI, 0, 'YXZ');
+    }
     if (p.hurtTime > 0) this.camera.rotation.z = Math.sin(p.hurtTime * 0.6) * 0.04;
     const targetFov = this.settings.fov * (p.sprinting ? 1.1 : 1);
     this.camera.fov += (targetFov - this.camera.fov) * 0.2;
@@ -509,10 +523,11 @@ export class Game {
 
     this.chunks.updateVisibility(this.camera.position);
     this.entities.render(alpha, sec);
+    this.playerModel.update(this, this.perspective !== 0 && this.cameraDist > 0.8, alpha, sec); // no model when the camera is squeezed into the head
     this.overlay.update(this.interaction, p.dead);
     this.renderer.clear();
     this.renderer.render(this.scene, this.camera);
-    this.held.render(this.renderer, alpha, sec);
+    if (this.perspective === 0) this.held.render(this.renderer, alpha, sec);
     this.hud.update();
     this.ui.tickOpen();
     this.lastSkyState = st;

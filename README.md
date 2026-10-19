@@ -62,6 +62,7 @@ in the console.
 | Drop item (stack with `Ctrl`) | `Q` |
 | Pause menu / close screen | `Esc` |
 | Debug overlay (fps, position, light, suns) | `F3` |
+| Camera: first person / behind / in front | `F5` |
 | Hide HUD | `F1` |
 
 Inventory screens: left-click picks up / places a stack, right-click splits a
@@ -289,11 +290,13 @@ poison from eyes) follow the documented table.
 * Weather: rain spells (12 000–24 000 ticks) after clear spells (12 000–180 000), fading in/out at 0.01 per tick; rain or snow by biome (none in deserts), stopped by roofs; overcast sky, weaker sun light, grey clouds, splashes and rain sound; rain puts out burning players and mobs and undead do not catch fire in it
 * Creative mode: flight, instant breaking without drops, no damage (except the void) or hunger, unlimited blocks, item catalogue with search; hostile mobs ignore creative players
 * Chat with commands (see Controls)
+* Third-person cameras (F5, behind and in front, pulled in by walls) with an animated player model holding the selected item
+* Animated title screen (stars, ringed giant, three suns, scrolling landscape) with splash texts
 * Blocky cloud layer (12×12 cells, 4 thick, y=192, drifting 0.03 blocks/tick), coloured by the suns
 
 **Not yet implemented**
 
-* Enchanting, anvils, shields, potions and status-effect UI (only hunger/poison effects exist); armour is not drawn on a third-person player model
+* Enchanting, anvils, shields, potions and status-effect UI (only hunger/poison effects exist); armour is not drawn on the third-person player model
 * Taming, sheep colours and dyes, potatoes/beetroot, bone meal
 * Villages, other structures, the other dimensions, redstone-style circuitry
 * Double chests and other storage containers, fences, walls, trapdoors, corner-shaped stairs
