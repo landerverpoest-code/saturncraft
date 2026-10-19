@@ -8,7 +8,7 @@ export const TOOL = { NONE: null, PICKAXE: 'pickaxe', AXE: 'axe', SHOVEL: 'shove
 export const TIER = { ANY: -1, WOOD: 0, STONE: 1, IRON: 2, DIAMOND: 3 };
 
 // Render shapes understood by the mesher
-export const SHAPE = { NONE: 0, CUBE: 1, CROSS: 2, LIQUID: 3, TORCH: 4, CACTUS: 5, CROP: 6, DOOR: 7, LADDER: 8, BED: 9 };
+export const SHAPE = { NONE: 0, CUBE: 1, CROSS: 2, LIQUID: 3, TORCH: 4, CACTUS: 5, CROP: 6, DOOR: 7, LADDER: 8, BED: 9, SLAB: 10, STAIRS: 11 };
 
 // Render layers
 export const LAYER = { OPAQUE: 0, CUTOUT: 1, TRANSLUCENT: 2 };
@@ -27,6 +27,8 @@ export const B = {
   DIAMOND_BLOCK: 53, GRANITE: 54, DIORITE: 55, ANDESITE: 56, TUFF: 57, SNOWY_GRASS: 58,
   SPRUCE_PLANKS: 59, BIRCH_PLANKS: 60, STONE_BRICKS: 61, CHEST: 62,
   FARMLAND: 63, WHEAT: 64, DOOR: 65, LADDER: 66, BED: 67,
+  OAK_SLAB: 68, COBBLESTONE_SLAB: 69, STONE_BRICK_SLAB: 70, SANDSTONE_SLAB: 71,
+  OAK_STAIRS: 72, COBBLESTONE_STAIRS: 73, STONE_BRICK_STAIRS: 74, SANDSTONE_STAIRS: 75,
 };
 
 const defaults = {
@@ -128,6 +130,18 @@ def(B.DOOR, 'Oak Door', { hardness: 3, resistance: 3, tool: TOOL.AXE, sound: 'wo
 def(B.LADDER, 'Ladder', { hardness: 0.4, resistance: 0.4, tool: TOOL.AXE, sound: 'wood', flammable: true, solid: false, opaque: false, shape: SHAPE.LADDER, layer: LAYER.CUTOUT, needsSupport: true });
 // Bed: two blocks; meta bits 0-1 = side the head lies towards, bit 3 = head half.
 def(B.BED, 'Bed', { hardness: 0.2, resistance: 0.2, sound: 'wool', flammable: true, opaque: false, shape: SHAPE.BED, layer: LAYER.CUTOUT, drops: 'bed', needsSupport: true, tex: { top: 'bed_foot_top_0', bottom: 'oak_planks', side: 'bed_side' } });
+
+// Slabs (meta 0 bottom, 1 top, 2 double) and stairs (meta bits 0-1 facing, bit 2 upside down)
+// copy their material's textures and stats. They block light like full blocks.
+for (const [slab, stairs, base, name] of [
+  [B.OAK_SLAB, B.OAK_STAIRS, B.OAK_PLANKS, 'Oak'], [B.COBBLESTONE_SLAB, B.COBBLESTONE_STAIRS, B.COBBLESTONE, 'Cobblestone'],
+  [B.STONE_BRICK_SLAB, B.STONE_BRICK_STAIRS, B.STONE_BRICKS, 'Stone Brick'], [B.SANDSTONE_SLAB, B.SANDSTONE_STAIRS, B.SANDSTONE, 'Sandstone'],
+]) {
+  const m = BLOCKS[base];
+  const common = { hardness: m.hardness, resistance: m.resistance, tool: m.tool, tier: m.tier, sound: m.sound, flammable: m.flammable, opaque: false, opacity: 15, tex: { ...m.tex }, base };
+  def(slab, `${name} Slab`, { ...common, shape: SHAPE.SLAB, drops: 'slab' });
+  def(stairs, `${name} Stairs`, { ...common, shape: SHAPE.STAIRS });
+}
 
 export const NUM_BLOCKS = BLOCKS.length;
 

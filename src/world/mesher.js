@@ -3,7 +3,7 @@
 // neighbours) so it can run inside a worker without access to the world.
 import { B, OPAQUE, SHAPES, LAYERS, SHAPE, LAYER } from './blocks.js';
 import { FACE_TILE, FRONT_TILE, texId } from './textures.js';
-import { doorBox, ladderBox, SIDE_DIRS, DOOR_UPPER, BED_HEAD, BED_BOX } from './shapes.js';
+import { doorBox, ladderBox, SIDE_DIRS, DOOR_UPPER, BED_HEAD, BED_BOX, slabBox, stairBoxes } from './shapes.js';
 
 export const PAD = 18;
 export const PAD_VOL = PAD * PAD * PAD;
@@ -205,6 +205,13 @@ export function meshSection(sec) {
           buf.pos[v * 3] -= dx * h * 0.41; buf.pos[v * 3 + 2] -= dz * h * 0.41;
         }
       }
+    } else if (shape === SHAPE.SLAB || shape === SHAPE.STAIRS) {
+      // light-blocking partial blocks: shade with the brightest neighbouring light
+      let sk = 0, bk = 0;
+      for (let d = 0; d < 6; d++) { const l = light[i + FACE_N[d]]; sk = Math.max(sk, l >> 4); bk = Math.max(bk, l & 15); }
+      const tiles = [0, 1, 2, 3, 4, 5].map((d) => FACE_TILE[id * 6 + d]);
+      const boxes = shape === SHAPE.SLAB ? [slabBox(meta[i])] : stairBoxes(meta[i]);
+      for (const b of boxes) emitBox(buf, x, y, z, b[0], b[1], b[2], b[3], b[4], b[5], tiles, sk * 17, bk * 17, 'box');
     } else if (shape === SHAPE.BED) {
       const l = light[i], m = meta[i], top = BED_TOPS[m & 3][m & BED_HEAD ? 1 : 0];
       emitBox(buf, x, y, z, ...BED_BOX, [BED_SIDE, BED_SIDE, top, BED_BOTTOM, BED_SIDE, BED_SIDE], (l >> 4) * 17, (l & 15) * 17, 'box');

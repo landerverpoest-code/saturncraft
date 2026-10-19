@@ -3,7 +3,7 @@
 //
 // Side indices (used in meta) follow the furnace convention:
 // 0 = -z, 1 = +x, 2 = +z, 3 = -x.
-import { B } from './blocks.js';
+import { B, BLOCKS, SHAPE } from './blocks.js';
 
 export const SIDE_DIRS = [[0, 0, -1], [1, 0, 0], [0, 0, 1], [-1, 0, 0]];
 
@@ -48,6 +48,15 @@ export function torchBox(meta) {
   return [cx - 0.16, 0.2, cz - 0.16, cx + 0.16, 0.85, cz + 0.16];
 }
 
+export const SLAB_TOP = 1, SLAB_DOUBLE = 2, STAIRS_UPSIDE = 4;
+const SLAB_BOXES = [[0, 0, 0, 1, 0.5, 1], [0, 0.5, 0, 1, 1, 1], [0, 0, 0, 1, 1, 1]];
+export function slabBox(meta) { return SLAB_BOXES[Math.min(2, meta)]; }
+/** Stairs: a half slab plus the raised half on the side the player faced when placing. */
+export function stairBoxes(meta) {
+  const up = meta & STAIRS_UPSIDE;
+  return [up ? [0, 0.5, 0, 1, 1, 1] : [0, 0, 0, 1, 0.5, 1], sideSlab(meta & 3, 0.5, up ? 0 : 0.5, up ? 0.5 : 1)];
+}
+
 export const BED_HEAD = 8;
 export const BED_BOX = [0, 0, 0, 1, 9 / 16, 1];
 
@@ -55,6 +64,7 @@ export const BED_BOX = [0, 0, 0, 1, 9 / 16, 1];
 export const SHAPED_COLLISION = new Uint8Array(256);
 SHAPED_COLLISION[B.DOOR] = 1;
 SHAPED_COLLISION[B.BED] = 1;
+for (const id of [B.OAK_SLAB, B.COBBLESTONE_SLAB, B.STONE_BRICK_SLAB, B.SANDSTONE_SLAB, B.OAK_STAIRS, B.COBBLESTONE_STAIRS, B.STONE_BRICK_STAIRS, B.SANDSTONE_STAIRS]) SHAPED_COLLISION[id] = 1;
 
 /**
  * Collision boxes of a solid non-cube block, or null for an ordinary full
@@ -63,6 +73,9 @@ SHAPED_COLLISION[B.BED] = 1;
 export function collisionBoxes(id, meta) {
   if (id === B.DOOR) return [doorBox(meta)];
   if (id === B.BED) return [BED_BOX];
+  const sh = BLOCKS[id].shape;
+  if (sh === SHAPE.SLAB) return [slabBox(meta)];
+  if (sh === SHAPE.STAIRS) return stairBoxes(meta);
   return null;
 }
 
@@ -70,6 +83,7 @@ export function collisionBoxes(id, meta) {
 export function selectionBox(id, meta) {
   if (id === B.DOOR) return doorBox(meta);
   if (id === B.BED) return BED_BOX;
+  if (BLOCKS[id].shape === SHAPE.SLAB) return slabBox(meta);
   if (id === B.LADDER) return ladderBox(meta);
   if (id === B.TORCH) return torchBox(meta);
   return null;

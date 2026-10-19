@@ -6,7 +6,7 @@ import { breakProgressPerTick, blockDrops, canHarvest } from '../world/mining.js
 import { PHYS } from '../physics/constants.js';
 import { EXHAUSTION } from './survival.js';
 import { lightAt } from '../entities/entities.js';
-import { sideOf, SIDE_DIRS, DOOR_OPEN, DOOR_UPPER, BED_HEAD } from '../world/shapes.js';
+import { sideOf, SIDE_DIRS, DOOR_OPEN, DOOR_UPPER, BED_HEAD, SLAB_TOP, SLAB_DOUBLE, STAIRS_UPSIDE } from '../world/shapes.js';
 
 /** Brightness for block particles: local light, dimmed with the combined sunlight (as the held item). */
 function particleLight(g, x, y, z) {
@@ -252,14 +252,30 @@ export class Interaction {
     if (d.bed) return this.placeBed(t);
     let placeId = isBlockItem(st.id) ? st.id : d.places;
     if (placeId === undefined) return false;
+    // where on the clicked block the crosshair is (0 = bottom, 1 = top), for slabs and stairs
+    const [ex, ey, ez] = p.eyePos(), [ldx, ldy, ldz] = p.lookDir();
+    const hitY = ey + ldy * t.dist - t.y;
+    const pshape = BLOCKS[placeId].shape;
+    if (pshape === SHAPE.SLAB && t.id === placeId) {
+      // clicking the open face of a single slab of the same kind makes it a double slab
+      const m = w.getMeta(t.x, t.y, t.z);
+      if ((m === 0 && t.face[1] === 1) || (m === 1 && t.face[1] === -1)) return this.finishPlace(t.x, t.y, t.z, placeId, SLAB_DOUBLE);
+    }
     // Place location: replace soft blocks, else the adjacent cell
     let px = t.x, py = t.y, pz = t.z;
     const tb = BLOCKS[t.id];
     if (!(tb.replaceable && !isFluid(t.id))) { px += t.face[0]; py += t.face[1]; pz += t.face[2]; }
     const cur = w.getBlock(px, py, pz);
+    if (pshape === SHAPE.SLAB && cur === placeId && w.getMeta(px, py, pz) !== SLAB_DOUBLE) return this.finishPlace(px, py, pz, placeId, SLAB_DOUBLE);
     if (cur && !BLOCKS[cur].replaceable) return false;
     if (SOLID[placeId] && (p.intersectsBlock(px, py, pz) || g.entities.blockOccupied(px, py, pz))) return false;
     let meta = 0;
+    const upper = t.face[1] === -1 || (t.face[1] === 0 && hitY - Math.floor(hitY) > 0.5);
+    if (pshape === SHAPE.SLAB) meta = upper ? SLAB_TOP : 0;
+    if (pshape === SHAPE.STAIRS) {
+      const s = Math.abs(ldx) > Math.abs(ldz) ? (ldx > 0 ? 1 : 3) : (ldz > 0 ? 2 : 0);
+      meta = s | (upper ? STAIRS_UPSIDE : 0);
+    }
     if (placeId === B.TORCH || placeId === B.LADDER) {
       // torches stand on floors or hang on walls; ladders only hang on walls
       if (t.face[1] === -1 || (placeId === B.LADDER && t.face[1] === 1)) return false;
@@ -279,6 +295,17 @@ export class Interaction {
       p.inventory.slots[p.inventory.selected] = { id: I.BUCKET, count: 1, damage: 0 };
       p.inventory.changed();
     } else p.inventory.removeFromSlot(p.inventory.selected, 1);
+    this.swing = SWING_TICKS;
+    return true;
+  }
+
+  /** Put a block (used for merging slabs) and consume one item. */
+  finishPlace(x, y, z, id, meta) {
+    const g = this.game, p = g.player;
+    if (p.intersectsBlock(x, y, z) && meta === SLAB_DOUBLE) return false;
+    g.world.setBlockUrgent(x, y, z, id, meta);
+    g.audio.play('place_' + BLOCKS[id].sound, [x + 0.5, y + 0.5, z + 0.5]);
+    p.inventory.removeFromSlot(p.inventory.selected, 1);
     this.swing = SWING_TICKS;
     return true;
   }

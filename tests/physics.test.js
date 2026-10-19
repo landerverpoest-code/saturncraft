@@ -127,6 +127,29 @@ describe('collision and step-up', () => {
     for (let i = 0; i < 40; i++) b.travel(w, { forward: 1, yaw: 0 });
     expect(b.y).toBeCloseTo(65, 5);
   });
+  it('walks up onto a bottom slab with the default 0.6 step', () => {
+    const w = new MockWorld();
+    for (let z = -30; z <= -2; z++) w.set(0, 64, z, B.OAK_SLAB, 0);
+    const b = player(w);
+    for (let i = 0; i < 40; i++) b.travel(w, { forward: 1, yaw: 0 });
+    expect(b.y).toBeCloseTo(64.5, 5);
+  });
+  it('a top slab is a ceiling, not a floor', () => {
+    const w = new MockWorld();
+    w.set(0, 64, 0, B.OAK_SLAB, 1);
+    const b = player(w);
+    for (let i = 0; i < 10; i++) b.travel(w, { yaw: 0 });
+    expect(b.y).toBeCloseTo(64, 5); // stands inside the lower half
+  });
+  it('climbs a staircase without jumping', () => {
+    const w = new MockWorld();
+    // stairs facing -z (raised half on the -z side), one step per block going up
+    for (let k = 0; k < 4; k++) { w.set(0, 64 + k, -2 - k, B.COBBLESTONE_STAIRS, 0); for (let j = 0; j < k; j++) w.set(0, 64 + j, -2 - k, B.COBBLESTONE); }
+    for (let z = -6; z >= -30; z--) for (let y = 64; y <= 67; y++) w.set(0, y, z, B.COBBLESTONE); // landing at the top
+    const b = player(w);
+    for (let i = 0; i < 80; i++) b.travel(w, { forward: 1, yaw: 0 });
+    expect(b.y).toBeCloseTo(68, 5);
+  });
   it('sneaking stops at ledges', () => {
     const w = new MockWorld();
     for (let x = -3; x <= 3; x++) for (let z = -6; z <= 0; z++) w.set(x, 63, z, B.AIR);

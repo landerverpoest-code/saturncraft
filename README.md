@@ -277,6 +277,7 @@ poison from eyes) follow the documented table.
 * Armour: leather/golden/iron/diamond helmets, chestplates, leggings and boots with the reference defence points, toughness, durability and damage formula (falls, drowning, burning, starvation and poison bypass it); armour slots in the inventory, right-click or shift-click to wear; armour bar
 * Experience: orbs from player kills (monsters 5, animals 1–3) and ores (coal 0–2, azurite 2–5, cinnabar 1–5, diamond/beryl 3–7) that drift to the player within 8 blocks; reference level curve, XP bar and level, 7 × level (max 100) dropped on death
 * Beds (3 wool + 3 planks): sleeping only when all three suns are down and no monster within 8 blocks; 5 s of sleep skips to the first sunrise; sets the respawn point (lost if the bed is gone)
+* Slabs and stairs in oak, cobblestone, stone brick and sandstone: bottom/top/double slabs (merge by placing), stairs facing away from the player and upside down when placed high; walkable with the 0.6 step-up; they block light like full blocks
 * Oak doors (two blocks, 3/16-thick collision box, open/close with right-click), ladders (climb 0.2/tick, fall capped at 0.15, sneak to hold on), torches on walls
 * Chests (27 slots, shift-click transfer, contents drop when broken, saved with the world); furnaces and chests face the player when placed
 * Bow and arrows (player and Rattler), arrow pick-up
@@ -292,7 +293,7 @@ poison from eyes) follow the documented table.
 * Enchanting, anvils, shields, potions and status-effect UI (only hunger/poison effects exist); armour is not drawn on a third-person player model
 * Breeding/taming, shearing, sheep colours, other crops, bone meal
 * Villages, other structures, the other dimensions, redstone-style circuitry
-* Double chests and other storage containers, slabs, stairs, fences, trapdoors
+* Double chests and other storage containers, fences, walls, trapdoors, corner-shaped stairs
 * Fire blocks and fire spread, thunderstorms and lightning, snow layers
 * Slimes, witches, drowned, husks/strays as separate variants, baby mobs, mob equipment
 * Difficulty levels (fixed at Normal), spectator/adventure modes, multiplayer
@@ -369,7 +370,7 @@ poison from eyes) follow the documented table.
 
 ## Tests
 
-`npm test` runs 121 unit tests:
+`npm test` runs 124 unit tests:
 
 * **physics** — constants, walk/sprint/sneak speeds, jump apex and duration,
   sprint-jump, terminal velocity, fall damage, collision, step-up, ledge

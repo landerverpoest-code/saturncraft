@@ -86,7 +86,7 @@ export class HeldItem {
     this.mesh = null;
     if (id == null) { this.group.add(this.hand); this.hand.position.set(0.52, -0.48, -0.8); this.hand.rotation.set(-0.55, 0.2, 0.32); return; }
     const d = ITEMS[id];
-    if (d.block !== undefined && (BLOCKS[d.block].shape === SHAPE.CUBE || BLOCKS[d.block].shape === SHAPE.CACTUS)) {
+    if (d.block !== undefined && (BLOCKS[d.block].shape === SHAPE.CUBE || BLOCKS[d.block].shape === SHAPE.CACTUS || BLOCKS[d.block].shape === SHAPE.SLAB || BLOCKS[d.block].shape === SHAPE.STAIRS)) {
       const b = BLOCKS[d.block];
       const side = new THREE.MeshLambertMaterial({ map: blockFaceTexture(b.tex.side), transparent: true, alphaTest: 0.3 });
       const top = new THREE.MeshLambertMaterial({ map: blockFaceTexture(b.tex.top), transparent: true, alphaTest: 0.3 });
