@@ -1,0 +1,61 @@
+// Mob definitions. Stats mirror the documented values of the vanilla mob
+// each one stands in for (listed in `role`), under Saturncraft's own names.
+import { I } from '../world/items.js';
+import { B } from '../world/blocks.js';
+
+export const CATEGORY = { CREATURE: 'creature', MONSTER: 'monster' };
+
+export const MOBS = {
+  bristleback: {
+    name: 'Bristleback', role: 'pig', category: CATEGORY.CREATURE,
+    health: 10, speed: 0.25, width: 0.9, height: 0.9, panicSpeed: 1.25, sound: 'oink',
+    drops: [{ id: I.RAW_PORK, min: 1, max: 3, cooked: I.COOKED_PORK }],
+  },
+  mooxen: {
+    name: 'Mooxen', role: 'cow', category: CATEGORY.CREATURE,
+    health: 10, speed: 0.2, width: 0.9, height: 1.4, panicSpeed: 2.0, sound: 'moo',
+    drops: [{ id: I.LEATHER, min: 0, max: 2 }, { id: I.RAW_BEEF, min: 1, max: 3, cooked: I.STEAK }],
+  },
+  fleecer: {
+    name: 'Fleecer', role: 'sheep', category: CATEGORY.CREATURE,
+    health: 8, speed: 0.23, width: 0.9, height: 1.3, panicSpeed: 1.25, sound: 'baa',
+    drops: [{ id: B.WOOL, min: 1, max: 1 }, { id: I.RAW_MUTTON, min: 1, max: 2, cooked: I.COOKED_MUTTON }],
+  },
+  cluckling: {
+    name: 'Cluckling', role: 'chicken', category: CATEGORY.CREATURE,
+    health: 4, speed: 0.25, width: 0.4, height: 0.7, panicSpeed: 1.4, sound: 'cluck', noFallDamage: true,
+    drops: [{ id: I.FEATHER, min: 0, max: 2 }, { id: I.RAW_CHICKEN, min: 1, max: 1, cooked: I.COOKED_CHICKEN }],
+  },
+  shambler: {
+    name: 'Shambler', role: 'zombie', category: CATEGORY.MONSTER,
+    health: 20, speed: 0.23, width: 0.6, height: 1.95, attack: 3, followRange: 35, armor: 2,
+    burnsInSun: true, sound: 'grunt',
+    drops: [{ id: I.ROTTEN_FLESH, min: 0, max: 2 }],
+    // rare player-kill drop (2.5%); the vanilla pool also has carrot/potato which do not exist here
+    rare: { chance: 0.025, ids: [I.IRON_INGOT] },
+  },
+  rattler: {
+    name: 'Rattler', role: 'skeleton', category: CATEGORY.MONSTER,
+    health: 20, speed: 0.25, width: 0.6, height: 1.99, followRange: 16, ranged: true,
+    burnsInSun: true, sound: 'rattle',
+    drops: [{ id: I.ARROW, min: 0, max: 2 }, { id: I.BONE, min: 0, max: 2 }],
+  },
+  fizzler: {
+    name: 'Fizzler', role: 'creeper', category: CATEGORY.MONSTER,
+    health: 20, speed: 0.25, width: 0.6, height: 1.7, followRange: 16, explosive: true, sound: 'hiss',
+    fuse: 30, explosionPower: 3,
+    drops: [{ id: I.GUNPOWDER, min: 0, max: 2 }],
+  },
+  skitterer: {
+    name: 'Skitterer', role: 'spider', category: CATEGORY.MONSTER,
+    health: 16, speed: 0.3, width: 1.4, height: 0.9, attack: 2, followRange: 16, climbs: true, sound: 'skitter',
+    drops: [{ id: I.STRING, min: 0, max: 2 }, { id: I.SPIDER_EYE, min: -1, max: 1, playerOnly: true }],
+  },
+  voidwalker: {
+    name: 'Voidwalker', role: 'enderman', category: CATEGORY.MONSTER,
+    health: 40, speed: 0.3, width: 0.6, height: 2.9, attack: 7, followRange: 64, neutral: true, sound: 'warble',
+    drops: [{ id: I.VOID_PEARL, min: 0, max: 1 }],
+  },
+};
+
+export const MOB_KEYS = Object.keys(MOBS);

@@ -1,0 +1,154 @@
+// Natural mob spawning around the player, chunk-generation animal herds,
+// passive-mob persistence across chunk unloads and mob caps.
+import { Mob } from './mob.js';
+import { MOBS, CATEGORY } from './mobTypes.js';
+import {
+  spawnTable, weightedPick, scaledCap, isDarkEnoughToSpawn, isBrightEnoughForAnimal,
+  SPAWN_MIN_DIST, DESPAWN_FAR, CREATURE_SPAWN_INTERVAL, CHUNK_GEN_CREATURE_CHANCE,
+} from './spawnRules.js';
+import { B, SOLID, OPAQUE, isFluid } from '../world/blocks.js';
+import { MIN_Y } from '../world/constants.js';
+import { chunkKey } from '../world/world.js';
+
+const NO_MONSTER_FLOOR = new Set([B.BEDROCK, B.GLASS, B.OAK_LEAVES, B.BIRCH_LEAVES, B.SPRUCE_LEAVES, B.ICE, B.CACTUS]);
+const MAX_PER_CHUNK = 4;
+
+export class MobSpawner {
+  constructor(game) {
+    this.game = game;
+    this.savedMobs = new Map();
+    this.generated = new Set();
+    this.enabled = true;
+  }
+
+  counts() {
+    let m = 0, c = 0;
+    for (const e of this.game.entities.list) if (e.kind === 'mob' && !e.dead) { if (e.def.category === CATEGORY.MONSTER) m++; else c++; }
+    return `hostile ${m}  passive ${c}`;
+  }
+
+  spawnMob(type, x, y, z) {
+    const m = new Mob(type, x, y, z);
+    m._game = this.game;
+    this.game.entities.add(m);
+    return m;
+  }
+
+  /** Can a mob of `type` stand at block (x,y,z)? */
+  canFit(type, x, y, z) {
+    const w = this.game.world, d = MOBS[type];
+    const hw = d.width / 2;
+    const cx = x + 0.5, cz = z + 0.5;
+    for (let bx = Math.floor(cx - hw); bx <= Math.floor(cx + hw - 1e-6); bx++)
+      for (let bz = Math.floor(cz - hw); bz <= Math.floor(cz + hw - 1e-6); bz++)
+        for (let by = y; by < y + Math.ceil(d.height); by++) {
+          const id = w.getBlock(bx, by, bz);
+          if (SOLID[id] || isFluid(id)) return false;
+        }
+    return true;
+  }
+
+  validSpawn(category, type, x, y, z) {
+    const w = this.game.world;
+    const below = w.getBlock(x, y - 1, z);
+    if (!SOLID[below] || !OPAQUE[below] && below !== B.ICE) return false;
+    if (!this.canFit(type, x, y, z)) return false;
+    const raw = w.skyLight(x, y, z), blk = w.blockLight(x, y, z);
+    if (category === CATEGORY.MONSTER) {
+      if (NO_MONSTER_FLOOR.has(below)) return false;
+      return isDarkEnoughToSpawn(raw, blk, this.game.sky.state.skyDarken);
+    }
+    return below === B.GRASS && isBrightEnoughForAnimal(raw, blk);
+  }
+
+  attempt(cx, cz, category) {
+    const g = this.game, w = g.world, p = g.player;
+    const x0 = cx * 16 + Math.floor(Math.random() * 16), z0 = cz * 16 + Math.floor(Math.random() * 16);
+    const top = w.heightAt(x0, z0);
+    const y = MIN_Y + Math.floor(Math.random() * (top + 2 - MIN_Y));
+    if (SOLID[w.getBlock(x0, y, z0)]) return 0;
+    const biome = w.biomeAt(x0, z0);
+    const table = spawnTable(category, biome);
+    if (!table.length) return 0;
+    let count = 0;
+    for (let group = 0; group < 3; group++) {
+      let x = x0, z = z0, entry = null, groupSize = 0, inGroup = 0;
+      const tries = Math.ceil(Math.random() * 4);
+      for (let l = 0; l < tries; l++) {
+        x += Math.floor(Math.random() * 6) - Math.floor(Math.random() * 6);
+        z += Math.floor(Math.random() * 6) - Math.floor(Math.random() * 6);
+        const dx = x + 0.5 - p.x, dy = y - p.y, dz = z + 0.5 - p.z;
+        const d2 = dx * dx + dy * dy + dz * dz;
+        if (d2 < SPAWN_MIN_DIST * SPAWN_MIN_DIST || d2 > DESPAWN_FAR * DESPAWN_FAR) continue;
+        if (!w.isLoaded(x, z)) continue;
+        if (!entry) {
+          entry = weightedPick(table);
+          if (!entry) return count;
+          groupSize = entry.min + Math.floor(Math.random() * (entry.max - entry.min + 1));
+        }
+        if (!this.validSpawn(category, entry.type, x, y, z)) continue;
+        const m = this.spawnMob(entry.type, x + 0.5, y, z + 0.5);
+        m.yaw = Math.random() * Math.PI * 2;
+        count++;
+        if (count >= MAX_PER_CHUNK) return count;
+        if (++inGroup >= groupSize) break;
+      }
+    }
+    return count;
+  }
+
+  tick() {
+    const g = this.game, w = g.world, p = g.player;
+    if (!this.enabled || p.dead) return;
+    const R = Math.min(8, g.chunks.renderDistance);
+    const pcx = Math.floor(p.x / 16), pcz = Math.floor(p.z / 16);
+    const chunks = [];
+    for (let dx = -R; dx <= R; dx++) for (let dz = -R; dz <= R; dz++) if (w.isChunkLoaded(pcx + dx, pcz + dz)) chunks.push([pcx + dx, pcz + dz]);
+    let monsters = 0, creatures = 0;
+    for (const e of g.entities.list) if (e.kind === 'mob' && !e.dead) { if (e.def.category === CATEGORY.MONSTER) monsters++; else creatures++; }
+    if (monsters < scaledCap(CATEGORY.MONSTER, chunks.length)) {
+      for (const [cx, cz] of chunks) monsters += this.attempt(cx, cz, CATEGORY.MONSTER);
+    }
+    if (g.ticks % CREATURE_SPAWN_INTERVAL === 0 && creatures < scaledCap(CATEGORY.CREATURE, chunks.length)) {
+      for (const [cx, cz] of chunks) creatures += this.attempt(cx, cz, CATEGORY.CREATURE);
+    }
+  }
+
+  onChunkLoaded(cx, cz) {
+    const k = chunkKey(cx, cz);
+    const saved = this.savedMobs.get(k);
+    if (saved) {
+      for (const s of saved) { const m = this.spawnMob(s.type, s.x, s.y, s.z); m.health = s.health; m.yaw = s.yaw; }
+      this.savedMobs.delete(k);
+    }
+    if (this.generated.has(k)) return;
+    this.generated.add(k);
+    // Herds placed at chunk generation time
+    const w = this.game.world;
+    while (Math.random() < CHUNK_GEN_CREATURE_CHANCE) {
+      const bx = cx * 16 + Math.floor(Math.random() * 16), bz = cz * 16 + Math.floor(Math.random() * 16);
+      const entry = weightedPick(spawnTable(CATEGORY.CREATURE, w.biomeAt(bx, bz)));
+      if (!entry) break;
+      const n = entry.min + Math.floor(Math.random() * (entry.max - entry.min + 1));
+      for (let i = 0; i < n; i++) {
+        const x = Math.max(cx * 16, Math.min(cx * 16 + 15, bx + Math.floor(Math.random() * 5) - 2));
+        const z = Math.max(cz * 16, Math.min(cz * 16 + 15, bz + Math.floor(Math.random() * 5) - 2));
+        const y = w.heightAt(x, z) + 1;
+        if (w.getBlock(x, y - 1, z) !== B.GRASS || !this.canFit(entry.type, x, y, z)) continue;
+        this.spawnMob(entry.type, x + 0.5, y, z + 0.5);
+      }
+    }
+  }
+
+  onChunkUnloaded(cx, cz) {
+    const k = chunkKey(cx, cz);
+    const list = [];
+    for (const e of this.game.entities.list) {
+      if (e.kind !== 'mob' || e.dead) continue;
+      if (Math.floor(e.x / 16) !== cx || Math.floor(e.z / 16) !== cz) continue;
+      if (e.persistent && e.deathTime === 0) list.push({ type: e.type, x: e.x, y: e.y, z: e.z, health: e.health, yaw: e.yaw });
+      e.removed = true; e.dead = true;
+    }
+    if (list.length) this.savedMobs.set(k, list);
+  }
+}

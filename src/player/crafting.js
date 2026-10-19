@@ -1,0 +1,103 @@
+// Shaped/shapeless crafting and furnace smelting recipes.
+import { B } from '../world/blocks.js';
+import { I } from '../world/items.js';
+
+const TAGS = {
+  planks: [B.OAK_PLANKS, B.SPRUCE_PLANKS, B.BIRCH_PLANKS],
+  log: [B.OAK_LOG, B.SPRUCE_LOG, B.BIRCH_LOG],
+  stone_mat: [B.COBBLESTONE, B.COBBLED_DEEPSTONE],
+};
+
+function matches(ing, id) {
+  if (ing == null) return id == null;
+  if (id == null) return false;
+  if (typeof ing === 'string') return TAGS[ing].includes(id);
+  return ing === id;
+}
+
+// pattern rows use single-character keys
+export const RECIPES = [];
+function shaped(pattern, key, result, count = 1) { RECIPES.push({ type: 'shaped', pattern, key, result, count }); }
+function shapeless(ings, result, count = 1) { RECIPES.push({ type: 'shapeless', ings, result, count }); }
+
+shapeless([B.OAK_LOG], B.OAK_PLANKS, 4);
+shapeless([B.SPRUCE_LOG], B.SPRUCE_PLANKS, 4);
+shapeless([B.BIRCH_LOG], B.BIRCH_PLANKS, 4);
+shaped(['P', 'P'], { P: 'planks' }, I.STICK, 4);
+shaped(['PP', 'PP'], { P: 'planks' }, B.WORKBENCH, 1);
+shaped(['C', 'S'], { C: I.COAL, S: I.STICK }, B.TORCH, 4);
+shaped(['CCC', 'C C', 'CCC'], { C: 'stone_mat' }, B.FURNACE, 1);
+shaped(['SS', 'SS'], { S: B.STONE }, B.STONE_BRICKS, 4);
+shaped(['SS', 'SS'], { S: B.SAND }, B.SANDSTONE, 1);
+shaped(['SS', 'SS'], { S: I.STRING }, B.WOOL, 1);
+shaped(['I I', ' I '], { I: I.IRON_INGOT }, I.BUCKET, 1);
+shaped(['F', 'S', 'E'], { F: I.FLINT, S: I.STICK, E: I.FEATHER }, I.ARROW, 4);
+shaped([' TS', 'T S', ' TS'], { T: I.STICK, S: I.STRING }, I.BOW, 1);
+for (const [blk, it] of [[B.COAL_BLOCK, I.COAL], [B.IRON_BLOCK, I.IRON_INGOT], [B.GOLD_BLOCK, I.GOLD_INGOT], [B.DIAMOND_BLOCK, I.DIAMOND]]) {
+  shaped(['XXX', 'XXX', 'XXX'], { X: it }, blk, 1);
+  shapeless([blk], it, 9);
+}
+const TOOL_MATS = { wood: 'planks', stone: 'stone_mat', iron: I.IRON_INGOT, gold: I.GOLD_INGOT, diamond: I.DIAMOND };
+for (const [mat, ing] of Object.entries(TOOL_MATS)) {
+  shaped(['XXX', ' S ', ' S '], { X: ing, S: I.STICK }, I[`${mat}_pickaxe`.toUpperCase()]);
+  shaped(['XX', 'XS', ' S'], { X: ing, S: I.STICK }, I[`${mat}_axe`.toUpperCase()]);
+  shaped(['X', 'S', 'S'], { X: ing, S: I.STICK }, I[`${mat}_shovel`.toUpperCase()]);
+  shaped(['X', 'X', 'S'], { X: ing, S: I.STICK }, I[`${mat}_sword`.toUpperCase()]);
+}
+
+/**
+ * Find the crafting result for a grid.
+ * @param {Array<{id:number}|null>} grid row-major
+ * @param {number} w grid width (2 or 3)
+ * @returns {{id:number,count:number}|null}
+ */
+export function craft(grid, w) {
+  const h = grid.length / w;
+  const ids = grid.map((s) => (s ? s.id : null));
+  // bounding box of used cells
+  let minX = w, minY = h, maxX = -1, maxY = -1;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (ids[y * w + x] != null) {
+    minX = Math.min(minX, x); maxX = Math.max(maxX, x); minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+  }
+  if (maxX < 0) return null;
+  const bw = maxX - minX + 1, bh = maxY - minY + 1;
+  const cells = [];
+  for (let y = minY; y <= maxY; y++) for (let x = minX; x <= maxX; x++) cells.push(ids[y * w + x]);
+  const used = cells.filter((c) => c != null);
+  for (const r of RECIPES) {
+    if (r.type === 'shapeless') {
+      if (used.length !== r.ings.length) continue;
+      const rem = used.slice();
+      let ok = true;
+      for (const ing of r.ings) {
+        const k = rem.findIndex((id) => matches(ing, id));
+        if (k < 0) { ok = false; break; }
+        rem.splice(k, 1);
+      }
+      if (ok) return { id: r.result, count: r.count };
+      continue;
+    }
+    const pw = Math.max(...r.pattern.map((row) => row.length)), ph = r.pattern.length;
+    if (pw !== bw || ph !== bh) continue;
+    for (const mirror of [false, true]) {
+      let ok = true;
+      for (let y = 0; y < ph && ok; y++) for (let x = 0; x < pw && ok; x++) {
+        const ch = (r.pattern[y][mirror ? pw - 1 - x : x] || ' ');
+        const ing = ch === ' ' ? null : r.key[ch];
+        if (!matches(ing, cells[y * bw + x])) ok = false;
+      }
+      if (ok) return { id: r.result, count: r.count };
+    }
+  }
+  return null;
+}
+
+// Smelting: input -> output; 200 ticks per item (10 s)
+export const SMELT_TIME = 200;
+export const SMELTING = {
+  [I.RAW_IRON]: I.IRON_INGOT, [I.RAW_GOLD]: I.GOLD_INGOT, [I.RAW_COPPER]: I.COPPER_INGOT,
+  [B.IRON_ORE]: I.IRON_INGOT, [B.GOLD_ORE]: I.GOLD_INGOT,
+  [B.SAND]: B.GLASS, [B.COBBLESTONE]: B.STONE, [B.COBBLED_DEEPSTONE]: B.DEEPSTONE,
+  [I.RAW_PORK]: I.COOKED_PORK, [I.RAW_BEEF]: I.STEAK, [I.RAW_CHICKEN]: I.COOKED_CHICKEN,
+  [I.RAW_MUTTON]: I.COOKED_MUTTON, [B.OAK_LOG]: I.COAL, [B.SPRUCE_LOG]: I.COAL, [B.BIRCH_LOG]: I.COAL,
+};

@@ -1,0 +1,295 @@
+// Main-thread authoritative world: chunk storage, block/light access,
+// edits with light updates, scheduled block ticks and raycasting.
+import { B, BLOCKS, SOLID, OPAQUE, isFluid } from './blocks.js';
+import { LightEngine } from './lighting.js';
+import { MIN_Y, MAX_Y, WORLD_HEIGHT, SECTION_COUNT, cidx } from './constants.js';
+import { TerrainGenerator } from './generator.js';
+import { tickFluid, fluidDelay } from './fluids.js';
+
+export function chunkKey(cx, cz) { return (cx + 32768) * 65536 + (cz + 32768); }
+
+export class Chunk {
+  constructor(cx, cz, d) {
+    this.cx = cx; this.cz = cz;
+    this.blocks = d.blocks; this.meta = d.meta; this.light = d.light;
+    this.biomes = d.biomes; this.colors = d.colors; this.heightmap = d.heightmap;
+    this.modified = !!d.modified;
+    this.sectionNonAir = new Uint16Array(SECTION_COUNT);
+    for (let s = 0; s < SECTION_COUNT; s++) {
+      let n = 0;
+      const base = s * 4096;
+      for (let i = 0; i < 4096; i++) if (this.blocks[base + i]) n++;
+      this.sectionNonAir[s] = n;
+    }
+    this.dirty = new Set();
+    for (let s = 0; s < SECTION_COUNT; s++) this.dirty.add(s);
+    this.meshed = false;
+    this.render = null; // owned by ChunkRenderer
+  }
+}
+
+export class World {
+  constructor(seed) {
+    this.seed = seed;
+    this.chunks = new Map();
+    this.saved = new Map();      // modified chunks that were unloaded
+    this.light = new LightEngine(this);
+    this.gen = new TerrainGenerator(seed); // main-thread copy for spawn search
+    this.scheduled = new Map();  // posKey -> {x,y,z,tick}
+    this.tickCount = 0;
+    this.listeners = { blockChanged: [], fallingBlock: [], dropItems: [] };
+    this._lastKey = -1; this._lastChunk = null;
+  }
+
+  on(evt, fn) { this.listeners[evt].push(fn); }
+  emit(evt, ...a) { for (const f of this.listeners[evt]) f(...a); }
+
+  getChunk(cx, cz) {
+    const k = chunkKey(cx, cz);
+    if (k === this._lastKey) return this._lastChunk;
+    const c = this.chunks.get(k);
+    if (c) { this._lastKey = k; this._lastChunk = c; }
+    return c;
+  }
+  isChunkLoaded(cx, cz) { return this.chunks.has(chunkKey(cx, cz)); }
+  isLoaded(x, z) { return !!this.getChunk(x >> 4, z >> 4); }
+
+  getBlock(x, y, z) {
+    if (y < MIN_Y || y > MAX_Y) return B.AIR;
+    const c = this.getChunk(x >> 4, z >> 4);
+    if (!c) return y < 0 ? B.STONE : B.AIR;
+    return c.blocks[cidx(x & 15, y, z & 15)];
+  }
+  getMeta(x, y, z) {
+    if (y < MIN_Y || y > MAX_Y) return 0;
+    const c = this.getChunk(x >> 4, z >> 4);
+    return c ? c.meta[cidx(x & 15, y, z & 15)] : 0;
+  }
+  getLight(x, y, z) {
+    if (y > MAX_Y) return 0xf0;
+    if (y < MIN_Y) return 0;
+    const c = this.getChunk(x >> 4, z >> 4);
+    return c ? c.light[cidx(x & 15, y, z & 15)] : 0xf0;
+  }
+  setLight(x, y, z, v) {
+    const c = this.getChunk(x >> 4, z >> 4);
+    if (!c) return;
+    const i = cidx(x & 15, y, z & 15);
+    if (c.light[i] === v) return;
+    c.light[i] = v;
+    this.markDirty(x, y, z);
+  }
+  skyLight(x, y, z) { return this.getLight(x, y, z) >> 4; }
+  blockLight(x, y, z) { return this.getLight(x, y, z) & 15; }
+  biomeAt(x, z) {
+    const c = this.getChunk(x >> 4, z >> 4);
+    return c ? c.biomes[(x & 15) + (z & 15) * 16] : 3;
+  }
+  heightAt(x, z) {
+    const c = this.getChunk(x >> 4, z >> 4);
+    return c ? c.heightmap[(x & 15) + (z & 15) * 16] : 64;
+  }
+
+  /** Mark the section containing (x,y,z) and touching neighbour sections for remeshing. */
+  markDirty(x, y, z) {
+    const lx = x & 15, lz = z & 15, ly = (y - MIN_Y) & 15;
+    const s = (y - MIN_Y) >> 4;
+    this._dirty(x >> 4, z >> 4, s);
+    if (lx === 0) this._dirty((x >> 4) - 1, z >> 4, s);
+    if (lx === 15) this._dirty((x >> 4) + 1, z >> 4, s);
+    if (lz === 0) this._dirty(x >> 4, (z >> 4) - 1, s);
+    if (lz === 15) this._dirty(x >> 4, (z >> 4) + 1, s);
+    if (ly === 0 && s > 0) this._dirty(x >> 4, z >> 4, s - 1);
+    if (ly === 15 && s < SECTION_COUNT - 1) this._dirty(x >> 4, z >> 4, s + 1);
+    // corners (AO / smooth light sample diagonals)
+    if ((lx === 0 || lx === 15) && (lz === 0 || lz === 15)) this._dirty((x >> 4) + (lx ? 1 : -1), (z >> 4) + (lz ? 1 : -1), s);
+  }
+  _dirty(cx, cz, s) {
+    const c = this.getChunk(cx, cz);
+    if (!c) return;
+    c.dirty.add(s);
+    if (this.urgentEdits) (c.urgent || (c.urgent = new Set())).add(s);
+  }
+
+  /** Player edit: mesh affected sections immediately rather than via workers. */
+  setBlockUrgent(x, y, z, id, meta = 0) {
+    this.urgentEdits = true;
+    try { return this.setBlock(x, y, z, id, meta); } finally { this.urgentEdits = false; }
+  }
+
+  /**
+   * Change a block. Updates lighting, heightmap, neighbour notifications.
+   */
+  setBlock(x, y, z, id, meta = 0, notify = true) {
+    if (y < MIN_Y || y > MAX_Y) return false;
+    const c = this.getChunk(x >> 4, z >> 4);
+    if (!c) return false;
+    const i = cidx(x & 15, y, z & 15);
+    const old = c.blocks[i];
+    if (old === id && c.meta[i] === meta) return false;
+    c.blocks[i] = id;
+    c.meta[i] = meta;
+    c.modified = true;
+    const s = (y - MIN_Y) >> 4;
+    if (!old && id) c.sectionNonAir[s]++;
+    else if (old && !id) c.sectionNonAir[s]--;
+    // heightmap
+    const hi = (x & 15) + (z & 15) * 16;
+    if (id && y > c.heightmap[hi]) c.heightmap[hi] = y;
+    else if (!id && y === c.heightmap[hi]) {
+      let yy = y - 1;
+      while (yy > MIN_Y && !c.blocks[cidx(x & 15, yy, z & 15)]) yy--;
+      c.heightmap[hi] = yy;
+    }
+    this.markDirty(x, y, z);
+    if (old !== id) this.light.onBlockChanged(x, y, z, old, id);
+    this.emit('blockChanged', x, y, z, old, id);
+    if (notify) {
+      this.onNeighborChanged(x, y, z);
+      this.onNeighborChanged(x + 1, y, z); this.onNeighborChanged(x - 1, y, z);
+      this.onNeighborChanged(x, y + 1, z); this.onNeighborChanged(x, y - 1, z);
+      this.onNeighborChanged(x, y, z + 1); this.onNeighborChanged(x, y, z - 1);
+    }
+    return true;
+  }
+
+  scheduleTick(x, y, z, delay) {
+    const k = `${x},${y},${z}`;
+    const t = this.tickCount + delay;
+    const cur = this.scheduled.get(k);
+    if (cur && cur.tick <= t) return;
+    this.scheduled.set(k, { x, y, z, tick: t });
+  }
+
+  onNeighborChanged(x, y, z) {
+    const id = this.getBlock(x, y, z);
+    if (!id) return;
+    const d = BLOCKS[id];
+    if (d.fluid) this.scheduleTick(x, y, z, fluidDelay(id));
+    else if (d.gravity) {
+      const below = this.getBlock(x, y - 1, z);
+      if (!SOLID[below] || isFluid(below)) this.scheduleTick(x, y, z, 2);
+    } else if (d.needsSupport) {
+      if (!this.hasSupport(x, y, z, id)) this.breakBlock(x, y, z, true);
+    } else if (id === B.GRASS && OPAQUE[this.getBlock(x, y + 1, z)]) {
+      this.setBlock(x, y, z, B.DIRT, 0, false);
+    }
+  }
+
+  hasSupport(x, y, z, id) {
+    const below = this.getBlock(x, y - 1, z);
+    if (id === B.CACTUS) {
+      if (below !== B.CACTUS && below !== B.SAND) return false;
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (SOLID[this.getBlock(x + dx, y, z + dz)]) return false;
+      return true;
+    }
+    if (id === B.TORCH) return SOLID[below] && OPAQUE[below];
+    if (id === B.DEAD_BUSH) return below === B.SAND || below === B.DIRT || below === B.GRASS;
+    return below === B.GRASS || below === B.DIRT || below === B.SNOWY_GRASS;
+  }
+
+  /** Remove a block, optionally dropping it as items (used for support loss, fluids). */
+  breakBlock(x, y, z, drop) {
+    const id = this.getBlock(x, y, z);
+    if (!id) return;
+    this.setBlock(x, y, z, B.AIR);
+    if (drop) this.emit('dropItems', x, y, z, id);
+  }
+
+  /** Run scheduled block ticks that are due. */
+  tick() {
+    this.tickCount++;
+    if (!this.scheduled.size) return;
+    const due = [];
+    for (const [k, t] of this.scheduled) if (t.tick <= this.tickCount) { due.push(t); this.scheduled.delete(k); }
+    // cap work per tick
+    for (let n = 0; n < due.length; n++) {
+      const t = due[n];
+      if (n > 4000) { this.scheduleTick(t.x, t.y, t.z, 1); continue; }
+      if (!this.isLoaded(t.x, t.z)) continue;
+      const id = this.getBlock(t.x, t.y, t.z);
+      const d = BLOCKS[id];
+      if (d.fluid) tickFluid(this, t.x, t.y, t.z, id);
+      else if (d.gravity) {
+        const below = this.getBlock(t.x, t.y - 1, t.z);
+        if ((!SOLID[below] || isFluid(below)) && t.y > MIN_Y) {
+          this.setBlock(t.x, t.y, t.z, B.AIR);
+          this.emit('fallingBlock', t.x, t.y, t.z, id);
+        }
+      }
+    }
+  }
+
+  /** Voxel DDA raycast. Returns {x,y,z,id,face:[nx,ny,nz],dist} or null. */
+  raycast(ox, oy, oz, dx, dy, dz, maxDist, hitFluids = false) {
+    let x = Math.floor(ox), y = Math.floor(oy), z = Math.floor(oz);
+    const stepX = dx > 0 ? 1 : -1, stepY = dy > 0 ? 1 : -1, stepZ = dz > 0 ? 1 : -1;
+    const tdx = Math.abs(1 / dx), tdy = Math.abs(1 / dy), tdz = Math.abs(1 / dz);
+    let tmx = dx > 0 ? (x + 1 - ox) * tdx : (ox - x) * tdx;
+    let tmy = dy > 0 ? (y + 1 - oy) * tdy : (oy - y) * tdy;
+    let tmz = dz > 0 ? (z + 1 - oz) * tdz : (oz - z) * tdz;
+    let face = [0, 0, 0], t = 0;
+    for (let i = 0; i < 256 && t <= maxDist; i++) {
+      const id = this.getBlock(x, y, z);
+      if (id && (hitFluids ? true : !isFluid(id))) {
+        const sh = BLOCKS[id];
+        if (sh.shape === 2 || sh.shape === 4) {
+          // small shapes: test against reduced box
+          const box = id === B.TORCH ? [0.375, 0, 0.375, 0.625, 0.625, 0.625] : [0.15, 0, 0.15, 0.85, 0.8, 0.85];
+          const hit = rayBox(ox, oy, oz, dx, dy, dz, x + box[0], y + box[1], z + box[2], x + box[3], y + box[4], z + box[5]);
+          if (hit !== null && hit <= maxDist) return { x, y, z, id, face, dist: hit };
+        } else return { x, y, z, id, face, dist: t };
+      }
+      if (tmx < tmy && tmx < tmz) { x += stepX; t = tmx; tmx += tdx; face = [-stepX, 0, 0]; }
+      else if (tmy < tmz) { y += stepY; t = tmy; tmy += tdy; face = [0, -stepY, 0]; }
+      else { z += stepZ; t = tmz; tmz += tdz; face = [0, 0, -stepZ]; }
+    }
+    return null;
+  }
+
+  addChunk(cx, cz, data) {
+    const k = chunkKey(cx, cz);
+    const saved = this.saved.get(k);
+    const c = new Chunk(cx, cz, saved || data);
+    if (saved) this.saved.delete(k);
+    this.chunks.set(k, c);
+    this._lastKey = -1;
+    this.light.stitchChunk(cx, cz);
+    // resume pending fluid ticks for saved chunks is not needed: fluids settle before unload
+    return c;
+  }
+
+  removeChunk(cx, cz) {
+    const k = chunkKey(cx, cz);
+    const c = this.chunks.get(k);
+    if (!c) return null;
+    if (c.modified) this.saved.set(k, { blocks: c.blocks, meta: c.meta, light: c.light, biomes: c.biomes, colors: c.colors, heightmap: c.heightmap, modified: true });
+    this.chunks.delete(k);
+    this._lastKey = -1;
+    return c;
+  }
+
+  /** Is the AABB colliding with any solid block? */
+  boxCollides(minX, minY, minZ, maxX, maxY, maxZ) {
+    for (let x = Math.floor(minX); x <= Math.floor(maxX - 1e-7); x++)
+      for (let y = Math.floor(minY); y <= Math.floor(maxY - 1e-7); y++)
+        for (let z = Math.floor(minZ); z <= Math.floor(maxZ - 1e-7); z++)
+          if (SOLID[this.getBlock(x, y, z)]) return true;
+    return false;
+  }
+}
+
+function rayBox(ox, oy, oz, dx, dy, dz, x0, y0, z0, x1, y1, z1) {
+  let tmin = -Infinity, tmax = Infinity;
+  const o = [ox, oy, oz], d = [dx, dy, dz], mn = [x0, y0, z0], mx = [x1, y1, z1];
+  for (let a = 0; a < 3; a++) {
+    if (Math.abs(d[a]) < 1e-9) { if (o[a] < mn[a] || o[a] > mx[a]) return null; continue; }
+    let t1 = (mn[a] - o[a]) / d[a], t2 = (mx[a] - o[a]) / d[a];
+    if (t1 > t2) [t1, t2] = [t2, t1];
+    tmin = Math.max(tmin, t1); tmax = Math.min(tmax, t2);
+  }
+  if (tmax < Math.max(0, tmin)) return null;
+  return Math.max(0, tmin);
+}
+
+export { WORLD_HEIGHT };

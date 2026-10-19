@@ -1,0 +1,286 @@
+// Menus and container screens (inventory, workbench, furnace).
+import { iconURL } from './icons.js';
+import { ITEMS, maxStack } from '../world/items.js';
+import { craft } from '../player/crafting.js';
+
+function el(html) { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstChild; }
+
+export class UI {
+  constructor(game) {
+    this.game = game;
+    this.layer = document.getElementById('screens');
+    this.open = null;        // 'inventory' | 'workbench' | 'furnace' | 'pause' | 'death' | null
+    this.cursor = null;      // stack held by the mouse
+    this.craftGrid = [];
+    this.craftW = 2;
+    this.cursorEl = el('<div class="cursor-stack hidden"></div>');
+    this.tooltipEl = el('<div class="tooltip hidden"></div>');
+    document.body.appendChild(this.cursorEl);
+    document.body.appendChild(this.tooltipEl);
+    window.addEventListener('mousemove', (e) => {
+      this.cursorEl.style.left = e.clientX + 'px'; this.cursorEl.style.top = e.clientY + 'px';
+      this.tooltipEl.style.left = e.clientX + 14 + 'px'; this.tooltipEl.style.top = e.clientY - 26 + 'px';
+    });
+  }
+
+  get blocking() { return this.open !== null; }
+
+  clear() { this.layer.innerHTML = ''; this.tooltipEl.classList.add('hidden'); }
+
+  close() {
+    if (this.open === 'death') return;
+    const g = this.game;
+    // return crafting grid + cursor items
+    const inv = g.player.inventory;
+    const give = (st) => { if (!st) return; const left = inv.add(st); if (left) g.entities.spawnItem(g.player.x, g.player.y + 1, g.player.z, { ...st, count: left }); };
+    for (const st of this.craftGrid) give(st);
+    this.craftGrid = [];
+    give(this.cursor); this.cursor = null;
+    this.renderCursor();
+    this.open = null;
+    this.furnace = null;
+    this.clear();
+    g.onUIClosed();
+  }
+
+  // ---- generic slot handling -------------------------------------------------
+  slotHTML(st) {
+    if (!st) return '';
+    const d = ITEMS[st.id];
+    let h = `<img src="${iconURL(st.id)}">`;
+    if (st.count > 1) h += `<span class="count">${st.count}</span>`;
+    if (d && d.durability && st.damage > 0) {
+      const f = 1 - st.damage / d.durability;
+      h += `<div class="dura"><div style="width:${f * 100}%;background:hsl(${f * 120},90%,50%)"></div></div>`;
+    }
+    return h;
+  }
+
+  renderCursor() {
+    if (!this.cursor) { this.cursorEl.classList.add('hidden'); return; }
+    this.cursorEl.classList.remove('hidden');
+    this.cursorEl.innerHTML = `<img src="${iconURL(this.cursor.id)}">${this.cursor.count > 1 ? `<span class="count">${this.cursor.count}</span>` : ''}`;
+  }
+
+  makeSlot(get, set, opts = {}) {
+    const s = document.createElement('div');
+    s.className = 'slot';
+    const refresh = () => { s.innerHTML = this.slotHTML(get()); };
+    refresh();
+    s.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      if (opts.onClick) opts.onClick(e); else this.clickSlot(get, set, e.button === 2, e.shiftKey, opts);
+      this.refreshAll();
+    });
+    s.addEventListener('contextmenu', (e) => e.preventDefault());
+    s.addEventListener('mouseenter', () => {
+      const st = get();
+      if (st) { this.tooltipEl.textContent = ITEMS[st.id].name; this.tooltipEl.classList.remove('hidden'); }
+    });
+    s.addEventListener('mouseleave', () => this.tooltipEl.classList.add('hidden'));
+    this.refreshers.push(refresh);
+    return s;
+  }
+
+  clickSlot(get, set, right, shift, opts) {
+    const st = get();
+    if (shift && st && opts.quickMove) { opts.quickMove(); return; }
+    const c = this.cursor;
+    if (opts.takeOnly) { if (st && (!c || (c.id === st.id && c.count + st.count <= maxStack(st.id)))) { this.cursor = c ? { ...c, count: c.count + st.count } : st; set(null); } return; }
+    if (!right) {
+      if (!c) { this.cursor = st; set(null); }
+      else if (!st) { set(c); this.cursor = null; }
+      else if (st.id === c.id && !ITEMS[st.id].durability) {
+        const n = Math.min(c.count, maxStack(st.id) - st.count);
+        st.count += n; c.count -= n;
+        if (c.count <= 0) this.cursor = null;
+        set(st);
+      } else { set(c); this.cursor = st; }
+    } else {
+      if (!c && st) {
+        const half = Math.ceil(st.count / 2);
+        this.cursor = { ...st, count: half };
+        st.count -= half;
+        set(st.count > 0 ? st : null);
+      } else if (c && (!st || (st.id === c.id && st.count < maxStack(st.id) && !ITEMS[st.id].durability))) {
+        if (!st) set({ ...c, count: 1 }); else { st.count++; set(st); }
+        c.count--;
+        if (c.count <= 0) this.cursor = null;
+      }
+    }
+  }
+
+  refreshAll() { for (const r of this.refreshers) r(); this.renderCursor(); this.game.player.inventory.changed(); }
+
+  inventoryGrid(container) {
+    const inv = this.game.player.inventory;
+    const main = el('<div class="grid" style="grid-template-columns:repeat(9,var(--slot));margin-bottom:8px"></div>');
+    const hot = el('<div class="grid" style="grid-template-columns:repeat(9,var(--slot))"></div>');
+    const quick = (i) => () => {
+      const st = inv.slots[i];
+      if (!st) return;
+      if (container && container.accept && container.accept(st)) { inv.slots[i] = null; return; }
+      // hotbar <-> main
+      const range = i < 9 ? [9, 36] : [0, 9];
+      inv.slots[i] = null;
+      let left = st.count;
+      for (let k = range[0]; k < range[1] && left; k++) {
+        const s = inv.slots[k];
+        if (s && s.id === st.id && !ITEMS[s.id].durability) { const n = Math.min(left, maxStack(s.id) - s.count); s.count += n; left -= n; }
+      }
+      for (let k = range[0]; k < range[1] && left; k++) if (!inv.slots[k]) { inv.slots[k] = { ...st, count: left }; left = 0; }
+      if (left) inv.slots[i] = { ...st, count: left };
+    };
+    for (let i = 9; i < 36; i++) main.appendChild(this.makeSlot(() => inv.slots[i], (v) => { inv.slots[i] = v; }, { quickMove: quick(i) }));
+    for (let i = 0; i < 9; i++) hot.appendChild(this.makeSlot(() => inv.slots[i], (v) => { inv.slots[i] = v; }, { quickMove: quick(i) }));
+    const wrap = document.createElement('div');
+    wrap.appendChild(main); wrap.appendChild(hot);
+    return wrap;
+  }
+
+  craftingSection(w) {
+    this.craftW = w;
+    this.craftGrid = new Array(w * w).fill(null);
+    const box = el('<div class="inv-top"></div>');
+    const grid = el(`<div class="grid" style="grid-template-columns:repeat(${w},var(--slot))"></div>`);
+    for (let i = 0; i < w * w; i++) grid.appendChild(this.makeSlot(() => this.craftGrid[i], (v) => { this.craftGrid[i] = v; }));
+    box.appendChild(grid);
+    box.appendChild(el('<div class="arrow">➜</div>'));
+    const result = () => craft(this.craftGrid, w);
+    const consume = () => { for (let i = 0; i < this.craftGrid.length; i++) { const s = this.craftGrid[i]; if (s) { s.count--; if (s.count <= 0) this.craftGrid[i] = null; } } };
+    box.appendChild(this.makeSlot(result, () => {}, {
+      onClick: (e) => {
+        const r = result();
+        if (!r) return;
+        const inv = this.game.player.inventory;
+        if (e.shiftKey) {
+          for (let n = 0; n < 64; n++) {
+            const rr = result();
+            if (!rr || rr.id !== r.id) break;
+            const left = inv.add({ ...rr, damage: 0 });
+            consume();
+            if (left) { this.game.entities.spawnItem(this.game.player.x, this.game.player.y + 1, this.game.player.z, { ...rr, count: left }); break; }
+          }
+        } else {
+          const c = this.cursor;
+          if (!c) this.cursor = { id: r.id, count: r.count, damage: 0 };
+          else if (c.id === r.id && c.count + r.count <= maxStack(r.id)) c.count += r.count;
+          else return;
+          consume();
+        }
+        this.game.audio.play('click');
+      },
+    }));
+    return box;
+  }
+
+  showContainer(kind, title, inner) {
+    this.clear();
+    this.refreshers = [];
+    this.open = kind;
+    const panel = el(`<div class="panel"><h3>${title}</h3></div>`);
+    const screen = el('<div class="screen" style="background:rgba(0,0,0,.35)"></div>');
+    inner(panel);
+    screen.appendChild(panel);
+    screen.addEventListener('mousedown', (e) => {
+      // clicking outside the panel drops the cursor stack
+      if (e.target === screen && this.cursor) {
+        const g = this.game, p = g.player;
+        const [dx, , dz] = p.lookDir();
+        g.entities.spawnItem(p.x, p.y + 1.3, p.z, this.cursor, [dx * 0.3, 0.1, dz * 0.3]).pickupDelay = 40;
+        this.cursor = null; this.renderCursor();
+      }
+    });
+    this.layer.appendChild(screen);
+  }
+
+  openInventory() {
+    this.showContainer('inventory', 'Inventory', (panel) => {
+      panel.appendChild(this.craftingSection(2));
+      panel.appendChild(this.inventoryGrid());
+      panel.appendChild(el('<div class="recipes-hint">Tip: logs → planks → sticks / workbench. Shift-click moves stacks, right-click splits.</div>'));
+    });
+  }
+
+  openWorkbench() {
+    this.game.input.unlock();
+    this.showContainer('workbench', 'Workbench', (panel) => {
+      panel.appendChild(this.craftingSection(3));
+      panel.appendChild(this.inventoryGrid());
+    });
+  }
+
+  openFurnace(x, y, z) {
+    this.game.input.unlock();
+    const f = this.game.getFurnace(x, y, z);
+    this.furnace = f;
+    const fuelOf = (st) => st && ITEMS[st.id] && ITEMS[st.id].fuel;
+    this.showContainer('furnace', 'Furnace', (panel) => {
+      const top = el('<div class="inv-top"></div>');
+      const mid = el('<div class="furnace-mid"></div>');
+      mid.appendChild(this.makeSlot(() => f.input, (v) => { f.input = v; }));
+      const flame = el('<div class="flame"><div></div></div>');
+      mid.appendChild(flame);
+      mid.appendChild(this.makeSlot(() => f.fuel, (v) => { f.fuel = v; }));
+      top.appendChild(mid);
+      const prog = el('<div class="progress"><div></div></div>');
+      top.appendChild(prog);
+      top.appendChild(this.makeSlot(() => f.output, (v) => { f.output = v; }, { takeOnly: true }));
+      panel.appendChild(top);
+      panel.appendChild(this.inventoryGrid({
+        accept: (st) => {
+          if (fuelOf(st) && !f.fuel) { f.fuel = st; return true; }
+          if (!f.input) { f.input = st; return true; }
+          return false;
+        },
+      }));
+      this.refreshers.push(() => {
+        flame.firstChild.style.height = `${f.burnTotal ? (f.burnTime / f.burnTotal) * 100 : 0}%`;
+        prog.firstChild.style.width = `${(f.cookTime / 200) * 100}%`;
+      });
+    });
+  }
+
+  /** Called each frame while a furnace screen is open */
+  tickOpen() { if (this.open === 'furnace') for (const r of this.refreshers) r(); }
+
+  showPause() {
+    this.clear();
+    this.open = 'pause';
+    const g = this.game;
+    const s = el(`<div class="screen">
+      <h2>Paused</h2>
+      <button class="btn" data-a="resume">Back to Game</button>
+      <div class="field"><label>Render distance: <b id="rdv">${g.settings.renderDistance}</b> chunks</label><input type="range" min="2" max="16" value="${g.settings.renderDistance}" id="rd"></div>
+      <div class="field"><label>Field of view: <b id="fovv">${g.settings.fov}</b></label><input type="range" min="50" max="110" value="${g.settings.fov}" id="fov"></div>
+      <div class="field"><label>Mouse sensitivity: <b id="msv">${g.settings.sensitivity}</b></label><input type="range" min="10" max="200" value="${g.settings.sensitivity}" id="ms"></div>
+      <div class="field"><label>Volume: <b id="volv">${Math.round(g.settings.volume * 100)}</b>%</label><input type="range" min="0" max="100" value="${Math.round(g.settings.volume * 100)}" id="vol"></div>
+      <div class="field"><label><input type="checkbox" id="sh" ${g.settings.shadows ? 'checked' : ''}> Sun shadows (3 shadow-casting lights)</label></div>
+      <button class="btn" data-a="title">Save &amp; Quit to Title</button>
+    </div>`);
+    const bind = (id, lbl, fn) => s.querySelector('#' + id).addEventListener('input', (e) => { s.querySelector('#' + lbl).textContent = fn(+e.target.value); });
+    bind('rd', 'rdv', (v) => { g.setSetting('renderDistance', v); return v; });
+    bind('fov', 'fovv', (v) => { g.setSetting('fov', v); return v; });
+    bind('ms', 'msv', (v) => { g.setSetting('sensitivity', v); return v; });
+    bind('vol', 'volv', (v) => { g.setSetting('volume', v / 100); return v; });
+    s.querySelector('#sh').addEventListener('change', (e) => g.setSetting('shadows', e.target.checked));
+    s.querySelector('[data-a=resume]').onclick = () => { this.open = null; this.clear(); g.onUIClosed(); };
+    s.querySelector('[data-a=title]').onclick = () => g.quitToTitle();
+    this.layer.appendChild(s);
+  }
+
+  showDeath(cause) {
+    this.clear();
+    this.cursor = null; this.renderCursor();
+    this.open = 'death';
+    const msgs = {
+      fall: 'hit the ground too hard', lava: 'tried to swim in lava', fire: 'burned to death', drown: 'drowned',
+      starve: 'starved to death', cactus: 'was pricked to death', void: 'fell out of the world', explosion: 'was blown up',
+      arrow: 'was shot by a Rattler', poison: 'succumbed to poison',
+    };
+    const text = msgs[cause] || (cause && cause.startsWith('mob:') ? `was slain by a ${cause.slice(4)}` : 'died');
+    const s = el(`<div class="screen" id="death-screen"><h2>You Died!</h2><p class="sub">Player ${text}</p><button class="btn">Respawn</button></div>`);
+    s.querySelector('button').onclick = () => { this.open = null; this.clear(); this.game.respawn(); };
+    this.layer.appendChild(s);
+  }
+}

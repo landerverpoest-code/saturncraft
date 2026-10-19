@@ -1,0 +1,117 @@
+// Procedural Web Audio sound effects (no audio files). Every sound is
+// synthesised from noise and oscillators so all audio is original.
+export class Audio {
+  constructor() {
+    this.ctx = null;
+    this.volume = 0.5;
+    this.listener = [0, 0, 0, 0]; // x,y,z,yaw
+    this.noiseBuf = null;
+    this.last = new Map();
+  }
+
+  ensure() {
+    if (this.ctx) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    this.ctx = new AC();
+    this.master = this.ctx.createGain();
+    this.master.gain.value = this.volume;
+    this.master.connect(this.ctx.destination);
+    const len = this.ctx.sampleRate;
+    this.noiseBuf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+    const d = this.noiseBuf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  }
+
+  setVolume(v) { this.volume = v; if (this.master) this.master.gain.value = v; }
+  setListener(x, y, z, yaw) { this.listener = [x, y, z, yaw]; }
+
+  // spatial: returns [gain, pan]
+  spatial(pos) {
+    if (!pos) return [1, 0];
+    const [lx, ly, lz, yaw] = this.listener;
+    const dx = pos[0] - lx, dy = pos[1] - ly, dz = pos[2] - lz;
+    const d = Math.hypot(dx, dy, dz);
+    const g = Math.max(0, 1 - d / 16);
+    // right vector (cos, -sin)
+    const pan = d > 0.01 ? Math.max(-1, Math.min(1, (dx * Math.cos(yaw) - dz * Math.sin(yaw)) / d)) : 0;
+    return [g, pan];
+  }
+
+  noise(t0, dur, freq, q, gain, out, type = 'bandpass') {
+    const src = this.ctx.createBufferSource();
+    src.buffer = this.noiseBuf;
+    src.playbackRate.value = 0.5 + Math.random();
+    const f = this.ctx.createBiquadFilter();
+    f.type = type; f.frequency.value = freq; f.Q.value = q;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(gain, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    src.connect(f); f.connect(g); g.connect(out);
+    src.start(t0, Math.random() * 0.5); src.stop(t0 + dur + 0.05);
+  }
+
+  tone(t0, dur, f0, f1, gain, out, type = 'sine') {
+    const o = this.ctx.createOscillator();
+    o.type = type;
+    o.frequency.setValueAtTime(f0, t0);
+    o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t0 + dur);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(gain, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    o.connect(g); g.connect(out);
+    o.start(t0); o.stop(t0 + dur + 0.05);
+  }
+
+  play(name, pos = null, vol = 1) {
+    if (!this.ctx || this.ctx.state !== 'running') return;
+    const now = this.ctx.currentTime;
+    const lastT = this.last.get(name) || 0;
+    if (now - lastT < 0.03) return;
+    this.last.set(name, now);
+    const [g0, pan] = this.spatial(pos);
+    const gain = g0 * vol;
+    if (gain <= 0.01) return;
+    const p = this.ctx.createStereoPanner();
+    p.pan.value = pan;
+    p.connect(this.master);
+    const out = p;
+    const t = now;
+    const mat = name.split('_').slice(1).join('_');
+    const matFreq = { stone: 900, wood: 500, grass: 2400, gravel: 1400, sand: 3000, snow: 3500, glass: 4000, metal: 2500, wool: 1800 }[mat] || 1200;
+    if (name.startsWith('break_')) { this.noise(t, 0.18, matFreq, 1.2, 0.6 * gain, out); this.noise(t + 0.03, 0.12, matFreq * 0.6, 2, 0.4 * gain, out); }
+    else if (name.startsWith('hit_')) this.noise(t, 0.06, matFreq, 2, 0.25 * gain, out);
+    else if (name.startsWith('place_')) this.noise(t, 0.1, matFreq * 0.8, 1.5, 0.5 * gain, out);
+    else if (name.startsWith('step_')) this.noise(t, 0.07, matFreq * 0.7, 1.5, 0.12 * gain, out);
+    else switch (name) {
+      case 'pop': this.tone(t, 0.08, 600 + Math.random() * 400, 1400, 0.2 * gain, out, 'triangle'); break;
+      case 'eat': this.noise(t, 0.08, 1800, 3, 0.25 * gain, out); break;
+      case 'burp': this.tone(t, 0.25, 160, 90, 0.3 * gain, out, 'sawtooth'); break;
+      case 'hurt': this.tone(t, 0.18, 320, 140, 0.35 * gain, out, 'square'); this.noise(t, 0.1, 800, 1, 0.2 * gain, out); break;
+      case 'mob_hurt': this.tone(t, 0.15, 500 + Math.random() * 200, 200, 0.25 * gain, out, 'sawtooth'); break;
+      case 'mob_death': this.tone(t, 0.4, 400, 60, 0.3 * gain, out, 'sawtooth'); break;
+      case 'grunt': this.tone(t, 0.35, 110 + Math.random() * 30, 80, 0.25 * gain, out, 'sawtooth'); break;
+      case 'oink': this.tone(t, 0.18, 300, 200, 0.2 * gain, out, 'square'); this.tone(t + 0.12, 0.12, 280, 180, 0.15 * gain, out, 'square'); break;
+      case 'moo': this.tone(t, 0.7, 140, 110, 0.25 * gain, out, 'sawtooth'); break;
+      case 'baa': this.tone(t, 0.45, 420, 380, 0.15 * gain, out, 'sawtooth'); break;
+      case 'cluck': this.tone(t, 0.06, 900, 600, 0.15 * gain, out, 'square'); this.tone(t + 0.1, 0.06, 1000, 700, 0.15 * gain, out, 'square'); break;
+      case 'rattle': for (let k = 0; k < 4; k++) this.noise(t + k * 0.05, 0.04, 2500, 6, 0.2 * gain, out); break;
+      case 'hiss': this.noise(t, 1.3, 5000, 0.7, 0.35 * gain, out, 'highpass'); break;
+      case 'skitter': for (let k = 0; k < 3; k++) this.noise(t + k * 0.06, 0.05, 3500, 4, 0.15 * gain, out); break;
+      case 'warble': this.tone(t, 0.6, 200, 900, 0.18 * gain, out, 'sine'); this.tone(t, 0.6, 210, 60, 0.1 * gain, out, 'triangle'); break;
+      case 'scream': this.tone(t, 0.8, 1200, 300, 0.2 * gain, out, 'sawtooth'); break;
+      case 'teleport': this.tone(t, 0.3, 200, 1600, 0.2 * gain, out, 'sine'); break;
+      case 'explode':
+        this.noise(t, 1.6, 300, 0.5, 1.0 * gain, out, 'lowpass');
+        this.tone(t, 0.8, 90, 30, 0.8 * gain, out, 'sine'); break;
+      case 'bow': this.noise(t, 0.12, 1500, 3, 0.3 * gain, out); this.tone(t, 0.1, 300, 120, 0.2 * gain, out, 'triangle'); break;
+      case 'arrow_hit': this.noise(t, 0.08, 1200, 4, 0.3 * gain, out); break;
+      case 'splash': this.noise(t, 0.4, 1200, 0.8, 0.4 * gain, out); break;
+      case 'bucket_fill': this.noise(t, 0.3, 900, 1, 0.3 * gain, out); break;
+      case 'fizz': this.noise(t, 0.5, 4000, 1, 0.3 * gain, out, 'highpass'); break;
+      case 'click': this.tone(t, 0.04, 1200, 900, 0.15 * gain, out, 'square'); break;
+      case 'land': this.noise(t, 0.12, 500, 1, 0.4 * gain, out, 'lowpass'); break;
+      default: this.tone(t, 0.1, 440, 440, 0.1 * gain, out);
+    }
+  }
+}

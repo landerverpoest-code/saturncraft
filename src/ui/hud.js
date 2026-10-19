@@ -1,0 +1,167 @@
+// Heads-up display: hotbar, health/hunger/air bars, crosshair, attack
+// cooldown, sky compass and the F3 debug overlay.
+import { iconURL } from './icons.js';
+import { ITEMS } from '../world/items.js';
+
+const svg = (inner) => `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" shape-rendering="crispEdges">${inner}</svg>`)}`;
+const heartPath = 'M9 16 L2 9 Q0 6 2 3.5 Q4.5 1 7 3 L9 5 L11 3 Q13.5 1 16 3.5 Q18 6 16 9 Z';
+const ICON = {
+  heartEmpty: svg(`<path d="${heartPath}" fill="#2a1414" stroke="#000" stroke-width="1.2"/>`),
+  heartFull: svg(`<path d="${heartPath}" fill="#e3263a" stroke="#000" stroke-width="1.2"/><path d="M4 5 L6 4" stroke="#ffb3b3" stroke-width="1.5"/>`),
+  heartHalf: svg(`<defs><clipPath id="c"><rect x="0" y="0" width="9" height="18"/></clipPath></defs><path d="${heartPath}" fill="#2a1414" stroke="#000" stroke-width="1.2"/><path d="${heartPath}" fill="#e3263a" clip-path="url(#c)"/>`),
+  heartPoison: svg(`<path d="${heartPath}" fill="#7a9a2a" stroke="#000" stroke-width="1.2"/>`),
+  foodEmpty: svg(`<rect x="3" y="5" width="12" height="10" rx="3" fill="#2a2214" stroke="#000"/><rect x="5" y="2" width="8" height="4" fill="#2a2214" stroke="#000"/>`),
+  foodFull: svg(`<rect x="3" y="5" width="12" height="10" rx="3" fill="#d88a2a" stroke="#000"/><rect x="5" y="2" width="8" height="4" fill="#f2d48a" stroke="#000"/><rect x="5" y="7" width="3" height="2" fill="#ffd27a"/>`),
+  foodHalf: svg(`<defs><clipPath id="c"><rect x="9" y="0" width="9" height="18"/></clipPath></defs><rect x="3" y="5" width="12" height="10" rx="3" fill="#2a2214" stroke="#000"/><rect x="3" y="5" width="12" height="10" rx="3" fill="#d88a2a" clip-path="url(#c)"/>`),
+  foodHunger: svg(`<rect x="3" y="5" width="12" height="10" rx="3" fill="#6a8a2a" stroke="#000"/><rect x="5" y="2" width="8" height="4" fill="#9aba5a" stroke="#000"/>`),
+  bubble: svg(`<circle cx="9" cy="9" r="6" fill="#4a8ae8" stroke="#0a1a4a" stroke-width="1.5"/><circle cx="7" cy="7" r="1.6" fill="#e6f2ff"/>`),
+};
+
+export class HUD {
+  constructor(game) {
+    this.game = game;
+    this.root = document.getElementById('hud');
+    this.root.innerHTML = `
+      <div id="overlay-water" class="hidden"></div>
+      <div id="overlay-lava" class="hidden"></div>
+      <div id="overlay-fire" class="hidden"></div>
+      <div id="overlay-vignette"></div>
+      <div id="crosshair"></div>
+      <div id="attack-indicator" class="hidden"><div></div></div>
+      <div id="skyinfo"><canvas width="192" height="96"></canvas><div><div id="phase-label">Day</div><div id="time-label" style="opacity:.7;font-size:11px"></div></div></div>
+      <div id="debug" class="hidden"></div>
+      <div id="toast"></div>
+      <div id="item-name"></div>
+      <div id="bottom">
+        <div id="bars"><div class="bar" id="health"></div><div class="bar right" id="food"></div></div>
+        <div id="bars2" style="width:calc(var(--slot) * 9 + 8px);display:flex;justify-content:flex-end"><div class="bar right" id="air"></div></div>
+        <div class="hotbar" id="hotbar"></div>
+      </div>`;
+    this.hotbar = this.root.querySelector('#hotbar');
+    this.slots = [];
+    for (let i = 0; i < 9; i++) {
+      const s = document.createElement('div');
+      s.className = 'slot';
+      this.hotbar.appendChild(s);
+      this.slots.push(s);
+    }
+    this.healthEl = this.root.querySelector('#health');
+    this.foodEl = this.root.querySelector('#food');
+    this.airEl = this.root.querySelector('#air');
+    this.makeIcons(this.healthEl, 10); this.makeIcons(this.foodEl, 10); this.makeIcons(this.airEl, 10);
+    this.debugEl = this.root.querySelector('#debug');
+    this.skyCanvas = this.root.querySelector('#skyinfo canvas');
+    this.phaseLabel = this.root.querySelector('#phase-label');
+    this.timeLabel = this.root.querySelector('#time-label');
+    this.toastEl = this.root.querySelector('#toast');
+    this.itemNameEl = this.root.querySelector('#item-name');
+    this.attackEl = this.root.querySelector('#attack-indicator');
+    this.lastHotbarKey = '';
+    this.lastSel = -1;
+    this.showDebug = false;
+    this.visible = true;
+  }
+
+  makeIcons(el, n) { for (let i = 0; i < n; i++) { const img = document.createElement('img'); img.className = 'icon'; el.appendChild(img); } }
+
+  setVisible(v) { this.visible = v; this.root.style.display = v ? '' : 'none'; }
+
+  toast(msg, ms = 2500) {
+    this.toastEl.textContent = msg;
+    this.toastEl.style.opacity = 1;
+    clearTimeout(this._toastT);
+    this._toastT = setTimeout(() => { this.toastEl.style.opacity = 0; }, ms);
+  }
+
+  renderSlot(el, st) {
+    if (!st) { el.innerHTML = ''; return; }
+    const d = ITEMS[st.id];
+    let html = `<img src="${iconURL(st.id)}">`;
+    if (st.count > 1) html += `<span class="count">${st.count}</span>`;
+    if (d && d.durability && st.damage > 0) {
+      const f = 1 - st.damage / d.durability;
+      html += `<div class="dura"><div style="width:${f * 100}%;background:hsl(${f * 120},90%,50%)"></div></div>`;
+    }
+    el.innerHTML = html;
+  }
+
+  update() {
+    const g = this.game, p = g.player;
+    const inv = p.inventory;
+    const key = inv.slots.slice(0, 9).map((s) => (s ? `${s.id}:${s.count}:${s.damage}` : '-')).join('|');
+    if (key !== this.lastHotbarKey) {
+      this.lastHotbarKey = key;
+      for (let i = 0; i < 9; i++) this.renderSlot(this.slots[i], inv.slots[i]);
+    }
+    if (inv.selected !== this.lastSel) {
+      this.slots.forEach((s, i) => s.classList.toggle('sel', i === inv.selected));
+      this.lastSel = inv.selected;
+      const st = inv.selectedStack;
+      this.itemNameEl.textContent = st ? ITEMS[st.id].name : '';
+      this.itemNameEl.style.opacity = 1;
+      clearTimeout(this._nameT);
+      this._nameT = setTimeout(() => { this.itemNameEl.style.opacity = 0; }, 1800);
+    }
+    // health
+    const hp = Math.ceil(p.health);
+    const poison = !!p.effects.poison;
+    const blink = p.hurtTime > 0 && (p.hurtTime >> 1) % 2 === 0;
+    [...this.healthEl.children].forEach((img, i) => {
+      const v = hp - i * 2;
+      let src = v >= 2 ? (poison ? ICON.heartPoison : ICON.heartFull) : v === 1 ? ICON.heartHalf : ICON.heartEmpty;
+      if (img._src !== src) { img.src = src; img._src = src; }
+      img.style.transform = p.health <= 4 ? `translateY(${Math.round(Math.sin(performance.now() / 60 + i * 2) * 1.5)}px)` : '';
+      img.style.filter = blink ? 'brightness(2.2)' : '';
+    });
+    const food = p.hunger.food;
+    const hungerFx = !!p.effects.hunger;
+    [...this.foodEl.children].forEach((img, i) => {
+      const v = food - i * 2;
+      let src = v >= 2 ? (hungerFx ? ICON.foodHunger : ICON.foodFull) : v === 1 ? ICON.foodHalf : ICON.foodEmpty;
+      if (img._src !== src) { img.src = src; img._src = src; }
+      img.style.transform = p.hunger.saturation <= 0 && g.ticks % (food * 3 + 1) === 0 ? 'translateY(-2px)' : '';
+    });
+    const showAir = p.air < 300 || p.body.eyeInWater;
+    const bubbles = Math.ceil(Math.max(0, p.air) * 10 / 300);
+    [...this.airEl.children].forEach((img, i) => {
+      img.src = ICON.bubble; img.style.visibility = showAir && i < bubbles ? 'visible' : 'hidden';
+    });
+    // attack cooldown indicator
+    const cd = g.interaction ? g.interaction.attackCooldownProgress() : 1;
+    this.attackEl.classList.toggle('hidden', cd >= 1);
+    this.attackEl.firstChild.style.width = `${cd * 100}%`;
+    // overlays
+    const b = p.body;
+    this.root.querySelector('#overlay-water').classList.toggle('hidden', !b.eyeInWater);
+    this.root.querySelector('#overlay-lava').classList.toggle('hidden', !b.eyeInLava);
+    this.root.querySelector('#overlay-fire').classList.toggle('hidden', !(p.fireTicks > 0 && !b.inWater));
+    const vign = this.root.querySelector('#overlay-vignette');
+    vign.style.background = p.hurtTime > 0 ? `radial-gradient(ellipse at center, transparent 50%, rgba(200,0,0,${p.hurtTime / 22}) 100%)` : (p.health <= 4 ? 'radial-gradient(ellipse at center, transparent 60%, rgba(120,0,0,.35) 100%)' : '');
+    this.drawSky();
+    if (this.showDebug) this.debugEl.textContent = g.debugText();
+  }
+
+  drawSky() {
+    const st = this.game.sky.state;
+    const c = this.skyCanvas, ctx = c.getContext('2d');
+    const w = c.width, h = c.height;
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = 'rgba(40,60,110,0.5)';
+    ctx.beginPath(); ctx.arc(w / 2, h - 6, h - 12, Math.PI, 0); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(4, h - 6); ctx.lineTo(w - 4, h - 6); ctx.stroke();
+    for (const s of st.suns) {
+      // azimuth projected left-right (east -> west), elevation up
+      const x = w / 2 + s.dir[0] * (w / 2 - 12); // east to the right
+      const y = h - 6 - s.elevation * (h - 16);
+      const [r, g, bl] = s.color;
+      ctx.globalAlpha = s.isUp ? 1 : 0.3;
+      ctx.fillStyle = `rgb(${r * 255},${g * 255},${bl * 255})`;
+      ctx.beginPath(); ctx.arc(x, Math.min(h - 2, y), 4 + s.sun.size * 3, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    const label = { day: 'Day', twilight: 'Twilight', night: 'Night' }[st.phase];
+    if (this.phaseLabel.textContent !== label) this.phaseLabel.textContent = label;
+    this.timeLabel.textContent = `${st.aboveCount}/3 suns up · light ${15 - st.skyDarken}`;
+  }
+}
