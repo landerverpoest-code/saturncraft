@@ -25,6 +25,7 @@ shapeless([B.SPRUCE_LOG], B.SPRUCE_PLANKS, 4);
 shapeless([B.BIRCH_LOG], B.BIRCH_PLANKS, 4);
 shaped(['P', 'P'], { P: 'planks' }, I.STICK, 4);
 shaped(['PP', 'PP'], { P: 'planks' }, B.WORKBENCH, 1);
+shaped(['PPP', 'P P', 'PPP'], { P: 'planks' }, B.CHEST, 1);
 shaped(['C', 'S'], { C: I.COAL, S: I.STICK }, B.TORCH, 4);
 shaped(['CCC', 'C C', 'CCC'], { C: 'stone_mat' }, B.FURNACE, 1);
 shaped(['SS', 'SS'], { S: B.STONE }, B.STONE_BRICKS, 4);

@@ -15,6 +15,7 @@ function addTex(name) {
 for (const b of BLOCKS) {
   if (!b || b.id === B.AIR) continue;
   addTex(b.tex.top); addTex(b.tex.bottom); addTex(b.tex.side);
+  if (b.tex.front) addTex(b.tex.front);
 }
 addTex('furnace_side');
 addTex('water_flow');
@@ -31,6 +32,9 @@ for (const b of BLOCKS) {
   const s = addTex(t.side), top = addTex(t.top), bot = addTex(t.bottom);
   FACE_TILE.set([s, s, top, bot, s, s], b.id * 6);
 }
+// Blocks with a front texture show it on the side they were placed facing.
+export const FRONT_TILE = new Int16Array(256).fill(-1);
+for (const b of BLOCKS) if (b && b.tex.front) FRONT_TILE[b.id] = addTex(b.tex.front);
 // Furnaces show their front only on one side; the others use a plain side.
 for (const id of [B.FURNACE, B.FURNACE_LIT]) {
   const side = texId('furnace_side');
@@ -320,6 +324,22 @@ const GEN = {
     for (let y = 5; y < 11; y++) c.set(5, y, hex('#6b4a2a'));
     for (let y = 4; y < 12; y++) c.set(11, y, hex('#6b4a2a'));
     c.set(10, 4, hex('#9a9a9a')); c.set(12, 4, hex('#9a9a9a')); c.set(11, 3, hex('#9a9a9a'));
+  },
+  chest_top: (c) => {
+    planks(c, '#a2773f');
+    const d = hex('#4e3416');
+    for (let i = 0; i < 16; i++) { c.set(i, 0, d); c.set(i, 15, d); c.set(0, i, d); c.set(15, i, d); }
+  },
+  chest_side: (c) => {
+    planks(c, '#9a6e38');
+    const d = hex('#4e3416');
+    for (let i = 0; i < 16; i++) { c.set(i, 0, d); c.set(i, 15, d); c.set(0, i, d); c.set(15, i, d); c.set(i, 5, d); c.set(i, 6, shade(d, 1.5)); }
+  },
+  chest_front: (c) => {
+    GEN.chest_side(c);
+    const m = hex('#c9c9c9'), md = hex('#6d6d6d');
+    for (let y = 3; y < 9; y++) for (let x = 6; x < 10; x++) c.set(x, y, (x === 6 || y === 8) ? md : m);
+    c.set(7, 6, md); c.set(8, 6, md);
   },
   furnace_top: (c) => c.noiseFill(['#6e6e70', '#7c7c7e', '#626264'].map(hex), 0.3),
   furnace_side: (c) => {

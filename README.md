@@ -263,6 +263,7 @@ poison from eyes) follow the documented table.
 * 9 mobs with AI, pathfinding, drops, natural spawning, caps and despawning
 * Explosions (ray-based block destruction with blast resistance, exposure-scaled damage, 1/power drop survival)
 * Inventory, hotbar, 2×2 and 3×3 shaped/shapeless crafting, furnace smelting
+* Chests (27 slots, shift-click transfer, contents drop when broken, saved with the world); furnaces and chests face the player when placed
 * Bow and arrows (player and Rattler), arrow pick-up
 * Death screen, item drop on death, respawn; pause menu with settings
 * Procedural sound effects with stereo panning; world saving
@@ -273,7 +274,7 @@ poison from eyes) follow the documented table.
 * Experience orbs and enchanting, armour items, shields, potions and status-effect UI (only hunger/poison effects exist)
 * Farming (seeds, wheat, bread), breeding/taming, shearing, sheep colours
 * Villages, other structures, the other dimensions, redstone-style circuitry
-* Chests and other storage containers, doors, slabs, stairs, fences, beds (spawn is fixed)
+* Double chests and other storage containers, doors, slabs, stairs, fences, beds (spawn is fixed)
 * Wall-mounted torches, fire blocks and fire spread, weather (rain/snow/thunder)
 * Slimes, witches, drowned, husks/strays as separate variants, baby mobs, mob equipment
 * Difficulty levels (fixed at Normal), creative mode, commands, multiplayer

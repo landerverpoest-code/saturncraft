@@ -78,7 +78,7 @@ export function explode(game, x, y, z, power, source) {
       const ideal = { type: BLOCKS[id].tool, tier: 99, speed: 1 };
       for (const st of blockDrops(id, ideal)) game.entities.spawnItem(bx + 0.5, by + 0.5, bz + 0.5, st);
     }
-    if (id === B.FURNACE || id === B.FURNACE_LIT) game.onBlockBroken(bx, by, bz, id);
+    if (id === B.FURNACE || id === B.FURNACE_LIT || id === B.CHEST) game.onBlockBroken(bx, by, bz, id);
   }
   game.particles.smoke(x, y, z, 80, power * 1.5);
   game.audio.play('explode', [x, y, z]);

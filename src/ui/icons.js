@@ -34,10 +34,11 @@ function blockIcon(b) {
     return c;
   }
   const top = texCanvas(b.tex.top, tint('top')), side = texCanvas(b.tex.side, tint('side'));
+  const front = b.tex.front ? texCanvas(b.tex.front) : side;
   // top face
   ctx.save(); ctx.setTransform(1, 0.5, -1, 0.5, 16, 1); ctx.drawImage(top, 0, 0, 16, 16); ctx.restore();
   // left face
-  ctx.save(); ctx.setTransform(1, 0.5, 0, 1, 0, 9); ctx.drawImage(side, 0, 0, 16, 16);
+  ctx.save(); ctx.setTransform(1, 0.5, 0, 1, 0, 9); ctx.drawImage(front, 0, 0, 16, 16);
   ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(0, 0, 16, 16); ctx.restore();
   // right face
   ctx.save(); ctx.setTransform(1, -0.5, 0, 1, 16, 17); ctx.drawImage(side, 0, 0, 16, 16);

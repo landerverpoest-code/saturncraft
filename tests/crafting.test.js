@@ -23,6 +23,10 @@ describe('crafting', () => {
     expect(craft(grid([C, C, null, C, S, null, null, S, null]), 3)).toEqual({ id: I.STONE_AXE, count: 1 });
     expect(craft(grid([null, C, C, null, S, C, null, S, null]), 3)).toEqual({ id: I.STONE_AXE, count: 1 });
   });
+  it('chest from a ring of mixed planks', () => {
+    const P = B.OAK_PLANKS, Q = B.BIRCH_PLANKS;
+    expect(craft(grid([P, P, Q, P, null, P, Q, P, P]), 3)).toEqual({ id: B.CHEST, count: 1 });
+  });
   it('furnace and torches', () => {
     const C = B.COBBLESTONE;
     expect(craft(grid([C, C, C, C, null, C, C, C, C]), 3)).toEqual({ id: B.FURNACE, count: 1 });

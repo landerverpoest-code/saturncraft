@@ -52,6 +52,7 @@ export class Game {
     this.running = false;
     this.paused = false;
     this.furnaces = new Map();
+    this.chests = new Map();      // "x,y,z" -> { x, y, z, slots: 27 stacks }
     this.fps = 0; this.frameCount = 0; this.fpsTime = 0;
   }
 
@@ -208,7 +209,23 @@ export class Game {
     return f;
   }
 
+  getChest(x, y, z) {
+    const k = `${x},${y},${z}`;
+    let c = this.chests.get(k);
+    if (!c) { c = { x, y, z, slots: new Array(27).fill(null) }; this.chests.set(k, c); }
+    return c;
+  }
+
   onBlockBroken(x, y, z, id) {
+    if (id === B.CHEST) {
+      const k = `${x},${y},${z}`;
+      const c = this.chests.get(k);
+      if (c) {
+        for (const st of c.slots) if (st) this.entities.spawnItem(x + 0.5, y + 0.5, z + 0.5, st);
+        this.chests.delete(k);
+        if (this.ui.chest === c) this.ui.close();
+      }
+    }
     if (id === B.FURNACE || id === B.FURNACE_LIT) {
       const k = `${x},${y},${z}`;
       const f = this.furnaces.get(k);
@@ -295,7 +312,7 @@ export class Game {
 
     if (this.ui.open === 'death') { inp.endFrame(); return; }
     if (inp.wasPressed('inventory')) {
-      if (this.ui.open === 'inventory' || this.ui.open === 'workbench' || this.ui.open === 'furnace') this.ui.close();
+      if (this.ui.open === 'inventory' || this.ui.open === 'workbench' || this.ui.open === 'furnace' || this.ui.open === 'chest') this.ui.close();
       else if (!this.ui.blocking) { this.input.unlock(); this.ui.openInventory(); }
     }
     if (inp.wasPressed('pause') && this.ui.blocking) {

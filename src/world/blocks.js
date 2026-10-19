@@ -25,7 +25,7 @@ export const B = {
   REDBLOOM: 42, DEAD_BUSH: 43, WORKBENCH: 44, FURNACE: 45, FURNACE_LIT: 46, TORCH: 47,
   OBSIDIAN: 48, WOOL: 49, COAL_BLOCK: 50, IRON_BLOCK: 51, GOLD_BLOCK: 52,
   DIAMOND_BLOCK: 53, GRANITE: 54, DIORITE: 55, ANDESITE: 56, TUFF: 57, SNOWY_GRASS: 58,
-  SPRUCE_PLANKS: 59, BIRCH_PLANKS: 60, STONE_BRICKS: 61,
+  SPRUCE_PLANKS: 59, BIRCH_PLANKS: 60, STONE_BRICKS: 61, CHEST: 62,
 };
 
 const defaults = {
@@ -41,6 +41,7 @@ function def(id, name, props) {
   const d = { ...defaults, ...props, id, name };
   if (!d.tex) d.tex = { all: name.toLowerCase().replace(/ /g, '_') };
   if (d.tex.all) d.tex = { top: d.tex.all, bottom: d.tex.all, side: d.tex.all };
+  if (!d.tex.front) d.tex.front = null;
   if (!d.opaque && props.opacity === undefined) d.opacity = 0;
   BLOCKS[id] = d;
   return d;
@@ -114,6 +115,8 @@ def(B.SNOWY_GRASS, 'Snowy Grass Block', { hardness: 0.6, resistance: 0.6, tool: 
 def(B.SPRUCE_PLANKS, 'Spruce Planks', { hardness: 2, resistance: 3, tool: TOOL.AXE, sound: 'wood', flammable: true });
 def(B.BIRCH_PLANKS, 'Birch Planks', { hardness: 2, resistance: 3, tool: TOOL.AXE, sound: 'wood', flammable: true });
 def(B.STONE_BRICKS, 'Stone Bricks', { hardness: 1.5, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD });
+// tex.front: shown on the side facing the player when placed (meta 0..3)
+def(B.CHEST, 'Chest', { hardness: 2.5, resistance: 2.5, tool: TOOL.AXE, sound: 'wood', flammable: true, container: true, tex: { top: 'chest_top', bottom: 'chest_top', side: 'chest_side', front: 'chest_front' } });
 
 export const NUM_BLOCKS = BLOCKS.length;
 

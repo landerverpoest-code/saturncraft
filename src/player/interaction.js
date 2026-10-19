@@ -201,6 +201,7 @@ export class Interaction {
     if (!p.sneaking || !st) {
       if (t.id === B.WORKBENCH) { g.ui.openWorkbench(); return true; }
       if (t.id === B.FURNACE || t.id === B.FURNACE_LIT) { g.ui.openFurnace(t.x, t.y, t.z); return true; }
+      if (t.id === B.CHEST) { g.ui.openChest(t.x, t.y, t.z); g.audio.play('chest_open', [t.x + 0.5, t.y + 0.5, t.z + 0.5]); return true; }
     }
     if (!st) return false;
     let placeId = isBlockItem(st.id) ? st.id : d.places;
@@ -215,7 +216,7 @@ export class Interaction {
     if (BLOCKS[placeId].needsSupport && !w.hasSupport(px, py, pz, placeId)) return false;
     if ((placeId === B.TALL_GRASS || placeId === B.SUNPETAL || placeId === B.REDBLOOM) && !w.hasSupport(px, py, pz, placeId)) return false;
     let meta = 0;
-    if (placeId === B.FURNACE) {
+    if (placeId === B.FURNACE || BLOCKS[placeId].tex.front) {
       // face the player: meta 0 = -z front, 1 = +x, 2 = +z, 3 = -x
       const dx = p.x - (px + 0.5), dz = p.z - (pz + 0.5);
       meta = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 1 : 3) : (dz > 0 ? 2 : 0);

@@ -38,7 +38,9 @@ export class UI {
     give(this.cursor); this.cursor = null;
     this.renderCursor();
     this.open = null;
+    if (this.chest) this.game.audio.play('chest_close', [this.chest.x + 0.5, this.chest.y + 0.5, this.chest.z + 0.5]);
     this.furnace = null;
+    this.chest = null;
     this.clear();
     g.onUIClosed();
   }
@@ -119,7 +121,11 @@ export class UI {
     const quick = (i) => () => {
       const st = inv.slots[i];
       if (!st) return;
-      if (container && container.accept && container.accept(st)) { inv.slots[i] = null; return; }
+      if (container && container.accept) {
+        const r = container.accept(st); // true: all taken, 'partial': some taken (st.count reduced)
+        if (r === true) { inv.slots[i] = null; return; }
+        if (r === 'partial') return;
+      }
       // hotbar <-> main
       const range = i < 9 ? [9, 36] : [0, 9];
       inv.slots[i] = null;
@@ -239,6 +245,44 @@ export class UI {
         prog.firstChild.style.width = `${(f.cookTime / 200) * 100}%`;
       });
     });
+  }
+
+  openChest(x, y, z) {
+    this.game.input.unlock();
+    const c = this.game.getChest(x, y, z);
+    const inv = this.game.player.inventory;
+    /** Move a stack into a range of slots (merging first); returns what is left. */
+    const insert = (slots, from, to, st) => {
+      let left = st.count;
+      for (let k = from; k < to && left; k++) {
+        const s = slots[k];
+        if (s && s.id === st.id && !ITEMS[s.id].durability) { const n = Math.min(left, maxStack(s.id) - s.count); s.count += n; left -= n; }
+      }
+      for (let k = from; k < to && left; k++) if (!slots[k]) { slots[k] = { ...st, count: left }; left = 0; }
+      return left;
+    };
+    this.showContainer('chest', 'Chest', (panel) => {
+      const grid = el('<div class="grid" style="grid-template-columns:repeat(9,var(--slot));margin-bottom:12px"></div>');
+      for (let i = 0; i < 27; i++) {
+        grid.appendChild(this.makeSlot(() => c.slots[i], (v) => { c.slots[i] = v; }, {
+          quickMove: () => {
+            const st = c.slots[i];
+            const left = insert(inv.slots, 0, 36, st);
+            c.slots[i] = left ? { ...st, count: left } : null;
+          },
+        }));
+      }
+      panel.appendChild(grid);
+      panel.appendChild(this.inventoryGrid({
+        accept: (st) => {
+          const left = insert(c.slots, 0, 27, st);
+          if (left === st.count) return false;
+          if (left) { st.count = left; return 'partial'; }
+          return true;
+        },
+      }));
+    });
+    this.chest = c;
   }
 
   /** Called each frame while a furnace screen is open */

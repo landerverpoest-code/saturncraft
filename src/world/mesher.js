@@ -2,7 +2,7 @@
 // Input is a 18x18x18 padded copy of a 16^3 section (1 block border from
 // neighbours) so it can run inside a worker without access to the world.
 import { B, OPAQUE, SHAPES, LAYERS, SHAPE, LAYER } from './blocks.js';
-import { FACE_TILE, texId } from './textures.js';
+import { FACE_TILE, FRONT_TILE, texId } from './textures.js';
 
 export const PAD = 18;
 export const PAD_VOL = PAD * PAD * PAD;
@@ -125,7 +125,7 @@ export function meshSection(sec) {
         if (id === B.FURNACE || id === B.FURNACE_LIT) {
           if (d === FURNACE_FRONT_DIR[meta[i] & 3]) tile = texId(id === B.FURNACE ? 'furnace_front' : 'furnace_front_lit');
           else if (d !== 2 && d !== 3) tile = texId('furnace_side');
-        }
+        } else if (FRONT_TILE[id] >= 0 && d === FURNACE_FRONT_DIR[meta[i] & 3]) tile = FRONT_TILE[id];
         let r = 255, g = 255, b2 = 255;
         if ((id === B.GRASS && d === 2)) { r = colors[ci]; g = colors[ci + 1]; b2 = colors[ci + 2]; }
         else if (id === B.OAK_LEAVES) { r = colors[ci + 3]; g = colors[ci + 4]; b2 = colors[ci + 5]; }
