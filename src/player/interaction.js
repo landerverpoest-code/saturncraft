@@ -3,6 +3,7 @@
 import { B, BLOCKS, SOLID, SHAPE, isFluid, CROPS } from '../world/blocks.js';
 import { ITEMS, I, toolOf, isBlockItem, WOOL_ITEMS } from '../world/items.js';
 import { breakProgressPerTick, blockDrops, canHarvest } from '../world/mining.js';
+import { enchLevel, meleeBonus, silkDropsSelf } from '../world/enchantments.js';
 import { PHYS } from '../physics/constants.js';
 import { EXHAUSTION } from './survival.js';
 import { lightAt } from '../entities/entities.js';
@@ -167,7 +168,7 @@ export class Interaction {
       this.breaking = { x: t.x, y: t.y, z: t.z, id: t.id, progress: 0 };
     }
     const tool = toolOf(p.inventory.selectedStack);
-    const per = breakProgressPerTick(t.id, tool, { onGround: p.body.onGround || p.body.inWater, inWater: p.body.eyeInWater });
+    const per = breakProgressPerTick(t.id, tool, { onGround: p.body.onGround || p.body.inWater, inWater: p.body.eyeInWater, swiftdig: enchLevel(p.inventory.selectedStack, 'swiftdig') });
     this.breaking.progress += per;
     // holding the button chains full swings into a continuous chopping motion
     if (this.swing <= 0) this.swing = SWING_TICKS;
@@ -190,9 +191,11 @@ export class Interaction {
     if (id === B.FIRE) { g.audio.play('fizz', [x + 0.5, y + 0.5, z + 0.5]); return; }
     g.audio.play('break_' + BLOCKS[id].sound, [x + 0.5, y + 0.5, z + 0.5]);
     g.particles && g.particles.blockBreak(x, y, z, id, particleLight(g, x + 0.5, y + 0.5, z + 0.5));
-    const xp = p.creative ? null : ORE_XP[id];
+    const held = p.inventory.selectedStack, ench = tool.type && held && held.ench ? held.ench : null;
+    const silk = !!(ench && ench.gentle_hand && silkDropsSelf(id));
+    const xp = p.creative || silk ? null : ORE_XP[id];
     if (xp && canHarvest(id, tool)) g.entities.spawnXp(x + 0.5, y + 0.5, z + 0.5, xp[0] + Math.floor(Math.random() * (xp[1] - xp[0] + 1)));
-    if (!p.creative) for (const drop of blockDrops(id, tool, Math.random, meta)) g.entities.spawnItem(x + 0.5, y + 0.3, z + 0.5, drop);
+    if (!p.creative) for (const drop of blockDrops(id, tool, Math.random, meta, ench)) g.entities.spawnItem(x + 0.5, y + 0.3, z + 0.5, drop);
     // Ice melts into water when broken above a solid block
     if (id === B.ICE && SOLID[g.world.getBlock(x, y - 1, z)] && g.world.dimension !== 'cinderdeep') {
       g.world.setBlockUrgent(x, y, z, B.WATER, 0);
@@ -201,18 +204,25 @@ export class Interaction {
     p.hunger.addExhaustion(EXHAUSTION.BREAK_BLOCK);
     p.stats.blocksMined++;
     if (BLOCKS[id].hardness > 0 && tool.type) p.inventory.damageSelected(tool.type === 'sword' ? 2 : 1);
+    // an ice block broken with Gentle Hand drops itself and leaves no water
+    if (silk && id === B.ICE && g.world.getBlock(x, y, z) === B.WATER) g.world.setBlockUrgent(x, y, z, B.AIR);
   }
 
   attack(mob) {
     const g = this.game, p = g.player;
-    const tool = toolOf(p.inventory.selectedStack);
+    const held = p.inventory.selectedStack;
+    const tool = toolOf(held);
     const cd = this.attackCooldownProgress();
     let dmg = tool.damage * (0.2 + cd * cd * 0.8);
     const crit = cd > 0.9 && p.body.fallDistance > 0 && !p.body.onGround && !p.body.inWater && !p.sprinting;
     if (crit) dmg *= 1.5;
-    const knock = 0.4 + (p.sprinting && cd > 0.9 ? 1 : 0) * 0.5;
+    dmg += meleeBonus(held, mob) * cd; // Keen / Hallowed, scaled by the cooldown like the reference
+    const knock = 0.4 + ((p.sprinting && cd > 0.9 ? 1 : 0) + enchLevel(held, 'shove')) * 0.5;
     p.lastAttacked = mob; // tamed Howlers join in
+    if (mob.kind === 'mob') mob.plunder = enchLevel(held, 'plunder'); // looting for its drops
     if (mob.hurt(dmg, 'player', p, knock)) {
+      const fire = enchLevel(held, 'emberbrand');
+      if (fire && mob.kind === 'mob' && !(mob.def && mob.def.fireImmune)) mob.fireTicks = Math.max(mob.fireTicks || 0, fire * 80);
       if (crit) g.particles && g.particles.crit(mob.x, mob.y + mob.height * 0.6, mob.z);
       if (p.sprinting && cd > 0.9) p.sprinting = false;
       if (tool.type) p.inventory.damageSelected(tool.type === 'sword' ? 1 : 2);
@@ -243,8 +253,10 @@ export class Interaction {
     f = Math.min(1, f);
     const [ex, ey, ez] = p.eyePos();
     const [dx, dy, dz] = p.lookDir();
-    g.entities.spawnArrow(ex, ey - 0.1, ez, dx * 3 * f, dy * 3 * f, dz * 3 * f, p, f >= 1);
-    p.inventory.removeFromSlot(slot, 1);
+    const bow = p.inventory.selectedStack, endless = enchLevel(bow, 'endless') > 0;
+    const arrow = g.entities.spawnArrow(ex, ey - 0.1, ez, dx * 3 * f, dy * 3 * f, dz * 3 * f, p, f >= 1, null, enchLevel(bow, 'strongdraw'));
+    if (arrow && endless) arrow.pickup = false; // Endless arrows cannot be picked back up
+    if (!endless) p.inventory.removeFromSlot(slot, 1);
     p.inventory.damageSelected(1);
     g.audio.play('bow');
   }
@@ -255,7 +267,7 @@ export class Interaction {
     const st = p.inventory.selectedStack;
     const d = st && ITEMS[st.id];
     // Armour: right-click puts it on (swapping with what is worn), unless aiming at something usable
-    const usable = this.target && ([B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.CHEST, B.DOOR, B.BED].includes(this.target.id) || BLOCKS[this.target.id].shape === SHAPE.GATE);
+    const usable = this.target && ([B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.CHEST, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL].includes(this.target.id) || BLOCKS[this.target.id].shape === SHAPE.GATE);
     if (d && d.armor && !usable) {
       const inv = p.inventory, worn = inv.armor[d.armor.slot];
       inv.armor[d.armor.slot] = st;
@@ -312,6 +324,8 @@ export class Interaction {
       if (t.id === B.WORKBENCH) { g.ui.openWorkbench(); return true; }
       if (t.id === B.FURNACE || t.id === B.FURNACE_LIT) { g.ui.openFurnace(t.x, t.y, t.z); return true; }
       if (t.id === B.BED) { g.trySleep(t.x, t.y, t.z); return true; }
+      if (t.id === B.ENCHANTING_TABLE) { g.ui.openEnchanting(t.x, t.y, t.z); return true; }
+      if (t.id === B.ANVIL) { g.ui.openAnvil(t.x, t.y, t.z); return true; }
       if (t.id === B.OAK_TRAPDOOR) {
         const m = w.getMeta(t.x, t.y, t.z);
         w.setBlockUrgent(t.x, t.y, t.z, t.id, m ^ TRAPDOOR_OPEN);
@@ -411,6 +425,7 @@ export class Interaction {
       if (t.face[1] === -1 || (placeId !== B.TORCH && t.face[1] === 1)) return false;
       if (t.face[1] === 0) { const s = sideOf(-t.face[0], -t.face[2]); meta = placeId === B.TORCH ? 1 + s : s; }
     }
+    if (placeId === B.ANVIL) meta = Math.abs(ldx) > Math.abs(ldz) ? 1 : 0; // the long side faces across the player's view
     if (BLOCKS[placeId].needsSupport && !w.hasSupport(px, py, pz, placeId, meta)) return false;
     if ((placeId === B.TALL_GRASS || placeId === B.SUNPETAL || placeId === B.REDBLOOM) && !w.hasSupport(px, py, pz, placeId)) return false;
     if (placeId === B.FURNACE || BLOCKS[placeId].tex.front) {

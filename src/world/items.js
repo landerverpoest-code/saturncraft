@@ -161,6 +161,8 @@ item('ember_powder', 'Ember Powder', { iconStyle: ['dust', { h: '#ff9a20' }] });
 item('ember_quartz', 'Ember Quartz', { iconStyle: ['gem', { h: '#f0d8c8' }] });
 item('glowshard_dust', 'Glowshard Dust', { iconStyle: ['dust', { h: '#ffd860' }] });
 item('eye_of_the_void', 'Eye of the Void', { stack: 16, voidEye: true, iconStyle: ['pearl', { h: '#3aa88a', H: '#c8ff6a' }] });
+// Enchanted book: carries stack.ench, applied to gear at an anvil (see world/enchantments.js)
+item('enchanted_book', 'Enchanted Book', { stack: 1, enchBook: true, iconStyle: ['book', { h: '#7a2a8a', H: '#a050c0', w: '#f0e4c8' }] });
 
 // Fuel for block items
 for (const id of [B.OAK_PLANKS, B.SPRUCE_PLANKS, B.BIRCH_PLANKS, B.JUNGLE_PLANKS, B.ACACIA_PLANKS, B.DARK_OAK_PLANKS, B.OAK_LOG, B.BIRCH_LOG, B.SPRUCE_LOG, B.JUNGLE_LOG, B.ACACIA_LOG, B.DARK_OAK_LOG, B.WORKBENCH]) ITEMS[id].fuel = 300;

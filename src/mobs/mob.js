@@ -249,7 +249,8 @@ export class Mob {
     if (killedByPlayer && this.def.category === CATEGORY.MONSTER && g.milestones) g.milestones.event('kill');
     if (this.def.onDeath) this.def.onDeath(this, g, killedByPlayer);
     if (this.age < 0) { this.killedByPlayer = false; return; } // babies drop nothing
-    for (const d of rollDrops(this.type, { killedByPlayer, onFire: this.fireTicks > 0, sheared: this.sheared })) {
+    const plunder = source === 'player' ? this.plunder | 0 : 0; // set by the player's melee hit
+    for (const d of rollDrops(this.type, { killedByPlayer, onFire: this.fireTicks > 0, sheared: this.sheared, plunder })) {
       if (d.id === B.WOOL) d.id = WOOL_ITEMS[this.woolColor || 0];
       g.entities.spawnItem(this.x, this.y + 0.5, this.z, d);
     }

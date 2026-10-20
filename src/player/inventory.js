@@ -1,8 +1,10 @@
-// Slot-based inventory. Stacks are {id, count, damage?}.
+// Slot-based inventory. Stacks are {id, count, damage?, ench?, rw?} (see world/enchantments.js).
 import { maxStack, ITEMS } from '../world/items.js';
+import { canStack, durabilityLoss } from '../world/enchantments.js';
 
 export function stack(id, count = 1, damage = 0) { return { id, count, damage }; }
-export function sameItem(a, b) { return a && b && a.id === b.id && !(ITEMS[a.id] && ITEMS[a.id].durability); }
+/** Can these two stacks merge? (same item, no durability, same enchantments) */
+export const sameItem = canStack;
 
 export class Inventory {
   constructor(size = 36) {
@@ -23,7 +25,7 @@ export class Inventory {
     if (!ITEMS[st.id] || !ITEMS[st.id].durability) {
       for (let i = 0; i < this.slots.length && left > 0; i++) {
         const s = this.slots[i];
-        if (s && s.id === st.id && s.count < max) {
+        if (canStack(s, st) && s.count < max) {
           const n = Math.min(left, max - s.count);
           s.count += n; left -= n;
         }
@@ -32,7 +34,7 @@ export class Inventory {
     for (let i = 0; i < this.slots.length && left > 0; i++) {
       if (!this.slots[i]) {
         const n = Math.min(left, max);
-        this.slots[i] = { id: st.id, count: n, damage: st.damage || 0 };
+        this.slots[i] = { ...st, count: n, damage: st.damage || 0 };
         left -= n;
       }
     }
@@ -45,8 +47,8 @@ export class Inventory {
   removeFromSlot(i, n = 1) {
     const s = this.slots[i];
     if (!s) return null;
-    if (this.creative) return { id: s.id, count: Math.min(n, s.count), damage: s.damage };
-    const taken = { id: s.id, count: Math.min(n, s.count), damage: s.damage };
+    if (this.creative) return { ...s, count: Math.min(n, s.count) };
+    const taken = { ...s, count: Math.min(n, s.count) };
     s.count -= taken.count;
     if (s.count <= 0) this.slots[i] = null;
     this.changed();
@@ -54,12 +56,14 @@ export class Inventory {
   }
 
   /** Damage the tool in the selected slot; returns true if it broke. */
-  damageSelected(amount = 1) {
+  damageSelected(amount = 1, rng = Math.random) {
     const s = this.selectedStack;
     if (this.creative) return false;
     if (!s) return false;
     const d = ITEMS[s.id];
     if (!d || !d.durability) return false;
+    amount = durabilityLoss(s, amount, rng); // Steadfast may spare it
+    if (!amount) return false;
     s.damage = (s.damage || 0) + amount;
     if (s.damage >= d.durability) { this.slots[this.selected] = null; this.changed(); return true; }
     this.changed();

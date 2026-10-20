@@ -1,6 +1,7 @@
 // Armour: defence points and toughness reduce incoming damage with the
 // reference formula; every piece wears by max(1, floor(damage / 4)) per hit.
 import { ITEMS } from '../world/items.js';
+import { durabilityLoss } from '../world/enchantments.js';
 
 export const ARMOR_SLOTS = ['helmet', 'chestplate', 'leggings', 'boots'];
 
@@ -24,13 +25,13 @@ export function armorTotals(armor) {
 }
 
 /** Wear every worn piece after taking `damage`; returns the indices of pieces that broke. */
-export function wearArmor(armor, damage) {
+export function wearArmor(armor, damage, rng = Math.random) {
   const broke = [];
   const wear = Math.max(1, Math.floor(damage / 4));
   for (let i = 0; i < armor.length; i++) {
     const st = armor[i];
     if (!st) continue;
-    st.damage = (st.damage || 0) + wear;
+    st.damage = (st.damage || 0) + durabilityLoss(st, wear, rng); // Steadfast spares some wear
     if (st.damage >= ITEMS[st.id].durability) { armor[i] = null; broke.push(i); }
   }
   return broke;

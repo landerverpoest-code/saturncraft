@@ -40,6 +40,7 @@ import { explode } from './entities/explosion.js';
 import { saveGame, applySave, applyPlayerSave } from './world/save.js';
 import { DimensionManager } from './world/dimensions/manager.js';
 import { DIMENSIONS } from './world/dimensions/dims.js';
+import { EnchantBooks } from './render/enchantBooks.js';
 
 // Spherical (radial distance) fog instead of view-depth fog, so chunk edges never show at screen corners
 THREE.ShaderChunk.fog_vertex = `#ifdef USE_FOG
@@ -123,6 +124,7 @@ export class Game {
     this.ui = new UI(this);
     this.held = new HeldItem(this);
     this.overlay = new BlockOverlay(this.scene);
+    this.enchantBooks = new EnchantBooks(this.scene); // floating books over enchanting tables
     this.dims = new DimensionManager(this); // the Cinderdeep and the Hollow (world/dimensions/)
     this.dims.applyLook();
 
@@ -684,6 +686,7 @@ export class Game {
 
     this.chunks.updateVisibility(this.camera.position);
     this.entities.render(alpha, sec);
+    this.enchantBooks.update(this, sec);
     this.playerModel.update(this, this.perspective !== 0 && this.cameraDist > 0.8, alpha, sec); // no model when the camera is squeezed into the head
     if (this.net) this.net.render(sec);
     this.overlay.update(this.interaction, p.dead);

@@ -9,18 +9,20 @@ import { texturePixels } from '../world/textures.js';
 import { MIN_Y } from '../world/constants.js';
 import { addXp, splitOrbs } from '../player/experience.js';
 import { RAIL_EXITS, RAIL_UP, railHeight } from '../world/rails.js';
+import { withExtras, canStack, isGlinting, arrowDamage } from '../world/enchantments.js';
 
 let nextEntityId = 1;
 export const ENTITY_RENDER_DIST = 64;
 const SHADOW_CAST_DIST = 24;
 const texCache = new Map();
-function iconTexture(id) {
-  if (texCache.has(id)) return texCache.get(id);
-  const c = itemCanvas(id);
+function iconTexture(id, glint = false) {
+  const key = glint ? id + ':g' : id;
+  if (texCache.has(key)) return texCache.get(key);
+  const c = itemCanvas(id, glint);
   const t = new THREE.CanvasTexture(c);
   t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter;
   t.colorSpace = THREE.SRGBColorSpace;
-  texCache.set(id, t);
+  texCache.set(key, t);
   return t;
 }
 const blockTexCache = new Map();
@@ -53,7 +55,7 @@ export class ItemEntity {
     this.body = new Body(0.25, 0.25);
     this.body.stepHeight = 0;
     this.body.setPos(x, y, z);
-    this.stack = { id: st.id, count: st.count, damage: st.damage || 0 };
+    this.stack = withExtras({ id: st.id, count: st.count, damage: st.damage || 0 }, st); // keeps enchantments
     this.age = 0;
     this.pickupDelay = 10;
     this.dead = false;
@@ -347,7 +349,7 @@ export class Arrow {
       return;
     }
     if (target) {
-      let dmg = Math.ceil(speed * 2);
+      let dmg = arrowDamage(speed, this.power | 0);
       if (this.crit) dmg += Math.floor(Math.random() * (dmg / 2 + 2));
       const ok = target.hurt(dmg, 'arrow', this.shooter, 0.6, this);
       if (ok) { this.dead = true; return; }
@@ -402,7 +404,12 @@ export class EntityManager {
   }
   spawnBoat(x, y, z, yaw, cart = false) { return this.netSpawn('boat', { x, y, z, yaw, cart }) ? null : this.add(cart ? new Minecart(x, y, z, yaw) : new Boat(x, y, z, yaw)); }
   spawnFallingBlock(x, y, z, id) { return this.netSpawn('falling', {}) ? null : this.add(new FallingBlock(x, y, z, id)); }
-  spawnArrow(x, y, z, vx, vy, vz, shooter, crit, thrown = null) { return this.netSpawn('arrow', { x, y, z, v: [vx, vy, vz], crit, thrown }) ? null : this.add(new Arrow(x, y, z, vx, vy, vz, shooter, crit, thrown)); }
+  spawnArrow(x, y, z, vx, vy, vz, shooter, crit, thrown = null, power = 0) {
+    if (this.netSpawn('arrow', { x, y, z, v: [vx, vy, vz], crit, thrown, power: power || undefined })) return null;
+    const a = this.add(new Arrow(x, y, z, vx, vy, vz, shooter, crit, thrown));
+    a.power = power | 0; // Strongdraw level of the bow
+    return a;
+  }
 
   /** Multiplayer guest: dropped items, orbs, arrows and boats are made (and shared) by the host. */
   netSpawn(kind, data) {
@@ -491,7 +498,7 @@ export class EntityManager {
       const items = this.list.filter((e) => e.kind === 'item' && !e.dead);
       for (let i = 0; i < items.length; i++) for (let j = i + 1; j < items.length; j++) {
         const a = items[i], b = items[j];
-        if (a.dead || b.dead || a.stack.id !== b.stack.id || ITEMS[a.stack.id].durability) continue;
+        if (a.dead || b.dead || !canStack(a.stack, b.stack)) continue;
         if (Math.abs(a.x - b.x) < 0.5 && Math.abs(a.y - b.y) < 0.5 && Math.abs(a.z - b.z) < 0.5 && a.stack.count + b.stack.count <= maxStack(a.stack.id)) {
           a.stack.count += b.stack.count; b.dead = true;
         }
@@ -560,7 +567,7 @@ export class EntityManager {
 
   createMesh(e) {
     if (e.kind === 'item') {
-      const mat = new THREE.SpriteMaterial({ map: iconTexture(e.stack.id), alphaTest: 0.3 });
+      const mat = new THREE.SpriteMaterial({ map: iconTexture(e.stack.id, isGlinting(e.stack)), alphaTest: 0.3 });
       const s = new THREE.Sprite(mat);
       s.scale.setScalar(0.38);
       return s;

@@ -81,9 +81,10 @@ export class HeldItem {
 
   resize() { this.camera.aspect = window.innerWidth / window.innerHeight; this.camera.updateProjectionMatrix(); }
 
-  build(id) {
+  build(id, glint = false) {
     this.group.clear();
     this.mesh = null;
+    this.glintMat = null;
     if (id == null) { this.group.add(this.hand); this.hand.position.set(0.52, -0.48, -0.8); this.hand.rotation.set(-0.55, 0.2, 0.32); return; }
     const d = ITEMS[id];
     if (d.block !== undefined && (BLOCKS[d.block].shape === SHAPE.CUBE || BLOCKS[d.block].shape === SHAPE.CACTUS || BLOCKS[d.block].shape === SHAPE.SLAB || BLOCKS[d.block].shape === SHAPE.STAIRS)) {
@@ -95,9 +96,10 @@ export class HeldItem {
       this.mesh.position.set(0.5, -0.45, -0.75);
       this.mesh.rotation.set(0.1, 0.8, 0);
     } else {
-      const tex = new THREE.CanvasTexture(itemCanvas(id));
+      const tex = new THREE.CanvasTexture(itemCanvas(id, glint));
       tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter; tex.colorSpace = THREE.SRGBColorSpace;
       const mat = new THREE.MeshLambertMaterial({ map: tex, transparent: true, alphaTest: 0.3, side: THREE.DoubleSide });
+      if (glint) this.glintMat = mat;
       this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.6), mat);
       this.mesh.position.set(0.55, -0.35, -0.75);
       this.mesh.rotation.set(0, -1.2, 0.35);
@@ -110,7 +112,11 @@ export class HeldItem {
     if (p.dead || !g.hud.visible) return;
     const st = p.inventory.selectedStack;
     const id = st ? st.id : null;
-    if (id !== this.currentId) { this.currentId = id; this.build(id); this.equipAnim = 1; }
+    const glint = !!(st && st.ench && Object.keys(st.ench).length);
+    const key = id == null ? null : id + (glint ? ':g' : '');
+    if (key !== this.currentId) { this.currentId = key; this.build(id, glint); this.equipAnim = 1; }
+    // enchanted items shimmer: a slow purple pulse on the emissive colour
+    if (this.glintMat) this.glintMat.emissive.setRGB(0.1 + 0.07 * Math.sin(sec * 3), 0.02, 0.16 + 0.1 * Math.sin(sec * 3));
     this.equipAnim = Math.max(0, this.equipAnim - 0.12);
     const it = g.interaction;
     // Swing: an arc toward the screen centre and a forward chop, pivoting at

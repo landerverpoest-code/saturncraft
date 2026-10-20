@@ -1,6 +1,7 @@
 // Heads-up display: hotbar, health/hunger/air bars, crosshair, attack
 // cooldown, sky compass and the F3 debug overlay.
-import { iconURL } from './icons.js';
+import { iconURL, stackHTML } from './icons.js';
+import { hasEnch, enchLines } from '../world/enchantments.js';
 import { ITEMS } from '../world/items.js';
 import { armorTotals } from '../player/armor.js';
 import { xpToNextLevel } from '../player/experience.js';
@@ -100,21 +101,13 @@ export class HUD {
   }
 
   renderSlot(el, st) {
-    if (!st) { el.innerHTML = ''; return; }
-    const d = ITEMS[st.id];
-    let html = `<img src="${iconURL(st.id)}">`;
-    if (st.count > 1) html += `<span class="count">${st.count}</span>`;
-    if (d && d.durability && st.damage > 0) {
-      const f = 1 - st.damage / d.durability;
-      html += `<div class="dura"><div style="width:${f * 100}%;background:hsl(${f * 120},90%,50%)"></div></div>`;
-    }
-    el.innerHTML = html;
+    el.innerHTML = stackHTML(st);
   }
 
   update() {
     const g = this.game, p = g.player;
     const inv = p.inventory;
-    const key = inv.slots.slice(0, 9).map((s) => (s ? `${s.id}:${s.count}:${s.damage}` : '-')).join('|');
+    const key = inv.slots.slice(0, 9).map((s) => (s ? `${s.id}:${s.count}:${s.damage}:${s.ench ? JSON.stringify(s.ench) : ''}` : '-')).join('|');
     if (key !== this.lastHotbarKey) {
       this.lastHotbarKey = key;
       for (let i = 0; i < 9; i++) this.renderSlot(this.slots[i], inv.slots[i]);
@@ -124,6 +117,7 @@ export class HUD {
       this.lastSel = inv.selected;
       const st = inv.selectedStack;
       this.itemNameEl.textContent = st ? ITEMS[st.id].name : '';
+      if (st && hasEnch(st)) { const e = document.createElement('span'); e.className = 'ench-list'; e.textContent = enchLines(st).join(', '); this.itemNameEl.appendChild(e); }
       this.itemNameEl.style.opacity = 1;
       clearTimeout(this._nameT);
       this._nameT = setTimeout(() => { this.itemNameEl.style.opacity = 0; }, 1800);
