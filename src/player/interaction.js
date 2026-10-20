@@ -7,6 +7,7 @@ import { PHYS } from '../physics/constants.js';
 import { EXHAUSTION } from './survival.js';
 import { lightAt } from '../entities/entities.js';
 import { canLight, FIRE_DELAY } from '../world/fire.js';
+import { Bobber } from '../entities/bobber.js';
 import { tryLightRift, findHollowRing, fillHollowGate } from '../world/dimensions/portal.js';
 import { LEAVES, SAPLING_TREE, growTree } from '../world/trees.js';
 import { sideOf, SIDE_DIRS, DOOR_OPEN, DOOR_UPPER, BED_HEAD, SLAB_TOP, SLAB_DOUBLE, STAIRS_UPSIDE, GATE_OPEN, TRAPDOOR_OPEN, TRAPDOOR_TOP } from '../world/shapes.js';
@@ -119,6 +120,19 @@ export class Interaction {
     if (d && d.bow) {
       if (input.right) this.bowDraw++;
       else if (this.bowDraw > 0) { this.releaseBow(); this.bowDraw = 0; }
+      return;
+    }
+    if (d && d.rod && input.rightPressed) {
+      // cast the bobber, or reel it in (a catch if a fish is biting)
+      if (this.bobber && !this.bobber.dead) {
+        const dmg = this.bobber.reel(g);
+        if (dmg && !p.creative) p.inventory.damageSelected(dmg);
+      } else {
+        const [ex, ey, ez] = p.eyePos(), [dx, dy, dz] = p.lookDir();
+        this.bobber = g.entities.add(new Bobber(ex + dx * 0.5, ey + dy * 0.5, ez + dz * 0.5, dx * 0.7, dy * 0.7 + 0.15, dz * 0.7, p));
+        g.audio.play('bow', [ex, ey, ez], 0.4);
+      }
+      this.swing = SWING_TICKS;
       return;
     }
     if (d && d.throwable && input.rightPressed) {
@@ -537,6 +551,12 @@ export class Interaction {
     p.inventory.removeFromSlot(p.inventory.selected, 1);
     this.swing = SWING_TICKS;
     return true;
+  }
+
+  /** Is the player still holding a fishing rod? (the bobber vanishes otherwise) */
+  holdingRod() {
+    const st = this.game.player.inventory.selectedStack;
+    return !!(st && ITEMS[st.id] && ITEMS[st.id].rod);
   }
 
   /** A pumpkin on top of a T of four iron blocks comes alive as an Ironguard. */

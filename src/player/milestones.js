@@ -26,6 +26,7 @@ export const MILESTONES = [
   { id: 'village', title: 'Neighbours', desc: 'Find a village', icon: B.DIRT_PATH, tick: (g) => g.world.dimension === 'overworld' && villagesNear(g.world.gen, g.player.x, g.player.z, g.player.x, g.player.z).some((v) => Math.hypot(v.cx - g.player.x, v.cz - g.player.z) < 40) },
   { id: 'tame', title: 'Best Friends', desc: 'Tame a Howler with a bone', icon: I.BONE, event: 'tame' },
   { id: 'golem', title: 'Heavy Metal', desc: 'Build an Ironguard', icon: B.IRON_BLOCK, event: 'golem' },
+  { id: 'fish', title: 'Gone Fishing', desc: 'Catch something with a fishing rod', icon: I.FISHING_ROD, event: 'fish' },
   { id: 'trade', title: 'Fair Trade', desc: 'Trade with a Settler', icon: I.BERYL, event: 'trade' },
   { id: 'dungeon', title: 'Cage Breaker', desc: 'Break a monster spawner', icon: B.SPAWNER, event: 'spawner' },
 ];
