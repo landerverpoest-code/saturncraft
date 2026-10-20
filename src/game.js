@@ -17,6 +17,7 @@ import { Clouds } from './sky/clouds.js';
 import { Weather, WeatherRenderer } from './sky/weather.js';
 import { Lightning } from './sky/lightning.js';
 import { snowfall } from './world/randomTicks.js';
+import { igniteTNT } from './entities/tnt.js';
 import { canLight, FIRE_DELAY } from './world/fire.js';
 import { Chat } from './ui/chat.js';
 import { Music } from './audio/music.js';
@@ -96,6 +97,7 @@ export class Game {
     this.clouds = new Clouds(this.scene, this.seed);
     this.weather = new Weather();
     // fire checks this: rain puts out (and stops) fires that are open to the sky
+    this.world.onTNT = (x, y, z) => igniteTNT(this, x, y, z);
     this.world.rainingAt = (x, y, z) => this.world.dimension === 'overworld' && this.weather.level >= 0.2 && Weather.precipitation(this.world.biomeAt(x, z)) === 'rain' && this.world.heightAt(x, z) <= y;
     this.chat = this.chat || new Chat(this);
     this.weatherFx = new WeatherRenderer(this.scene);

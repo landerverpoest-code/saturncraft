@@ -8,6 +8,7 @@ import { EXHAUSTION } from './survival.js';
 import { lightAt } from '../entities/entities.js';
 import { canLight, FIRE_DELAY } from '../world/fire.js';
 import { Bobber } from '../entities/bobber.js';
+import { igniteTNT } from '../entities/tnt.js';
 import { updateRails } from '../world/rails.js';
 import { tryLightRift, findHollowRing, fillHollowGate } from '../world/dimensions/portal.js';
 import { LEAVES, SAPLING_TREE, growTree } from '../world/trees.js';
@@ -352,6 +353,7 @@ export class Interaction {
     }
     // Flint and steel lights a fire on the clicked face (or lights a fire on top of a solid block)
     if (d.igniter) {
+      if (t.id === B.TNT) { igniteTNT(g, t.x, t.y, t.z); if (!p.creative) p.inventory.damageSelected(1); this.swing = SWING_TICKS; return true; }
       const fx = t.x + t.face[0], fy = t.y + t.face[1], fz = t.z + t.face[2];
       // inside an obsidian frame: open a Rift portal instead of lighting a fire
       if (w.dimension !== 'hollow' && tryLightRift(w, fx, fy, fz, (x, y, z, id, m) => w.setBlockUrgent(x, y, z, id, m, false))) {

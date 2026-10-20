@@ -1,6 +1,7 @@
 // Explosions: 16x16x16 ray block destruction with blast resistance, entity
 // damage with exposure, and 1/power drop survival.
 import { B, BLOCKS, isFluid } from '../world/blocks.js';
+import { igniteTNT } from './tnt.js';
 import { blockDrops } from '../world/mining.js';
 
 /** Damage dealt to an entity at normalised distance d (0..1) with exposure e. */
@@ -73,6 +74,7 @@ export function explode(game, x, y, z, power, source) {
   // Blocks
   for (const [bx, by, bz, id] of blocks) {
     if (BLOCKS[id].hardness < 0 || w.getBlock(bx, by, bz) !== id) continue; // may already be gone (door halves)
+    if (id === B.TNT) { igniteTNT(game, bx, by, bz, 10 + Math.floor(Math.random() * 20)); continue; } // chain reaction
     const meta = w.getMeta(bx, by, bz);
     w.setBlock(bx, by, bz, B.AIR);
     if (Math.random() < 1 / power) {

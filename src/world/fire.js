@@ -11,6 +11,7 @@ odds([B.OAK_LOG, B.BIRCH_LOG, B.SPRUCE_LOG, B.JUNGLE_LOG, B.ACACIA_LOG, B.DARK_O
 odds([B.OAK_LEAVES, B.BIRCH_LEAVES, B.SPRUCE_LEAVES, B.JUNGLE_LEAVES, B.ACACIA_LEAVES, B.DARK_OAK_LEAVES, B.WOOL], 30, 60);
 odds([B.VINES], 15, 100);
 odds([B.BOOKSHELF], 30, 20);
+odds([B.TNT], 15, 100);
 odds([B.TALL_GRASS, B.SUNPETAL, B.REDBLOOM, B.SKYBELL, B.ROSETTE, B.DEAD_BUSH], 60, 100);
 
 export const FIRE_DELAY = 30;
@@ -54,6 +55,7 @@ function rainyAround(world, x, y, z) {
 function tryBurn(world, x, y, z, chance, age, rng) {
   const id = world.getBlock(x, y, z);
   if (Math.floor(rng() * chance) >= flam(id)) return;
+  if (id === B.TNT && world.onTNT) { world.onTNT(x, y, z); return; } // fire sets TNT off
   if (Math.floor(rng() * (age + 10)) < 5 && !(world.rainingAt && world.rainingAt(x, y, z))) {
     world.setBlock(x, y, z, B.FIRE, Math.min(15, age + Math.floor(Math.floor(rng() * 5) / 4)));
     world.scheduleTick(x, y, z, FIRE_DELAY + Math.floor(rng() * 10));

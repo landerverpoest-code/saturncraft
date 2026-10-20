@@ -17,6 +17,7 @@
 //   openContainer / closeContainer / uiBefore / uiAfter, requestTrade(...),
 //   sendCommand(text), requestTravel(dim, arrival), requestExplosion(...),
 //   onSwitchDimension(dim, pos), onArrived(x, y, z), respawnNearHost()
+import { igniteTNT, PrimedTNT } from '../entities/tnt.js';
 import {
   PROTOCOL_VERSION, MAX_PLAYERS, encodeMessage, Reassembler, makeRoomCode, cleanName,
   packPlayerState, unpackPlayerState, packEntity, encodePackedChunk, decodePackedChunk,
@@ -398,6 +399,11 @@ export class HostSession extends Session {
       ents.spawnArrow(m.x, m.y, m.z, v[0], v[1], v[2], c.rp.target, !!m.crit, m.thrown === 'egg' || m.thrown === 'snowball' ? m.thrown : null);
     } else if (m.k === 'boat') {
       ents.spawnBoat(m.x, m.y, m.z, +m.yaw || 0, !!m.cart);
+    } else if (m.k === 'tnt') {
+      // a guest lit TNT: it burns (and blows up) here, so the blast reaches everyone
+      const x = Math.floor(m.x), y = Math.floor(m.y), z = Math.floor(m.z);
+      if (g.world.getBlock(x, y, z) === B.TNT) igniteTNT(g, x, y, z);
+      else ents.add(new PrimedTNT(x + 0.5, y, z + 0.5));
     }
   }
 

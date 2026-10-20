@@ -559,6 +559,17 @@ const GEN = {
       }
     }
   },
+  tnt_side: (c) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const band = y >= 5 && y <= 10;
+      c.set(x, y, band ? (y === 5 || y === 10 ? hex('#c8c8c0') : hex('#ece8dc')) : shade(hex(x % 4 === 0 ? '#9a2a1e' : '#c8382a'), 0.9 + c.h(x, y) * 0.15));
+    }
+    // a blocky word-mark on the white band
+    for (const [x0, w] of [[2, 3], [6, 4], [11, 3]]) for (let x = x0; x < x0 + w; x++) c.set(x, 7, hex('#2a2a2a'));
+    for (const x of [3, 7, 9, 12]) for (let y = 7; y <= 9; y++) c.set(x, y, hex('#2a2a2a'));
+  },
+  tnt_top: (c) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, shade(hex('#c8382a'), 0.85 + c.h(x, y) * 0.2)); for (let k = 6; k < 10; k++) for (let j = 6; j < 10; j++) c.set(k, j, hex('#3a2a20')); c.set(7, 7, hex('#d8d0c0')); },
+  tnt_bottom: (c) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, shade(hex('#b8302a'), 0.85 + c.h(x, y) * 0.2)); },
   cobweb: (c) => {
     for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
     const col = [236, 236, 240];
