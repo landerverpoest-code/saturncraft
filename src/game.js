@@ -137,6 +137,16 @@ export class Game {
     this.chunks.onChunkLoaded = (cx, cz) => this.spawner.onChunkLoaded(cx, cz);
     this.chunks.onChunkUnloaded = (cx, cz) => this.spawner.onChunkUnloaded(cx, cz);
     this.player.listeners.hurt.push(() => this.audio.play('hurt'));
+    // a blocked hit wears the shield and pushes melee attackers back
+    this.player.listeners.blocked = [(amount, attacker) => {
+      const p = this.player;
+      this.audio.play('shield', [p.x, p.y + 1, p.z]);
+      if (!p.creative && amount >= 3) p.inventory.damageSelected(1 + Math.floor(amount));
+      if (attacker && attacker.body && attacker.kind === 'mob') {
+        const dx = attacker.x - p.x, dz = attacker.z - p.z, d = Math.hypot(dx, dz) || 1;
+        attacker.body.vx += dx / d * 0.5; attacker.body.vz += dz / d * 0.5;
+      }
+    }];
     this.player.listeners.death.push((cause) => this.onDeath(cause));
 
     if (this.saveData) {

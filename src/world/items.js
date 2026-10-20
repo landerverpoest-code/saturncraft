@@ -97,6 +97,7 @@ item('bowl', 'Bowl');
 item('beetroot_soup', 'Beetroot Soup', { stack: 1, food: { hunger: 6, saturation: 7.2, leaves: 'bowl' } });
 item('shears', 'Shears', { stack: 1, durability: 238, shears: true });
 item('flint_and_steel', 'Flint and Steel', { stack: 1, durability: 64, igniter: true });
+item('shield', 'Shield', { stack: 1, durability: 336, shield: true, iconStyle: ['shield', { h: '#8a6034', H: '#a87a48', s: '#9a9aa0', w: '#5a3d1e' }] });
 item('minecart', 'Minecart', { stack: 1, minecart: true, iconStyle: ['cart', { h: '#8a8a90', H: '#b8b8c0', s: '#2a2a2e' }] });
 item('fishing_rod', 'Fishing Rod', { stack: 1, durability: 64, rod: true, iconStyle: ['rod', { s: '#7a5a32', w: '#dddddd', h: '#c8302a' }] });
 item('raw_silverfin', 'Raw Silverfin', { food: { hunger: 2, saturation: 0.4 }, iconStyle: ['fish', { h: '#9aa8b0', H: '#c8d4dc', s: '#5a6a74' }] });

@@ -125,6 +125,10 @@ export class Interaction {
       else if (this.bowDraw > 0) { this.releaseBow(); this.bowDraw = 0; }
       return;
     }
+    // shields: hold right mouse to block (after a short raise, as in the reference)
+    p.blocking = !!(d && d.shield && input.right && (this.shieldRaise = (this.shieldRaise || 0) + 1) > 5);
+    if (!(d && d.shield && input.right)) this.shieldRaise = 0;
+    if (d && d.shield) return;
     if (d && d.rod && input.rightPressed) {
       // cast the bobber, or reel it in (a catch if a fish is biting)
       if (this.bobber && !this.bobber.dead) {

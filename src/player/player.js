@@ -67,6 +67,15 @@ export class Player {
   hurt(amount, source = 'generic', attacker = null) {
     if (this.dead || amount <= 0) return false;
     if (this.creative && source !== 'void' && source !== 'kill') return false; // creative players only die in the void
+    // a raised shield stops hits and arrows from in front (within 90 degrees of the view)
+    if (this.blocking && attacker && attacker.x !== undefined && source !== 'fall' && source !== 'fire' && source !== 'drown' && source !== 'starve') {
+      const dx = attacker.x - this.x, dz = attacker.z - this.z, d = Math.hypot(dx, dz) || 1;
+      const lx = -Math.sin(this.yaw), lz = -Math.cos(this.yaw);
+      if ((dx * lx + dz * lz) / d > 0) {
+        for (const f of this.listeners.blocked || []) f(amount, attacker);
+        return false;
+      }
+    }
     if (this.invulnerable > 10) {
       if (amount <= this.lastHurt) return false;
       const extra = amount - this.lastHurt;
@@ -157,7 +166,8 @@ export class Player {
     const wasOnGround = b.onGround;
     const x0 = b.x, z0 = b.z, y0 = b.y;
     b.travel(world, {
-      forward: input.forward, strafe: input.strafe, yaw: this.yaw,
+      // raising a shield slows you to a fifth, like sneaking
+      forward: input.forward * (this.blocking ? 0.2 : 1), strafe: input.strafe * (this.blocking ? 0.2 : 1), yaw: this.yaw,
       jump: input.jump && (this.jumpCooldown === 0 || b.inWater || b.inLava),
       sprint: this.sprinting, sneak: this.sneaking,
       flying: this.flying, descend: this.flying && !!input.sneak,

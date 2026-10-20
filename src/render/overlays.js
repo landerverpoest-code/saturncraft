@@ -127,12 +127,13 @@ export class HeldItem {
     const eat = it.eating > 0 ? Math.sin(sec * 20) * 0.03 : 0;
     const b = p.body;
     const walk = b.onGround ? Math.min(1, Math.hypot(b.vx, b.vz) * 6) : 0;
-    this.group.rotation.set(arc * 0.35 - push * 0.25, twist * 0.3, arc * 0.45);
+    this.group.rotation.set(arc * 0.35 - push * 0.25, twist * 0.3 + (p.blocking ? 0.9 : 0), arc * 0.45 - (p.blocking ? 0.3 : 0));
     _pivotRot.copy(SHOULDER).applyEuler(this.group.rotation);
     this.group.position.copy(SHOULDER).sub(_pivotRot).add(_offset.set(
       Math.sin(sec * 9) * 0.02 * walk - arc * 0.2 - (it.eating ? 0.25 : 0),
       -Math.abs(Math.cos(sec * 9)) * 0.02 * walk - this.equipAnim * 0.5 + eat + (it.eating ? 0.1 : 0) + arc * 0.1 + lift * 0.05,
       -push * 0.15));
+    if (p.blocking) this.group.position.add(_offset.set(-0.35, 0.15, 0.05)); // shield raised across the view
     const L = lightAt(g, p.x, p.y + 1.6, p.z) * (0.4 + 0.6 * Math.min(1, g.sky.state.combined + 0.25));
     this.scene.children[0].intensity = 0.1 + 1.9 * L;
     this.scene.children[1].intensity = 1.6 * L;
