@@ -467,6 +467,7 @@ export class Interaction {
 
   interactMob(mob) {
     const g = this.game, p = g.player, st = p.inventory.selectedStack, d = st && ITEMS[st.id];
+    if (mob.netProxy) return false; // multiplayer client: only the host can feed, shear, tame or trade
     if (mob.def.villager && mob.deathTime === 0 && mob.trades.length && !(d && d.food && mob.def.food)) { g.ui.openTrade(mob); g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); return true; }
     if (mob.def.tameable && mob.deathTime === 0 && this.interactHowler(mob, st, d)) return true;
     if (!d || mob.deathTime > 0 || mob.def.category !== 'creature') return false;

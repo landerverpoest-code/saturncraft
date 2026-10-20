@@ -77,6 +77,56 @@ Commands: `/gamemode survival|creative` (`/gm 0|1`), `/time set day|night|noon|m
 (e.g. `/give diamond_sword`, `/give oak planks 64`), `/summon <mob>` (Saturncraft names or the role,
 e.g. `zombie`), `/xp <n> [levels]`, `/kill`, `/heal`, `/clear`, `/spawnpoint`, `/seed`.
 
+## Multiplayer
+
+Play with up to **8 friends** in one world, peer-to-peer over WebRTC — there is
+no game server, so it works on the static GitHub Pages build. The free public
+[PeerJS](https://peerjs.com) signalling server only introduces the browsers;
+after that all traffic goes directly between them.
+
+**Host:** start or continue a world, press **Esc** and choose **Open to Friends
+(host)**. The pause menu then shows a short room code (e.g. `K7QX2M`) and a join
+link (`…/?join=K7QX2M`) with a copy button. Your world keeps running while the
+pause menu is open; the host's world is the one that is saved (including
+everything guests build).
+
+**Join:** on the title screen enter the code next to **Join a Friend** (or just
+open the join link). Your name comes from the **Your name** field (remembered in
+the browser, `Player-1234` by default). The world downloads, the terrain is
+generated locally from the host's seed, and you appear next to the host.
+
+What is shared:
+
+| | How |
+|---|---|
+| World | seed + every edited chunk on join (the save format's RLE chunks); then block edits both ways. The host validates guest edits (reach), applies them with their consequences (supports, fluids) and rebroadcasts every change in its world — fluids, fire, crops, explosions — to everyone. |
+| Players | position, look, held item, sneaking, swinging, sleeping at 10 Hz; drawn with the third-person player model and a name tag |
+| Mobs | simulated only by the host (they chase / attack the nearest player); guests get 10 Hz snapshots and see non-simulated copies. Guest hits (melee and arrows) are sent to the host; drops and experience from mobs a guest kills go to that guest |
+| Time & weather | from the host, once a second (sleeping skips the night when the host sleeps) |
+| Chat | `T`, messages go to everyone with the sender's name; join / leave notices |
+| Guest inventories | kept in the host's save by player name, restored on rejoin |
+
+Disconnects: a guest who leaves is removed for everyone; if the host quits or
+the connection drops, guests see a message and go back to the title screen.
+Single-player is unchanged when no session is open (the networking code in
+`src/net/` is only loaded when hosting or joining).
+
+Limits (by design, to keep it simple and robust):
+
+* Mobs exist only in the area the host has loaded; guests far from the host see
+  no mobs, and only the host can feed, breed, shear, tame or trade with them.
+* Dropped items, experience orbs, boats, chests and furnaces are per player
+  (nothing is duplicated, but you cannot hand items to a friend or share a chest).
+* Crops and other random ticks advance where the host is; a guest more than
+  8 chunks away runs them locally (not synced).
+* No PvP. Commands such as `/time` or `/summon` only affect the host's world when
+  the host types them.
+* The host's tab should stay open (background tabs keep simulating, throttled).
+
+For development, `?net=local` swaps WebRTC for a `BroadcastChannel` loopback
+between two tabs of the same browser, and `?peerhost=…&peerport=…&peerpath=…&peersecure=0`
+selects a self-hosted PeerJS server.
+
 ## Project layout
 
 ```
@@ -103,6 +153,8 @@ src/
   render/                  chunkRenderer.js, terrainMaterial.js, overlays.js, particles.js
   ui/                      hud.js, screens.js, icons.js, input.js, style.css
   audio/                   audio.js (procedural Web Audio effects)
+  net/                     multiplayer: protocol.js (wire format), transport.js (PeerJS / loopback),
+                           editSync.js (block edits), session.js (host & client), remotePlayer.js, mobMirror.js
 tests/                     vitest suites (95 tests)
 ```
 

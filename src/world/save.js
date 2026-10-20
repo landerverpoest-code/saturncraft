@@ -46,17 +46,26 @@ function txn(db, mode, fn) {
   });
 }
 
-function packChunk(c) {
+export function packChunk(c) {
   return {
     blocks: rleEncode(c.blocks), meta: rleEncode(c.meta), light: rleEncode(c.light),
     biomes: c.biomes.slice(), colors: c.colors.slice(), heightmap: new Int16Array(c.heightmap),
   };
 }
-function unpackChunk(p) {
+export function unpackChunk(p) {
   const V = 16 * 16 * 384;
   return {
     blocks: rleDecode(p.blocks, V), meta: rleDecode(p.meta, V), light: rleDecode(p.light, V),
     biomes: p.biomes, colors: p.colors, heightmap: p.heightmap, modified: true,
+  };
+}
+
+/** A player's own state (position, health, inventory...), also kept per name for multiplayer guests. */
+export function playerSaveData(p) {
+  return {
+    x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, health: p.health,
+    food: p.hunger.food, saturation: p.hunger.saturation, exhaustion: p.hunger.exhaustion,
+    air: p.air, spawn: p.spawn, bed: p.bed || null, slots: p.inventory.slots, armor: p.inventory.armor, xp: p.xp, gamemode: p.gamemode, flying: p.flying, selected: p.inventory.selected,
   };
 }
 
@@ -77,11 +86,7 @@ export async function saveGame(game) {
     time: game.time,
     gameRules: { doDaylightCycle: game.settings.daylightCycle !== false, doHostileSpawning: game.settings.hostileMobs !== false },
     savedAt: Date.now(),
-    player: {
-      x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, health: p.health,
-      food: p.hunger.food, saturation: p.hunger.saturation, exhaustion: p.hunger.exhaustion,
-      air: p.air, spawn: p.spawn, bed: p.bed || null, slots: p.inventory.slots, armor: p.inventory.armor, xp: p.xp, gamemode: p.gamemode, flying: p.flying, selected: p.inventory.selected,
-    },
+    player: playerSaveData(p),
     furnaces: [...game.furnaces.values()],
     chests: [...game.chests.values()],
     worldSpawn: game.worldSpawn,
@@ -92,6 +97,7 @@ export async function saveGame(game) {
     savedMobs, liveMobs, chunks,
     // which dimension the player (and the fields above) are in, plus the other dimensions' state
     ...(game.dims ? game.dims.saveData(packChunk) : {}),
+    netPlayers: game.netPlayers || {}, // multiplayer guests' state by name
   };
   const db = await openDB();
   await txn(db, 'readwrite', (s) => s.put(data, 'current'));
@@ -126,6 +132,7 @@ export function applySave(game, data) {
     if (typeof data.gameRules.doDaylightCycle === 'boolean') game.settings.daylightCycle = data.gameRules.doDaylightCycle;
     if (typeof data.gameRules.doHostileSpawning === 'boolean') game.settings.hostileMobs = data.gameRules.doHostileSpawning;
   }
+  game.netPlayers = data.netPlayers || {};
   game.weather.load(data.weather);
   game.milestones.load(data.milestones);
   for (const b of data.boats || []) game.entities.spawnBoat(b.x, b.y, b.z, b.yaw);

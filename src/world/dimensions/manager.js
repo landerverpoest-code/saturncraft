@@ -78,6 +78,8 @@ export class DimensionManager {
   switchTo(dim, arrival) {
     const g = this.game, w = g.world, p = g.player, old = w.dimension;
     if (!DIMENSIONS[dim]) return false;
+    // multiplayer sessions share one world: other dimensions are single-player only for now
+    if (g.net) { if (g.hud) g.hud.toast('Other dimensions are not available in multiplayer yet'); return false; }
     if (p.riding) g.dismount();
     if (p.sleeping) p.sleeping = null;
     // unload every chunk (modified ones go to world.saved, persistent mobs to the spawner)
@@ -237,6 +239,7 @@ export class DimensionManager {
     const dim = dimensionByName(name);
     if (!dim) return `Usage: /dimension <${Object.keys(DIMENSIONS).join('|')}>`;
     if (dim === this.current) return `You are already in ${DIMENSIONS[dim].name}`;
+    if (this.game.net) return 'Other dimensions are not available in multiplayer yet';
     const p = this.game.player, from = this.current;
     if (dim === DIM.HOLLOW) this.switchTo(dim, { mode: 'hollowArrival' });
     else if (from === DIM.HOLLOW) this.switchTo(dim, dim === DIM.OVERWORLD ? { mode: 'spawn', x: p.spawn.x, y: p.spawn.y, z: p.spawn.z } : { mode: 'safe', x: p.spawn.x / 8, y: 64, z: p.spawn.z / 8 });

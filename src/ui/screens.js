@@ -5,6 +5,7 @@ import { craft, RECIPES, recipeLayout, chooseIngredients } from '../player/craft
 import { B } from '../world/blocks.js';
 import { canTrade, doTrade, MAX_USES } from '../mobs/trades.js';
 import { MILESTONES } from '../player/milestones.js';
+import { loadPlayerName } from '../net/protocol.js';
 
 function el(html) { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstChild; }
 
@@ -477,7 +478,7 @@ export class UI {
     this.clear();
     this.open = 'pause';
     const g = this.game;
-    const s = el(`<div class="screen">
+    const s = el(`<div class="screen pause-screen">
       <h2>Paused</h2>
       <button class="btn" data-a="resume">Back to Game</button>
       <div class="field"><label>Render distance: <b id="rdv">${g.settings.renderDistance}</b> chunks</label><input type="range" min="2" max="16" value="${g.settings.renderDistance}" id="rd"></div>
@@ -489,8 +490,10 @@ export class UI {
       <div class="btn-row"><button class="btn" id="dlc">Day/night cycle: ${g.settings.daylightCycle !== false ? 'On' : 'Off'}</button>
       <button class="btn" id="hm">Hostile mobs: ${g.settings.hostileMobs !== false ? 'On' : 'Off'}</button></div>
       <button class="btn" data-a="ms">Milestones</button>
-      <button class="btn" data-a="title">Save &amp; Quit to Title</button>
+      <div class="net-box"></div>
+      <button class="btn" data-a="title">${g.net && g.net.isClient ? 'Disconnect' : 'Save &amp; Quit to Title'}</button>
     </div>`);
+    this.fillNetBox(s.querySelector('.net-box'));
     const bind = (id, lbl, fn) => s.querySelector('#' + id).addEventListener('input', (e) => { s.querySelector('#' + lbl).textContent = fn(+e.target.value); });
     bind('rd', 'rdv', (v) => { g.setSetting('renderDistance', v); return v; });
     bind('fov', 'fovv', (v) => { g.setSetting('fov', v); return v; });
@@ -508,6 +511,45 @@ export class UI {
     s.querySelector('[data-a=title]').onclick = () => g.quitToTitle();
     s.querySelector('[data-a=ms]').onclick = () => this.showMilestones();
     this.layer.appendChild(s);
+  }
+
+  /** Multiplayer part of the pause menu: open to friends, or the room code and who is here. */
+  fillNetBox(box) {
+    const g = this.game, net = g.net;
+    if (!net) {
+      const b = el('<button class="btn" data-a="host">Open to Friends (host)</button>');
+      const msg = el('<p class="sub net-msg"></p>');
+      b.onclick = async () => {
+        if (g.world.dimension && g.world.dimension !== 'overworld') { msg.textContent = 'Go back to the overworld to host a multiplayer world'; return; }
+        b.disabled = true; b.textContent = 'Opening…';
+        try { await g.openToFriends(loadPlayerName()); if (this.open === 'pause') this.showPause(); }
+        catch (e) { b.disabled = false; b.textContent = 'Open to Friends (host)'; msg.textContent = e.message || String(e); }
+      };
+      box.append(b, msg);
+      return;
+    }
+    const players = el('<p class="sub net-players"></p>');
+    players.textContent = `Players: ${net.playerNames().join(', ')}`;
+    if (net.isHost) {
+      const info = el(`<div class="net-room"><p class="sub">Open to friends · room code <b class="net-code"></b></p>
+        <div class="join-row"><input type="text" readonly class="net-link"><button class="btn" data-a="copy">Copy Link</button></div></div>`);
+      info.querySelector('.net-code').textContent = net.code;
+      const link = info.querySelector('.net-link');
+      link.value = net.link;
+      link.onclick = () => link.select();
+      info.querySelector('[data-a=copy]').onclick = (e) => {
+        link.select();
+        const done = () => { e.target.textContent = 'Copied'; };
+        if (navigator.clipboard) navigator.clipboard.writeText(net.link).then(done, () => document.execCommand('copy'));
+        else { document.execCommand('copy'); done(); }
+      };
+      box.append(info);
+    } else {
+      const info = el('<p class="sub"></p>');
+      info.textContent = `Playing in ${net.welcome.hostName}'s world as ${net.name}`;
+      box.append(info);
+    }
+    box.append(players);
   }
 
   showMilestones() {
