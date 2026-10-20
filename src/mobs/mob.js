@@ -52,6 +52,18 @@ export class Mob {
     this.woolColor = type === 'fleecer' ? randomSheepColor() : 0;
     // settlers: profession, trade offers and the house they live in
     this.profession = null; this.trades = []; this.home = null; this.lastRestock = 0;
+    // Howlers: tamed by the player (owner), sitting, current enemy
+    this.tamed = false; this.sitting = false; this.enemy = null;
+  }
+
+  get maxHealth() { return this.tamed ? this.def.tamedHealth : this.def.health; }
+
+  tame(g) {
+    this.tamed = true; this.sitting = true; this.enemy = null; this.target = null; this.path = null; this.wander = null;
+    this.health = this.def.tamedHealth;
+    this.persistent = true;
+    this.hearts(g, 7);
+    if (g.milestones) g.milestones.event('tame');
   }
 
   get baby() { return this.age < 0; }
@@ -63,12 +75,13 @@ export class Mob {
   }
 
   /** State kept when the mob is saved with its chunk. */
-  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor, profession: this.profession, trades: this.trades, home: this.home, lastRestock: this.lastRestock }; }
+  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor, profession: this.profession, trades: this.trades, home: this.home, lastRestock: this.lastRestock, tamed: this.tamed, sitting: this.sitting }; }
   loadData(s) {
     this.health = s.health; this.yaw = s.yaw;
     if (s.age < 0) { this.setBaby(true); this.age = s.age; } else this.age = s.age || 0;
     this.sheared = !!s.sheared;
     if (s.woolColor !== undefined) this.woolColor = s.woolColor;
+    if (s.tamed) { this.tamed = true; this.sitting = !!s.sitting; }
     if (s.profession) { this.profession = s.profession; this.trades = s.trades || []; this.home = s.home || null; this.lastRestock = s.lastRestock || 0; }
   }
 
@@ -132,6 +145,7 @@ export class Mob {
     baby.setBaby(true);
     baby.woolColor = Math.random() < 0.5 ? this.woolColor : mate.woolColor; // (the reference blends dye colours)
     baby.yaw = this.yaw;
+    if (this.tamed) { baby.tamed = true; baby.health = baby.def.tamedHealth; baby.persistent = true; } // pups of tame Howlers are tame
     for (const m of [this, mate]) { m.loveTicks = 0; m.age = 6000; m.breedTime = 0; }
     this.hearts(g, 7);
     g.entities.spawnXp(this.x, this.y + 0.5, this.z, 1 + Math.floor(Math.random() * 7));
@@ -166,7 +180,7 @@ export class Mob {
     } else { this.lastHurt = dmg; this.invulnerable = 20; this.hurtTime = 10; }
     this.health -= dmg;
     this.noActionTime = 0;
-    if (attacker && attacker.isPlayer) this.lastHurtByPlayer = 100;
+    if (attacker && (attacker.isPlayer || attacker.tamed)) this.lastHurtByPlayer = 100;
     if (attacker && knockback > 0) {
       const dx = this.x - attacker.x, dz = this.z - attacker.z;
       const d = Math.hypot(dx, dz) || 1;
@@ -176,7 +190,15 @@ export class Mob {
       if (b.onGround) b.vy = Math.min(0.4, b.vy / 2 + knockback);
     }
     const g = this._game;
-    if (this.def.category === CATEGORY.CREATURE) this.panicTicks = 60 + Math.floor(Math.random() * 40);
+    if (this.def.tameable) {
+      // a hurt Howler stands up and fights back; a wild one calls its pack
+      this.sitting = false;
+      const foe = attacker && attacker.isPlayer ? (this.tamed ? null : 'player') : attacker;
+      if (foe && attacker !== this) {
+        this.enemy = foe;
+        if (!this.tamed && g) for (const e of g.entities.list) if (e !== this && e.type === this.type && !e.tamed && !e.dead && Math.hypot(e.x - this.x, e.z - this.z) < 16) e.enemy = foe;
+      }
+    } else if (this.def.category === CATEGORY.CREATURE) this.panicTicks = 60 + Math.floor(Math.random() * 40);
     else if (attacker && attacker.isPlayer) { this.target = 'player'; if (this.type === 'voidwalker') this.angry = true; }
     if (g) g.audio.play(this.health <= 0 ? 'mob_death' : 'mob_hurt', [this.x, this.y + 1, this.z]);
     if (this.health <= 0) this.die(g, source);
@@ -339,6 +361,7 @@ export class Mob {
   // ---------------------------------------------------------------------------
   ai(g, p, pdist) {
     if (this.def.villager) return this.settlerAI(g, p, pdist);
+    if (this.def.tameable) return this.howlerAI(g, p, pdist);
     if (this.def.category === CATEGORY.CREATURE) return this.passiveAI(g);
     switch (this.type) {
       case 'shambler': return this.meleeAI(g, p, pdist);
@@ -418,6 +441,66 @@ export class Mob {
     if (this.type === 'cluckling' && --this.eggTime <= 0) {
       g.entities.spawnItem(this.x, this.y + 0.3, this.z, { id: I.EGG, count: 1 });
       this.eggTime = 6000 + Math.floor(Math.random() * 6000);
+    }
+  }
+
+  /** Howlers: wild packs roam and hunt Fleecers/Clucklings; tamed ones sit, follow and defend their owner. */
+  howlerAI(g, p, pdist) {
+    if (this.age < 0) { if (++this.age === 0) this.setBaby(false); } else if (this.age > 0) this.age--;
+    const alive = (e) => e && (e === 'player' ? !p.dead && !p.creative && pdist < 24 : !e.dead && e.deathTime === 0 && Math.hypot(e.x - this.x, e.z - this.z) < 24);
+    if (this.enemy && !alive(this.enemy)) this.enemy = null;
+    this.headPitch = 0;
+    if (this.tamed) {
+      // help the owner: attack whatever hurt them or whatever they hit (not Fizzlers, not other pets)
+      for (const e of [p.lastHurtBy, p.lastAttacked]) {
+        if (!this.enemy && e && e !== this && !e.tamed && e.type !== 'fizzler' && alive(e)) this.enemy = e;
+      }
+      p.lastHurtBy = p.lastHurtBy && alive(p.lastHurtBy) ? p.lastHurtBy : null;
+      if (this.sitting) { this.enemy = null; this.move = null; this.headPitch = pdist < 8 ? -0.2 : 0; return; }
+    }
+    const foe = this.enemy;
+    if (foe) {
+      const t = foe === 'player' ? p : foe;
+      this.chase(g, t, 1.2);
+      this.howlerBite(g, t);
+      return;
+    }
+    if (this.loveTicks > 0) {
+      this.loveTicks--;
+      if (g.ticks % 10 === 0) this.hearts(g, 1);
+      const mate = this.findMate(g);
+      if (mate) {
+        const d = Math.hypot(mate.x - this.x, mate.z - this.z);
+        if (d > 1.2) this.steer(mate.x, mate.z, 1);
+        if (d < 3 && ++this.breedTime >= 60 && this.id < mate.id) this.breed(g, mate);
+        return;
+      }
+    }
+    if (this.tamed && !p.dead) {
+      if (pdist > 12) { if (this.teleportTo(g, p.x + (Math.random() - 0.5) * 3, p.z + (Math.random() - 0.5) * 3, p.y + 2)) return; }
+      if (pdist > 6) { this.chase(g, p, 1.3); return; }
+      if (this.tempted(g)) { this.yaw = Math.atan2(-(p.x - this.x), -(p.z - this.z)); this.headPitch = -0.4; return; }
+      if (pdist < 2.5) { this.wander = null; this.path = null; return; }
+      this.wanderAI(g, 0.8);
+      return;
+    }
+    // wild: now and then pick a Fleecer or Cluckling to hunt
+    if (g.ticks % 40 === this.id % 40 && Math.random() < 0.05) {
+      for (const e of g.entities.list) {
+        if (e.kind === 'mob' && (e.type === 'fleecer' || e.type === 'cluckling') && e.deathTime === 0 && Math.hypot(e.x - this.x, e.z - this.z) < 12) { this.enemy = e; break; }
+      }
+    }
+    this.wanderAI(g, 1);
+  }
+
+  howlerBite(g, t) {
+    const dx = t.x - this.x, dz = t.z - this.z;
+    if (dx * dx + dz * dz <= (this.width + (t.width || 0.6)) ** 2 + 0.6 && Math.abs(t.y - this.y) < 1.5 && this.attackCooldown <= 0) {
+      this.attackCooldown = 20;
+      const dmg = this.tamed ? this.def.tamedAttack : this.def.attack;
+      if (t.isPlayer || t === g.player) g.player.hurt(dmg, 'mob:' + this.def.name, this);
+      else t.hurt(dmg, 'mob:' + this.def.name, this, 0.4);
+      this.body.vy = this.body.onGround ? 0.3 : this.body.vy; // the pounce
     }
   }
 
@@ -637,5 +720,19 @@ export class Mob {
     m.rotation.set(0, yaw, 0);
     if (this.deathTime > 0) m.rotation.z = Math.min(1, (this.deathTime + alpha) / 10) * Math.PI / 2;
     animateModel(m, this, alpha, L, sec);
+    if (parts && parts.collar) {
+      parts.collar.visible = this.tamed;
+      for (const k of ['snout', 'nose', 'earL', 'earR']) parts[k].rotation.x = parts.head.rotation.x;
+      // sitting: hindquarters down, chest up, tail on the ground
+      const sit = this.sitting && this.deathTime === 0;
+      m.position.y = py - (sit ? 0.18 * m.scale.y : 0);
+      for (const k of ['body', 'mane', 'collar']) parts[k].rotation.x = sit ? 0.55 : 0;
+      if (sit) {
+        parts.legBL.rotation.x = parts.legBR.rotation.x = 1.4;
+        parts.legFL.rotation.x = parts.legFR.rotation.x = -0.3;
+        parts.tail.rotation.x = 1.2;
+      } else parts.tail.rotation.x = this.enemy ? 0.4 : 0.6 + Math.sin(sec * 8) * (this.tamed ? 0.25 : 0.05);
+      parts.tail.rotation.z = !sit && this.tamed ? Math.sin(sec * 10) * 0.35 : 0;
+    }
   }
 }

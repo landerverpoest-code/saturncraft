@@ -39,7 +39,10 @@ export const SPAWN_TABLES = {
     snowy_plains: DEFAULT_MONSTERS.map((e) => (e.type === 'rattler' ? { ...e, weight: 100 } : e)),
   },
   creature: {
-    plains: FARM_ANIMALS, forest: FARM_ANIMALS, birch_forest: FARM_ANIMALS, taiga: FARM_ANIMALS,
+    plains: FARM_ANIMALS, birch_forest: FARM_ANIMALS,
+    // packs of Howlers (wolves) in forests and taiga
+    forest: [...FARM_ANIMALS, { type: 'howler', weight: 5, min: 4, max: 4 }],
+    taiga: [...FARM_ANIMALS, { type: 'howler', weight: 8, min: 4, max: 4 }],
     default: [],
   },
 };

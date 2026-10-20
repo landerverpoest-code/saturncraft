@@ -179,6 +179,7 @@ export class Interaction {
     const crit = cd > 0.9 && p.body.fallDistance > 0 && !p.body.onGround && !p.body.inWater && !p.sprinting;
     if (crit) dmg *= 1.5;
     const knock = 0.4 + (p.sprinting && cd > 0.9 ? 1 : 0) * 0.5;
+    p.lastAttacked = mob; // tamed Howlers join in
     if (mob.hurt(dmg, 'player', p, knock)) {
       if (crit) g.particles && g.particles.crit(mob.x, mob.y + mob.height * 0.6, mob.z);
       if (p.sprinting && cd > 0.9) p.sprinting = false;
@@ -399,9 +400,31 @@ export class Interaction {
   }
 
   /** Feed / breed / shear a passive mob. Returns true if something happened. */
+  /** Howlers: tame a wild one with bones (1 in 3), heal/breed a tame one with meat, otherwise sit/stand. */
+  interactHowler(mob, st, d) {
+    const g = this.game, p = g.player;
+    const use = () => { if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1); this.swing = SWING_TICKS; };
+    if (!mob.tamed) {
+      if (!st || st.id !== I.BONE || mob.target) return false;
+      use();
+      if (Math.random() < 1 / 3) {
+        mob.tame(g);
+      } else g.particles.smoke(mob.x, mob.y + mob.height, mob.z, 7, 0.4);
+      return true;
+    }
+    if (d && d.food && mob.def.food.includes(st.id)) {
+      if (mob.health < mob.maxHealth) { mob.health = Math.min(mob.maxHealth, mob.health + d.food.hunger); use(); g.audio.play('eat', [mob.x, mob.y + 0.5, mob.z]); mob.hearts(g, 2, true); return true; }
+      if (mob.feed(g)) { use(); return true; }
+    }
+    mob.sitting = !mob.sitting;
+    mob.path = null; mob.wander = null; mob.target = null;
+    return true;
+  }
+
   interactMob(mob) {
     const g = this.game, p = g.player, st = p.inventory.selectedStack, d = st && ITEMS[st.id];
     if (mob.def.villager && mob.deathTime === 0 && mob.trades.length && !(d && d.food && mob.def.food)) { g.ui.openTrade(mob); g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); return true; }
+    if (mob.def.tameable && mob.deathTime === 0 && this.interactHowler(mob, st, d)) return true;
     if (!d || mob.deathTime > 0 || mob.def.category !== 'creature') return false;
     if (d.dye && mob.type === 'fleecer' && mob.woolColor !== d.dye) {
       mob.woolColor = d.dye;

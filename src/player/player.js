@@ -86,6 +86,7 @@ export class Player {
     }
     this.health = Math.max(0, this.health - amount);
     this.hunger.addExhaustion(EXHAUSTION.DAMAGE);
+    if (attacker && attacker.kind === 'mob') this.lastHurtBy = attacker; // tamed Howlers defend their owner
     if (attacker && attacker.x !== undefined) {
       // knockback away from attacker
       const dx = this.x - attacker.x, dz = this.z - attacker.z;
