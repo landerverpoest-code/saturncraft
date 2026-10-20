@@ -2,6 +2,7 @@
 // name tag, smoothed between network updates, plus (on the host) a stand-in
 // object that mob AI can target like the local player.
 import * as THREE from 'three';
+import { wearArmor, lightArmor } from '../render/armorModel.js';
 import { buildModel, animateModel } from '../mobs/models.js';
 import { itemCanvas } from '../ui/icons.js';
 import { lightAt } from '../entities/entities.js';
@@ -108,7 +109,10 @@ export class RemotePlayer {
     if (s.sleeping) this.root.rotation.set(-Math.PI / 2, cur.yaw, 0, 'YXZ');
     this.anim.hurtTime = s.hurt ? 5 : 0;
     this.anim.headPitch = cur.pitch;
-    animateModel(this.root, this.anim, 1, lightAt(game, cur.x, cur.y + 1.6, cur.z), sec);
+    const L = lightAt(game, cur.x, cur.y + 1.6, cur.z);
+    animateModel(this.root, this.anim, 1, L, sec);
+    wearArmor(this.root, s.armor || [null, null, null, null]);
+    lightArmor(this.root, L);
     const parts = this.root.userData.parts;
     parts.head.rotation.y = cur.yaw - this.bodyYaw;
     parts.hair.rotation.copy(parts.head.rotation);

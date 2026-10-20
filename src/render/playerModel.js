@@ -5,6 +5,7 @@ import { buildModel, animateModel } from '../mobs/models.js';
 import { itemCanvas } from '../ui/icons.js';
 import { lightAt } from '../entities/entities.js';
 import { SWING_TICKS } from '../player/interaction.js';
+import { wearArmor, lightArmor } from './armorModel.js';
 
 export class PlayerModel {
   constructor(scene) {
@@ -56,7 +57,10 @@ export class PlayerModel {
     if (p.sleeping) this.root.rotation.set(-Math.PI / 2, p.yaw, 0, 'YXZ');
     this.anim.hurtTime = p.hurtTime;
     this.anim.headPitch = p.pitch;
-    animateModel(this.root, this.anim, alpha, lightAt(game, x, y + 1.6, z), sec);
+    const L = lightAt(game, x, y + 1.6, z);
+    animateModel(this.root, this.anim, alpha, L, sec);
+    wearArmor(this.root, p.inventory.armor.map((s) => (s ? s.id : null)));
+    lightArmor(this.root, L);
     const parts = this.root.userData.parts;
     parts.head.rotation.y = p.yaw - this.bodyYaw;
     parts.hair.rotation.copy(parts.head.rotation);

@@ -371,14 +371,14 @@ poison from eyes) follow the documented table.
 * Saplings (oak, birch, spruce): leaves drop them 1 in 20; planted on grass or dirt they grow in two steps (1 in 7 per random tick in light ≥ 9; bone meal 45 %) into the same trees as world generation, if there is room; natural leaves with no log within 4 blocks decay and drop saplings/sticks/apples, placed leaves stay
 * Oak boats (5 planks): placed on water, bob on the surface, accelerate to about 8 blocks/s, steer with A/D, break after three hits and drop themselves; saved with the world
 * 20+ milestones (the reference game's advancements, with Saturncraft's own names) with a toast when reached and an overview in the pause menu, saved per world
-* Third-person cameras (F5, behind and in front, pulled in by walls) with an animated player model holding the selected item
+* Third-person cameras (F5, behind and in front, pulled in by walls) with an animated player model holding the selected item and wearing its armour (also on other players in multiplayer)
 * Animated title screen (stars, ringed giant, three suns, scrolling landscape) with splash texts
 * Blocky cloud layer (12×12 cells, 4 thick, y=192, drifting 0.03 blocks/tick), coloured by the suns
 * Three dimensions (see "Other dimensions" below): the overworld, **the Cinderdeep** (fiery underworld, 1:8 scale, reached through obsidian Rift portals) and **the Hollow** (void islands with the Void Wyrm boss, reached through a Hollow Gate in an underground Hollow Sanctum); each has its own chunks, saves, containers and mobs, and the save remembers which dimension you are in
 
 **Not yet implemented**
 
-* Enchanting, anvils, shields, potions and status-effect UI (only hunger/poison effects exist); armour is not drawn on the third-person player model
+* Enchanting, anvils, shields, potions and status-effect UI (only hunger/poison effects exist)
 * Taming of animals other than Howlers, cocoa and ink sacs
 * Large structures beyond villages, dungeons, sanctums and bastions; villager breeding and job sites; redstone-style circuitry; Hollow outer-island cities
 * Double chests and other storage containers, corner-shaped stairs
