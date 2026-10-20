@@ -51,10 +51,34 @@ export function torchBox(meta) {
 export const SLAB_TOP = 1, SLAB_DOUBLE = 2, STAIRS_UPSIDE = 4;
 const SLAB_BOXES = [[0, 0, 0, 1, 0.5, 1], [0, 0.5, 0, 1, 1, 1], [0, 0, 0, 1, 1, 1]];
 export function slabBox(meta) { return SLAB_BOXES[Math.min(2, meta)]; }
-/** Stairs: a half slab plus the raised half on the side the player faced when placing. */
-export function stairBoxes(meta) {
-  const up = meta & STAIRS_UPSIDE;
-  return [up ? [0, 0.5, 0, 1, 1, 1] : [0, 0, 0, 1, 0.5, 1], sideSlab(meta & 3, 0.5, up ? 0 : 0.5, up ? 0.5 : 1)];
+/** Quarter of the block in the corner between two perpendicular sides. */
+function quarter(a, b, y0, y1) {
+  const A = sideSlab(a, 0.5, y0, y1), Bx = sideSlab(b, 0.5, y0, y1);
+  return [Math.max(A[0], Bx[0]), y0, Math.max(A[2], Bx[2]), Math.min(A[3], Bx[3]), y1, Math.min(A[5], Bx[5])];
+}
+/**
+ * Stairs: a half slab plus the raised half on the side the player faced when
+ * placing. With `nb(dx, dz)` -> [id, meta] of neighbours the shape follows the
+ * reference corner rules: a perpendicular stair in front of the raised side
+ * makes an outer corner (only a raised quarter), one behind makes an inner
+ * corner (raised half plus a quarter).
+ */
+export function stairBoxes(meta, nb = null, isStairs = null) {
+  const up = meta & STAIRS_UPSIDE, s = meta & 3;
+  const [ry0, ry1] = up ? [0, 0.5] : [0.5, 1];
+  const base = up ? [0, 0.5, 0, 1, 1, 1] : [0, 0, 0, 1, 0.5, 1];
+  if (nb && isStairs) {
+    const same = (n) => n && isStairs(n[0]) && (n[1] & STAIRS_UPSIDE) === up;
+    const perp = (f) => ((f + s) & 1) === 1;
+    const at = (side) => nb(SIDE_DIRS[side][0], SIDE_DIRS[side][2]);
+    // a neighbour on `side` that is a stair facing like us blocks a corner towards it
+    const blocks = (side) => { const n = at(side); return same(n) && (n[1] & 3) === s; };
+    const front = at(s);
+    if (same(front) && perp(front[1] & 3) && !blocks((front[1] + 2) & 3)) return [base, quarter(s, front[1] & 3, ry0, ry1)];
+    const back = at((s + 2) & 3);
+    if (same(back) && perp(back[1] & 3) && !blocks(back[1] & 3)) return [base, sideSlab(s, 0.5, ry0, ry1), quarter((s + 2) & 3, back[1] & 3, ry0, ry1)];
+  }
+  return [base, sideSlab(s, 0.5, ry0, ry1)];
 }
 
 // ---- fences and gates -------------------------------------------------------
@@ -206,7 +230,7 @@ export function collisionBoxes(id, meta, world, x, y, z) {
   if (id === B.SNOW_LAYER) return (meta & 7) ? [snowBox(meta, true)] : [];
   if (id === B.OAK_TRAPDOOR) return [trapdoorBox(meta)];
   if (sh === SHAPE.WALL) return wallBoxes(world ? wallMask((a, b, c) => world.getBlock(a, b, c), x, y, z) : 0, 1.5);
-  if (sh === SHAPE.STAIRS) return stairBoxes(meta);
+  if (sh === SHAPE.STAIRS) return world ? stairBoxes(meta, (dx, dz) => [world.getBlock(x + dx, y, z + dz), world.getMeta(x + dx, y, z + dz)], (n) => BLOCKS[n] && BLOCKS[n].shape === SHAPE.STAIRS) : stairBoxes(meta);
   return null;
 }
 

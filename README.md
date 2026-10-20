@@ -355,6 +355,7 @@ poison from eyes) follow the documented table.
 * Grass and foliage tints blend smoothly across biome borders (blurred, world-aligned tint grid)
 * Shamblers hunt Settlers when no player is around
 * Bone meal grows crops 2–5 stages and sprouts grass and flowers
+* Stairs form inner and outer corners next to perpendicular stairs (reference shape rules, also for collision)
 * Slabs and stairs in oak, cobblestone, stone brick and sandstone: bottom/top/double slabs (merge by placing), stairs facing away from the player and upside down when placed high; walkable with the 0.6 step-up; they block light like full blocks
 * Oak doors (two blocks, 3/16-thick collision box, open/close with right-click), ladders (climb 0.2/tick, fall capped at 0.15, sneak to hold on), torches on walls
 * Chests (27 slots, shift-click transfer, contents drop when broken, saved with the world); furnaces and chests face the player when placed
@@ -381,7 +382,7 @@ poison from eyes) follow the documented table.
 * Enchanting, anvils, shields, potions and status-effect UI (only hunger/poison effects exist)
 * Taming of animals other than Howlers, cocoa and ink sacs
 * Large structures beyond villages, dungeons, sanctums and bastions; villager breeding and job sites; redstone-style circuitry; Hollow outer-island cities
-* Double chests and other storage containers, corner-shaped stairs
+* Double chests and other storage containers
 * Slimes, witches, drowned, husks/strays as separate variants, baby mobs, mob equipment
 * Difficulty levels (fixed at Normal), spectator/adventure modes, multiplayer
 * Sprint-swimming/crawling poses, minecarts, elytra
