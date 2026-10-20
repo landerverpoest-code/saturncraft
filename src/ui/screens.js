@@ -44,6 +44,7 @@ export class UI {
     give(this.cursor); this.cursor = null;
     this.renderCursor();
     this.open = null;
+    if ((this.chest || this.furnace) && g.net && g.net.isClient) g.net.closeContainer();
     if (this.chest) this.game.audio.play('chest_close', [this.chest.x + 0.5, this.chest.y + 0.5, this.chest.z + 0.5]);
     this.furnace = null;
     this.chest = null;
@@ -77,6 +78,7 @@ export class UI {
     refresh();
     s.addEventListener('mousedown', (e) => {
       e.preventDefault();
+      if (this.game.net && this.game.net.uiBefore) this.game.net.uiBefore(); // shared containers: remember the state before the click
       if (opts.onClick) opts.onClick(e); else this.clickSlot(get, set, e.button === 2, e.shiftKey, opts);
       this.refreshAll();
     });
@@ -119,7 +121,12 @@ export class UI {
     }
   }
 
-  refreshAll() { for (const r of this.refreshers) r(); this.renderCursor(); this.game.player.inventory.changed(); }
+  refreshAll(fromNet = false) {
+    for (const r of this.refreshers) r();
+    this.renderCursor();
+    this.game.player.inventory.changed();
+    if (!fromNet && this.game.net && this.game.net.uiAfter) this.game.net.uiAfter(); // shared containers: send what changed
+  }
 
   inventoryGrid(container) {
     const inv = this.game.player.inventory;
@@ -304,6 +311,7 @@ export class UI {
     this.game.input.unlock();
     const f = this.game.getFurnace(x, y, z);
     this.furnace = f;
+    if (this.game.net && this.game.net.isClient) this.game.net.openContainer('furnace', x, y, z, f); // the host's furnace
     const fuelOf = (st) => st && ITEMS[st.id] && ITEMS[st.id].fuel;
     this.showContainer('furnace', 'Furnace', (panel) => {
       const top = el('<div class="inv-top"></div>');
@@ -367,6 +375,7 @@ export class UI {
       }));
     });
     this.chest = c;
+    if (this.game.net && this.game.net.isClient) this.game.net.openContainer('chest', x, y, z, c); // the host's chest
   }
 
   openChat(prefix = '') {
@@ -430,6 +439,7 @@ export class UI {
         btn.addEventListener('mousedown', (e) => {
           e.preventDefault();
           const times = e.shiftKey ? 64 : 1;
+          if (mob.netProxy) { if (canTrade(o, inv)) g.net.requestTrade(mob, mob.trades.indexOf(o), times); return; } // the host keeps count
           let done = 0;
           for (let k = 0; k < times && canTrade(o, inv); k++) {
             const got = doTrade(o, inv);
@@ -520,7 +530,6 @@ export class UI {
       const b = el('<button class="btn" data-a="host">Open to Friends (host)</button>');
       const msg = el('<p class="sub net-msg"></p>');
       b.onclick = async () => {
-        if (g.world.dimension && g.world.dimension !== 'overworld') { msg.textContent = 'Go back to the overworld to host a multiplayer world'; return; }
         b.disabled = true; b.textContent = 'Opening…';
         try { await g.openToFriends(loadPlayerName()); if (this.open === 'pause') this.showPause(); }
         catch (e) { b.disabled = false; b.textContent = 'Open to Friends (host)'; msg.textContent = e.message || String(e); }
@@ -544,6 +553,18 @@ export class UI {
         else { document.execCommand('copy'); done(); }
       };
       box.append(info);
+      // host options: PvP and guest commands
+      const opts = el('<div class="btn-row"></div>');
+      const opt = (label, key, get) => {
+        const b = el('<button class="btn"></button>');
+        const show = () => { b.textContent = `${label}: ${get() ? 'On' : 'Off'}`; };
+        b.onclick = () => { net.setOptions({ [key]: !get() }); show(); };
+        show();
+        opts.appendChild(b);
+      };
+      opt('PvP', 'pvp', () => net.pvp);
+      opt('Guest commands', 'gc', () => net.guestCommands);
+      box.append(opts);
     } else {
       const info = el('<p class="sub"></p>');
       info.textContent = `Playing in ${net.welcome.hostName}'s world as ${net.name}`;
@@ -577,7 +598,7 @@ export class UI {
       starve: 'starved to death', cactus: 'was pricked to death', void: 'fell out of the world', explosion: 'was blown up',
       arrow: 'was shot by a Rattler', poison: 'succumbed to poison',
     };
-    const text = msgs[cause] || (cause && cause.startsWith('mob:') ? `was slain by a ${cause.slice(4)}` : 'died');
+    const text = msgs[cause] || (cause && cause.startsWith('mob:') ? `was slain by a ${cause.slice(4)}` : cause && cause.startsWith('player:') ? `was slain by ${cause.slice(7)}` : 'died');
     const s = el(`<div class="screen" id="death-screen"><h2>You Died!</h2><p class="sub">Player ${text}</p><button class="btn">Respawn</button></div>`);
     s.querySelector('button').onclick = () => { this.open = null; this.clear(); this.game.respawn(); };
     this.layer.appendChild(s);

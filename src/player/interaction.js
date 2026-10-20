@@ -56,6 +56,11 @@ export class Interaction {
     this.target = g.world.raycast(ex, ey, ez, dx, dy, dz, PHYS.REACH);
     this.mobTarget = g.entities ? g.entities.raycastMob(ex, ey, ez, dx, dy, dz, 3.0) : null;
     if (this.mobTarget && this.target && this.target.dist < this.mobTarget.dist) this.mobTarget = null;
+    if (g.net) {
+      // multiplayer: other players can be hit too (PvP)
+      const pt = g.net.raycastPlayers(ex, ey, ez, dx, dy, dz, 3.0);
+      if (pt && (!this.mobTarget || pt.dist < this.mobTarget.dist) && !(this.target && this.target.dist < pt.dist)) this.mobTarget = { mob: pt.target, dist: pt.dist };
+    }
     this.boatTarget = g.entities ? g.entities.raycastBoat(ex, ey, ez, dx, dy, dz, 3.0) : null;
     if (this.boatTarget && ((this.target && this.target.dist < this.boatTarget.dist) || this.boatTarget.boat === p.riding)) this.boatTarget = null;
   }
@@ -74,6 +79,7 @@ export class Interaction {
       const boat = this.boatTarget.boat;
       if (input.leftPressed) {
         this.swing = SWING_TICKS;
+        if (boat.netProxy) { g.net.hitBoat(boat); return; } // a shared boat: the host counts the hits
         boat.hits++; boat.hitTime = 10;
         g.audio.play('hit_wood', [boat.x, boat.y, boat.z]);
         if (boat.hits >= 3 || p.creative) {
@@ -83,7 +89,7 @@ export class Interaction {
         }
         return;
       }
-      if (input.rightPressed && !boat.rider && !p.riding) { g.mount(boat); return; }
+      if (input.rightPressed && !boat.rider && !boat.remoteRider && !p.riding) { g.mount(boat); return; }
     }
     if (input.leftPressed && this.mobTarget) {
       this.attack(this.mobTarget.mob);
@@ -474,6 +480,7 @@ export class Interaction {
       if (mob.health < mob.maxHealth) { mob.health = Math.min(mob.maxHealth, mob.health + d.food.hunger); use(); g.audio.play('eat', [mob.x, mob.y + 0.5, mob.z]); mob.hearts(g, 2, true); return true; }
       if (mob.feed(g)) { use(); return true; }
     }
+    if (mob.ownerName && p.netName && mob.ownerName !== p.netName) return false; // only its owner tells it to sit
     mob.sitting = !mob.sitting;
     mob.path = null; mob.wander = null; mob.target = null;
     return true;
@@ -481,7 +488,8 @@ export class Interaction {
 
   interactMob(mob) {
     const g = this.game, p = g.player, st = p.inventory.selectedStack, d = st && ITEMS[st.id];
-    if (mob.netProxy) return false; // multiplayer client: only the host can feed, shear, tame or trade
+    if (mob.isRemotePlayer) return false;
+    if (mob.netProxy) return g.net.interactMob(mob); // multiplayer guest: the host feeds, shears, tames or trades
     if (mob.def.villager && mob.deathTime === 0 && mob.trades.length && !(d && d.food && mob.def.food)) { g.ui.openTrade(mob); g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); return true; }
     if (mob.def.tameable && mob.deathTime === 0 && this.interactHowler(mob, st, d)) return true;
     if (!d || mob.deathTime > 0 || mob.def.category !== 'creature') return false;

@@ -95,14 +95,20 @@ open the join link). Your name comes from the **Your name** field (remembered in
 the browser, `Player-1234` by default). The world downloads, the terrain is
 generated locally from the host's seed, and you appear next to the host.
 
-What is shared:
+Every player can do everything; the host's game decides what happens.
 
 | | How |
 |---|---|
-| World | seed + every edited chunk on join (the save format's RLE chunks); then block edits both ways. The host validates guest edits (reach), applies them with their consequences (supports, fluids) and rebroadcasts every change in its world — fluids, fire, crops, explosions — to everyone. |
-| Players | position, look, held item, sneaking, swinging, sleeping at 10 Hz; drawn with the third-person player model and a name tag |
-| Mobs | simulated only by the host (they chase / attack the nearest player); guests get 10 Hz snapshots and see non-simulated copies. Guest hits (melee and arrows) are sent to the host; drops and experience from mobs a guest kills go to that guest |
-| Time & weather | from the host, once a second (sleeping skips the night when the host sleeps) |
+| World | seed + every edited chunk on join (the save format's RLE chunks); then block edits both ways. The host validates guest edits (reach), applies them with their consequences (supports, fluids) and rebroadcasts every change in its world — fluids, fire, crops, explosions — to everyone. The host keeps the chunks around every guest loaded, so crops grow, leaves decay, sand falls and mobs spawn there too. |
+| Players | position, look, held item, sneaking, swinging, sleeping, riding at 10 Hz; drawn with the third-person player model and a name tag |
+| Mobs | simulated by the host around every player; they chase the nearest player. Guests see 10 Hz copies and their hits (melee, arrows) are applied by the host. Guests feed and breed animals, shear and dye fleecers, tame Howlers (the guest becomes the owner: the pet follows, defends and sits for that player only) and trade with settlers (the host counts the uses) |
+| Items, orbs, arrows, boats, falling blocks | shared entities owned by the host: block drops, death drops, thrown items (Q), arrows and boats of any player appear for everyone; picking up asks the host, which hands each item to exactly one player. Boats can be ridden by anyone (the rider steers) |
+| Chests & furnaces | owned by the host: opening one on a guest shows the host's contents, every click is checked against the host's copy (if someone else took the stack first, the click is undone), furnaces smelt on the host, and several players can use the same chest at once. Dungeon loot is rolled once, by the host |
+| PvP | on by default (**PvP: On/Off** in the host's pause menu); the victim's own game applies the damage with its armour; death drops become shared items, guests respawn at their own bed |
+| Sleeping | the night is skipped once every player is in bed |
+| Commands | `/time`, `/weather`, `/gamerule`, `/summon` and `/dimension` typed by a guest are run by the host for the whole world (**Guest commands: On/Off**, default On); player commands (`/give`, `/tp`, `/gamemode`…) act on the guest |
+| Dimensions | the group travels together: when the host (or a guest, by stepping through a portal or with `/dimension`) goes to the Cinderdeep or the Hollow, everyone follows and arrives next to the host |
+| Time & weather | from the host, once a second |
 | Chat | `T`, messages go to everyone with the sender's name; join / leave notices |
 | Guest inventories | kept in the host's save by player name, restored on rejoin |
 
@@ -111,17 +117,12 @@ the connection drops, guests see a message and go back to the title screen.
 Single-player is unchanged when no session is open (the networking code in
 `src/net/` is only loaded when hosting or joining).
 
-Limits (by design, to keep it simple and robust):
+Limits:
 
-* Mobs exist only in the area the host has loaded; guests far from the host see
-  no mobs, and only the host can feed, breed, shear, tame or trade with them.
-* Dropped items, experience orbs, boats, chests and furnaces are per player
-  (nothing is duplicated, but you cannot hand items to a friend or share a chest).
-* Crops and other random ticks advance where the host is; a guest more than
-  8 chunks away runs them locally (not synced).
-* No PvP. Commands such as `/time` or `/summon` only affect the host's world when
-  the host types them.
-* The host's tab should stay open (background tabs keep simulating, throttled).
+* All players are always in the same dimension (no split parties across dimensions).
+* The Void Wyrm boss bar is only shown to the host; guests fight the same boss.
+* The host's tab should stay open (background tabs keep simulating, throttled);
+  everything depends on the host's machine and connection.
 
 For development, `?net=local` swaps WebRTC for a `BroadcastChannel` loopback
 between two tabs of the same browser, and `?peerhost=…&peerport=…&peerpath=…&peersecure=0`
@@ -154,7 +155,8 @@ src/
   ui/                      hud.js, screens.js, icons.js, input.js, style.css
   audio/                   audio.js (procedural Web Audio effects)
   net/                     multiplayer: protocol.js (wire format), transport.js (PeerJS / loopback),
-                           editSync.js (block edits), session.js (host & client), remotePlayer.js, mobMirror.js
+                           editSync.js (block edits), session.js (host & client), remotePlayer.js,
+                           entityMirror.js (guest copies of the host's entities)
 tests/                     vitest suites (95 tests)
 ```
 

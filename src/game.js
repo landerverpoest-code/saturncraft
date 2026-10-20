@@ -89,7 +89,7 @@ export class Game {
     this.scene.fog = new THREE.Fog(0x88aaff, 50, 120);
     createTextureArray();
 
-    this.world = new World(this.seed, (this.saveData && this.saveData.dimension) || 'overworld');
+    this.world = new World(this.seed, (this.saveData && this.saveData.dimension) || (this.net && this.net.dimension) || 'overworld');
     this.chunks = new ChunkRenderer(this.world, this.scene, this.seed, { renderDistance: s.renderDistance });
     this.sky = new Sky(this.scene, this.renderer, { shadowMapSize: s.shadowMapSize });
     this.sky.setShadowsEnabled(s.shadows);
@@ -261,7 +261,11 @@ export class Game {
   respawn() {
     const p = this.player;
     // dying away from the overworld sends you home first
-    if (this.world.dimension !== 'overworld') this.dims.switchTo('overworld', { mode: 'spawn', x: p.spawn.x, y: p.spawn.y, z: p.spawn.z });
+    if (this.world.dimension !== 'overworld') {
+      // a multiplayer guest stays with the group (the host decides where everybody is)
+      if (this.net && this.net.isClient) { p.respawn(); this.net.respawnNearHost(); this.input.lock(); return; }
+      this.dims.switchTo('overworld', { mode: 'spawn', x: p.spawn.x, y: p.spawn.y, z: p.spawn.z });
+    }
     // the bed must still be there (when its chunk is loaded we can check)
     if (p.bed && this.world.isLoaded(p.bed.x, p.bed.z) && this.world.getBlock(p.bed.x, p.bed.y, p.bed.z) !== B.BED) {
       p.bed = null;
@@ -291,6 +295,7 @@ export class Game {
   mount(boat) {
     const p = this.player;
     boat.rider = p; p.riding = boat;
+    if (boat.netProxy && this.net) this.net.ride(boat, true); // a shared boat: tell the host we steer it
     this.seatPlayer();
   }
 
@@ -298,6 +303,7 @@ export class Game {
     const p = this.player, boat = p.riding;
     if (!boat) return;
     boat.rider = null; p.riding = null;
+    if (boat.netProxy && this.net) this.net.ride(boat, false);
     const bx = Math.floor(boat.x), by = Math.floor(boat.y + 0.5), bz = Math.floor(boat.z);
     const spot = this.standNextTo(bx, by, bz);
     if (spot) p.setPosition(spot.x, spot.y, spot.z);
@@ -375,11 +381,11 @@ export class Game {
     if (p.dead || this.world.getBlock(s.x, s.y, s.z) !== B.BED || p.hurtTime > 0) { this.wakeUp(false); return; }
     p.setPosition(s.x + 0.5, s.y + 0.5625, s.z + 0.5);
     p.body.vx = p.body.vy = p.body.vz = 0;
-    if (++s.ticks >= 100) this.wakeUp(true); // 5 seconds of sleep skips the night
+    if (++s.ticks >= 100 && !this.net) this.wakeUp(true); // 5 seconds of sleep skips the night (multiplayer: once everyone sleeps)
   }
 
   getFurnace(x, y, z) {
-    const k = `${x},${y},${z}`;
+    const k = `${x},${y},${z}`; // (a multiplayer guest keeps copies of the host's furnaces here)
     let f = this.furnaces.get(k);
     if (!f) { f = { x, y, z, input: null, fuel: null, output: null, burnTime: 0, burnTotal: 0, cookTime: 0 }; this.furnaces.set(k, f); }
     return f;
@@ -391,6 +397,7 @@ export class Game {
     if (!c) {
       c = { x, y, z, slots: new Array(27).fill(null) };
       this.chests.set(k, c);
+      if (this.net && this.net.isClient) return c; // a copy of the host's chest (loot is rolled there)
       // dungeon chests roll their loot the first time they are opened or broken
       const meta = metaHint ?? this.world.getMeta(x, y, z);
       if (meta & 8) {
@@ -403,6 +410,14 @@ export class Game {
 
   onBlockBroken(x, y, z, id, meta = 0) {
     if (id === B.SPAWNER) this.milestones.event('spawner');
+    if (this.net && this.net.isClient) {
+      // the host spills the contents of its own chest / furnace
+      const k = `${x},${y},${z}`;
+      if (this.ui.chest && this.ui.chest === this.chests.get(k)) this.ui.close();
+      if (this.ui.furnace && this.ui.furnace === this.furnaces.get(k)) this.ui.close();
+      this.chests.delete(k); this.furnaces.delete(k);
+      return;
+    }
     if (id === B.CHEST) {
       const k = `${x},${y},${z}`;
       const c = (meta & 8) ? this.getChest(x, y, z, meta) : this.chests.get(k);
@@ -476,7 +491,10 @@ export class Game {
     if (!p.dead && near(p) && !p.creative) { p.fireTicks = Math.max(p.fireTicks, 160); p.hurt(5, 'lightning'); }
   }
 
-  explode(x, y, z, power, source) { explode(this, x, y, z, power, source); }
+  explode(x, y, z, power, source) {
+    if (this.net && this.net.isClient) { this.net.requestExplosion(x, y, z, power); return; } // the host's world blows up
+    explode(this, x, y, z, power, source);
+  }
 
   /** Open this world to friends (peer-to-peer); resolves to the host session with its room code. */
   async openToFriends(name) {
@@ -531,7 +549,7 @@ export class Game {
     if (p.riding) this.seatPlayer();
     this.spawner.tick();
     if (!this.net || this.net.isHost) this.spawnerBlocks.tick();
-    this.tickFurnaces();
+    if (!this.net || this.net.isHost) this.tickFurnaces(); // guests see the host's furnaces
     this.particles.tick();
     if (this.net) this.net.tick();
     if (this.ticks % 1200 === 0) this.save(); // autosave every minute

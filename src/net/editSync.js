@@ -86,7 +86,7 @@ export class EditSync {
     const w = this.world, cx = x >> 4, cz = z >> 4, k = chunkKey(cx, cz);
     let d = w.saved.get(k);
     if (!d) {
-      const g = w.gen.generate(cx, cz);
+      const g = (w.dimension && w.dimension !== 'overworld' ? w.dimGenerator : w.gen).generate(cx, cz);
       const light = new Uint8Array(CHUNK_VOLUME);
       computeChunkLight(g.blocks, light);
       d = { blocks: g.blocks, meta: g.meta, light, biomes: g.biomes, colors: g.colors, heightmap: g.heightmap, modified: true };

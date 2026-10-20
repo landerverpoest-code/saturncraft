@@ -130,7 +130,8 @@ export class RemotePlayer {
 function makeTarget(rp) {
   const st = () => rp.state || { x: 0, y: -1000, z: 0, yaw: 0, pitch: 0, dead: true };
   return {
-    isPlayer: true, remote: rp,
+    isPlayer: true, isRemotePlayer: true, remote: rp,
+    get netName() { return rp.name; },
     get x() { return st().x; }, get y() { return st().y; }, get z() { return st().z; },
     get yaw() { return st().yaw; }, get pitch() { return st().pitch; },
     get dead() { return !rp.state || !!rp.state.dead; },
@@ -144,11 +145,9 @@ function makeTarget(rp) {
     inventory: { get selectedStack() { const h = st().held; return h == null ? null : { id: h, count: 1 }; } },
     eyePos() { const s = st(); return [s.x, s.y + this.eyeHeight, s.z]; },
     lookDir() { const s = st(), cp = Math.cos(s.pitch); return [-Math.sin(s.yaw) * cp, Math.sin(s.pitch), -Math.cos(s.yaw) * cp]; },
+    // a mob, an explosion or another player hurts this player: their own game applies it (armour etc.)
     hurt(amount, source = 'generic', attacker = null) {
-      if (this.dead || amount <= 0 || (this.creative && source !== 'void')) return false;
-      if (attacker && attacker.kind === 'mob') this.lastHurtBy = attacker;
-      if (rp.session) rp.session.sendHurt(rp, amount, source, attacker);
-      return true;
+      return rp.session ? rp.session.targetHurt(rp, amount, source, attacker) : false;
     },
   };
 }

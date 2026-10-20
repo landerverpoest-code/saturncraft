@@ -166,3 +166,96 @@ export function loadPlayerName() {
 export function savePlayerName(name) {
   try { localStorage.setItem(NAME_KEY, cleanName(name)); } catch { /* storage unavailable */ }
 }
+
+// ---- shared entities (items, orbs, arrows, boats, falling blocks, mobs) ---------------
+/**
+ * Compact snapshot of any host entity: [kind, id, x, y, z, ...kind specific].
+ * `riderOf(boat)` gives the boat rider's player id (0 = host) or -1.
+ */
+export function packEntity(e, riderOf = () => -1) {
+  switch (e.kind) {
+    case 'mob': return ['m', ...packMob(e)];
+    case 'item': return ['i', e.id, r2(e.x), r2(e.y), r2(e.z), e.stack.id, e.stack.count, e.stack.damage | 0, e.pickupDelay > 0 ? 1 : 0];
+    case 'xp': return ['x', e.id, r2(e.x), r2(e.y), r2(e.z), e.value];
+    case 'arrow': return ['a', e.id, r2(e.x), r2(e.y), r2(e.z), r2(e.vx), r2(e.vy), r2(e.vz), e.stuck ? 1 : 0, e.pickup ? 1 : 0];
+    case 'boat': return ['b', e.id, r2(e.x), r2(e.y), r2(e.z), r2(e.yaw), e.hitTime | 0, riderOf(e)];
+    case 'falling': return ['f', e.id, r2(e.x), r2(e.y), r2(e.z), e.blockId];
+    default: return null;
+  }
+}
+const ENTITY_KINDS = { m: 'mob', i: 'item', x: 'xp', a: 'arrow', b: 'boat', f: 'falling' };
+export function unpackEntity(a) {
+  if (!Array.isArray(a) || !ENTITY_KINDS[a[0]]) return null;
+  if (a[0] === 'm') { const m = unpackMob(a.slice(1)); return m && { ...m, kind: 'mob' }; }
+  const [k, id, x, y, z] = a;
+  if (![x, y, z].every(Number.isFinite)) return null;
+  const o = { kind: ENTITY_KINDS[k], id, x, y, z };
+  if (k === 'i') Object.assign(o, { stack: { id: a[5] | 0, count: a[6] | 0, damage: a[7] | 0 }, delayed: !!a[8] });
+  else if (k === 'x') o.value = a[5] | 0;
+  else if (k === 'a') Object.assign(o, { vx: a[5], vy: a[6], vz: a[7], stuck: !!a[8], pickup: !!a[9] });
+  else if (k === 'b') Object.assign(o, { yaw: a[5], hitTime: a[6] | 0, rider: a[7] });
+  else if (k === 'f') o.blockId = a[5] | 0;
+  return o;
+}
+
+// ---- containers (chests and furnaces) ---------------------------------------------
+export const FURNACE_SLOTS = ['input', 'fuel', 'output'];
+export function containerSlots(kind, c) {
+  return kind === 'furnace' ? FURNACE_SLOTS.map((k) => c[k] || null) : c.slots.slice();
+}
+export function setContainerSlot(kind, c, i, st) {
+  if (kind === 'furnace') c[FURNACE_SLOTS[i]] = st; else c.slots[i] = st;
+}
+export function sameStack(a, b) {
+  if (!a || !b) return !a && !b;
+  return a.id === b.id && a.count === b.count && (a.damage | 0) === (b.damage | 0);
+}
+export const copyStack = (s) => (s ? { id: s.id, count: s.count, damage: s.damage | 0 } : null);
+/** Slot changes between two snapshots: [[index, before, after], ...]. */
+export function diffSlots(before, after) {
+  const out = [];
+  for (let i = 0; i < Math.max(before.length, after.length); i++) if (!sameStack(before[i], after[i])) out.push([i, copyStack(before[i]), copyStack(after[i])]);
+  return out;
+}
+/**
+ * Host side: apply a client's slot changes only if every slot still holds what
+ * the client saw (otherwise someone else got there first). Returns true if applied.
+ */
+export function applySlotChanges(kind, c, changes) {
+  const cur = containerSlots(kind, c), n = cur.length;
+  if (!Array.isArray(changes)) return false;
+  for (const ch of changes) {
+    if (!Array.isArray(ch) || !Number.isInteger(ch[0]) || ch[0] < 0 || ch[0] >= n) return false;
+    if (!sameStack(cur[ch[0]], ch[1])) return false;
+    const st = ch[2];
+    if (st && (!Number.isInteger(st.id) || !Number.isInteger(st.count) || st.count <= 0 || st.count > 64)) return false;
+  }
+  for (const [i, , st] of changes) setContainerSlot(kind, c, i, copyStack(st));
+  return true;
+}
+export function containerState(kind, c) {
+  return kind === 'furnace'
+    ? { slots: containerSlots(kind, c).map(copyStack), burnTime: c.burnTime | 0, burnTotal: c.burnTotal | 0, cookTime: c.cookTime | 0 }
+    : { slots: c.slots.map(copyStack) };
+}
+/** Client side: copy a host container state into the local mirror object (keeping its identity). */
+export function loadContainerState(kind, c, s) {
+  if (!s || !Array.isArray(s.slots)) return;
+  s.slots.forEach((st, i) => setContainerSlot(kind, c, i, copyStack(st)));
+  if (kind === 'furnace') { c.burnTime = s.burnTime | 0; c.burnTotal = s.burnTotal | 0; c.cookTime = s.cookTime | 0; }
+}
+
+/** How many of a stack fit into inventory slots. */
+export function roomFor(slots, st, maxStackOf, stackable = true) {
+  const max = maxStackOf(st.id);
+  let n = 0;
+  for (const s of slots) {
+    if (!s) n += max;
+    else if (stackable && s.id === st.id && s.count < max) n += max - s.count;
+  }
+  return n;
+}
+
+/** Chat commands that change the shared world: guests have the host run them. */
+export const WORLD_COMMANDS = new Set(['time', 'weather', 'gamerule', 'summon', 'dimension', 'dim']);
+export function commandName(text) { return (String(text).trim().replace(/^\//, '').split(/\s+/)[0] || '').toLowerCase(); }
