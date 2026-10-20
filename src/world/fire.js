@@ -70,11 +70,12 @@ export function tickFire(world, x, y, z, rng = Math.random) {
   }
   world.scheduleTick(x, y, z, FIRE_DELAY + Math.floor(rng() * 10));
   const below = world.getBlock(x, y - 1, z);
+  const eternal = below === B.CINDERSTONE; // Cinderstone burns forever
   if (!hasFuelAround(world, x, y, z)) {
-    if (!(SOLID[below] && OPAQUE[below]) || age > 3) world.setBlock(x, y, z, B.AIR);
+    if (!eternal && (!(SOLID[below] && OPAQUE[below]) || age > 3)) world.setBlock(x, y, z, B.AIR);
     return;
   }
-  if (!isFlammable(below) && age === 15 && rng() < 0.25) { world.setBlock(x, y, z, B.AIR); return; }
+  if (!eternal && !isFlammable(below) && age === 15 && rng() < 0.25) { world.setBlock(x, y, z, B.AIR); return; }
   // burn neighbours
   for (const [dx, dy, dz] of NEIGHBOURS) tryBurn(world, x + dx, y + dy, z + dz, dy ? 250 : 300, age, rng);
   // spread through the air nearby

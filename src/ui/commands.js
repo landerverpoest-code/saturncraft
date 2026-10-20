@@ -5,6 +5,7 @@ import { MOBS, MOB_KEYS } from '../mobs/mobTypes.js';
 import { skyState } from '../sky/suns.js';
 import { addXp } from '../player/experience.js';
 import { villageInRegion, VILLAGE_REGION } from '../world/villages.js';
+import { nearestSanctum } from '../world/dimensions/sanctum.js';
 
 /** item lookup by key ("diamond_sword", "oak_planks", "grass_block") and by display name */
 let ITEM_KEYS = null;
@@ -50,7 +51,8 @@ export const HELP = [
   '/give <item> [count]',
   '/summon <mob> [x y z]',
   '/xp <amount> [levels]',
-  '/locate village',
+  '/locate <village|sanctum|bastion>',
+  '/dimension <overworld|cinderdeep|hollow>',
   '/kill,  /clear,  /spawnpoint,  /seed,  /heal',
 ];
 
@@ -145,8 +147,23 @@ export function runCommand(game, text) {
     case 'clear': p.inventory.clear(); return 'Cleared the inventory';
     case 'spawnpoint': p.spawn = { x: p.x, y: p.y, z: p.z }; p.bed = null; return `Set spawn point to ${Math.floor(p.x)}, ${Math.floor(p.y)}, ${Math.floor(p.z)}`;
     case 'seed': return `Seed: [${game.seed}]`;
+    case 'dimension': case 'dim': return game.dims ? game.dims.command(args[0]) : 'Dimensions unavailable';
     case 'locate': {
-      if ((args[0] || '').toLowerCase() !== 'village') return 'Usage: /locate village';
+      const what = (args[0] || '').toLowerCase();
+      if (what === 'sanctum') {
+        if (game.world.dimension !== 'overworld') return 'Hollow Sanctums are only found in the overworld';
+        const s = nearestSanctum(game.seed, p.x, p.z);
+        return s ? `The nearest Hollow Sanctum is at ${s.x}, ${s.y}, ${s.z} (${Math.round(Math.hypot(s.x - p.x, s.z - p.z))} blocks away)` : 'No sanctum found nearby';
+      }
+      if (what === 'bastion') {
+        if (game.world.dimension !== 'cinderdeep') return 'Ember Bastions are only found in the Cinderdeep';
+        const gen = game.world.dimGenerator;
+        const list = gen.bastionsNear(p.x - 1024, p.z - 1024, p.x + 1024, p.z + 1024);
+        if (!list.length) return 'No bastion found nearby';
+        const b = list.reduce((a, c) => (Math.hypot(c.cx - p.x, c.cz - p.z) < Math.hypot(a.cx - p.x, a.cz - p.z) ? c : a));
+        return `The nearest Ember Bastion is at ${b.cx}, ${b.y + 1}, ${b.cz} (${Math.round(Math.hypot(b.cx - p.x, b.cz - p.z))} blocks away)`;
+      }
+      if (what !== 'village') return 'Usage: /locate <village|sanctum|bastion>';
       const R = VILLAGE_REGION, prx = Math.floor(p.x / R), prz = Math.floor(p.z / R);
       let best = null;
       // search rings of regions outwards; one ring past the first find, since a neighbour can be closer

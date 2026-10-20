@@ -36,6 +36,8 @@ import { Input } from './ui/input.js';
 import { Audio } from './audio/audio.js';
 import { explode } from './entities/explosion.js';
 import { saveGame, applySave, applyPlayerSave } from './world/save.js';
+import { DimensionManager } from './world/dimensions/manager.js';
+import { DIMENSIONS } from './world/dimensions/dims.js';
 
 // Spherical (radial distance) fog instead of view-depth fog, so chunk edges never show at screen corners
 THREE.ShaderChunk.fog_vertex = `#ifdef USE_FOG
@@ -85,14 +87,14 @@ export class Game {
     this.scene.fog = new THREE.Fog(0x88aaff, 50, 120);
     createTextureArray();
 
-    this.world = new World(this.seed);
+    this.world = new World(this.seed, (this.saveData && this.saveData.dimension) || 'overworld');
     this.chunks = new ChunkRenderer(this.world, this.scene, this.seed, { renderDistance: s.renderDistance });
     this.sky = new Sky(this.scene, this.renderer, { shadowMapSize: s.shadowMapSize });
     this.sky.setShadowsEnabled(s.shadows);
     this.clouds = new Clouds(this.scene, this.seed);
     this.weather = new Weather();
     // fire checks this: rain puts out (and stops) fires that are open to the sky
-    this.world.rainingAt = (x, y, z) => this.weather.level >= 0.2 && Weather.precipitation(this.world.biomeAt(x, z)) === 'rain' && this.world.heightAt(x, z) <= y;
+    this.world.rainingAt = (x, y, z) => this.world.dimension === 'overworld' && this.weather.level >= 0.2 && Weather.precipitation(this.world.biomeAt(x, z)) === 'rain' && this.world.heightAt(x, z) <= y;
     this.chat = this.chat || new Chat(this);
     this.weatherFx = new WeatherRenderer(this.scene);
     this.lightning = new Lightning(this.scene);
@@ -117,6 +119,8 @@ export class Game {
     this.ui = new UI(this);
     this.held = new HeldItem(this);
     this.overlay = new BlockOverlay(this.scene);
+    this.dims = new DimensionManager(this); // the Cinderdeep and the Hollow (world/dimensions/)
+    this.dims.applyLook();
 
     this.world.on('fallingBlock', (x, y, z, id) => this.entities.spawnFallingBlock(x, y, z, id));
     this.world.on('fireCrackle', (x, y, z) => this.audio.play('fire', [x + 0.5, y + 0.5, z + 0.5]));
@@ -238,6 +242,8 @@ export class Game {
 
   respawn() {
     const p = this.player;
+    // dying away from the overworld sends you home first
+    if (this.world.dimension !== 'overworld') this.dims.switchTo('overworld', { mode: 'spawn', x: p.spawn.x, y: p.spawn.y, z: p.spawn.z });
     // the bed must still be there (when its chunk is loaded we can check)
     if (p.bed && this.world.isLoaded(p.bed.x, p.bed.z) && this.world.getBlock(p.bed.x, p.bed.y, p.bed.z) !== B.BED) {
       p.bed = null;
@@ -291,6 +297,7 @@ export class Game {
   /** Right-click on a bed: set the respawn point and sleep if it is night and safe. */
   trySleep(x, y, z) {
     const w = this.world, p = this.player;
+    if (w.dimension !== 'overworld') { this.dims.bedExplodes(x, y, z); return; } // beds blow up outside the overworld
     const m = w.getMeta(x, y, z);
     const [dx, , dz] = SIDE_DIRS[m & 3];
     const head = m & BED_HEAD ? [x, z] : [x + dx, z + dz];
@@ -461,9 +468,10 @@ export class Game {
     const mv = blocking ? { forward: 0, strafe: 0, jump: false, sneak: false, sprint: false } : inp.movement();
     this.world.tick();
     this.weather.tick();
-    this.tickRain();
+    const overworld = this.world.dimension === 'overworld';
+    if (overworld) this.tickRain();
     this.lightning.tick();
-    this.tickThunder();
+    if (overworld) this.tickThunder();
     runRandomTicks(this.world, Math.floor(this.player.x / 16), Math.floor(this.player.z / 16), Math.min(this.chunks.renderDistance, 6));
     // Hold the player in place until the terrain under them has loaded (spawn, respawn, teleports)
     const p = this.player;
@@ -471,7 +479,8 @@ export class Game {
     if (p.riding && (mv.sneak || p.riding.dead || p.dead)) this.dismount();
     this.boatInput = p.riding ? mv : null;
     const still = { forward: 0, strafe: 0, jump: false, sneak: false, sprint: false };
-    if (this.chunks.isAreaReady(p.x, p.z, 0)) this.player.tick(this.world, p.sleeping || p.riding ? still : mv);
+    this.dims.tick(); // portals, arrivals, the Hollow's boss
+    if (!this.dims.pending && this.chunks.isAreaReady(p.x, p.z, 0)) this.player.tick(this.world, p.sleeping || p.riding ? still : mv);
     else p.prev = { x: p.x, y: p.y, z: p.z };
     if (!blocking) {
       this.interaction.tick({
@@ -598,9 +607,10 @@ export class Game {
     this.sky.rain = this.weather.level;
     this.sky.thunder = this.weather.storm;
     this.sky.flash = this.lightning.flash;
-    const st = this.sky.update(smoothTime, sec, this.camera, new THREE.Vector3(x, y, z));
-    this.weatherFx.update(this.world, this.camera, p.yaw, this.weather.level, sec, Math.min(1, st.combined) * 0.85 + 0.15);
-    this.audio.setRain(this.weather.level * (Weather.precipitation(this.world.biomeAt(Math.floor(x), Math.floor(z))) === 'rain' ? 1 : 0),
+    const st = this.dims.updateSky(smoothTime, sec, this.camera, new THREE.Vector3(x, y, z));
+    const wlevel = this.world.dimension === 'overworld' ? this.weather.level : 0; // no weather in the Cinderdeep or the Hollow
+    this.weatherFx.update(this.world, this.camera, p.yaw, wlevel, sec, Math.min(1, st.combined) * 0.85 + 0.15);
+    this.audio.setRain(wlevel * (Weather.precipitation(this.world.biomeAt(Math.floor(x), Math.floor(z))) === 'rain' ? 1 : 0),
       this.world.heightAt(Math.floor(x), Math.floor(z)) > y + eye);
     terrainUniforms.uTime.value = sec;
     const R = this.chunks.renderDistance * 16;
@@ -609,7 +619,7 @@ export class Game {
     this.scene.fog.color.copy(fogCol);
     if (b.eyeInWater) { this.scene.fog.color.setRGB(0.03, 0.1, 0.3); this.scene.fog.near = 1; this.scene.fog.far = 18; }
     else if (b.eyeInLava) { this.scene.fog.color.setRGB(0.6, 0.15, 0.02); this.scene.fog.near = 0; this.scene.fog.far = 2; }
-    else { this.scene.fog.near = R * 0.65; this.scene.fog.far = R; }
+    else { this.scene.fog.near = R * 0.65; this.scene.fog.far = R; this.dims.adjustFog(this.scene.fog, R); }
     this.sky.uniforms.uUnderwater.value = b.eyeInWater ? 1 : 0;
     this.audio.setListener(x, y + eye, z, p.yaw);
 
@@ -636,7 +646,7 @@ export class Game {
       `Saturncraft  ${this.fps} fps  draw calls ${ri.calls}  tris ${(ri.triangles / 1000).toFixed(0)}k`,
       `XYZ ${p.x.toFixed(2)} / ${p.y.toFixed(2)} / ${p.z.toFixed(2)}   chunk ${bx >> 4}, ${bz >> 4}`,
       `Facing yaw ${(((p.yaw * 180 / Math.PI) % 360 + 360) % 360).toFixed(0)}°  pitch ${(p.pitch * 180 / Math.PI).toFixed(0)}°`,
-      `Biome ${biomeName(w.biomeAt(bx, bz))}   chunks ${w.chunks.size}`,
+      `${w.dimension === 'overworld' ? `Biome ${biomeName(w.biomeAt(bx, bz))}` : `Dimension ${DIMENSIONS[w.dimension].name}`}   chunks ${w.chunks.size}`,
       `Light: sky ${sky} (effective ${effectiveSkyLight(sky, st.skyDarken)})  block ${bl}`,
       `Time ${this.time}  phase ${st.phase}  suns up ${st.aboveCount}  combined ${st.combined.toFixed(2)}  darken ${st.skyDarken}`,
       ...st.suns.map((s) => `  ${s.sun.name.padEnd(12)} elev ${(Math.asin(s.elevation) * 180 / Math.PI).toFixed(1).padStart(6)}°  light ${s.factor.toFixed(2)}`),

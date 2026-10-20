@@ -143,6 +143,13 @@ for (const [mat, m] of Object.entries(ARMOR_MATERIALS)) {
   });
 }
 
+// Cinderdeep / Hollow items (iconStyle: [template, colours] for ui/icons.js)
+item('ember_rod', 'Ember Rod', { fuel: 2400, iconStyle: ['stick', { s: '#ffb030' }] });
+item('ember_powder', 'Ember Powder', { iconStyle: ['dust', { h: '#ff9a20' }] });
+item('ember_quartz', 'Ember Quartz', { iconStyle: ['gem', { h: '#f0d8c8' }] });
+item('glowshard_dust', 'Glowshard Dust', { iconStyle: ['dust', { h: '#ffd860' }] });
+item('eye_of_the_void', 'Eye of the Void', { stack: 16, voidEye: true, iconStyle: ['pearl', { h: '#3aa88a', H: '#c8ff6a' }] });
+
 // Fuel for block items
 for (const id of [B.OAK_PLANKS, B.SPRUCE_PLANKS, B.BIRCH_PLANKS, B.OAK_LOG, B.BIRCH_LOG, B.SPRUCE_LOG, B.WORKBENCH]) ITEMS[id].fuel = 300;
 ITEMS[B.COAL_BLOCK].fuel = 16000;

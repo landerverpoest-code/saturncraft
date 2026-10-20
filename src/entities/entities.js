@@ -42,7 +42,7 @@ export function lightAt(game, x, y, z) {
   const sky = Math.max(0, (l >> 4) - game.sky.state.skyDarken * 0) / 15;
   const blk = (l & 15) / 15;
   const curve = (f) => { const b = f / (4 - 3 * f); return b * 0.45 + (1 - Math.pow(1 - b, 4)) * 0.55; };
-  return Math.max(curve(sky), curve(blk) * 0.95, 0.06);
+  return Math.max(curve(sky), curve(blk) * 0.95, game.minEntityLight || 0.06);
 }
 
 export class ItemEntity {
@@ -399,7 +399,7 @@ export class EntityManager {
 
   /** Remove entities in an unloaded chunk (mobs are despawned, items are kept frozen). */
   frozen(e) {
-    return !this.game.world.isLoaded(Math.floor(e.x), Math.floor(e.z));
+    return !e.noFreeze && !this.game.world.isLoaded(Math.floor(e.x), Math.floor(e.z));
   }
 
   render(alpha, timeSec) {
@@ -409,7 +409,7 @@ export class EntityManager {
       const dist2 = (e.x - cam.x) ** 2 + (e.y - cam.y) ** 2 + (e.z - cam.z) ** 2;
       let m = this.meshes.get(e.id);
       // entity render distance (64 blocks for mobs, 32 for small entities)
-      const maxD = e.kind === 'mob' ? ENTITY_RENDER_DIST : ENTITY_RENDER_DIST / 2;
+      const maxD = e.kind === 'mob' ? (e.def.boss ? 320 : ENTITY_RENDER_DIST) : ENTITY_RENDER_DIST / 2;
       if (dist2 > maxD * maxD) { if (m) m.visible = false; continue; }
       if (!m) { m = this.createMesh(e); if (!m) continue; this.meshes.set(e.id, m); this.scene.add(m); }
       m.visible = true;
@@ -440,8 +440,8 @@ export class EntityManager {
         m.position.set(px, py, pz);
         if (!e.stuck) m.lookAt(px + e.vx, py + e.vy, pz + e.vz);
         m.material.color.setScalar(L);
-      } else if (e.kind === 'mob') {
-        e.renderUpdate(m, px, py, pz, alpha, L, timeSec);
+      } else if (e.renderUpdate) {
+        e.renderUpdate(m, px, py, pz, alpha, L, timeSec); // mobs and custom entities (fireballs, thrown eyes)
       }
     }
   }
@@ -482,7 +482,7 @@ export class EntityManager {
       const m = new THREE.Mesh(this.arrowGeo, new THREE.MeshLambertMaterial({ color: 0xbbaa88 }));
       return m;
     }
-    if (e.kind === 'mob') return e.createMesh(this.game);
+    if (e.createMesh) return e.createMesh(this.game);
     return null;
   }
 }

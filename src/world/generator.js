@@ -1,6 +1,7 @@
 // Deterministic terrain generator. Runs inside Web Workers (see gen.worker.js)
 // but is a pure module so it can be unit-tested and used for spawn search.
 import { stampVillages } from './villages.js';
+import { stampSanctums } from './dimensions/sanctum.js';
 import { treeShape, LEAVES } from './trees.js';
 import { B, DEEP_VARIANT } from './blocks.js';
 import { Simplex, hash4, hashf, mulberry32 } from './noise.js';
@@ -310,6 +311,7 @@ export class TerrainGenerator {
 
     // 9. Villages
     stampVillages(this, blocks, meta, cx, cz);
+    stampSanctums(this, blocks, meta, cx, cz); // Hollow Sanctums (world/dimensions/sanctum.js)
 
     // Final heightmap: highest non-air block
     for (let z = 0; z < 16; z++) for (let x = 0; x < 16; x++) {

@@ -37,11 +37,13 @@ export class ChunkRenderer {
     this.materials = createTerrainMaterials();
     this.depthMaterial = createTerrainDepthMaterial();
     this.workers = [];
+    this.seed = seed;
+    this.epoch = 0; // bumped on a dimension switch; older generation results are dropped
     const n = Math.max(2, Math.min(6, (navigator.hardwareConcurrency || 4) - 1));
     for (let i = 0; i < n; i++) {
       const w = new Worker(new URL('../world/worker.js', import.meta.url), { type: 'module' });
       w.onmessage = (e) => this.onWorkerMessage(e.data);
-      w.postMessage({ type: 'init', seed });
+      w.postMessage({ type: 'init', seed, dimension: world.dimension });
       w.busy = 0;
       this.workers.push(w);
     }
@@ -69,6 +71,7 @@ export class ChunkRenderer {
       const k = chunkKey(m.cx, m.cz);
       this.pendingGen.delete(k);
       this.workers.forEach((w) => { if (w._jobs && w._jobs.has(m.jobId)) { w._jobs.delete(m.jobId); w.busy--; } });
+      if (m.epoch !== this.epoch) return;
       const [pcx, pcz] = this.center;
       if (Math.max(Math.abs(m.cx - pcx), Math.abs(m.cz - pcz)) > this.renderDistance + 2) return;
       if (this.world.isChunkLoaded(m.cx, m.cz)) return;
@@ -174,7 +177,7 @@ export class ChunkRenderer {
       for (const [, cx, cz, k] of want) {
         if (this.pendingGen.size >= maxInflight) break;
         this.pendingGen.add(k);
-        this.post(this.pickWorker(), { type: 'gen', cx, cz });
+        this.post(this.pickWorker(), { type: 'gen', cx, cz, epoch: this.epoch });
       }
     }
 
@@ -372,6 +375,15 @@ export class ChunkRenderer {
       if (!c || !c.meshed) return false;
     }
     return true;
+  }
+
+  /** Drop every chunk mesh and pending job; the workers now generate `dimension`. */
+  resetDimension(dimension) {
+    for (const c of this.world.chunks.values()) this.disposeChunk(c);
+    this.pendingGen.clear(); this.pendingMesh.clear(); this.meshResults.length = 0; this.rebuild.clear();
+    this.epoch++;
+    for (const w of this.workers) w.postMessage({ type: 'init', seed: this.seed, dimension });
+    this.visDirty = true;
   }
 
   dispose() { for (const w of this.workers) w.terminate(); }

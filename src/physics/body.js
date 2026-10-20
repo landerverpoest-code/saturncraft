@@ -208,6 +208,11 @@ export class Body {
       this.fallDistance = 0;
     }
     this.move(world, this.vx, this.vy, this.vz, input.sneak);
+    if (this.onGround) {
+      // slow ground (Mournsand): horizontal velocity multiplier
+      const sf = BLOCKS[world.getBlock(Math.floor(this.x), Math.floor(this.y - 0.5000001), Math.floor(this.z))];
+      if (sf && sf.speedFactor !== 1) { this.vx *= sf.speedFactor; this.vz *= sf.speedFactor; }
+    }
     if (ladder && (this.horizontalCollision || input.jump)) this.vy = 0.2; // climb
     if (!this.noGravity) this.vy -= PHYS.GRAVITY;
     this.vy *= PHYS.DRAG_Y;

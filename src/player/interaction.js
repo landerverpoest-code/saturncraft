@@ -7,6 +7,7 @@ import { PHYS } from '../physics/constants.js';
 import { EXHAUSTION } from './survival.js';
 import { lightAt } from '../entities/entities.js';
 import { canLight, FIRE_DELAY } from '../world/fire.js';
+import { tryLightRift, findHollowRing, fillHollowGate } from '../world/dimensions/portal.js';
 import { LEAVES, SAPLING_TREE, growTree } from '../world/trees.js';
 import { sideOf, SIDE_DIRS, DOOR_OPEN, DOOR_UPPER, BED_HEAD, SLAB_TOP, SLAB_DOUBLE, STAIRS_UPSIDE, GATE_OPEN } from '../world/shapes.js';
 
@@ -162,7 +163,7 @@ export class Interaction {
     if (xp && canHarvest(id, tool)) g.entities.spawnXp(x + 0.5, y + 0.5, z + 0.5, xp[0] + Math.floor(Math.random() * (xp[1] - xp[0] + 1)));
     if (!p.creative) for (const drop of blockDrops(id, tool, Math.random, meta)) g.entities.spawnItem(x + 0.5, y + 0.3, z + 0.5, drop);
     // Ice melts into water when broken above a solid block
-    if (id === B.ICE && SOLID[g.world.getBlock(x, y - 1, z)]) {
+    if (id === B.ICE && SOLID[g.world.getBlock(x, y - 1, z)] && g.world.dimension !== 'cinderdeep') {
       g.world.setBlockUrgent(x, y, z, B.WATER, 0);
       g.world.scheduleTick(x, y, z, 5);
     }
@@ -262,6 +263,8 @@ export class Interaction {
       this.swing = SWING_TICKS;
       return true;
     }
+    // Eye of the Void: set into a Hollow Frame, or thrown to point at the nearest sanctum
+    if (d && d.voidEye) return this.useVoidEye(this.target);
     const t = this.target;
     if (!t) return false;
     // Interactive blocks
@@ -304,6 +307,14 @@ export class Interaction {
     // Flint and steel lights a fire on the clicked face (or lights a fire on top of a solid block)
     if (d.igniter) {
       const fx = t.x + t.face[0], fy = t.y + t.face[1], fz = t.z + t.face[2];
+      // inside an obsidian frame: open a Rift portal instead of lighting a fire
+      if (w.dimension !== 'hollow' && tryLightRift(w, fx, fy, fz, (x, y, z, id, m) => w.setBlockUrgent(x, y, z, id, m, false))) {
+        g.audio.play('ignite', [fx + 0.5, fy + 0.5, fz + 0.5]); g.audio.play('warble', [fx + 0.5, fy + 0.5, fz + 0.5]);
+        if (p.gamemode !== 'creative') p.inventory.damageSelected(1);
+        if (g.milestones) g.milestones.event('rift');
+        this.swing = SWING_TICKS;
+        return true;
+      }
       if (!canLight(w, fx, fy, fz)) return false;
       w.setBlockUrgent(fx, fy, fz, B.FIRE, 0);
       w.scheduleTick(fx, fy, fz, FIRE_DELAY + Math.floor(Math.random() * 10));
@@ -352,6 +363,15 @@ export class Interaction {
       const dx = p.x - (px + 0.5), dz = p.z - (pz + 0.5);
       meta = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 1 : 3) : (dz > 0 ? 2 : 0);
     }
+    if (placeId === B.WATER && w.dimension === 'cinderdeep') {
+      // water boils away at once in the Cinderdeep
+      g.audio.play('fizz', [px + 0.5, py + 0.5, pz + 0.5]);
+      g.particles.smoke(px + 0.5, py + 0.5, pz + 0.5, 16, 1);
+      p.inventory.slots[p.inventory.selected] = { id: I.BUCKET, count: 1, damage: 0 };
+      p.inventory.changed();
+      this.swing = SWING_TICKS;
+      return true;
+    }
     w.setBlockUrgent(px, py, pz, placeId, meta);
     if (CROPS.has(placeId) && g.milestones) g.milestones.event('plant');
     if (isFluid(placeId)) w.scheduleTick(px, py, pz, 5);
@@ -362,6 +382,30 @@ export class Interaction {
     } else p.inventory.removeFromSlot(p.inventory.selected, 1);
     this.swing = SWING_TICKS;
     return true;
+  }
+
+  useVoidEye(t) {
+    const g = this.game, w = g.world, p = g.player;
+    if (t && t.id === B.HOLLOW_FRAME) {
+      w.setBlockUrgent(t.x, t.y, t.z, B.HOLLOW_FRAME_EYE, 0, false);
+      if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
+      g.audio.play('place_glass', [t.x + 0.5, t.y + 1, t.z + 0.5]);
+      const ring = findHollowRing(w, t.x, t.y, t.z);
+      if (ring) {
+        fillHollowGate(w, ring, (x, y, z, id) => w.setBlockUrgent(x, y, z, id, 0, false));
+        g.audio.play('teleport', [ring.x + 0.5, ring.y, ring.z + 0.5]);
+        g.hud.toast('The Hollow Gate opens');
+      }
+      this.swing = SWING_TICKS;
+      return true;
+    }
+    if (t && t.id === B.HOLLOW_FRAME_EYE) return false;
+    if (g.dims && g.dims.throwEye()) {
+      if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
+      this.swing = SWING_TICKS;
+      return true;
+    }
+    return false;
   }
 
   boneMeal(t) {
