@@ -4,8 +4,8 @@ import { I, DYES, WOOL_ITEMS } from '../world/items.js';
 import { COLOR } from '../world/colors.js';
 
 const TAGS = {
-  planks: [B.OAK_PLANKS, B.SPRUCE_PLANKS, B.BIRCH_PLANKS],
-  log: [B.OAK_LOG, B.SPRUCE_LOG, B.BIRCH_LOG],
+  planks: [B.OAK_PLANKS, B.SPRUCE_PLANKS, B.BIRCH_PLANKS, B.JUNGLE_PLANKS, B.ACACIA_PLANKS, B.DARK_OAK_PLANKS],
+  log: [B.OAK_LOG, B.SPRUCE_LOG, B.BIRCH_LOG, B.JUNGLE_LOG, B.ACACIA_LOG, B.DARK_OAK_LOG],
   stone_mat: [B.COBBLESTONE, B.COBBLED_DEEPSTONE],
 };
 
@@ -24,6 +24,12 @@ function shapeless(ings, result, count = 1) { RECIPES.push({ type: 'shapeless', 
 shapeless([B.OAK_LOG], B.OAK_PLANKS, 4);
 shapeless([B.SPRUCE_LOG], B.SPRUCE_PLANKS, 4);
 shapeless([B.BIRCH_LOG], B.BIRCH_PLANKS, 4);
+shapeless([B.JUNGLE_LOG], B.JUNGLE_PLANKS, 4);
+shapeless([B.ACACIA_LOG], B.ACACIA_PLANKS, 4);
+shapeless([B.DARK_OAK_LOG], B.DARK_OAK_PLANKS, 4);
+shapeless([B.RED_MUSHROOM, B.BROWN_MUSHROOM, I.BOWL], I.MUSHROOM_STEW);
+shapeless([B.SKYBELL], DYES[COLOR.LIGHT_BLUE], 1);
+shapeless([B.ROSETTE], DYES[COLOR.PINK], 1);
 shaped(['P', 'P'], { P: 'planks' }, I.STICK, 4);
 shaped(['PP', 'PP'], { P: 'planks' }, B.WORKBENCH, 1);
 shaped(['PPP', 'P P', 'PPP'], { P: 'planks' }, B.CHEST, 1);
@@ -193,4 +199,5 @@ export const SMELTING = {
   [B.SAND]: B.GLASS, [I.CLAY_BALL]: I.BRICK, [B.CLAY]: B.BRICKS, [B.CACTUS]: DYES[COLOR.GREEN], [B.COBBLESTONE]: B.STONE, [B.COBBLED_DEEPSTONE]: B.DEEPSTONE,
   [I.RAW_PORK]: I.COOKED_PORK, [I.POTATO]: I.BAKED_POTATO, [I.RAW_BEEF]: I.STEAK, [I.RAW_CHICKEN]: I.COOKED_CHICKEN,
   [I.RAW_MUTTON]: I.COOKED_MUTTON, [B.OAK_LOG]: I.COAL, [B.SPRUCE_LOG]: I.COAL, [B.BIRCH_LOG]: I.COAL,
+  [B.JUNGLE_LOG]: I.COAL, [B.ACACIA_LOG]: I.COAL, [B.DARK_OAK_LOG]: I.COAL, [B.RED_SAND]: B.GLASS,
 };

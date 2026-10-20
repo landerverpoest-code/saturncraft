@@ -156,6 +156,12 @@ function leavesTex(c, density = 0.78) {
   }
 }
 
+// Fired clay: a flat matte colour with faint grain.
+function terracotta(c, base) {
+  const b = hex(base);
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, shade(b, 0.93 + c.h(x, y) * 0.07 + (c.h(x >> 2, y >> 2, 1) - 0.5) * 0.05));
+}
+
 // Tilled soil: furrows across the face, darker when moist.
 function farmland(c, moist) {
   const pal = moist ? ['#3f2a19', '#4a321e', '#36241a', '#52381f'] : ['#6e4c2e', '#7d5836', '#634329', '#8a633e'];
@@ -386,6 +392,87 @@ const GEN = {
   birch_log_top: (c) => logTop(c, '#e8e4d8', '#c9b07c'),
   spruce_log: (c) => logSide(c, '#4a3420', '#38261a', false),
   spruce_log_top: (c) => logTop(c, '#4a3420', '#8c6a3f'),
+  jungle_log: (c) => {
+    logSide(c, '#5a4424', '#3f2f17', false);
+    // mossy flecks on the bark
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) if (c.h(x >> 1, y, 21) < 0.13) c.set(x, y, shade(hex('#5e6a2a'), 0.85 + c.h(x, y) * 0.2));
+  },
+  jungle_log_top: (c) => logTop(c, '#5a4424', '#a77a50'),
+  jungle_planks: (c) => planks(c, '#a07350'),
+  jungle_leaves: (c) => leavesTex(c, 0.9),
+  jungle_sapling: (c) => sapling(c, '#3f9a2a', '#2a6a1a', '#5a4424', false),
+  acacia_log: (c) => logSide(c, '#6a645a', '#4f4a42', false),
+  acacia_log_top: (c) => logTop(c, '#6a645a', '#b0603a'),
+  acacia_planks: (c) => planks(c, '#b0603a'),
+  acacia_leaves: (c) => leavesTex(c, 0.74),
+  acacia_sapling: (c) => sapling(c, '#8a9a2a', '#5f6a1a', '#6a645a', false),
+  dark_oak_log: (c) => logSide(c, '#3e2d18', '#2a1e10', false),
+  dark_oak_log_top: (c) => logTop(c, '#3e2d18', '#5c4329'),
+  dark_oak_planks: (c) => planks(c, '#4f3720'),
+  dark_oak_leaves: (c) => leavesTex(c, 0.9),
+  dark_oak_sapling: (c) => sapling(c, '#2f6a1a', '#1f4a12', '#3e2d18', false),
+  red_sand: (c) => c.noiseFill(['#bf6a2a', '#b05f22', '#c97632', '#a8571e'].map(hex), 0.2),
+  terracotta: (c) => terracotta(c, '#985e43'),
+  orange_terracotta: (c) => terracotta(c, '#a1532a'),
+  yellow_terracotta: (c) => terracotta(c, '#b8862a'),
+  white_terracotta: (c) => terracotta(c, '#d1b2a1'),
+  brown_terracotta: (c) => terracotta(c, '#4d3324'),
+  red_terracotta: (c) => terracotta(c, '#8f3d2e'),
+  light_gray_terracotta: (c) => terracotta(c, '#876a61'),
+  vines: (c) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
+    // a few wavy strands with leaves branching off them
+    for (const sx of [2, 6, 10, 13]) {
+      for (let y = 0; y < 16; y++) {
+        const x = sx + Math.round(Math.sin(y * 0.6 + sx) * 1.2);
+        c.set(x, y, shade([235, 235, 235], 0.6 + c.h(x, y) * 0.25));
+        if (c.h(sx, y, 3) < 0.4) { c.set(x + 1, y, shade([245, 245, 245], 0.8 + c.h(x, y, 4) * 0.2)); c.set(x - 1, y + 1, shade([245, 245, 245], 0.75)); }
+      }
+    }
+  },
+  lily_pad: (c) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const dx = x - 7.5, dy = y - 7.5, r = Math.sqrt(dx * dx + dy * dy);
+      const notch = dy < 0 && Math.abs(dx) < -dy * 0.35;
+      if (r > 7.2 || notch) { c.set(x, y, [0, 0, 0], 0); continue; }
+      const vein = Math.abs(Math.atan2(dy, dx) * 4 / Math.PI % 1) < 0.12 && r > 1.5;
+      c.set(x, y, shade(hex('#2f7d25'), vein ? 0.75 : 0.9 + c.h(x, y) * 0.2 - r * 0.015));
+    }
+  },
+  brown_mushroom: (c) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
+    for (let y = 10; y < 15; y++) { c.set(7, y, hex('#d8ccb4')); c.set(8, y, hex('#c4b89e')); }
+    for (let y = 7; y < 10; y++) for (let x = 4 - (y - 7); x <= 11 + (y - 7); x++) c.set(x, y, shade(hex('#9a6e4c'), 0.9 + c.h(x, y) * 0.2));
+  },
+  red_mushroom: (c) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
+    for (let y = 10; y < 15; y++) { c.set(7, y, hex('#e0d8c8')); c.set(8, y, hex('#cbc2b0')); }
+    for (let y = 5; y < 10; y++) for (let x = 5 - Math.min(2, y - 5); x <= 10 + Math.min(2, y - 5); x++) c.set(x, y, shade(hex('#c42a22'), 0.9 + c.h(x, y) * 0.15));
+    for (const [x, y] of [[6, 6], [9, 7], [4, 8], [11, 8], [7, 8]]) c.set(x, y, hex('#f0ece0'));
+  },
+  brown_mushroom_block: (c) => c.noiseFill(['#8d6a4a', '#957252', '#83603f', '#9c7a58'].map(hex), 0.4),
+  red_mushroom_block: (c) => {
+    c.noiseFill(['#b8241e', '#c42a22', '#ac1f1a'].map(hex), 0.4);
+    for (let k = 0; k < 6; k++) {
+      const x = Math.floor(c.h(k, 0, 9) * 14), y = Math.floor(c.h(k, 1, 9) * 14);
+      for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) c.set(x + dx, y + dy, shade(hex('#f2eee4'), 0.92 + c.h(x + dx, y + dy) * 0.08));
+    }
+  },
+  mushroom_stem: (c) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, shade(hex('#d6d0c0'), 0.88 + c.h(x, y >> 2, 5) * 0.12));
+  },
+  mushroom_stem_top: (c) => c.noiseFill(['#c8bea6', '#bfb49b', '#d0c7b0'].map(hex), 0.5),
+  mycelium_top: (c) => c.noiseFill(['#6f6370', '#7a6b7c', '#655966', '#86778a', '#5f5560'].map(hex), 0.35),
+  mycelium_side: (c) => {
+    c.noiseFill(P.dirt, 0.4);
+    const g = ['#6f6370', '#7a6b7c', '#655966'].map(hex);
+    for (let x = 0; x < 16; x++) {
+      const depth = 2 + Math.floor(c.h(x, 0, 11) * 3);
+      for (let y = 0; y < depth; y++) c.set(x, y, g[Math.floor(c.h(x, y, 12) * 3)]);
+    }
+  },
+  skybell: (c) => crossPlant(c, '#3f8a2a', '#4a7ae8', '#d8e0ff'),
+  rosette: (c) => crossPlant(c, '#3f8a2a', '#f08ab8', '#fff0a0'),
   oak_planks: (c) => planks(c, '#a7834e'),
   spruce_planks: (c) => planks(c, '#6f4f2f'),
   birch_planks: (c) => planks(c, '#cdb987'),

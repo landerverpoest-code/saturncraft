@@ -39,7 +39,7 @@ function blockIcon(b, forceTint = null) {
     for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) if (tpl[y][x] === 'h') { ctx.fillStyle = (x + y) % 5 ? col : lighten(col, 0.8); ctx.fillRect(x * 2, y * 2, 2, 2); }
     return c;
   }
-  if (b.shape === SHAPE.CROSS || b.shape === SHAPE.TORCH || b.shape === SHAPE.LADDER || b.shape === SHAPE.PANE) {
+  if (b.shape === SHAPE.CROSS || b.shape === SHAPE.TORCH || b.shape === SHAPE.LADDER || b.shape === SHAPE.PANE || b.shape === SHAPE.PAD) {
     ctx.drawImage(texCanvas(b.tex.side, b.tint ? GRASS_TINT : null), 0, 0, 32, 32);
     return c;
   }
@@ -118,7 +118,7 @@ const ITEM_STYLE = {
   potato: ['potato', { h: '#c8a25a', H: '#e0c080', s: '#8a6a3a' }], baked_potato: ['potato', { h: '#d89a3a', H: '#f6d080', s: '#7a4a1e' }],
   poisonous_potato: ['potato', { h: '#a8b04a', H: '#c8d070', s: '#5a6a2a' }],
   beetroot: ['beetroot', { h: '#9a1e30', H: '#c8304a', s: '#3f8a2a' }], beetroot_seeds: ['seeds', { h: '#c8b08a', H: '#a08860' }],
-  bowl: ['bowl', { h: '#8a6034', H: '#a87a48', w: '#8a6034' }], beetroot_soup: ['bowl', { h: '#8a6034', H: '#a87a48', w: '#b0203a' }],
+  bowl: ['bowl', { h: '#8a6034', H: '#a87a48', w: '#8a6034' }], beetroot_soup: ['bowl', { h: '#8a6034', H: '#a87a48', w: '#b0203a' }], mushroom_stew: ['bowl', { h: '#8a6034', H: '#a87a48', w: '#b08a5a' }],
   bread: ['bread', { h: '#b8783a', H: '#d89a50', w: '#8a5426' }],
 };
 

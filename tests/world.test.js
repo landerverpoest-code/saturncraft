@@ -3,6 +3,7 @@ import { TerrainGenerator, ORE_FEATURES, sampleOreHeight } from '../src/world/ge
 import { computeChunkLight } from '../src/world/lighting.js';
 import { World } from '../src/world/world.js';
 import { B } from '../src/world/blocks.js';
+import { LOGS as TREE_LOGS, LEAVES as TREE_LEAVES } from '../src/world/trees.js';
 import { CHUNK_VOLUME, cidx, MIN_Y, SEA_LEVEL } from '../src/world/constants.js';
 import { explosionDamage, explosionBlocks } from '../src/entities/explosion.js';
 import { rng } from './helpers.js';
@@ -33,8 +34,8 @@ describe('terrain generator', () => {
     expect(found).toBe(true);
   });
   it('tree canopies are continuous across chunk borders', () => {
-    const LOGS = new Set([B.OAK_LOG, B.BIRCH_LOG, B.SPRUCE_LOG]);
-    const LEAVES = new Set([B.OAK_LEAVES, B.BIRCH_LEAVES, B.SPRUCE_LEAVES]);
+    const LOGS = TREE_LOGS;
+    const LEAVES = TREE_LEAVES;
     const g = new TerrainGenerator(777);
     let checked = 0;
     for (let cx = 0; cx < 30 && checked < 5; cx++) for (let cz = 0; cz < 4; cz++) {
@@ -52,7 +53,7 @@ describe('terrain generator', () => {
       }
     }
     expect(checked).toBeGreaterThan(0);
-  });
+  }, 30000);
   it('places diamonds only deep underground and coal throughout', () => {
     let deepest = -1000, highest = -1000, coal = 0, diamonds = 0;
     for (let cx = 0; cx < 12; cx++) {

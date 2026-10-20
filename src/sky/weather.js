@@ -44,7 +44,7 @@ export class Weather {
   /** 'rain', 'snow' or null for a biome. */
   static precipitation(biomeId) {
     const b = BIOMES[biomeId];
-    if (!b || b.key === 'desert') return null;
+    if (!b || b.dry) return null; // deserts, savannas and badlands never see rain
     return b.temp < 0.15 ? 'snow' : 'rain';
   }
 

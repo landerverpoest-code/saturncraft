@@ -267,6 +267,7 @@ poison from eyes) follow the documented table.
 **Implemented** (vanilla features)
 
 * Chunked 384-high world, worker generation, biomes, caves, ore distribution, trees, plants
+* More biomes: swamp (flat pools, lily pads, vine-hung oaks, clay), jungle (giant 2x2 trees, bushes, vines, melons), savanna (acacia), badlands (red sand, striped terracotta mesas), dark forest (dark oak canopy, huge mushrooms), mushroom fields, snowy taiga and flower forest, with their own tints, wood types, saplings, recipes and spawns; mountains rise gradually out of rolling foothills
 * Mining with hardness/tool tiers/durability, block drops, placing, pick-block
 * Sky light + block light with smooth lighting and AO; torches, lava, lit furnace glow
 * Gravity blocks, water and lava flow, source creation, obsidian/cobblestone/stone formation

@@ -218,7 +218,7 @@ export class Body {
   /** Is the body inside a ladder block (feet or anywhere along its height)? */
   onLadder(world) {
     const x = Math.floor(this.x), z = Math.floor(this.z);
-    for (let y = Math.floor(this.y); y <= Math.floor(this.y + this.height - 0.01); y++) if (world.getBlock(x, y, z) === B.LADDER) return true;
+    for (let y = Math.floor(this.y); y <= Math.floor(this.y + this.height - 0.01); y++) { const id = world.getBlock(x, y, z); if (id === B.LADDER || id === B.VINES) return true; }
     return false;
   }
 

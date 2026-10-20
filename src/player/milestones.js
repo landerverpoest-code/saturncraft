@@ -8,7 +8,7 @@ import { villagesNear } from '../world/villages.js';
 const has = (g, ...ids) => ids.some((id) => g.player.inventory.count(id) > 0);
 
 export const MILESTONES = [
-  { id: 'wood', title: 'Timber!', desc: 'Get a log', icon: B.OAK_LOG, inv: (g) => has(g, B.OAK_LOG, B.BIRCH_LOG, B.SPRUCE_LOG) },
+  { id: 'wood', title: 'Timber!', desc: 'Get a log', icon: B.OAK_LOG, inv: (g) => has(g, B.OAK_LOG, B.BIRCH_LOG, B.SPRUCE_LOG, B.JUNGLE_LOG, B.ACACIA_LOG, B.DARK_OAK_LOG) },
   { id: 'bench', title: 'Workshop', desc: 'Make a workbench', icon: B.WORKBENCH, inv: (g) => has(g, B.WORKBENCH) },
   { id: 'stone', title: 'Stone Age', desc: 'Mine some cobblestone', icon: B.COBBLESTONE, inv: (g) => has(g, B.COBBLESTONE, B.COBBLED_DEEPSTONE) },
   { id: 'pick', title: 'Sharper Tools', desc: 'Make a stone pickaxe', icon: I.STONE_PICKAXE, inv: (g) => has(g, I.STONE_PICKAXE) },

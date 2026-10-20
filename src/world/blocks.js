@@ -8,7 +8,7 @@ export const TOOL = { NONE: null, PICKAXE: 'pickaxe', AXE: 'axe', SHOVEL: 'shove
 export const TIER = { ANY: -1, WOOD: 0, STONE: 1, IRON: 2, DIAMOND: 3 };
 
 // Render shapes understood by the mesher
-export const SHAPE = { NONE: 0, CUBE: 1, CROSS: 2, LIQUID: 3, TORCH: 4, CACTUS: 5, CROP: 6, DOOR: 7, LADDER: 8, BED: 9, SLAB: 10, STAIRS: 11, FENCE: 12, GATE: 13, PANE: 14, FIRE: 15 };
+export const SHAPE = { NONE: 0, CUBE: 1, CROSS: 2, LIQUID: 3, TORCH: 4, CACTUS: 5, CROP: 6, DOOR: 7, LADDER: 8, BED: 9, SLAB: 10, STAIRS: 11, FENCE: 12, GATE: 13, PANE: 14, FIRE: 15, PAD: 16 };
 
 // Render layers
 export const LAYER = { OPAQUE: 0, CUTOUT: 1, TRANSLUCENT: 2 };
@@ -33,6 +33,14 @@ export const B = {
   SPAWNER: 81, MOSSY_COBBLESTONE: 82, SUGAR_CANE: 83, BOOKSHELF: 84, BRICKS: 85, GLASS_PANE: 86, DIRT_PATH: 87,
   PUMPKIN: 88, JACK_O_LANTERN: 89, MELON: 90, FIRE: 91,
   OAK_SAPLING: 92, BIRCH_SAPLING: 93, SPRUCE_SAPLING: 94, POTATOES: 95, BEETROOTS: 96,
+  JUNGLE_LOG: 97, JUNGLE_LEAVES: 98, JUNGLE_PLANKS: 99, JUNGLE_SAPLING: 100,
+  ACACIA_LOG: 101, ACACIA_LEAVES: 102, ACACIA_PLANKS: 103, ACACIA_SAPLING: 104,
+  DARK_OAK_LOG: 105, DARK_OAK_LEAVES: 106, DARK_OAK_PLANKS: 107, DARK_OAK_SAPLING: 108,
+  RED_SAND: 109, TERRACOTTA: 110, ORANGE_TERRACOTTA: 111, YELLOW_TERRACOTTA: 112, WHITE_TERRACOTTA: 113,
+  BROWN_TERRACOTTA: 114, RED_TERRACOTTA: 115, LIGHT_GRAY_TERRACOTTA: 116,
+  VINES: 117, LILY_PAD: 118, BROWN_MUSHROOM: 119, RED_MUSHROOM: 120,
+  BROWN_MUSHROOM_BLOCK: 121, RED_MUSHROOM_BLOCK: 122, MUSHROOM_STEM: 123, MYCELIUM: 124,
+  SKYBELL: 125, ROSETTE: 126,
 };
 
 const defaults = {
@@ -176,6 +184,41 @@ def(B.BIRCH_SAPLING, 'Birch Sapling', { ...plant });
 def(B.SPRUCE_SAPLING, 'Spruce Sapling', { ...plant });
 // Fire: meta = age 0..15; spreads to and burns flammable blocks (see fire.js).
 def(B.FIRE, 'Fire', { hardness: 0, resistance: 0, solid: false, opaque: false, shape: SHAPE.FIRE, layer: LAYER.CUTOUT, emit: 15, replaceable: true, drops: null, sound: 'wool', tex: { all: 'fire' } });
+
+// Biome blocks: jungle / acacia / dark oak wood, badlands terracotta, swamp and mushroom plants.
+const logDef = (name, key) => ({ hardness: 2, resistance: 2, tool: TOOL.AXE, sound: 'wood', flammable: true, tex: { top: key + '_log_top', bottom: key + '_log_top', side: key + '_log' } });
+const plankDef = { hardness: 2, resistance: 3, tool: TOOL.AXE, sound: 'wood', flammable: true };
+def(B.JUNGLE_LOG, 'Jungle Log', logDef('Jungle', 'jungle'));
+def(B.JUNGLE_LEAVES, 'Jungle Leaves', { ...leaves, drops: 'leaves' });
+def(B.JUNGLE_PLANKS, 'Jungle Planks', plankDef);
+def(B.JUNGLE_SAPLING, 'Jungle Sapling', { ...plant });
+def(B.ACACIA_LOG, 'Acacia Log', logDef('Acacia', 'acacia'));
+def(B.ACACIA_LEAVES, 'Acacia Leaves', { ...leaves, drops: 'leaves' });
+def(B.ACACIA_PLANKS, 'Acacia Planks', plankDef);
+def(B.ACACIA_SAPLING, 'Acacia Sapling', { ...plant });
+def(B.DARK_OAK_LOG, 'Dark Oak Log', logDef('Dark Oak', 'dark_oak'));
+// thick canopies: dark oak leaves let less light through
+def(B.DARK_OAK_LEAVES, 'Dark Oak Leaves', { ...leaves, opacity: 2, drops: 'oak_leaves' });
+def(B.DARK_OAK_PLANKS, 'Dark Oak Planks', plankDef);
+def(B.DARK_OAK_SAPLING, 'Dark Oak Sapling', { ...plant });
+def(B.RED_SAND, 'Red Sand', { hardness: 0.5, resistance: 0.5, tool: TOOL.SHOVEL, gravity: true, sound: 'sand' });
+const clayStone = { hardness: 1.25, resistance: 4.2, tool: TOOL.PICKAXE, tier: TIER.WOOD };
+def(B.TERRACOTTA, 'Terracotta', clayStone);
+for (const c of ['ORANGE', 'YELLOW', 'WHITE', 'BROWN', 'RED', 'LIGHT_GRAY']) {
+  def(B[c + '_TERRACOTTA'], c.split('_').map((w) => w[0] + w.slice(1).toLowerCase()).join(' ') + ' Terracotta', clayStone);
+}
+// Vines hang on the side (meta, like ladders) of a log or leaves, or below another vine; climbable.
+def(B.VINES, 'Vines', { hardness: 0.2, resistance: 0.2, tool: TOOL.HOE, solid: false, opaque: false, shape: SHAPE.LADDER, layer: LAYER.CUTOUT, sound: 'grass', flammable: true, replaceable: true, needsSupport: true, tint: 'foliage', drops: null });
+def(B.LILY_PAD, 'Lily Pad', { hardness: 0, resistance: 0, solid: false, opaque: false, shape: SHAPE.PAD, layer: LAYER.CUTOUT, sound: 'grass', needsSupport: true });
+def(B.BROWN_MUSHROOM, 'Brown Mushroom', { ...plant, emit: 1 });
+def(B.RED_MUSHROOM, 'Red Mushroom', { ...plant });
+const shroom = { hardness: 0.2, resistance: 0.2, tool: TOOL.AXE, sound: 'wood' };
+def(B.BROWN_MUSHROOM_BLOCK, 'Brown Mushroom Block', { ...shroom, drops: 'brown_mushroom_block' });
+def(B.RED_MUSHROOM_BLOCK, 'Red Mushroom Block', { ...shroom, drops: 'red_mushroom_block' });
+def(B.MUSHROOM_STEM, 'Mushroom Stem', { ...shroom, drops: null, tex: { top: 'mushroom_stem_top', bottom: 'mushroom_stem_top', side: 'mushroom_stem' } });
+def(B.MYCELIUM, 'Mycelium', { hardness: 0.6, resistance: 0.6, tool: TOOL.SHOVEL, drops: B.DIRT, sound: 'grass', tex: { top: 'mycelium_top', bottom: 'dirt', side: 'mycelium_side' } });
+def(B.SKYBELL, 'Skybell', plant);
+def(B.ROSETTE, 'Rosette', plant);
 def(B.GLASS_PANE, 'Glass Pane', { hardness: 0.3, resistance: 0.3, opaque: false, shape: SHAPE.PANE, layer: LAYER.CUTOUT, drops: null, sound: 'glass', tex: { all: 'glass' } });
 
 export const NUM_BLOCKS = BLOCKS.length;

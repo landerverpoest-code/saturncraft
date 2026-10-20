@@ -5,6 +5,7 @@
 // join up across chunk borders. Settlers are spawned from the plan on the main
 // thread when a chunk is generated.
 import { B } from './blocks.js';
+import { LEAVES, LOGS, PLANTS } from './trees.js';
 import { BIOME } from './biomes.js';
 import { SEA_LEVEL, MIN_Y, WORLD_HEIGHT, cidx } from './constants.js';
 import { mulberry32, hash4 } from './noise.js';
@@ -18,6 +19,7 @@ const STYLES = {
   plains: { corner: B.OAK_LOG, wall: B.OAK_PLANKS, floor: B.COBBLESTONE, roof: B.OAK_STAIRS, roofSlab: B.OAK_SLAB, fence: B.OAK_FENCE },
   desert: { corner: B.SANDSTONE, wall: B.SANDSTONE, floor: B.SANDSTONE, roof: B.SANDSTONE_STAIRS, roofSlab: B.SANDSTONE_SLAB, fence: B.OAK_FENCE },
   taiga: { corner: B.SPRUCE_LOG, wall: B.SPRUCE_PLANKS, floor: B.COBBLESTONE, roof: B.COBBLESTONE_STAIRS, roofSlab: B.COBBLESTONE_SLAB, fence: B.SPRUCE_FENCE },
+  savanna: { corner: B.ACACIA_LOG, wall: B.ACACIA_PLANKS, floor: B.COBBLESTONE, roof: B.OAK_STAIRS, roofSlab: B.OAK_SLAB, fence: B.OAK_FENCE },
 };
 
 const cache = new Map();
@@ -40,9 +42,10 @@ function planVillage(gen, rx, rz) {
   const col = gen.column(cx, cz);
   const y = gen.surfaceAt(cx, cz, col) + 1;
   const biome = gen.biomeFor(col, y - 1);
-  if (![BIOME.PLAINS, BIOME.DESERT, BIOME.TAIGA, BIOME.SNOWY_PLAINS].includes(biome)) return null;
+  if (![BIOME.PLAINS, BIOME.DESERT, BIOME.TAIGA, BIOME.SNOWY_PLAINS, BIOME.SAVANNA].includes(biome)) return null;
+  if (biome === BIOME.SAVANNA && rng() < 0.5) return null; // savanna villages are rarer
   if (y <= SEA_LEVEL + 1 || y > SEA_LEVEL + 45) return null;
-  const style = biome === BIOME.DESERT ? 'desert' : biome === BIOME.PLAINS ? 'plains' : 'taiga';
+  const style = biome === BIOME.DESERT ? 'desert' : biome === BIOME.PLAINS ? 'plains' : biome === BIOME.SAVANNA ? 'savanna' : 'taiga';
   const pieces = [{ type: 'well', x0: cx - 2, z0: cz - 2, x1: cx + 1, z1: cz + 1, y }];
   const roads = [];
   const taken = (a) => pieces.some((p) => a.x0 <= p.x1 + 1 && a.x1 >= p.x0 - 1 && a.z0 <= p.z1 + 1 && a.z1 >= p.z0 - 1);
@@ -107,7 +110,7 @@ export function stampVillages(gen, blocks, meta, cx, cz) {
       blocks[i] = id; meta[i] = m;
     };
     const get = (x, y, z) => (inChunk(x, z) && y >= MIN_Y && y < MIN_Y + WORLD_HEIGHT ? blocks[cidx(x - X0, y, z - Z0)] : 0);
-    const solidGround = (id) => id && id !== B.WATER && id !== B.OAK_LEAVES && id !== B.BIRCH_LEAVES && id !== B.SPRUCE_LEAVES && id !== B.TALL_GRASS && id !== B.SUNPETAL && id !== B.REDBLOOM && id !== B.OAK_LOG && id !== B.BIRCH_LOG && id !== B.SPRUCE_LOG;
+    const solidGround = (id) => id && id !== B.WATER && !LEAVES.has(id) && !LOGS.has(id) && !PLANTS.has(id);
     // roads: path blocks on the ground (planks over water)
     for (const [x, z] of v.roads) {
       if (!inChunk(x, z)) continue;
