@@ -143,8 +143,12 @@ for (const [mat, m] of Object.entries(ARMOR_MATERIALS)) {
   });
 }
 
+// Added after the armour so earlier item ids stay stable for old saves
+item('mushroom_stew', 'Mushroom Stew', { stack: 1, food: { hunger: 6, saturation: 7.2, leaves: 'bowl' } });
+
 // Fuel for block items
-for (const id of [B.OAK_PLANKS, B.SPRUCE_PLANKS, B.BIRCH_PLANKS, B.OAK_LOG, B.BIRCH_LOG, B.SPRUCE_LOG, B.WORKBENCH]) ITEMS[id].fuel = 300;
+for (const id of [B.OAK_PLANKS, B.SPRUCE_PLANKS, B.BIRCH_PLANKS, B.JUNGLE_PLANKS, B.ACACIA_PLANKS, B.DARK_OAK_PLANKS, B.OAK_LOG, B.BIRCH_LOG, B.SPRUCE_LOG, B.JUNGLE_LOG, B.ACACIA_LOG, B.DARK_OAK_LOG, B.WORKBENCH]) ITEMS[id].fuel = 300;
+for (const id of [B.OAK_SAPLING, B.BIRCH_SAPLING, B.SPRUCE_SAPLING, B.JUNGLE_SAPLING, B.ACACIA_SAPLING, B.DARK_OAK_SAPLING]) ITEMS[id].fuel = 100;
 ITEMS[B.COAL_BLOCK].fuel = 16000;
 
 export function itemDef(id) { return ITEMS[id]; }

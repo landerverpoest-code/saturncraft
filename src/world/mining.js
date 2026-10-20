@@ -100,6 +100,12 @@ export function blockDrops(blockId, tool = HAND, rng = Math.random, meta = 0) {
       for (let k = 0; k < 3; k++) if (rng() < 4 / 7) seeds++;
       return [{ id: I.WHEAT, count: 1 }, { id: I.WHEAT_SEEDS, count: seeds }];
     }
+    // huge mushroom caps: 0-2 small mushrooms (reference: max(0, rand(-6..2)))
+    case 'brown_mushroom_block':
+    case 'red_mushroom_block': {
+      const n = Math.max(0, randInt(rng, -6, 2));
+      return n ? [{ id: d === 'red_mushroom_block' ? B.RED_MUSHROOM : B.BROWN_MUSHROOM, count: n }] : [];
+    }
     case 'dead_bush': { const n = randInt(rng, 0, 2); return n ? [{ id: I.STICK, count: n }] : []; }
     case 'oak_leaves':
     case 'leaves': {

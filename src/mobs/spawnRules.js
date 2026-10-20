@@ -37,12 +37,23 @@ export const SPAWN_TABLES = {
     desert: DEFAULT_MONSTERS.map((e) => (e.type === 'shambler' ? { ...e, weight: 100 } : e)),
     // snowy plains: skeleton 20 + stray 80 are all Rattlers here
     snowy_plains: DEFAULT_MONSTERS.map((e) => (e.type === 'rattler' ? { ...e, weight: 100 } : e)),
+    snowy_taiga: DEFAULT_MONSTERS.map((e) => (e.type === 'rattler' ? { ...e, weight: 100 } : e)),
+    badlands: DEFAULT_MONSTERS.map((e) => (e.type === 'shambler' ? { ...e, weight: 100 } : e)),
+    // no monsters spawn naturally on the mushroom islands
+    mushroom_fields: [],
   },
   creature: {
-    plains: FARM_ANIMALS, birch_forest: FARM_ANIMALS,
+    plains: FARM_ANIMALS, birch_forest: FARM_ANIMALS, flower_forest: FARM_ANIMALS, dark_forest: FARM_ANIMALS,
+    // swamps and savannas: the same farm animals (reference swamps add slimes, savannas horses)
+    swamp: FARM_ANIMALS, savanna: FARM_ANIMALS,
+    // jungles: mostly pigs and chickens
+    jungle: [{ type: 'cluckling', weight: 10, min: 4, max: 4 }, { type: 'bristleback', weight: 10, min: 4, max: 4 }, { type: 'mooxen', weight: 4, min: 4, max: 4 }],
+    // the mushroom islands keep only their cattle
+    mushroom_fields: [{ type: 'mooxen', weight: 8, min: 4, max: 8 }],
     // packs of Howlers (wolves) in forests and taiga
     forest: [...FARM_ANIMALS, { type: 'howler', weight: 5, min: 4, max: 4 }],
     taiga: [...FARM_ANIMALS, { type: 'howler', weight: 8, min: 4, max: 4 }],
+    snowy_taiga: [{ type: 'howler', weight: 8, min: 4, max: 4 }, { type: 'fleecer', weight: 6, min: 2, max: 4 }],
     default: [],
   },
 };

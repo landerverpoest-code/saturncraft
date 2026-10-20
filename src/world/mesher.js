@@ -1,7 +1,8 @@
 // Face-culled section mesher with smooth lighting and ambient occlusion.
 // Input is a 18x18x18 padded copy of a 16^3 section (1 block border from
 // neighbours) so it can run inside a worker without access to the world.
-import { B, OPAQUE, SHAPES, LAYERS, SHAPE, LAYER } from './blocks.js';
+import { B, BLOCKS, OPAQUE, SHAPES, LAYERS, SHAPE, LAYER } from './blocks.js';
+import { LEAVES } from './trees.js';
 import { FACE_TILE, FRONT_TILE, texId } from './textures.js';
 import { WOOL_RGB } from './colors.js';
 import { doorBox, ladderBox, SIDE_DIRS, DOOR_UPPER, BED_HEAD, BED_BOX, slabBox, stairBoxes, fenceConnects, fenceRenderBoxes, gateRenderBoxes, paneConnects, paneBoxes } from './shapes.js';
@@ -37,6 +38,9 @@ for (const f of FACES) {
 }
 
 const FOLIAGE_FIXED = { [B.BIRCH_LEAVES]: [128, 167, 85], [B.SPRUCE_LEAVES]: [97, 153, 97] };
+// blocks tinted with the biome's foliage colour (leaves, vines)
+const FOLIAGE_BIOME = new Uint8Array(256);
+for (const d of BLOCKS) if (d && d.tint === 'foliage') FOLIAGE_BIOME[d.id] = 1;
 const FURNACE_FRONT_DIR = [5, 0, 4, 1];
 // crop textures per growth stage 0..7 (carrots have 4 visual stages)
 const CROP_TILES = { [B.WHEAT]: [0, 1, 2, 3, 4, 5, 6, 7].map((i) => texId('wheat_' + i)), [B.CARROTS]: [0, 0, 1, 1, 2, 2, 2, 3].map((i) => texId('carrots_' + i)),
@@ -115,7 +119,7 @@ export function meshSection(sec) {
         const ni = i + FACE_N[d];
         const nb = blocks[ni];
         if (OPAQUE[nb]) continue;
-        if (translucent && nb === id && id !== B.OAK_LEAVES && id !== B.BIRCH_LEAVES && id !== B.SPRUCE_LEAVES) continue;
+        if (translucent && nb === id && !LEAVES.has(id)) continue;
         // smooth light + AO
         const corners = FACE_AO[d];
         const fl = light[ni];
@@ -138,7 +142,7 @@ export function meshSection(sec) {
         else if (id === B.FARMLAND && d === 2 && meta[i] > 0) tile = FARMLAND_MOIST;
         let r = 255, g = 255, b2 = 255;
         if ((id === B.GRASS && d === 2)) { r = colors[ci]; g = colors[ci + 1]; b2 = colors[ci + 2]; }
-        else if (id === B.OAK_LEAVES) { r = colors[ci + 3]; g = colors[ci + 4]; b2 = colors[ci + 5]; }
+        else if (FOLIAGE_BIOME[id]) { r = colors[ci + 3]; g = colors[ci + 4]; b2 = colors[ci + 5]; }
         else if (FOLIAGE_FIXED[id]) [r, g, b2] = FOLIAGE_FIXED[id];
         else if (id === B.WOOL && meta[i]) [r, g, b2] = WOOL_RGB[meta[i] & 15];
         const f = FACES[d];
@@ -215,6 +219,21 @@ export function meshSection(sec) {
           if (side === 0) { const n = buf.n; for (let k = 0; k < 2; k++) swapVert(buf, n - 4 + k, n - 1 - k); }
         }
       }
+    } else if (shape === SHAPE.PAD) {
+      // a flat pad resting on the water surface, visible from both sides
+      const l = light[i], tile = FACE_TILE[id * 6 + 2];
+      const sky = (l >> 4) * 17, blk = (l & 15) * 17, yy = y + 1 / 64;
+      buf.ensure(8);
+      buf.vert(x, yy, z + 1, 0, 1, 0, 0, 1, 255, 255, 255, sky, blk, 0, tile);
+      buf.vert(x + 1, yy, z + 1, 0, 1, 0, 1, 1, 255, 255, 255, sky, blk, 0, tile);
+      buf.vert(x + 1, yy, z, 0, 1, 0, 1, 0, 255, 255, 255, sky, blk, 0, tile);
+      buf.vert(x, yy, z, 0, 1, 0, 0, 0, 255, 255, 255, sky, blk, 0, tile);
+      buf.quad(false);
+      buf.vert(x, yy, z, 0, -1, 0, 0, 0, 255, 255, 255, sky, blk, 0, tile);
+      buf.vert(x + 1, yy, z, 0, -1, 0, 1, 0, 255, 255, 255, sky, blk, 0, tile);
+      buf.vert(x + 1, yy, z + 1, 0, -1, 0, 1, 1, 255, 255, 255, sky, blk, 0, tile);
+      buf.vert(x, yy, z + 1, 0, -1, 0, 0, 1, 255, 255, 255, sky, blk, 0, tile);
+      buf.quad(false);
     } else if (shape === SHAPE.TORCH) {
       const l = light[i], m = meta[i];
       if (!m) emitBox(buf, x, y, z, 7 / 16, 0, 7 / 16, 9 / 16, 10 / 16, 9 / 16, FACE_TILE[id * 6], (l >> 4) * 17, (l & 15) * 17);
@@ -262,7 +281,7 @@ export function meshSection(sec) {
       const s = meta[i] & 3, a = s === 1 || s === 3 ? 0 : 2; // axis of the wall normal
       const atWall = s === 1 || s === 2 ? 1 : 0, off = atWall ? -1 / 16 : 1 / 16;
       b[a] = atWall + off - 0.005; b[a + 3] = atWall + off + 0.005;
-      emitBox(buf, x, y, z, b[0], b[1], b[2], b[3], b[4], b[5], FACE_TILE[id * 6], (l >> 4) * 17, (l & 15) * 17, 'box');
+      emitBox(buf, x, y, z, b[0], b[1], b[2], b[3], b[4], b[5], FACE_TILE[id * 6], (l >> 4) * 17, (l & 15) * 17, 'box', FOLIAGE_BIOME[id] ? [colors[ci + 3], colors[ci + 4], colors[ci + 5]] : null);
     } else if (shape === SHAPE.CACTUS) {
       const l = light[i];
       const sky = (l >> 4) * 17, blk = (l & 15) * 17;
@@ -293,7 +312,8 @@ function swapVert(buf, a, b) {
 }
 
 /** Axis-aligned box; uvMode 'torch' maps the top to the torch tip, 'box' maps every face to its sub-rectangle. */
-function emitBox(buf, x, y, z, x0, y0, z0, x1, y1, z1, tile, sky, blk, uvMode = 'torch') {
+function emitBox(buf, x, y, z, x0, y0, z0, x1, y1, z1, tile, sky, blk, uvMode = 'torch', rgb = null) {
+  const cr = rgb ? rgb[0] : 255, cg = rgb ? rgb[1] : 255, cb = rgb ? rgb[2] : 255;
   const mn = [x0, y0, z0], mx = [x1, y1, z1];
   for (let d = 0; d < 6; d++) {
     const f = FACES[d];
@@ -312,7 +332,7 @@ function emitBox(buf, x, y, z, x0, y0, z0, x1, y1, z1, tile, sky, blk, uvMode = 
       else { u = p[0]; v = 1 - p[1]; }
       if (d === 2 && uvMode === 'torch') { u = 7 / 16 + s * 2 / 16; v = 6 / 16 + t * 2 / 16; }
       else if ((d === 2 || d === 3) && uvMode === 'box') { u = p[0]; v = p[2]; }
-      buf.vert(x + p[0], y + p[1], z + p[2], f.n[0], f.n[1], f.n[2], u, v, 255, 255, 255, sky, blk, 0, typeof tile === 'number' ? tile : tile[d]);
+      buf.vert(x + p[0], y + p[1], z + p[2], f.n[0], f.n[1], f.n[2], u, v, cr, cg, cb, sky, blk, 0, typeof tile === 'number' ? tile : tile[d]);
     }
     buf.quad(false);
   }

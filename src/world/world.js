@@ -192,10 +192,20 @@ export class World {
   hasSupport(x, y, z, id, metaIn) {
     const below = this.getBlock(x, y - 1, z);
     if (id === B.CACTUS) {
-      if (below !== B.CACTUS && below !== B.SAND) return false;
+      if (below !== B.CACTUS && below !== B.SAND && below !== B.RED_SAND) return false;
       for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (SOLID[this.getBlock(x + dx, y, z + dz)]) return false;
       return true;
     }
+    if (id === B.VINES) {
+      // on the side of a solid block or leaves, or hanging from the vine above
+      const meta = metaIn ?? this.getMeta(x, y, z);
+      if (this.getBlock(x, y + 1, z) === B.VINES) return true;
+      const [dx, , dz] = SIDE_DIRS[meta & 3];
+      const wall = this.getBlock(x + dx, y, z + dz);
+      return !!(SOLID[wall] && (OPAQUE[wall] || BLOCKS[wall].tint === 'foliage' || BLOCKS[wall].tint === 'birch' || BLOCKS[wall].tint === 'spruce'));
+    }
+    if (id === B.LILY_PAD) return below === B.WATER || below === B.ICE;
+    if (id === B.BROWN_MUSHROOM || id === B.RED_MUSHROOM) return !!(SOLID[below] && OPAQUE[below]);
     if (id === B.TORCH || id === B.LADDER) {
       const meta = metaIn ?? this.getMeta(x, y, z);
       const side = id === B.TORCH ? meta - 1 : meta & 3;
@@ -217,15 +227,15 @@ export class World {
       if ((metaIn ?? this.getMeta(x, y, z)) & DOOR_UPPER) return below === B.DOOR;
       return !!SOLID[below] && below !== B.DOOR && this.getBlock(x, y + 1, z) === B.DOOR;
     }
-    if (id === B.DEAD_BUSH) return below === B.SAND || below === B.DIRT || below === B.GRASS;
+    if (id === B.DEAD_BUSH) return below === B.SAND || below === B.RED_SAND || below === B.DIRT || below === B.GRASS || (below >= B.TERRACOTTA && below <= B.LIGHT_GRAY_TERRACOTTA);
     if (CROPS.has(id)) return below === B.FARMLAND;
     if (id === B.SUGAR_CANE) {
       if (below === B.SUGAR_CANE) return true;
-      if (below !== B.GRASS && below !== B.DIRT && below !== B.SAND) return false;
+      if (below !== B.GRASS && below !== B.DIRT && below !== B.SAND && below !== B.RED_SAND) return false;
       for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const n = this.getBlock(x + dx, y - 1, z + dz); if (n === B.WATER || n === B.ICE) return true; }
       return false;
     }
-    return below === B.GRASS || below === B.DIRT || below === B.SNOWY_GRASS;
+    return below === B.GRASS || below === B.DIRT || below === B.SNOWY_GRASS || below === B.MYCELIUM;
   }
 
   /** Remove a block, optionally dropping it as items (used for support loss, fluids). */

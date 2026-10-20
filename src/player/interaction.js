@@ -340,9 +340,9 @@ export class Interaction {
       const s = Math.abs(ldx) > Math.abs(ldz) ? (ldx > 0 ? 1 : 3) : (ldz > 0 ? 2 : 0);
       meta = s | (upper && pshape === SHAPE.STAIRS ? STAIRS_UPSIDE : 0);
     }
-    if (placeId === B.TORCH || placeId === B.LADDER) {
+    if (placeId === B.TORCH || placeId === B.LADDER || placeId === B.VINES) {
       // torches stand on floors or hang on walls; ladders only hang on walls
-      if (t.face[1] === -1 || (placeId === B.LADDER && t.face[1] === 1)) return false;
+      if (t.face[1] === -1 || (placeId !== B.TORCH && t.face[1] === 1)) return false;
       if (t.face[1] === 0) { const s = sideOf(-t.face[0], -t.face[2]); meta = placeId === B.TORCH ? 1 + s : s; }
     }
     if (BLOCKS[placeId].needsSupport && !w.hasSupport(px, py, pz, placeId, meta)) return false;

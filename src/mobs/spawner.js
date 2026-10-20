@@ -9,10 +9,11 @@ import {
   SPAWN_MIN_DIST, DESPAWN_FAR, CREATURE_SPAWN_INTERVAL, CHUNK_GEN_CREATURE_CHANCE,
 } from './spawnRules.js';
 import { B, SOLID, OPAQUE, isFluid } from '../world/blocks.js';
+import { LEAVES } from '../world/trees.js';
 import { MIN_Y } from '../world/constants.js';
 import { chunkKey } from '../world/world.js';
 
-const NO_MONSTER_FLOOR = new Set([B.BEDROCK, B.GLASS, B.OAK_LEAVES, B.BIRCH_LEAVES, B.SPRUCE_LEAVES, B.ICE, B.CACTUS]);
+const NO_MONSTER_FLOOR = new Set([B.BEDROCK, B.GLASS, ...LEAVES, B.ICE, B.CACTUS]);
 const MAX_PER_CHUNK = 4;
 
 export class MobSpawner {
@@ -60,7 +61,7 @@ export class MobSpawner {
       if (NO_MONSTER_FLOOR.has(below)) return false;
       return isDarkEnoughToSpawn(raw, blk, this.game.sky.state.skyDarken);
     }
-    return below === B.GRASS && isBrightEnoughForAnimal(raw, blk);
+    return (below === B.GRASS || below === B.MYCELIUM) && isBrightEnoughForAnimal(raw, blk);
   }
 
   attempt(cx, cz, category) {
@@ -146,7 +147,8 @@ export class MobSpawner {
         const x = Math.max(cx * 16, Math.min(cx * 16 + 15, bx + Math.floor(Math.random() * 5) - 2));
         const z = Math.max(cz * 16, Math.min(cz * 16 + 15, bz + Math.floor(Math.random() * 5) - 2));
         const y = w.heightAt(x, z) + 1;
-        if (w.getBlock(x, y - 1, z) !== B.GRASS || !this.canFit(entry.type, x, y, z)) continue;
+        const ground = w.getBlock(x, y - 1, z);
+        if ((ground !== B.GRASS && ground !== B.MYCELIUM) || !this.canFit(entry.type, x, y, z)) continue;
         this.spawnMob(entry.type, x + 0.5, y, z + 0.5);
       }
     }
