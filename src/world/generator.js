@@ -279,6 +279,7 @@ export class TerrainGenerator {
       }
     }
 
+    const tints = this.tintGrid(x0, z0), tintOut = [0, 0, 0, 0, 0, 0];
     // 3. Surface + biome
     const rng = mulberry32(hash4(this.seed, cx, cz, 1));
     for (let z = 0; z < 16; z++) for (let x = 0; x < 16; x++) {
@@ -289,11 +290,9 @@ export class TerrainGenerator {
       heightmap[ci] = top;
       const biome = this.biomeFor(col, top);
       biomes[ci] = biome;
-      const tNorm = Math.max(0, Math.min(1, col.temp / 1.3)), hNorm = Math.max(0, Math.min(1, col.humid));
-      const bd = BIOMES[biome];
-      const g = bd.grass || grassColor(biome === BIOME.DESERT ? 1 : tNorm, biome === BIOME.DESERT ? 0 : hNorm);
-      const f = bd.foliage || foliageColor(tNorm, hNorm);
-      colors.set([g[0], g[1], g[2], f[0], f[1], f[2]], ci * 6);
+      // grass/foliage tints blend smoothly across biome borders (blurred tint grid)
+      tints.sample(x, z, tintOut);
+      colors.set(tintOut, ci * 6);
       // Steep faces show bare rock, as in the reference game's mountain surface rules
       // (badland cliffs show their terracotta bands instead)
       if (this.isSteep(x0 + x, z0 + z, top, biome)) {
@@ -673,6 +672,42 @@ export class TerrainGenerator {
       const kind = this.treeKind(biome, hashf(this.seed, wx, wz, 52));
       this.placeTree(blocks, meta, kind, wx - x0, top + 1, wz - z0, hashf(this.seed, wx, wz, 53));
     }
+  }
+
+  /** Grass + foliage tint of one column, from its biome and climate. */
+  tintAt(wx, wz, tmp) {
+    const col = this.column(wx, wz, tmp);
+    const top = this.surfaceAt(wx, wz, col);
+    const biome = this.biomeFor(col, top);
+    const tNorm = Math.max(0, Math.min(1, col.temp / 1.3)), hNorm = Math.max(0, Math.min(1, col.humid));
+    const bd = BIOMES[biome];
+    const g = bd.grass || grassColor(biome === BIOME.DESERT ? 1 : tNorm, biome === BIOME.DESERT ? 0 : hNorm);
+    const f = bd.foliage || foliageColor(tNorm, hNorm);
+    return [g[0], g[1], g[2], f[0], f[1], f[2]];
+  }
+
+  /**
+   * Tints sampled every 4 blocks on a world-aligned grid around the chunk,
+   * box-blurred over 3x3 samples (about 12 blocks) and interpolated per
+   * column, so neighbouring chunks agree and biome borders fade over ~8 blocks.
+   */
+  tintGrid(x0, z0) {
+    const S = 4, N = 9, tmp = {}; // samples at x0-8 .. x0+24
+    const raw = [];
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) raw.push(this.tintAt(x0 - 8 + i * S, z0 - 8 + j * S, tmp));
+    const M = 5, blur = []; // blurred samples at x0 .. x0+16
+    for (let j = 0; j < M; j++) for (let i = 0; i < M; i++) {
+      const acc = [0, 0, 0, 0, 0, 0];
+      for (let dj = 1; dj <= 3; dj++) for (let di = 1; di <= 3; di++) { const r = raw[(j + dj) * N + i + di]; for (let k = 0; k < 6; k++) acc[k] += r[k]; }
+      blur.push(acc.map((v) => v / 9));
+    }
+    return {
+      sample(x, z, out) {
+        const fx = x / S, fz = z / S, i = Math.floor(fx), j = Math.floor(fz), tx = fx - i, tz = fz - j;
+        const a = blur[j * M + i], b = blur[j * M + i + 1], c = blur[(j + 1) * M + i], d = blur[(j + 1) * M + i + 1];
+        for (let k = 0; k < 6; k++) out[k] = Math.round((a[k] * (1 - tx) + b[k] * tx) * (1 - tz) + (c[k] * (1 - tx) + d[k] * tx) * tz);
+      },
+    };
   }
 
   placeTree(blocks, meta, kind, lx, y, lz, r) {
