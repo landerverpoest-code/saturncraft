@@ -117,6 +117,7 @@ export class RemotePlayer {
     parts.head.rotation.y = cur.yaw - this.bodyYaw;
     parts.hair.rotation.copy(parts.head.rotation);
     parts.body.rotation.x = s.sneaking ? 0.45 : 0;
+    if (s.riding) parts.legL.rotation.x = parts.legR.rotation.x = -1.4;
     const t = (now - this.swingAt) / SWING_MS;
     if (t >= 0 && t < 1) parts.armR.rotation.x = -Math.sin(t * Math.PI) * 1.6 - 0.3;
     this.setHeldItem(s.held);

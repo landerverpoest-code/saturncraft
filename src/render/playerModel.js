@@ -65,6 +65,8 @@ export class PlayerModel {
     parts.head.rotation.y = p.yaw - this.bodyYaw;
     parts.hair.rotation.copy(parts.head.rotation);
     parts.body.rotation.x = p.sneaking ? 0.45 : 0;
+    if (p.riding) { parts.legL.rotation.x = parts.legR.rotation.x = -1.4; parts.legL.rotation.z = -0.15; parts.legR.rotation.z = 0.15; } // seated in a boat, cart or saddle
+    else parts.legL.rotation.z = parts.legR.rotation.z = 0;
     // attack / mining swing of the right arm
     const it = game.interaction;
     const t = it.swing > 0 ? Math.min(1, (SWING_TICKS - it.swing + alpha) / SWING_TICKS) : 0;
