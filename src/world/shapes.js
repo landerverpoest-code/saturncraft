@@ -115,6 +115,40 @@ export function gateRenderBoxes(meta) {
   }
   return boxes;
 }
+// ---- walls and trapdoors ----------------------------------------------------
+export function wallConnects(id) {
+  const d = BLOCKS[id];
+  return !!d && (d.shape === SHAPE.WALL || d.shape === SHAPE.GATE || (d.opaque && d.solid && d.shape === SHAPE.CUBE));
+}
+export function wallMask(get, x, y, z) {
+  let m = 0;
+  for (let s = 0; s < 4; s++) if (wallConnects(get(x + SIDE_DIRS[s][0], y, z + SIDE_DIRS[s][2]))) m |= 1 << s;
+  return m;
+}
+/** Post (left out on a straight run, like the reference) plus 6-wide arms 14/16 high; `h` overrides heights for collision. */
+export function wallBoxes(mask, h = 0) {
+  const W0 = 5 / 16, W1 = 11 / 16, A = h || 14 / 16;
+  const straight = mask === 5 || mask === 10;
+  const out = straight ? [] : [[4 / 16, 0, 4 / 16, 12 / 16, h || 1, 12 / 16]];
+  if (mask & 1) out.push([W0, 0, 0, W1, A, straight ? 1 : 4 / 16]);
+  if (mask & 2 && !straight) out.push([12 / 16, 0, W0, 1, A, W1]);
+  if (mask & 4 && !straight) out.push([W0, 0, 12 / 16, W1, A, 1]);
+  if (mask & 8) out.push([0, 0, W0, straight ? 1 : 4 / 16, A, W1]);
+  return out;
+}
+export const TRAPDOOR_OPEN = 4, TRAPDOOR_TOP = 8;
+const TD = 3 / 16;
+/** A trapdoor lies flat (bottom or top of the block) or, open, stands against its hinge side. */
+export function trapdoorBox(meta) {
+  if (!(meta & TRAPDOOR_OPEN)) return meta & TRAPDOOR_TOP ? [0, 1 - TD, 0, 1, 1, 1] : [0, 0, 0, 1, TD, 1];
+  switch (meta & 3) {
+    case 0: return [0, 0, 0, 1, 1, TD];
+    case 1: return [1 - TD, 0, 0, 1, 1, 1];
+    case 2: return [0, 0, 1 - TD, 1, 1, 1];
+    default: return [0, 0, 0, TD, 1, 1];
+  }
+}
+
 /** Glass panes connect to panes and to full blocks (glass included). */
 export function paneConnects(id) {
   const d = BLOCKS[id];
@@ -150,6 +184,7 @@ SHAPED_COLLISION[B.DOOR] = 1;
 SHAPED_COLLISION[B.BED] = 1;
 SHAPED_COLLISION[B.GLASS_PANE] = 1;
 SHAPED_COLLISION[B.SNOW_LAYER] = 1;
+for (const id of [B.COBBLESTONE_WALL, B.MOSSY_COBBLESTONE_WALL, B.OAK_TRAPDOOR]) SHAPED_COLLISION[id] = 1;
 /** Snow layer box (n = meta + 1 layers); collision is one layer lower, so a single layer has none. */
 export const snowBox = (meta, collide = false) => [0, 0, 0, 1, ((meta & 7) + (collide ? 0 : 1)) * 2 / 16, 1];
 for (const id of [B.OAK_FENCE, B.SPRUCE_FENCE, B.BIRCH_FENCE, B.OAK_FENCE_GATE]) SHAPED_COLLISION[id] = 1;
@@ -169,6 +204,8 @@ export function collisionBoxes(id, meta, world, x, y, z) {
   const sh = BLOCKS[id].shape;
   if (sh === SHAPE.SLAB) return [slabBox(meta)];
   if (id === B.SNOW_LAYER) return (meta & 7) ? [snowBox(meta, true)] : [];
+  if (id === B.OAK_TRAPDOOR) return [trapdoorBox(meta)];
+  if (sh === SHAPE.WALL) return wallBoxes(world ? wallMask((a, b, c) => world.getBlock(a, b, c), x, y, z) : 0, 1.5);
   if (sh === SHAPE.STAIRS) return stairBoxes(meta);
   return null;
 }
@@ -180,6 +217,8 @@ const FIRE_BOX = [0, 0, 0, 1, 1 / 16, 1];
 export function selectionBox(id, meta) {
   if (id === B.DOOR) return doorBox(meta);
   if (id === B.SNOW_LAYER) return snowBox(meta);
+  if (id === B.OAK_TRAPDOOR) return trapdoorBox(meta);
+  if (BLOCKS[id].shape === SHAPE.WALL) return [4 / 16, 0, 4 / 16, 12 / 16, 1, 12 / 16];
   if (BLOCKS[id].shape === SHAPE.FENCE) return [P0, 0, P0, P1, 1, P1];
   if (BLOCKS[id].shape === SHAPE.PANE) return [7 / 16, 0, 7 / 16, 9 / 16, 1, 9 / 16];
   if (BLOCKS[id].shape === SHAPE.GATE) return (meta & 1) === 0 ? [0, 0, 6 / 16, 1, 1, 10 / 16] : [6 / 16, 0, 0, 10 / 16, 1, 1];

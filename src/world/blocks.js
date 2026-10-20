@@ -8,7 +8,7 @@ export const TOOL = { NONE: null, PICKAXE: 'pickaxe', AXE: 'axe', SHOVEL: 'shove
 export const TIER = { ANY: -1, WOOD: 0, STONE: 1, IRON: 2, DIAMOND: 3 };
 
 // Render shapes understood by the mesher
-export const SHAPE = { NONE: 0, CUBE: 1, CROSS: 2, LIQUID: 3, TORCH: 4, CACTUS: 5, CROP: 6, DOOR: 7, LADDER: 8, BED: 9, SLAB: 10, STAIRS: 11, FENCE: 12, GATE: 13, PANE: 14, FIRE: 15, PAD: 16, SNOW: 17 };
+export const SHAPE = { NONE: 0, CUBE: 1, CROSS: 2, LIQUID: 3, TORCH: 4, CACTUS: 5, CROP: 6, DOOR: 7, LADDER: 8, BED: 9, SLAB: 10, STAIRS: 11, FENCE: 12, GATE: 13, PANE: 14, FIRE: 15, PAD: 16, SNOW: 17, WALL: 18, TRAPDOOR: 19 };
 
 // Render layers
 export const LAYER = { OPAQUE: 0, CUTOUT: 1, TRANSLUCENT: 2 };
@@ -42,7 +42,7 @@ export const B = {
   BROWN_MUSHROOM_BLOCK: 121, RED_MUSHROOM_BLOCK: 122, MUSHROOM_STEM: 123, MYCELIUM: 124,
   SKYBELL: 125, ROSETTE: 126,
   // Other dimensions (ids from 160 up, see world/dimensions/): the Cinderdeep and the Hollow
-  SNOW_LAYER: 130,
+  SNOW_LAYER: 130, COBBLESTONE_WALL: 131, MOSSY_COBBLESTONE_WALL: 132, OAK_TRAPDOOR: 133,
   CINDERSTONE: 160, GLOWSHARD: 161, MOURNSAND: 162, EMBERQUARTZ_ORE: 163, SCORCHED_BRICKS: 164, RIFT: 165,
   HOLLOWSTONE: 166, HOLLOW_FRAME: 167, HOLLOW_FRAME_EYE: 168, HOLLOW_GATE: 169, WYRM_EGG: 170,
 };
@@ -108,6 +108,10 @@ def(B.DEEP_AZURITE_ORE, 'Deep Azurite Ore', deepOre(TIER.STONE, 'azurite'));
 def(B.DEEP_DIAMOND_ORE, 'Deep Diamond Ore', deepOre(TIER.IRON, 'diamond'));
 def(B.SANDSTONE, 'Sandstone', { hardness: 0.8, resistance: 0.8, tool: TOOL.PICKAXE, tier: TIER.WOOD, tex: { top: 'sandstone_top', bottom: 'sandstone_bottom', side: 'sandstone' } });
 def(B.SNOW_BLOCK, 'Snow Block', { hardness: 0.2, resistance: 0.2, tool: TOOL.SHOVEL, tier: TIER.WOOD, sound: 'snow', drops: 'snowballs' });
+// Walls connect to walls, gates and full blocks (1.5-high collision); trapdoors: meta bits 0-1 hinge side, 4 open, 8 upper half.
+def(B.COBBLESTONE_WALL, 'Cobblestone Wall', { hardness: 2, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD, opaque: false, shape: SHAPE.WALL, tex: { all: 'cobblestone' } });
+def(B.MOSSY_COBBLESTONE_WALL, 'Mossy Cobblestone Wall', { hardness: 2, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD, opaque: false, shape: SHAPE.WALL, tex: { all: 'mossy_cobblestone' } });
+def(B.OAK_TRAPDOOR, 'Oak Trapdoor', { hardness: 3, resistance: 3, tool: TOOL.AXE, sound: 'wood', flammable: true, opaque: false, shape: SHAPE.TRAPDOOR, layer: LAYER.CUTOUT, tex: { all: 'oak_trapdoor' } });
 // Snow layers: meta = layers - 1 (1..8 layers of 2/16 block); falls in cold biomes while it snows.
 def(B.SNOW_LAYER, 'Snow', { hardness: 0.1, resistance: 0.1, tool: TOOL.SHOVEL, tier: TIER.WOOD, sound: 'snow', opaque: false, shape: SHAPE.SNOW, replaceable: true, needsSupport: true, drops: 'snow_layer', tex: { all: 'snow_block' } });
 def(B.ICE, 'Ice', { hardness: 0.5, resistance: 0.5, tool: TOOL.PICKAXE, opaque: false, opacity: 1, layer: LAYER.TRANSLUCENT, drops: null, slipperiness: 0.98, sound: 'glass' });

@@ -9,7 +9,7 @@ import { lightAt } from '../entities/entities.js';
 import { canLight, FIRE_DELAY } from '../world/fire.js';
 import { tryLightRift, findHollowRing, fillHollowGate } from '../world/dimensions/portal.js';
 import { LEAVES, SAPLING_TREE, growTree } from '../world/trees.js';
-import { sideOf, SIDE_DIRS, DOOR_OPEN, DOOR_UPPER, BED_HEAD, SLAB_TOP, SLAB_DOUBLE, STAIRS_UPSIDE, GATE_OPEN } from '../world/shapes.js';
+import { sideOf, SIDE_DIRS, DOOR_OPEN, DOOR_UPPER, BED_HEAD, SLAB_TOP, SLAB_DOUBLE, STAIRS_UPSIDE, GATE_OPEN, TRAPDOOR_OPEN, TRAPDOOR_TOP } from '../world/shapes.js';
 
 /** Brightness for block particles: local light, dimmed with the combined sunlight (as the held item). */
 function particleLight(g, x, y, z) {
@@ -272,6 +272,13 @@ export class Interaction {
       if (t.id === B.WORKBENCH) { g.ui.openWorkbench(); return true; }
       if (t.id === B.FURNACE || t.id === B.FURNACE_LIT) { g.ui.openFurnace(t.x, t.y, t.z); return true; }
       if (t.id === B.BED) { g.trySleep(t.x, t.y, t.z); return true; }
+      if (t.id === B.OAK_TRAPDOOR) {
+        const m = w.getMeta(t.x, t.y, t.z);
+        w.setBlockUrgent(t.x, t.y, t.z, t.id, m ^ TRAPDOOR_OPEN);
+        g.audio.play(m & TRAPDOOR_OPEN ? 'door_close' : 'door_open', [t.x + 0.5, t.y + 0.5, t.z + 0.5]);
+        this.swing = SWING_TICKS;
+        return true;
+      }
       if (BLOCKS[t.id].shape === SHAPE.GATE) {
         const m = w.getMeta(t.x, t.y, t.z);
         w.setBlockUrgent(t.x, t.y, t.z, t.id, m ^ GATE_OPEN);
@@ -352,6 +359,11 @@ export class Interaction {
     if (pshape === SHAPE.STAIRS || pshape === SHAPE.GATE) {
       const s = Math.abs(ldx) > Math.abs(ldz) ? (ldx > 0 ? 1 : 3) : (ldz > 0 ? 2 : 0);
       meta = s | (upper && pshape === SHAPE.STAIRS ? STAIRS_UPSIDE : 0);
+    }
+    if (pshape === SHAPE.TRAPDOOR) {
+      // hinged on the clicked wall, or on the far side from the player on floors and ceilings; upper half when placed high
+      const s = t.face[1] === 0 ? sideOf(-t.face[0], -t.face[2]) : (Math.abs(ldx) > Math.abs(ldz) ? (ldx > 0 ? 1 : 3) : (ldz > 0 ? 2 : 0));
+      meta = s | (upper ? TRAPDOOR_TOP : 0);
     }
     if (placeId === B.TORCH || placeId === B.LADDER || placeId === B.VINES) {
       // torches stand on floors or hang on walls; ladders only hang on walls

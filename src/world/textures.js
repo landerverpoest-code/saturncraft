@@ -538,6 +538,13 @@ const GEN = {
       }
     }
   },
+  oak_trapdoor: (c) => {
+    // a plank frame with four square openings
+    planks(c, '#a7834e');
+    const d = hex('#6a4a28');
+    for (let i = 0; i < 16; i++) { c.set(i, 0, d); c.set(i, 15, d); c.set(0, i, d); c.set(15, i, d); }
+    for (const [ox, oy] of [[3, 3], [9, 3], [3, 9], [9, 9]]) for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) c.set(ox + x, oy + y, [0, 0, 0], 0);
+  },
   oak_sapling: (c) => sapling(c, '#4f9a2a', '#2f6a1a', '#6a4a2a', false),
   birch_sapling: (c) => sapling(c, '#7aae4a', '#4a7a2a', '#d8d8cc', false),
   spruce_sapling: (c) => sapling(c, '#3f6a3a', '#24452a', '#4a3420', true),

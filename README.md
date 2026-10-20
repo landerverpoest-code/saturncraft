@@ -346,6 +346,7 @@ poison from eyes) follow the documented table.
 * 16 dye colours: bone meal (white), flowers (yellow/red), azurite (blue), cactus in a furnace (green), coal (black) and mixes; dyed wool; sheep come in natural colours (white, black, grays, brown, rare pink), can be dyed and drop/shear their colour
 * Pumpkin patches (plains, taiga) and melons (forests): pumpkin + torch = pumpkin lantern (light 15), melons drop 3–7 slices, pumpkin pie
 * Howlers (wolves) in packs of 4 in forests and taiga: they hunt Fleecers and Clucklings and the whole pack turns on whoever hurts one; tame with bones (1 in 3), then they sit/stand on right-click, follow you (teleporting when over 12 blocks away), attack what hurts you or what you hit, heal and breed with meat (pups are tame), red collar
+* Cobblestone and mossy cobblestone walls (6 → 6; connect to walls, gates and full blocks, no post on straight runs, 1.5-high collision) and oak trapdoors (6 planks → 2; lie on the bottom or top half, open against their hinge side with right-click)
 * Snow layers (1–8 layers of 2/16; a single layer has no collision): cold biomes are generated with a snow cover on ground and treetops, snowfall adds single layers and freezes still water, light above 11 melts snow and ice; shovels dig snowballs (4 → snow block, 3 snow blocks → 6 layers), placing snow on snow stacks it
 * Grass and foliage tints blend smoothly across biome borders (blurred, world-aligned tint grid)
 * Shamblers hunt Settlers when no player is around
@@ -376,7 +377,7 @@ poison from eyes) follow the documented table.
 * Enchanting, anvils, shields, potions and status-effect UI (only hunger/poison effects exist); armour is not drawn on the third-person player model
 * Taming of animals other than Howlers, cocoa and ink sacs
 * Large structures beyond villages, dungeons, sanctums and bastions; villager breeding and job sites; redstone-style circuitry; Hollow outer-island cities
-* Double chests and other storage containers, walls, trapdoors, corner-shaped stairs
+* Double chests and other storage containers, corner-shaped stairs
 * Slimes, witches, drowned, husks/strays as separate variants, baby mobs, mob equipment
 * Difficulty levels (fixed at Normal), spectator/adventure modes, multiplayer
 * Sprint-swimming/crawling poses, minecarts, elytra

@@ -39,6 +39,7 @@ function blockIcon(b, forceTint = null) {
     for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) if (tpl[y][x] === 'h') { ctx.fillStyle = (x + y) % 5 ? col : lighten(col, 0.8); ctx.fillRect(x * 2, y * 2, 2, 2); }
     return c;
   }
+  if (b.shape === SHAPE.TRAPDOOR) { ctx.drawImage(texCanvas(b.tex.side), 0, 0, 32, 32); return c; }
   if (b.shape === SHAPE.CROSS || b.shape === SHAPE.TORCH || b.shape === SHAPE.LADDER || b.shape === SHAPE.PANE || b.shape === SHAPE.PAD) {
     ctx.drawImage(texCanvas(b.tex.side, b.tint ? GRASS_TINT : null), 0, 0, 32, 32);
     return c;
