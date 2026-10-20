@@ -58,6 +58,8 @@ for (const [a, b, out, n] of [
 for (let c = 1; c < 16; c++) shapeless([DYES[c], B.WOOL], WOOL_ITEMS[c], 1);
 shaped([' I', 'I '], { I: I.IRON_INGOT }, I.SHEARS, 1);
 shapeless([I.IRON_INGOT, I.FLINT], I.FLINT_AND_STEEL);
+shaped(['SS', 'SS'], { S: I.SNOWBALL }, B.SNOW_BLOCK, 1);
+shaped(['BBB'], { B: B.SNOW_BLOCK }, B.SNOW_LAYER, 6);
 shaped(['P P', ' P '], { P: 'planks' }, I.BOWL, 4);
 shapeless([I.BOWL, I.BEETROOT, I.BEETROOT, I.BEETROOT, I.BEETROOT, I.BEETROOT, I.BEETROOT], I.BEETROOT_SOUP);
 for (const [planks, fence] of [[B.OAK_PLANKS, B.OAK_FENCE], [B.SPRUCE_PLANKS, B.SPRUCE_FENCE], [B.BIRCH_PLANKS, B.BIRCH_FENCE]]) shaped(['PSP', 'PSP'], { P: planks, S: I.STICK }, fence, 3);

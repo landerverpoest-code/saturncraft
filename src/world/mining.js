@@ -65,6 +65,8 @@ export function blockDrops(blockId, tool = HAND, rng = Math.random, meta = 0) {
     case 'beryl': return [{ id: I.BERYL, count: 1 }];
     case 'clay': return [{ id: I.CLAY_BALL, count: 4 }];
     case 'gravel': return rng() < 0.1 ? [{ id: I.FLINT, count: 1 }] : [{ id: B.GRAVEL, count: 1 }];
+    case 'snowballs': return [{ id: I.SNOWBALL, count: 4 }];
+    case 'snow_layer': return [{ id: I.SNOWBALL, count: (meta & 7) + 1 }];
     case 'slab': return [{ id: blockId, count: meta === 2 ? 2 : 1 }];
     case 'wool': return [{ id: WOOL_ITEMS[meta & 15], count: 1 }];
     case 'melon': return [{ id: I.MELON_SLICE, count: 3 + Math.floor(rng() * 5) }];

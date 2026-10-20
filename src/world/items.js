@@ -97,6 +97,7 @@ item('bowl', 'Bowl');
 item('beetroot_soup', 'Beetroot Soup', { stack: 1, food: { hunger: 6, saturation: 7.2, leaves: 'bowl' } });
 item('shears', 'Shears', { stack: 1, durability: 238, shears: true });
 item('flint_and_steel', 'Flint and Steel', { stack: 1, durability: 64, igniter: true });
+item('snowball', 'Snowball', { stack: 16, snowball: true });
 item('paper', 'Paper');
 item('book', 'Book');
 item('brick', 'Brick');

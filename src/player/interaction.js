@@ -336,6 +336,8 @@ export class Interaction {
       const m = w.getMeta(t.x, t.y, t.z);
       if ((m === 0 && t.face[1] === 1) || (m === 1 && t.face[1] === -1)) return this.finishPlace(t.x, t.y, t.z, placeId, SLAB_DOUBLE);
     }
+    // placing snow on snow adds a layer (up to a full block of 8)
+    if (placeId === B.SNOW_LAYER && t.id === B.SNOW_LAYER && (w.getMeta(t.x, t.y, t.z) & 7) < 7) return this.finishPlace(t.x, t.y, t.z, B.SNOW_LAYER, (w.getMeta(t.x, t.y, t.z) & 7) + 1);
     // Place location: replace soft blocks, else the adjacent cell
     let px = t.x, py = t.y, pz = t.z;
     const tb = BLOCKS[t.id];

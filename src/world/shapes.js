@@ -149,6 +149,9 @@ export const SHAPED_COLLISION = new Uint8Array(256);
 SHAPED_COLLISION[B.DOOR] = 1;
 SHAPED_COLLISION[B.BED] = 1;
 SHAPED_COLLISION[B.GLASS_PANE] = 1;
+SHAPED_COLLISION[B.SNOW_LAYER] = 1;
+/** Snow layer box (n = meta + 1 layers); collision is one layer lower, so a single layer has none. */
+export const snowBox = (meta, collide = false) => [0, 0, 0, 1, ((meta & 7) + (collide ? 0 : 1)) * 2 / 16, 1];
 for (const id of [B.OAK_FENCE, B.SPRUCE_FENCE, B.BIRCH_FENCE, B.OAK_FENCE_GATE]) SHAPED_COLLISION[id] = 1;
 for (const id of [B.OAK_SLAB, B.COBBLESTONE_SLAB, B.STONE_BRICK_SLAB, B.SANDSTONE_SLAB, B.OAK_STAIRS, B.COBBLESTONE_STAIRS, B.STONE_BRICK_STAIRS, B.SANDSTONE_STAIRS]) SHAPED_COLLISION[id] = 1;
 
@@ -165,6 +168,7 @@ export function collisionBoxes(id, meta, world, x, y, z) {
   if (id === B.BED) return [BED_BOX];
   const sh = BLOCKS[id].shape;
   if (sh === SHAPE.SLAB) return [slabBox(meta)];
+  if (id === B.SNOW_LAYER) return (meta & 7) ? [snowBox(meta, true)] : [];
   if (sh === SHAPE.STAIRS) return stairBoxes(meta);
   return null;
 }
@@ -175,6 +179,7 @@ const FIRE_BOX = [0, 0, 0, 1, 1 / 16, 1];
 /** Selection (outline / raycast) box, or null for a full cube. */
 export function selectionBox(id, meta) {
   if (id === B.DOOR) return doorBox(meta);
+  if (id === B.SNOW_LAYER) return snowBox(meta);
   if (BLOCKS[id].shape === SHAPE.FENCE) return [P0, 0, P0, P1, 1, P1];
   if (BLOCKS[id].shape === SHAPE.PANE) return [7 / 16, 0, 7 / 16, 9 / 16, 1, 9 / 16];
   if (BLOCKS[id].shape === SHAPE.GATE) return (meta & 1) === 0 ? [0, 0, 6 / 16, 1, 1, 10 / 16] : [6 / 16, 0, 0, 10 / 16, 1, 1];

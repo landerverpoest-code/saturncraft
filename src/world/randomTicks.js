@@ -2,7 +2,8 @@
 // section near the player get a chance to change, as in the reference game
 // (randomTickSpeed = 3). Handles grass spreading, farmland moisture and crop
 // growth.
-import { B, OPAQUE, CROPS } from './blocks.js';
+import { B, OPAQUE, SOLID, CROPS } from './blocks.js';
+import { BIOMES } from './biomes.js';
 import { MIN_Y, SECTION_COUNT, cidx } from './constants.js';
 import { lavaIgnite, FIRE_DELAY } from './fire.js';
 import { LEAVES, SAPLING_TREE, growTree, leavesConnected } from './trees.js';
@@ -78,6 +79,9 @@ export function randomTickBlock(world, x, y, z, id, rng = Math.random) {
     else growTree(world, x, y, z, SAPLING_TREE[id], rng);
   } else if (LEAVES.has(id)) {
     if (world.getMeta(x, y, z) === 0 && !leavesConnected(world, x, y, z)) world.breakBlock(x, y, z, true);
+  } else if (id === B.SNOW_LAYER || id === B.ICE) {
+    // torches and other lights melt snow and ice
+    if (rawBlockLight(world, x, y + (id === B.ICE ? 1 : 0), z) > 11) world.setBlock(x, y, z, id === B.ICE ? B.WATER : B.AIR);
   } else if (id === B.LAVA) {
     lavaIgnite(world, x, y, z, rng);
   } else if (id === B.FIRE) {
@@ -89,9 +93,30 @@ export function randomTickBlock(world, x, y, z, id, rng = Math.random) {
   }
 }
 
+/**
+ * While it snows: a few random columns near the player each tick get a layer
+ * of snow (one layer at most, like the reference game) or freeze over if they
+ * are still water. Roughly the reference rate of 1 in 16 columns per chunk.
+ */
+export function snowfall(world, px, pz, rng = Math.random, tries = 4) {
+  for (let k = 0; k < tries; k++) {
+    const x = Math.floor(px + (rng() - 0.5) * 96), z = Math.floor(pz + (rng() - 0.5) * 96);
+    if (!world.isLoaded(x, z)) continue;
+    const bd = BIOMES[world.biomeAt(x, z)];
+    if (!bd || bd.temp >= 0.15) continue;
+    const y = world.heightAt(x, z), top = world.getBlock(x, y, z);
+    if (rawBlockLight(world, x, y + 1, z) > 11) continue;
+    if (top === B.WATER && world.getMeta(x, y, z) === 0) { world.setBlock(x, y, z, B.ICE); continue; }
+    if (top === B.SNOW_LAYER || world.getBlock(x, y + 1, z)) continue;
+    if ((SOLID[top] && OPAQUE[top]) || LEAVES.has(top)) world.setBlock(x, y + 1, z, B.SNOW_LAYER, 0);
+  }
+}
+
+function rawBlockLight(world, x, y, z) { return world.getLight(x, y, z) & 15; }
+
 /** Ids that react to random ticks (fast pre-filter). */
 export const RANDOM_TICKS = new Uint8Array(256);
-for (const id of [B.GRASS, B.FARMLAND, B.SUGAR_CANE, B.LAVA, B.FIRE, ...CROPS, ...LEAVES, ...Object.keys(SAPLING_TREE).map(Number)]) RANDOM_TICKS[id] = 1;
+for (const id of [B.GRASS, B.FARMLAND, B.SUGAR_CANE, B.LAVA, B.FIRE, B.SNOW_LAYER, B.ICE, ...CROPS, ...LEAVES, ...Object.keys(SAPLING_TREE).map(Number)]) RANDOM_TICKS[id] = 1;
 
 /** Run one tick's worth of random ticks in all chunks within `radius` chunks of (cx, cz). */
 export function runRandomTicks(world, cx, cz, radius, rng = Math.random) {

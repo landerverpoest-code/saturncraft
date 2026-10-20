@@ -68,6 +68,8 @@ export function sampleOreHeight(f, rng) {
   return f.min + Math.floor(rng() * (range / 2 + 1)) + Math.floor(rng() * (range / 2 + 1));
 }
 
+const SNOW_GROUND = new Set([B.SNOWY_GRASS, B.DIRT, B.STONE, B.GRAVEL, B.SAND, B.ICE, B.COBBLESTONE, B.ANDESITE, B.GRANITE, B.DIORITE]);
+
 // Ground cover per biome: chance of tall grass, flowers and small mushrooms on a grass block.
 const GRASS_P = { [BIOME.PLAINS]: 0.22, [BIOME.TAIGA]: 0.07, [BIOME.SAVANNA]: 0.35, [BIOME.JUNGLE]: 0.3, [BIOME.SWAMP]: 0.12, [BIOME.DARK_FOREST]: 0.06, [BIOME.FLOWER_FOREST]: 0.08 };
 const FLOWER_P = { [BIOME.FLOWER_FOREST]: 0.2, [BIOME.SWAMP]: 0.012, [BIOME.JUNGLE]: 0.004, [BIOME.SAVANNA]: 0.006, [BIOME.DARK_FOREST]: 0.004 };
@@ -671,6 +673,15 @@ export class TerrainGenerator {
       }
       const kind = this.treeKind(biome, hashf(this.seed, wx, wz, 52));
       this.placeTree(blocks, meta, kind, wx - x0, top + 1, wz - z0, hashf(this.seed, wx, wz, 53));
+    }
+    // A layer of snow on the ground and treetops of cold biomes (not on peaks that are already snow blocks)
+    for (let z = 0; z < 16; z++) for (let x = 0; x < 16; x++) {
+      const ci = x + z * 16, bd = BIOMES[biomes[ci]];
+      if (!bd || bd.temp >= 0.15 || bd.key === 'frozen_ocean' || bd.key === 'ocean') continue;
+      let y = Math.min(MIN_Y + WORLD_HEIGHT - 2, heightmap[ci] + 40);
+      while (y > heightmap[ci] && !blocks[cidx(x, y, z)]) y--;
+      const b = blocks[cidx(x, y, z)];
+      if ((SNOW_GROUND.has(b) || LEAVES.has(b)) && !blocks[cidx(x, y + 1, z)]) blocks[cidx(x, y + 1, z)] = B.SNOW_LAYER;
     }
   }
 

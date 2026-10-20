@@ -16,6 +16,7 @@ import { Sky } from './sky/sky.js';
 import { Clouds } from './sky/clouds.js';
 import { Weather, WeatherRenderer } from './sky/weather.js';
 import { Lightning } from './sky/lightning.js';
+import { snowfall } from './world/randomTicks.js';
 import { canLight, FIRE_DELAY } from './world/fire.js';
 import { Chat } from './ui/chat.js';
 import { Music } from './audio/music.js';
@@ -276,6 +277,7 @@ export class Game {
     const wth = this.weather, p = this.player;
     if (wth.level < 0.2) return;
     if (p.fireTicks > 0 && wth.rainingAt(this.world, p.x, p.y + 1, p.z)) p.fireTicks = 0;
+    if (!this.net || this.net.isHost) snowfall(this.world, p.x, p.z);
     for (let k = 0; k < Math.round(wth.level * 6); k++) {
       const x = Math.floor(p.x + (Math.random() - 0.5) * 16), z = Math.floor(p.z + (Math.random() - 0.5) * 16);
       if (Weather.precipitation(this.world.biomeAt(x, z)) !== 'rain') continue;

@@ -5,7 +5,7 @@ import { B, BLOCKS, OPAQUE, SHAPES, LAYERS, SHAPE, LAYER } from './blocks.js';
 import { LEAVES } from './trees.js';
 import { FACE_TILE, FRONT_TILE, texId } from './textures.js';
 import { WOOL_RGB } from './colors.js';
-import { doorBox, ladderBox, SIDE_DIRS, DOOR_UPPER, BED_HEAD, BED_BOX, slabBox, stairBoxes, fenceConnects, fenceRenderBoxes, gateRenderBoxes, paneConnects, paneBoxes } from './shapes.js';
+import { doorBox, ladderBox, SIDE_DIRS, DOOR_UPPER, BED_HEAD, BED_BOX, slabBox, stairBoxes, fenceConnects, fenceRenderBoxes, gateRenderBoxes, paneConnects, paneBoxes, snowBox } from './shapes.js';
 
 export const PAD = 18;
 export const PAD_VOL = PAD * PAD * PAD;
@@ -248,6 +248,10 @@ export function meshSection(sec) {
           buf.pos[v * 3] -= dx * h * 0.41; buf.pos[v * 3 + 2] -= dz * h * 0.41;
         }
       }
+    } else if (shape === SHAPE.SNOW) {
+      // a slab of snow; sides hidden by neighbouring snow of at least the same height are skipped by emitBox order cost only
+      const l = light[i], b = snowBox(meta[i]);
+      emitBox(buf, x, y, z, b[0], b[1], b[2], b[3], b[4], b[5], FACE_TILE[id * 6 + 2], (l >> 4) * 17, (l & 15) * 17, 'box');
     } else if (shape === SHAPE.SLAB || shape === SHAPE.STAIRS) {
       // light-blocking partial blocks: shade with the brightest neighbouring light
       let sk = 0, bk = 0;
