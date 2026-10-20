@@ -67,6 +67,7 @@ export class Game {
     this.furnaces = new Map();
     this.chests = new Map();      // "x,y,z" -> { x, y, z, slots: 27 stacks }
     this.fps = 0; this.frameCount = 0; this.fpsTime = 0;
+    this.net = null;              // multiplayer session (src/net/session.js), null in single-player
   }
 
   async start(onProgress) {
@@ -121,6 +122,7 @@ export class Game {
     this.world.on('fallingBlock', (x, y, z, id) => this.entities.spawnFallingBlock(x, y, z, id));
     this.world.on('fireCrackle', (x, y, z) => this.audio.play('fire', [x + 0.5, y + 0.5, z + 0.5]));
     this.world.on('dropItems', (x, y, z, id, meta) => {
+      if (this.net && this.net.applyingRemote) return; // the player who made the edit gets the drops
       for (const st of blockDrops(id, toolOf(null), Math.random, meta)) this.entities.spawnItem(x + 0.5, y + 0.3, z + 0.5, st);
     });
     this.chunks.onChunkLoaded = (cx, cz) => this.spawner.onChunkLoaded(cx, cz);
@@ -139,6 +141,7 @@ export class Game {
       this.player.setPosition(sp.x, sp.y + 1, sp.z);
       this.player.yaw = Math.PI * 0.75;
     }
+    if (this.net) this.net.attach(this); // joining a friend: their world, time and our position
 
     // the chat opens on the key press itself, so nothing typed right after T or / reaches the game
     this.input.onKey = (e) => {
@@ -179,7 +182,7 @@ export class Game {
       };
       step();
     });
-    if (!this.saveData) {
+    if (!this.saveData && !this.net) {
       // Put the player on the surface
       const px = Math.floor(this.player.x), pz = Math.floor(this.player.z);
       let y = this.world.heightAt(px, pz) + 1;
@@ -188,7 +191,7 @@ export class Game {
       this.player.setPosition(px + 0.5, y, pz + 0.5);
     }
     // the world spawn (used again when the home bed is gone)
-    this.worldSpawn = (this.saveData && this.saveData.worldSpawn) || { ...this.player.spawn };
+    this.worldSpawn = (this.saveData && this.saveData.worldSpawn) || this.worldSpawn || { ...this.player.spawn };
 
     this.running = true;
     this.lastTime = performance.now();
@@ -210,12 +213,14 @@ export class Game {
   onUIClosed() { this.input.lock(); }
 
   async save() {
+    if (this.net && this.net.isClient) return false; // a friend's world is saved by its host
     try { await saveGame(this); return true; } catch (e) { console.warn('save failed', e); return false; }
   }
 
   async quitToTitle() {
     this.running = false;
     await this.save();
+    if (this.net) this.net.close();
     this.input.unlock();
     this.chunks.dispose();
     window.removeEventListener('resize', this._onResize);
@@ -452,6 +457,23 @@ export class Game {
 
   explode(x, y, z, power, source) { explode(this, x, y, z, power, source); }
 
+  /** Open this world to friends (peer-to-peer); resolves to the host session with its room code. */
+  async openToFriends(name) {
+    if (this.net) return this.net;
+    const { hostSession } = await import('./net/session.js');
+    this.net = await hostSession(this, name);
+    return this.net;
+  }
+
+  /** Advance the simulation without rendering (a multiplayer tab in the background gets no frames). */
+  backgroundTick(now) {
+    if (!this.mouseLatch) this.mouseLatch = { left: false, right: false, middle: false };
+    const dt = Math.min(now - this.lastTime, 1000);
+    this.lastTime = now;
+    this.acc += dt;
+    while (this.acc >= TICK_MS) { this.tick(); this.acc -= TICK_MS; }
+  }
+
   // -------------------------------------------------------------------------
   tick() {
     this.ticks++;
@@ -463,8 +485,8 @@ export class Game {
     this.weather.tick();
     this.tickRain();
     this.lightning.tick();
-    this.tickThunder();
-    runRandomTicks(this.world, Math.floor(this.player.x / 16), Math.floor(this.player.z / 16), Math.min(this.chunks.renderDistance, 6));
+    if (!this.net || this.net.isHost) this.tickThunder(); // clients see the host's lightning
+    if (!this.net || this.net.localRandomTicks) runRandomTicks(this.world, Math.floor(this.player.x / 16), Math.floor(this.player.z / 16), Math.min(this.chunks.renderDistance, 6));
     // Hold the player in place until the terrain under them has loaded (spawn, respawn, teleports)
     const p = this.player;
     if (p.sleeping) this.tickSleep();
@@ -483,9 +505,10 @@ export class Game {
     this.entities.tick();
     if (p.riding) this.seatPlayer();
     this.spawner.tick();
-    this.spawnerBlocks.tick();
+    if (!this.net || this.net.isHost) this.spawnerBlocks.tick();
     this.tickFurnaces();
     this.particles.tick();
+    if (this.net) this.net.tick();
     if (this.ticks % 1200 === 0) this.save(); // autosave every minute
     if (this.ticks % 100 === 0) this.milestones.tick();
     if (this.ticks % 20 === 0) {
@@ -555,7 +578,7 @@ export class Game {
     this.lastTime = now;
     if (dt > 250) dt = 250;
     this.handleFrameInput();
-    const pauseSim = this.ui.open === 'pause';
+    const pauseSim = this.ui.open === 'pause' && !this.net; // a shared world keeps running
     if (!pauseSim) {
       this.acc += dt;
       while (this.acc >= TICK_MS) { this.tick(); this.acc -= TICK_MS; }
@@ -616,6 +639,7 @@ export class Game {
     this.chunks.updateVisibility(this.camera.position);
     this.entities.render(alpha, sec);
     this.playerModel.update(this, this.perspective !== 0 && this.cameraDist > 0.8, alpha, sec); // no model when the camera is squeezed into the head
+    if (this.net) this.net.render(sec);
     this.overlay.update(this.interaction, p.dead);
     this.renderer.clear();
     this.renderer.render(this.scene, this.camera);

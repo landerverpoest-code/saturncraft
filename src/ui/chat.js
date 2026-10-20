@@ -51,7 +51,11 @@ export class Chat {
       this.history.push(text);
       if (text.startsWith('/') || this.game.player) {
         const out = text.startsWith('/') ? runCommand(this.game, text) : null;
-        if (!text.startsWith('/')) this.add(`<Player> ${text}`);
+        if (!text.startsWith('/')) {
+          const net = this.game.net;
+          this.add(`<${net ? net.name : 'Player'}> ${text}`);
+          if (net) net.sendChat(text);
+        }
         else for (const line of [].concat(out || [])) this.add(line);
       }
     }

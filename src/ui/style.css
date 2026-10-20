@@ -134,3 +134,16 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 .milestone-row.done { opacity: 1; filter: none; border: 1px solid #f0b04a; }
 .milestone-row img { width: 32px; height: 32px; image-rendering: pixelated; }
 .milestone-row .d { font-size: 12px; opacity: .8; }
+
+/* multiplayer */
+.net-box { display: flex; flex-direction: column; align-items: center; gap: 8px; max-width: 420px; }
+.net-box p.sub { margin: 0; text-align: center; }
+.net-room { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.net-code { color: #ffe2a6; letter-spacing: 2px; font-size: 18px; }
+.pause-screen { overflow-y: auto; justify-content: safe center; padding: 16px 0; }
+.join-row input.net-link { font-size: 12px; color: #ddd; text-transform: none; }
+.join-row { display: flex; gap: 8px; width: 300px; }
+.join-row input { flex: 1; min-width: 0; padding: 8px; font-size: 16px; background: #111; color: #fff; border: 2px solid #444; border-radius: 4px; text-transform: uppercase; }
+.join-row .btn { min-width: 0; flex: 0 0 auto; }
+#join-msg { margin: 0; min-height: 1em; color: #ffb0a0; }
+.net-msg:empty { display: none; }
