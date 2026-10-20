@@ -390,12 +390,12 @@ export class HostSession extends Session {
     if (m.k === 'item') {
       const st = m.st;
       if (!st || !ITEMS[st.id] || !Number.isInteger(st.count) || st.count <= 0 || st.count > 64) return;
-      const e = ents.spawnItem(m.x, m.y, m.z, { id: st.id, count: st.count, damage: st.damage | 0 }, v);
+      const e = ents.spawnItem(m.x, m.y, m.z, copyStack(st), v);
       if (e && m.pd) e.pickupDelay = Math.min(80, m.pd | 0);
     } else if (m.k === 'xp') {
       if (m.n > 0) ents.spawnXp(m.x, m.y, m.z, Math.min(100000, m.n | 0));
     } else if (m.k === 'arrow' && v) {
-      ents.spawnArrow(m.x, m.y, m.z, v[0], v[1], v[2], c.rp.target, !!m.crit, m.thrown === 'egg' || m.thrown === 'snowball' ? m.thrown : null);
+      ents.spawnArrow(m.x, m.y, m.z, v[0], v[1], v[2], c.rp.target, !!m.crit, m.thrown === 'egg' || m.thrown === 'snowball' ? m.thrown : null, Math.max(0, Math.min(5, m.power | 0)));
     } else if (m.k === 'boat') {
       ents.spawnBoat(m.x, m.y, m.z, +m.yaw || 0);
     }
@@ -412,7 +412,7 @@ export class HostSession extends Session {
       if (!n) return;
       e.stack.count -= n;
       if (e.stack.count <= 0) e.dead = true;
-      c.ch.send({ t: 'got', st: { id: e.stack.id, count: n, damage: e.stack.damage | 0 } });
+      c.ch.send({ t: 'got', st: { ...copyStack(e.stack), count: n } });
     } else if (e.kind === 'xp') {
       e.dead = true;
       c.ch.send({ t: 'gotxp', v: e.value });
@@ -768,9 +768,11 @@ export class ClientSession extends Session {
       case 'ents': if (m.d === g.world.dimension && !g.dims.pending) this.ents.apply(m.m); break;
       case 'hurt': p.hurt(m.a, m.s, m.x != null ? { x: m.x, z: m.z } : null); break;
       case 'got': {
-        const left = p.inventory.add(m.st);
+        const got = copyStack(m.st);
+        if (!got || !ITEMS[got.id]) break;
+        const left = p.inventory.add(got);
         g.audio.play('pop');
-        if (left) this.requestSpawn('item', { x: p.x, y: p.y + 1, z: p.z, st: { ...m.st, count: left }, pd: 40 });
+        if (left) this.requestSpawn('item', { x: p.x, y: p.y + 1, z: p.z, st: { ...got, count: left }, pd: 40 });
         break;
       }
       case 'gotxp': { const lv = addXp(p.xp, m.v); g.audio.play(lv && p.xp.level % 5 === 0 ? 'levelup' : 'orb'); break; }
@@ -813,7 +815,7 @@ export class ClientSession extends Session {
   requestSpawn(kind, d) {
     if (kind === 'falling') return; // the host's own world simulation makes those
     const r2 = (v) => Math.round(v * 100) / 100;
-    this.send({ t: 'spawn', k: kind, x: r2(d.x), y: r2(d.y), z: r2(d.z), st: d.st ? copyStack(d.st) : undefined, v: d.v ? d.v.map(r2) : undefined, n: d.n, pd: d.pd, crit: d.crit, yaw: d.yaw });
+    this.send({ t: 'spawn', k: kind, x: r2(d.x), y: r2(d.y), z: r2(d.z), st: d.st ? copyStack(d.st) : undefined, v: d.v ? d.v.map(r2) : undefined, n: d.n, pd: d.pd, crit: d.crit, yaw: d.yaw, power: d.power });
   }
 
   /** Right-click on a mob or player. */

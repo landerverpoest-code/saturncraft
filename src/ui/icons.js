@@ -4,6 +4,7 @@ import { BLOCKS, SHAPE } from '../world/blocks.js';
 import { ITEMS, MATERIALS, ARMOR_MATERIALS } from '../world/items.js';
 import { texturePixels } from '../world/textures.js';
 import { COLORS, WOOL_RGB } from '../world/colors.js';
+import { hasEnch, enchLines } from '../world/enchantments.js';
 import { TOOL_TEMPLATES, GEAR_TEMPLATES, paintTemplate, materialRamp, ramp, WOOD_HANDLE } from './toolArt.js';
 
 const cache = new Map();
@@ -200,22 +201,74 @@ function itemIcon(d) {
   return c;
 }
 
-/** Data URL icon for an item id */
-export function iconURL(id) {
-  if (cache.has(id)) return cache.get(id);
+/**
+ * Enchantment glint: a purple sheen with two diagonal light bands, drawn only
+ * over the icon's opaque pixels (the canvas is modified in place).
+ */
+export function addGlint(c) {
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  const img = ctx.getImageData(0, 0, W, H), px = img.data;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = (y * W + x) * 4;
+    if (px[i + 3] < 40) continue;
+    const d = ((x + y) / (W + H)) * 3; // bands along the diagonal
+    const band = Math.max(0, 1 - Math.abs((d % 1) - 0.5) * 4);
+    const k = 0.16 + band * 0.46;
+    px[i] = px[i] * (1 - k) + 190 * k;
+    px[i + 1] = px[i + 1] * (1 - k) + 90 * k;
+    px[i + 2] = px[i + 2] * (1 - k) + 255 * k;
+  }
+  ctx.putImageData(img, 0, 0);
+  return c;
+}
+
+/** Data URL icon for an item id (with the enchantment glint when `glint`). */
+export function iconURL(id, glint = false) {
+  const key = glint ? id + ':g' : id;
+  if (cache.has(key)) return cache.get(key);
   const d = ITEMS[id];
   let url = '';
-  if (d) {
-    const canvas = d.block !== undefined ? blockIcon(BLOCKS[d.block]) : itemIcon(d);
-    url = canvas.toDataURL();
-  }
-  cache.set(id, url);
+  if (d) url = itemCanvas(id, glint).toDataURL();
+  cache.set(key, url);
   return url;
 }
 
+/** Icon of a stack: enchanted stacks glint. */
+export const stackIconURL = (st) => iconURL(st.id, hasEnch(st));
+
+/** Inner HTML of a slot holding a stack: icon (+ animated glint), count and durability bar. */
+export function stackHTML(st) {
+  if (!st) return '';
+  const d = ITEMS[st.id];
+  const url = stackIconURL(st);
+  let h = `<img src="${url}">`;
+  if (hasEnch(st)) h += `<div class="glint-fx" style="-webkit-mask-image:url(${url});mask-image:url(${url})"></div>`;
+  if (st.count > 1) h += `<span class="count">${st.count}</span>`;
+  if (d && d.durability && st.damage > 0) {
+    const f = 1 - st.damage / d.durability;
+    h += `<div class="dura"><div style="width:${f * 100}%;background:hsl(${f * 120},90%,50%)"></div></div>`;
+  }
+  return h;
+}
+
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+/** Tooltip HTML: the item name (aqua when enchanted) and one line per enchantment. */
+export function tooltipHTML(st, extra = '') {
+  const d = ITEMS[st.id];
+  if (!d) return '';
+  const lines = enchLines(st);
+  let h = `<div class="tt-name${lines.length ? ' ench' : ''}">${esc(d.name)}${esc(extra)}</div>`;
+  for (const l of lines) h += `<div class="tt-ench">${esc(l)}</div>`;
+  const dur = d.durability;
+  if (dur && st.damage > 0) h += `<div class="tt-dura">Durability: ${dur - st.damage} / ${dur}</div>`;
+  return h;
+}
+
 /** Canvas (16x16 texture-like) for 3D item rendering of non-block items. */
-export function itemCanvas(id) {
+export function itemCanvas(id, glint = false) {
   const d = ITEMS[id];
   if (!d) return null;
-  return d.block !== undefined ? blockIcon(BLOCKS[d.block]) : itemIcon(d);
+  const c = d.block !== undefined ? blockIcon(BLOCKS[d.block]) : itemIcon(d);
+  return glint ? addGlint(c) : c;
 }

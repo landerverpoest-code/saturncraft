@@ -1,6 +1,9 @@
 // Menus and container screens (inventory, workbench, furnace).
-import { iconURL } from './icons.js';
-import { ITEMS, maxStack } from '../world/items.js';
+import { iconURL, stackHTML, stackIconURL, tooltipHTML } from './icons.js';
+import { ITEMS, I, maxStack } from '../world/items.js';
+import { canStack, hasEnch, isEnchantable, countBookshelves, tableOffers, rollOffer, applyOffer, enchName, anvilCombine, ANVIL_MAX_COST } from '../world/enchantments.js';
+import { spendLevels } from '../player/experience.js';
+import { mulberry32 } from '../world/noise.js';
 import { craft, RECIPES, recipeLayout, chooseIngredients } from '../player/crafting.js';
 import { B } from '../world/blocks.js';
 import { canTrade, doTrade, MAX_USES } from '../mobs/trades.js';
@@ -8,6 +11,30 @@ import { MILESTONES } from '../player/milestones.js';
 import { loadPlayerName } from '../net/protocol.js';
 
 function el(html) { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstChild; }
+
+/** A strip of made-up glyphs for an enchanting offer (procedural, seeded): a data URL. */
+const runeCache = new Map();
+function runeStrip(seed, n = 9) {
+  if (runeCache.has(seed)) return runeCache.get(seed);
+  const rng = mulberry32(seed);
+  const c = document.createElement('canvas'); c.width = n * 7; c.height = 9;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#4a3a6a';
+  const P = [];
+  for (let gy = 0; gy < 4; gy++) for (let gx = 0; gx < 3; gx++) P.push([gx * 2, gy * 2]);
+  for (let k = 0; k < n; k++) {
+    const ox = k * 7 + 1, oy = 1;
+    const strokes = 2 + Math.floor(rng() * 3);
+    for (let s = 0; s < strokes; s++) {
+      const a = P[Math.floor(rng() * P.length)], b = P[Math.floor(rng() * P.length)];
+      const steps = Math.max(Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1]), 1);
+      for (let t = 0; t <= steps; t++) ctx.fillRect(ox + Math.round(a[0] + (b[0] - a[0]) * t / steps), oy + Math.round(a[1] + (b[1] - a[1]) * t / steps), 1, 1);
+    }
+  }
+  const url = c.toDataURL();
+  runeCache.set(seed, url);
+  return url;
+}
 
 export class UI {
   constructor(game) {
@@ -41,6 +68,7 @@ export class UI {
     const give = (st) => { if (!st) return; const left = inv.add(st); if (left) g.entities.spawnItem(g.player.x, g.player.y + 1, g.player.z, { ...st, count: left }); };
     for (const st of this.craftGrid) give(st);
     this.craftGrid = [];
+    if (this.work) { for (const st of this.work) give(st); this.work = null; } // enchanting table / anvil inputs
     give(this.cursor); this.cursor = null;
     this.renderCursor();
     this.open = null;
@@ -48,28 +76,23 @@ export class UI {
     if (this.chest) this.game.audio.play('chest_close', [this.chest.x + 0.5, this.chest.y + 0.5, this.chest.z + 0.5]);
     this.furnace = null;
     this.chest = null;
+    this.enchTick = null;
+    this.refreshers = [];
     this.clear();
     g.onUIClosed();
   }
 
   // ---- generic slot handling -------------------------------------------------
-  slotHTML(st) {
-    if (!st) return '';
-    const d = ITEMS[st.id];
-    let h = `<img src="${iconURL(st.id)}">`;
-    if (st.count > 1) h += `<span class="count">${st.count}</span>`;
-    if (d && d.durability && st.damage > 0) {
-      const f = 1 - st.damage / d.durability;
-      h += `<div class="dura"><div style="width:${f * 100}%;background:hsl(${f * 120},90%,50%)"></div></div>`;
-    }
-    return h;
-  }
+  slotHTML(st) { return stackHTML(st); }
 
   renderCursor() {
     if (!this.cursor) { this.cursorEl.classList.add('hidden'); return; }
     this.cursorEl.classList.remove('hidden');
-    this.cursorEl.innerHTML = `<img src="${iconURL(this.cursor.id)}">${this.cursor.count > 1 ? `<span class="count">${this.cursor.count}</span>` : ''}`;
+    const c = this.cursor, url = stackIconURL(c);
+    this.cursorEl.innerHTML = `<img src="${url}">${hasEnch(c) ? `<div class="glint-fx" style="-webkit-mask-image:url(${url});mask-image:url(${url})"></div>` : ''}${c.count > 1 ? `<span class="count">${c.count}</span>` : ''}`;
   }
+
+  showTooltip(html) { this.tooltipEl.innerHTML = html; this.tooltipEl.classList.remove('hidden'); }
 
   makeSlot(get, set, opts = {}) {
     const s = document.createElement('div');
@@ -85,7 +108,7 @@ export class UI {
     s.addEventListener('contextmenu', (e) => e.preventDefault());
     s.addEventListener('mouseenter', () => {
       const st = get();
-      if (st) { this.tooltipEl.textContent = ITEMS[st.id].name; this.tooltipEl.classList.remove('hidden'); }
+      if (st) this.showTooltip(tooltipHTML(st));
     });
     s.addEventListener('mouseleave', () => this.tooltipEl.classList.add('hidden'));
     this.refreshers.push(refresh);
@@ -97,11 +120,17 @@ export class UI {
     if (shift && st && opts.quickMove) { opts.quickMove(); return; }
     const c = this.cursor;
     if (c && opts.filter && !opts.filter(c)) return; // e.g. only armour of the right kind fits an armour slot
-    if (opts.takeOnly) { if (st && (!c || (c.id === st.id && c.count + st.count <= maxStack(st.id)))) { this.cursor = c ? { ...c, count: c.count + st.count } : st; set(null); } return; }
+    if (opts.takeOnly) { if (st && (!c || (canStack(c, st) && c.count + st.count <= maxStack(st.id)))) { this.cursor = c ? { ...c, count: c.count + st.count } : st; set(null); } return; }
+    if (opts.single && c) {
+      // one-item slots (enchanting table, anvil): place a single item, swap only single items
+      if (!st) { set({ ...c, count: 1 }); c.count--; if (c.count <= 0) this.cursor = null; }
+      else if (c.count === 1) { set(c); this.cursor = st; }
+      return;
+    }
     if (!right) {
       if (!c) { this.cursor = st; set(null); }
       else if (!st) { set(c); this.cursor = null; }
-      else if (st.id === c.id && !ITEMS[st.id].durability) {
+      else if (canStack(st, c)) {
         const n = Math.min(c.count, maxStack(st.id) - st.count);
         st.count += n; c.count -= n;
         if (c.count <= 0) this.cursor = null;
@@ -113,7 +142,7 @@ export class UI {
         this.cursor = { ...st, count: half };
         st.count -= half;
         set(st.count > 0 ? st : null);
-      } else if (c && (!st || (st.id === c.id && st.count < maxStack(st.id) && !ITEMS[st.id].durability))) {
+      } else if (c && (!st || (canStack(st, c) && st.count < maxStack(st.id)))) {
         if (!st) set({ ...c, count: 1 }); else { st.count++; set(st); }
         c.count--;
         if (c.count <= 0) this.cursor = null;
@@ -149,7 +178,7 @@ export class UI {
       let left = st.count;
       for (let k = range[0]; k < range[1] && left; k++) {
         const s = inv.slots[k];
-        if (s && s.id === st.id && !ITEMS[s.id].durability) { const n = Math.min(left, maxStack(s.id) - s.count); s.count += n; left -= n; }
+        if (canStack(s, st)) { const n = Math.min(left, maxStack(s.id) - s.count); s.count += n; left -= n; }
       }
       for (let k = range[0]; k < range[1] && left; k++) if (!inv.slots[k]) { inv.slots[k] = { ...st, count: left }; left = 0; }
       if (left) inv.slots[i] = { ...st, count: left };
@@ -348,7 +377,7 @@ export class UI {
       let left = st.count;
       for (let k = from; k < to && left; k++) {
         const s = slots[k];
-        if (s && s.id === st.id && !ITEMS[s.id].durability) { const n = Math.min(left, maxStack(s.id) - s.count); s.count += n; left -= n; }
+        if (canStack(s, st)) { const n = Math.min(left, maxStack(s.id) - s.count); s.count += n; left -= n; }
       }
       for (let k = from; k < to && left; k++) if (!slots[k]) { slots[k] = { ...st, count: left }; left = 0; }
       return left;
@@ -376,6 +405,184 @@ export class UI {
     });
     this.chest = c;
     if (this.game.net && this.game.net.isClient) this.game.net.openContainer('chest', x, y, z, c); // the host's chest
+  }
+
+  /** A single-item work slot (enchanting table / anvil) whose stack lives in this.work[i]. */
+  workSlot(i, opts = {}) {
+    const inv = this.game.player.inventory;
+    return this.makeSlot(() => this.work[i], (v) => { this.work[i] = v; }, {
+      single: opts.single, filter: opts.filter,
+      quickMove: () => { const st = this.work[i]; if (!st) return; const left = inv.add(st); this.work[i] = left ? { ...st, count: left } : null; },
+    });
+  }
+
+  /** Enchanting table: an item, Azurite and three offers powered by nearby bookshelves. */
+  openEnchanting(x, y, z) {
+    this.game.input.unlock();
+    const g = this.game, p = g.player, inv = p.inventory;
+    this.work = [null, null]; // [item, azurite]
+    const shelves = () => countBookshelves((a, b, c) => g.world.getBlock(a, b, c), x, y, z);
+    this.showContainer('enchanting', 'Enchant', (panel) => {
+      const top = el('<div class="ench-top"></div>');
+      const left = el('<div class="ench-inputs"></div>');
+      const book = el('<div class="ench-book"><div class="pg l"></div><div class="pg r"></div></div>');
+      left.appendChild(book);
+      const slots = el('<div class="ench-slots"></div>');
+      const itemSlot = this.workSlot(0, { single: true, filter: (st) => isEnchantable({ ...st, count: 1 }) });
+      itemSlot.title = 'Item to enchant';
+      const azSlot = this.workSlot(1, { filter: (st) => st.id === I.AZURITE });
+      azSlot.classList.add('azurite-slot');
+      azSlot.title = 'Azurite';
+      slots.append(itemSlot, azSlot);
+      left.appendChild(slots);
+      top.appendChild(left);
+      const offersEl = el('<div class="ench-offers"></div>');
+      top.appendChild(offersEl);
+      panel.appendChild(top);
+      const info = el('<div class="recipes-hint ench-info"></div>');
+      panel.appendChild(info);
+      const rows = [0, 1, 2].map((slot) => {
+        const row = el(`<button class="ench-offer"><img class="runes"><span class="req"><span class="az">${slot + 1}</span></span><span class="cost"></span></button>`);
+        row.addEventListener('mouseenter', () => { if (row.tip) this.showTooltip(row.tip); });
+        row.addEventListener('mouseleave', () => this.tooltipEl.classList.add('hidden'));
+        row.addEventListener('mousedown', (e) => { e.preventDefault(); this.enchantPick(slot, shelves()); this.refreshAll(); if (row.tip) this.showTooltip(row.tip); });
+        offersEl.appendChild(row);
+        return row;
+      });
+      let key = '';
+      this.refreshers.push(() => {
+        const st = this.work[0], n = shelves();
+        info.textContent = `Bookshelves: ${Math.min(15, n)} / 15  ·  Level ${p.xp.level}`;
+        const k = `${st ? st.id : -1}:${p.enchSeed}:${n}:${p.xp.level}:${this.work[1] ? this.work[1].count : 0}`;
+        if (k === key) return;
+        key = k;
+        const offers = st && isEnchantable(st) ? tableOffers(st.id, p.enchSeed, n) : [null, null, null];
+        const az = this.work[1] ? this.work[1].count : 0;
+        rows.forEach((row, slot) => {
+          const o = offers[slot];
+          const ok = !!o && (p.creative || (az >= slot + 1 && p.xp.level >= o.cost));
+          row.disabled = !o;
+          row.classList.toggle('locked', !!o && !ok);
+          row.querySelector('.cost').textContent = o ? o.cost : '';
+          const runes = row.querySelector('.runes');
+          if (o) runes.src = runeStrip(p.enchSeed * 3 + slot); else runes.removeAttribute('src');
+          runes.style.visibility = o ? 'visible' : 'hidden';
+          row.querySelector('.req').style.visibility = o ? 'visible' : 'hidden';
+          if (!o) { row.tip = null; return; }
+          const lack = [];
+          if (!p.creative && p.xp.level < o.cost) lack.push(`Level ${o.cost} required`);
+          if (!p.creative && az < slot + 1) lack.push(`${slot + 1} Azurite needed`);
+          row.tip = `<div class="tt-name ench">${enchName(o.hint[0], o.hint[1])} . . . ?</div>`
+            + `<div class="tt-ench">${slot + 1} Azurite, ${slot + 1} Level${slot ? 's' : ''}</div>`
+            + lack.map((l) => `<div class="tt-bad">${l}</div>`).join('');
+        });
+      });
+      panel.appendChild(this.inventoryGrid({
+        accept: (st) => {
+          if (st.id === I.AZURITE) {
+            if (!this.work[1]) { this.work[1] = st; return true; }
+            if (canStack(this.work[1], st)) {
+              const n = Math.min(st.count, maxStack(st.id) - this.work[1].count);
+              this.work[1].count += n; st.count -= n;
+              return st.count <= 0 ? true : n ? 'partial' : false;
+            }
+            return false;
+          }
+          if (!this.work[0] && isEnchantable({ ...st, count: 1 })) {
+            this.work[0] = { ...st, count: 1 };
+            st.count--;
+            return st.count <= 0 ? true : 'partial';
+          }
+          return false;
+        },
+      }));
+      // the little book on the screen flutters its pages
+      this.enchTick = () => { book.style.setProperty('--flip', String(Math.sin(performance.now() / 380) * 0.5 + 0.5)); };
+    });
+    this.refreshAll();
+  }
+
+  /** Take enchanting offer `slot`: pay levels and azurite, roll the enchantments. */
+  enchantPick(slot, shelves) {
+    const g = this.game, p = g.player, st = this.work[0];
+    if (!st || !isEnchantable(st)) return;
+    const o = tableOffers(st.id, p.enchSeed, shelves)[slot];
+    if (!o) return;
+    const az = this.work[1] ? this.work[1].count : 0;
+    if (!p.creative && (az < slot + 1 || p.xp.level < o.cost)) return;
+    this.work[0] = applyOffer(st, rollOffer(st.id, p.enchSeed, slot, o.cost));
+    if (!p.creative) {
+      spendLevels(p.xp, slot + 1);
+      this.work[1].count -= slot + 1;
+      if (this.work[1].count <= 0) this.work[1] = null;
+    }
+    p.enchSeed = (Math.random() * 0x7fffffff) | 0;
+    g.audio.play('enchant');
+    if (g.milestones) g.milestones.event('enchant');
+  }
+
+  /** Anvil: repair two of the same item (or with its material) and apply enchanted books. */
+  openAnvil(x, y, z) {
+    this.game.input.unlock();
+    const g = this.game, p = g.player, inv = p.inventory;
+    this.work = [null, null];
+    const combine = () => (this.work ? anvilCombine(this.work[0], this.work[1]) : null);
+    this.showContainer('anvil', 'Repair &amp; Enchant', (panel) => {
+      const top = el('<div class="inv-top anvil-top"></div>');
+      const a = this.workSlot(0, { single: true }), b = this.workSlot(1);
+      top.append(a, el('<div class="plus">+</div>'), b, el('<div class="arrow">➜</div>'));
+      const out = this.makeSlot(() => { const r = combine(); return r ? r.result : null; }, () => {}, {
+        onClick: (e) => this.anvilTake(x, y, z, e.shiftKey),
+      });
+      out.classList.add('anvil-out');
+      top.appendChild(out);
+      panel.appendChild(top);
+      const cost = el('<div class="anvil-cost"></div>');
+      panel.appendChild(cost);
+      this.refreshers.push(() => {
+        const r = combine();
+        const too = r && r.cost >= ANVIL_MAX_COST && !p.creative;
+        cost.className = 'anvil-cost' + (!r ? '' : too || (!p.creative && p.xp.level < r.cost) ? ' bad' : ' ok');
+        cost.textContent = !r ? (this.work && this.work[0] && this.work[1] ? 'These cannot be combined' : 'Put an item on the left, and a matching item, its material or an Enchanted Book on the right')
+          : too ? 'Too Expensive!' : `Level cost: ${r.cost}`;
+        out.classList.toggle('blocked', !!r && (too || (!p.creative && p.xp.level < r.cost)));
+      });
+      panel.appendChild(this.inventoryGrid({
+        accept: (st) => {
+          if (!this.work[0] && ITEMS[st.id] && (ITEMS[st.id].durability || st.id === I.ENCHANTED_BOOK)) { this.work[0] = { ...st, count: 1 }; st.count--; return st.count <= 0 ? true : 'partial'; }
+          if (!this.work[1]) { this.work[1] = st; return true; }
+          return false;
+        },
+      }));
+    });
+    this.refreshAll();
+  }
+
+  anvilTake(x, y, z, shift) {
+    const g = this.game, p = g.player, inv = p.inventory;
+    const r = this.work && anvilCombine(this.work[0], this.work[1]);
+    if (!r) return;
+    if (!p.creative && (r.cost >= ANVIL_MAX_COST || p.xp.level < r.cost)) return;
+    if (shift) { if (inv.add(r.result)) return; } // no room: nothing happens
+    else if (this.cursor) return;
+    else this.cursor = r.result;
+    this.work[0] = null;
+    const right = this.work[1];
+    right.count -= r.use;
+    if (right.count <= 0) this.work[1] = null;
+    if (!p.creative) spendLevels(p.xp, r.cost);
+    g.audio.play('anvil', [x + 0.5, y + 0.5, z + 0.5]);
+    if (g.milestones) g.milestones.event('anvil');
+    // 12 % chance the anvil wears a step (meta bits 1-2); worn out three times, it breaks
+    const w = g.world;
+    if (!p.creative && w.getBlock(x, y, z) === B.ANVIL && Math.random() < 0.12) {
+      const m = w.getMeta(x, y, z), wear = ((m >> 1) & 3) + 1;
+      if (wear > 2) {
+        w.setBlockUrgent(x, y, z, B.AIR);
+        g.audio.play('break_metal', [x + 0.5, y + 0.5, z + 0.5]);
+        this.close();
+      } else w.setBlockUrgent(x, y, z, B.ANVIL, (m & 1) | (wear << 1));
+    }
   }
 
   openChat(prefix = '') {
@@ -478,6 +685,7 @@ export class UI {
   /** Called each frame while a furnace screen is open */
   tickOpen() {
     if (this.open === 'furnace') for (const r of this.refreshers) r();
+    if (this.open === 'enchanting' && this.enchTick) this.enchTick();
     if (this.open === 'sleep' && this.sleepEl) {
       const s = this.game.player.sleeping;
       this.sleepEl.style.background = `rgba(4,6,14,${s ? Math.min(1, s.ticks / 70) : 0})`;

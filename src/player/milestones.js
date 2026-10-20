@@ -28,6 +28,9 @@ export const MILESTONES = [
   { id: 'golem', title: 'Heavy Metal', desc: 'Build an Ironguard', icon: B.IRON_BLOCK, event: 'golem' },
   { id: 'trade', title: 'Fair Trade', desc: 'Trade with a Settler', icon: I.BERYL, event: 'trade' },
   { id: 'dungeon', title: 'Cage Breaker', desc: 'Break a monster spawner', icon: B.SPAWNER, event: 'spawner' },
+  { id: 'enchanter', title: 'Spellbound', desc: 'Make an enchanting table', icon: B.ENCHANTING_TABLE, inv: (g) => has(g, B.ENCHANTING_TABLE) },
+  { id: 'enchant', title: 'Words of Power', desc: 'Enchant an item at an enchanting table', icon: I.ENCHANTED_BOOK, event: 'enchant' },
+  { id: 'anvil', title: 'Good as New', desc: 'Repair or combine gear at an anvil', icon: B.ANVIL, event: 'anvil' },
 ];
 
 export class Milestones {

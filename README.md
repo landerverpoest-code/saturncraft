@@ -142,6 +142,7 @@ src/
     mesher.js              face-culled section mesher with smooth light + AO
     fluids.js              water / lava flow; gravity blocks live in world.js
     mining.js              break times and block drops
+    enchantments.js        enchantments: table offers, anvil combining, effects
     textures.js            procedural pixel art for every block face
     save.js                IndexedDB persistence (RLE-compressed chunks)
   physics/                 constants.js (vanilla values), body.js (AABB, step-up, fluids)
@@ -151,7 +152,7 @@ src/
   entities/                items, falling blocks, arrows, explosions
   sky/                     suns.js (pure orbital model), sky.js (lights, shadows, colours),
                            skyShader.js (atmosphere, suns, planet), gasGiant.js (ring mesh + particles)
-  render/                  chunkRenderer.js, terrainMaterial.js, overlays.js, particles.js
+  render/                  chunkRenderer.js, terrainMaterial.js, overlays.js, particles.js, enchantBooks.js
   ui/                      hud.js, screens.js, icons.js, input.js, style.css
   audio/                   audio.js (procedural Web Audio effects)
   net/                     multiplayer: protocol.js (wire format), transport.js (PeerJS / loopback),
@@ -351,6 +352,8 @@ poison from eyes) follow the documented table.
 * Ironguards (iron golems): one guards every village well; 100 health, they smash hostile mobs (not Fizzlers) within 16 blocks for 7–21 damage and fling them up, turn on players who hurt Settlers or them, drop 3–5 iron and redblooms; build your own from a T of four iron blocks with a pumpkin on top (it never turns on you)
 * Throwable snowballs and eggs (right-click): they knock mobs back without damage and burst on impact; an egg hatches a baby Cluckling 1 in 8 (four of them 1 in 32); shared in multiplayer
 * Cobblestone and mossy cobblestone walls (6 → 6; connect to walls, gates and full blocks, no post on straight runs, 1.5-high collision) and oak trapdoors (6 planks → 2; lie on the bottom or top half, open against their hinge side with right-click)
+* Enchanting: the enchanting table (book + 2 diamonds + 4 obsidian; light 7, an open book floats above it and turns to face you) takes an item and Azurite and offers three enchantments whose level costs follow the reference formula (random 1–8 plus bookshelves in the 2-block ring with air in between, max 15 → top 30); picking one costs 1–3 levels and 1–3 Azurite and rolls enchantments with the reference enchantability (per material) and weighting; books become Enchanted Books. Enchantments (Saturncraft names): **Keen** (+damage), **Hallowed** (+damage to the undead), **Shove** (knockback), **Emberbrand** (sets targets alight), **Plunder** (more mob drops), **Swiftdig** (mining speed + level² + 1), **Gentle Hand** (blocks drop themselves), **Bounty** (more ore drops), **Steadfast** (durability chance), **Bulwark** (armour protection, 4 % per level, max 80 %), **Featherstep** (fall protection, boots), **Strongdraw** (bow damage) and **Endless** (arrows are not used up). Enchanted items glint purple in slots, on the ground and in the hand, list their enchantments in the tooltip, never stack with plain items and survive saves, chests and multiplayer. `/enchant <name> [level]` enchants the held item
+* Anvil (3 iron blocks + 4 iron ingots; falls like sand): combine two of the same item to repair it (both durabilities + 12 %), repair with its material (a quarter per unit) and apply Enchanted Books (levels merge: equal levels go up by one); level costs follow the reference rarity multipliers plus the doubling prior-work penalty, "Too Expensive!" from 40 levels; the anvil wears out after a few uses
 * Snow layers (1–8 layers of 2/16; a single layer has no collision): cold biomes are generated with a snow cover on ground and treetops, snowfall adds single layers and freezes still water, light above 11 melts snow and ice; shovels dig snowballs (4 → snow block, 3 snow blocks → 6 layers), placing snow on snow stacks it
 * Grass and foliage tints blend smoothly across biome borders (blurred, world-aligned tint grid)
 * Shamblers hunt Settlers when no player is around
@@ -378,7 +381,7 @@ poison from eyes) follow the documented table.
 
 **Not yet implemented**
 
-* Enchanting, anvils, shields, potions and status-effect UI (only hunger/poison effects exist); armour is not drawn on the third-person player model
+* Shields, potions and status-effect UI (only hunger/poison effects exist); armour is not drawn on the third-person player model
 * Taming of animals other than Howlers, cocoa and ink sacs
 * Large structures beyond villages, dungeons, sanctums and bastions; villager breeding and job sites; redstone-style circuitry; Hollow outer-island cities
 * Double chests and other storage containers, corner-shaped stairs
@@ -501,6 +504,10 @@ Code: `src/world/dimensions/` (registry and scaling, generators, portal logic, s
   continuity across chunk borders, lighting and cross-chunk light, water and
   lava spread distances, infinite sources, obsidian, falling sand, explosion
   damage, save encoding
+* **enchanting** — table level costs (reference formula, bookshelf ring and
+  cap), enchantability and weighted selection, exclusive enchantments, offers,
+  Swiftdig/Keen/Hallowed/Steadfast/Bounty/Gentle Hand/Bulwark/Strongdraw/Plunder
+  effects, stack merging and network round trips, anvil repair/book costs
 
 ## Build history (vertical slices)
 

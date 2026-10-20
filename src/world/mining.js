@@ -2,6 +2,7 @@
 import { BLOCKS, B, TIER, TOOL } from './blocks.js';
 import { I, HAND, WOOL_ITEMS } from './items.js';
 import { LEAF_SAPLING } from './trees.js';
+import { swiftdigBonus, silkDropsSelf, bountyCount } from './enchantments.js';
 
 /** True if this tool type is the efficient one for the block. */
 export function isCorrectToolType(block, tool) {
@@ -22,7 +23,7 @@ export function canHarvest(blockId, tool = HAND) {
  * Fraction of the block destroyed per game tick.
  * @param {number} blockId
  * @param {object} tool  tool stats (HAND for bare hand)
- * @param {{onGround?: boolean, inWater?: boolean}} ctx
+ * @param {{onGround?: boolean, inWater?: boolean, swiftdig?: number}} ctx  swiftdig = the tool's Swiftdig level
  */
 export function breakProgressPerTick(blockId, tool = HAND, ctx = {}) {
   const b = BLOCKS[blockId];
@@ -30,6 +31,7 @@ export function breakProgressPerTick(blockId, tool = HAND, ctx = {}) {
   if (b.hardness === 0) return 1;
   let speed = 1;
   if (isCorrectToolType(b, tool)) speed = tool.type === 'sword' ? 1.5 : tool.speed;
+  if (ctx.swiftdig && speed > 1) speed += swiftdigBonus(ctx.swiftdig);
   if (ctx.inWater) speed /= 5;
   if (ctx.onGround === false) speed /= 5;
   const divisor = canHarvest(blockId, tool) ? 30 : 100;
@@ -46,10 +48,27 @@ export function breakTicks(blockId, tool = HAND, ctx = {}) {
 
 const randInt = (rng, min, max) => min + Math.floor(rng() * (max - min + 1));
 
-/** Items dropped by a broken block. Returns [{id, count}]. */
-export function blockDrops(blockId, tool = HAND, rng = Math.random, meta = 0) {
+// Ore-like drops that Bounty multiplies
+const BOUNTY_DROPS = new Set(['coal', 'raw_iron', 'raw_gold', 'raw_copper', 'cinnabar', 'azurite', 'diamond', 'beryl']);
+
+/**
+ * Items dropped by a broken block. Returns [{id, count}].
+ * `ench` = the tool's enchantments: gentle_hand (the block drops itself), bounty (more ore drops).
+ */
+export function blockDrops(blockId, tool = HAND, rng = Math.random, meta = 0, ench = null) {
   const b = BLOCKS[blockId];
-  if (!b || b.drops === null || !canHarvest(blockId, tool)) return [];
+  if (!b || !canHarvest(blockId, tool)) return [];
+  if (ench && ench.gentle_hand && silkDropsSelf(blockId)) return [{ id: blockId, count: 1 }];
+  if (b.drops === null) return [];
+  const out = baseDrops(blockId, b, rng, meta);
+  const bounty = ench ? ench.bounty | 0 : 0;
+  if (bounty && (BOUNTY_DROPS.has(b.drops) || (typeof b.drops === 'object' && b.drops && blockId === B.EMBERQUARTZ_ORE))) {
+    for (const o of out) o.count = bountyCount(o.count, bounty, rng);
+  }
+  return out;
+}
+
+function baseDrops(blockId, b, rng, meta) {
   const d = b.drops;
   if (d === 'self') return [{ id: blockId, count: 1 }];
   if (typeof d === 'number') return [{ id: d, count: 1 }];

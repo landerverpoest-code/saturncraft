@@ -132,6 +132,8 @@ export class Audio {
       case 'door_open': this.noise(t, 0.12, 900, 2, 0.25 * gain, out); this.tone(t, 0.18, 220, 300, 0.12 * gain, out, 'triangle'); break;
       case 'door_close': this.noise(t, 0.07, 600, 1.5, 0.4 * gain, out, 'lowpass'); this.tone(t, 0.08, 160, 110, 0.15 * gain, out, 'triangle'); break;
       case 'orb': this.tone(t, 0.12, 1200 + Math.random() * 500, 1800, 0.12 * gain, out, 'sine'); break;
+      case 'enchant': for (let k = 0; k < 5; k++) this.tone(t + k * 0.06, 0.35, 700 + k * 180, 1400 + k * 220, 0.08 * gain, out, 'sine'); this.noise(t, 0.4, 5000, 1, 0.06 * gain, out, 'highpass'); break;
+      case 'anvil': this.tone(t, 0.5, 1400, 1300, 0.18 * gain, out, 'triangle'); this.tone(t, 0.35, 2100, 1900, 0.1 * gain, out, 'sine'); this.noise(t, 0.06, 3000, 3, 0.3 * gain, out); break;
       case 'levelup': this.tone(t, 0.5, 600, 1200, 0.2 * gain, out, 'triangle'); this.tone(t + 0.1, 0.5, 900, 1600, 0.15 * gain, out, 'sine'); break;
       case 'equip': this.noise(t, 0.15, 2500, 2, 0.25 * gain, out); this.tone(t, 0.1, 500, 700, 0.1 * gain, out, 'square'); break;
       case 'ignite': this.noise(t, 0.05, 3000, 4, 0.3 * gain, out); this.tone(t, 0.04, 1800, 1200, 0.1 * gain, out, 'square'); this.noise(t + 0.06, 0.35, 900, 0.7, 0.2 * gain, out); break;

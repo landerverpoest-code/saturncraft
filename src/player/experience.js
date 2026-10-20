@@ -31,3 +31,11 @@ export function splitOrbs(amount) {
 
 /** Experience dropped on death: 7 per level, at most 100. */
 export function deathXp(level) { return Math.min(100, 7 * level); }
+
+/** Spend whole levels (enchanting, anvil); the progress bar is kept (clamped to the new level). */
+export function spendLevels(xp, n) {
+  let removed = 0;
+  for (let k = 0; k < n && xp.level > 0; k++) { xp.level--; removed += xpToNextLevel(xp.level); }
+  xp.points = Math.min(xp.points, xpToNextLevel(xp.level) - 1);
+  xp.total = Math.max(0, xp.total - removed);
+}

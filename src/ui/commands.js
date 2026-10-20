@@ -1,9 +1,10 @@
 // Chat commands (T or / opens the chat). Each returns a message to print.
-import { ITEMS, maxStack } from '../world/items.js';
+import { ITEMS, I, maxStack } from '../world/items.js';
 import { BLOCKS } from '../world/blocks.js';
 import { MOBS, MOB_KEYS } from '../mobs/mobTypes.js';
 import { skyState } from '../sky/suns.js';
 import { addXp } from '../player/experience.js';
+import { ENCHANTS, ENCH_KEYS, canApply, compatible, enchName } from '../world/enchantments.js';
 import { villageInRegion, VILLAGE_REGION } from '../world/villages.js';
 import { nearestSanctum } from '../world/dimensions/sanctum.js';
 
@@ -22,6 +23,7 @@ export function itemByName(name) {
   }
   return ITEM_KEYS.get(name.toLowerCase().replace(/^minecraft:|^saturncraft:/, '').replace(/[^a-z0-9]+/g, '_'));
 }
+
 
 /** mob lookup by key ("shambler") or by the vanilla role it fills ("zombie") */
 export function mobByName(name) {
@@ -53,6 +55,7 @@ export const HELP = [
   '/weather <clear|rain|thunder> [ticks]',
   '/tp <x> <y> <z>  (~ for relative)',
   '/give <item> [count]',
+  '/enchant <name> [level]  (the held item; names: ' + ENCH_KEYS.join(', ') + ')',
   '/summon <mob> [x y z]',
   '/xp <amount> [levels]',
   '/locate <village|sanctum|bastion>',
@@ -132,6 +135,22 @@ export function runCommand(game, text) {
       }
       game.audio.play('pop');
       return `Gave ${total} [${ITEMS[id].name}]`;
+    }
+    case 'enchant': {
+      const st = p.inventory.selectedStack;
+      if (!args[0]) return 'Usage: /enchant <name> [level]';
+      const key = ENCH_KEYS.find((k) => k === args[0].toLowerCase() || ENCHANTS[k].name.toLowerCase().replace(/ /g, '_') === args[0].toLowerCase());
+      if (!key) return `Unknown enchantment ${args[0]} (${ENCH_KEYS.join(', ')})`;
+      if (!st) return 'Hold the item to enchant';
+      if (!canApply(key, st.id, true)) return `${enchName(key, 1)} cannot go on ${ITEMS[st.id].name}`;
+      const lvl = Math.max(1, Math.min(ENCHANTS[key].max, parseInt(args[1] || '1', 10) || 1));
+      const clash = Object.keys(st.ench || {}).find((k) => !compatible(k, key) && k !== key);
+      if (clash) return `${enchName(key, 1)} cannot be combined with ${enchName(clash, 1)}`;
+      if (st.id === I.BOOK) st.id = I.ENCHANTED_BOOK;
+      st.ench = { ...(st.ench || {}), [key]: lvl };
+      p.inventory.changed();
+      game.hud.lastHotbarKey = null; game.hud.lastSel = -1;
+      return `Enchanted ${ITEMS[st.id].name} with ${enchName(key, lvl)}`;
     }
     case 'summon': {
       if (/^lightning(_bolt)?$/i.test(args[0] || '')) {

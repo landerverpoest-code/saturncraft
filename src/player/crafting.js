@@ -41,6 +41,8 @@ shapeless([B.PUMPKIN, I.EGG], I.PUMPKIN_PIE, 1);
 shapeless([I.PAPER, I.PAPER, I.PAPER, I.LEATHER], I.BOOK, 1);
 shaped(['PPP', 'BBB', 'PPP'], { P: 'planks', B: I.BOOK }, B.BOOKSHELF, 1);
 shaped(['BB', 'BB'], { B: I.BRICK }, B.BRICKS, 1);
+shaped([' B ', 'DOD', 'OOO'], { B: I.BOOK, D: I.DIAMOND, O: B.OBSIDIAN }, B.ENCHANTING_TABLE, 1);
+shaped(['BBB', ' I ', 'III'], { B: B.IRON_BLOCK, I: I.IRON_INGOT }, B.ANVIL, 1);
 shaped(['GGG', 'GGG'], { G: B.GLASS }, B.GLASS_PANE, 16);
 // dyes: from bones, flowers, azurite and coal (black; the reference uses ink sacs), then mixed
 const D = (c) => DYES[COLOR[c]];

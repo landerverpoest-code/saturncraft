@@ -686,6 +686,40 @@ const GEN = {
   obsidian: (c) => c.noiseFill(['#140f1f', '#1d1530', '#0c0814', '#2c2045', '#3a2a5a'].map(hex), 0.4),
   wool: (c) => c.noiseFill(['#e9ecec', '#dfe3e3', '#f4f6f6', '#d4d8d8'].map(hex), 0.5),
   coal_block: (c) => c.noiseFill(['#1a1a1a', '#242424', '#121212', '#2e2e2e'].map(hex), 0.2),
+  // enchanting table: crimson cloth top with a gold-trimmed rune square, obsidian-and-diamond sides
+  enchanting_table_top: (c) => {
+    const red = ['#7a1a26', '#8c2230', '#6a1420', '#9a2a38'].map(hex), gold = hex('#d8b040'), dark = hex('#2a1018');
+    c.noiseFill(red, 0.4);
+    for (let i = 0; i < 16; i++) { c.set(i, 0, dark); c.set(i, 15, dark); c.set(0, i, dark); c.set(15, i, dark); }
+    for (let i = 3; i < 13; i++) { c.set(i, 3, gold); c.set(i, 12, gold); c.set(3, i, gold); c.set(12, i, gold); }
+    // a little rune in the middle
+    for (const [x, y] of [[7, 5], [8, 5], [6, 6], [9, 6], [7, 7], [8, 8], [6, 9], [9, 9], [7, 10], [8, 10], [5, 7], [10, 8]]) c.set(x, y, shade(gold, 0.85 + c.h(x, y) * 0.3));
+    for (const [x, y] of [[1, 1], [14, 1], [1, 14], [14, 14]]) c.set(x, y, hex('#5fe6dc'));
+  },
+  enchanting_table_side: (c) => {
+    GEN.obsidian(c);
+    const red = hex('#8c2230'), gold = hex('#d8b040');
+    // the cloth hangs over the top edge (rows 4..7 of the 3/4-high side)
+    for (let x = 0; x < 16; x++) for (let y = 4; y < 8; y++) {
+      const hang = y < 6 || (y === 6 && x % 4 !== 0) || (y === 7 && x % 4 === 2);
+      if (hang) c.set(x, y, shade(red, 0.85 + c.h(x, y) * 0.3));
+    }
+    for (let x = 0; x < 16; x++) if (x % 4 !== 0) c.set(x, 5, gold);
+    // diamond corner studs
+    for (const x of [1, 14]) for (const y of [10, 13]) c.set(x, y, hex('#5fe6dc'));
+  },
+  anvil_side: (c) => {
+    const p = ['#3e3e42', '#46464a', '#38383c', '#4e4e52'].map(hex);
+    c.noiseFill(p, 0.35);
+    for (let x = 0; x < 16; x++) { c.set(x, 0, hex('#5a5a60')); c.set(x, 15, hex('#2a2a2e')); }
+  },
+  anvil_top: (c) => {
+    const p = ['#4a4a4e', '#525256', '#44444a'].map(hex);
+    c.noiseFill(p, 0.3);
+    // a worn, polished striking face
+    for (let y = 5; y < 11; y++) for (let x = 2; x < 14; x++) c.set(x, y, shade(hex('#6a6a70'), 0.92 + c.h(x, y) * 0.16));
+    for (let x = 2; x < 14; x++) { c.set(x, 5, hex('#7a7a80')); c.set(x, 10, hex('#3a3a3e')); }
+  },
   iron_block: (c) => metalBlock(c, '#d8d8d8'),
   gold_block: (c) => metalBlock(c, '#f5cd3a'),
   diamond_block: (c) => metalBlock(c, '#5fe6dc'),

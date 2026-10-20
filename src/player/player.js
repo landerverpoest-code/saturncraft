@@ -7,6 +7,7 @@ import { B, SOLID } from '../world/blocks.js';
 import { MIN_Y } from '../world/constants.js';
 import { armorReduce, armorTotals, wearArmor, BYPASSES_ARMOR } from './armor.js';
 import { newXp } from './experience.js';
+import { protectionFactor, protectionReduce } from '../world/enchantments.js';
 
 export class Player {
   constructor() {
@@ -34,6 +35,7 @@ export class Player {
     this.gamemode = 'survival';  // or 'creative'
     this.flying = false;
     this.xpDelay = 0;           // ticks until the next orb can be absorbed
+    this.enchSeed = (Math.random() * 0x7fffffff) | 0; // enchanting-table offers stay put until something is enchanted
   }
 
   get x() { return this.body.x; } get y() { return this.body.y; } get z() { return this.body.z; }
@@ -84,6 +86,9 @@ export class Player {
         this.inventory.changed();
       }
     }
+    // Bulwark (all damage but the void / starving) and Featherstep (falls) on worn armour
+    const epf = protectionFactor(this.inventory.armor, source);
+    if (epf > 0) amount = protectionReduce(amount, epf);
     this.health = Math.max(0, this.health - amount);
     this.hunger.addExhaustion(EXHAUSTION.DAMAGE);
     if (attacker && attacker.kind === 'mob') this.lastHurtBy = attacker; // tamed Howlers defend their owner

@@ -65,7 +65,7 @@ export function playerSaveData(p) {
   return {
     x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, health: p.health,
     food: p.hunger.food, saturation: p.hunger.saturation, exhaustion: p.hunger.exhaustion,
-    air: p.air, spawn: p.spawn, bed: p.bed || null, slots: p.inventory.slots, armor: p.inventory.armor, xp: p.xp, gamemode: p.gamemode, flying: p.flying, selected: p.inventory.selected,
+    air: p.air, spawn: p.spawn, bed: p.bed || null, slots: p.inventory.slots, armor: p.inventory.armor, xp: p.xp, gamemode: p.gamemode, flying: p.flying, selected: p.inventory.selected, enchSeed: p.enchSeed,
   };
 }
 
@@ -158,6 +158,7 @@ export function applyPlayerSave(game, d) {
   p.inventory.slots = d.slots.map((s) => (s ? { ...s } : null));
   if (d.armor) p.inventory.armor = d.armor.map((s) => (s ? { ...s } : null));
   if (d.xp) p.xp = { ...d.xp };
+  if (Number.isInteger(d.enchSeed)) p.enchSeed = d.enchSeed;
   if (d.gamemode) p.setGamemode(d.gamemode);
   p.flying = !!d.flying && p.creative;
   p.inventory.selected = d.selected;
