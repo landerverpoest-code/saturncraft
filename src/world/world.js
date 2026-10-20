@@ -6,6 +6,8 @@ import { MIN_Y, MAX_Y, WORLD_HEIGHT, SECTION_COUNT, cidx } from './constants.js'
 import { TerrainGenerator } from './generator.js';
 import { tickFluid, fluidDelay } from './fluids.js';
 import { tickFire, fireCanStay } from './fire.js';
+import { riftCanStay } from './dimensions/portal.js';
+import { createGenerator } from './dimensions/dims.js';
 import { SIDE_DIRS, selectionBox, collisionBoxes, SHAPED_COLLISION, DOOR_UPPER, BED_HEAD } from './shapes.js';
 
 export function chunkKey(cx, cz) { return (cx + 32768) * 65536 + (cz + 32768); }
@@ -36,8 +38,9 @@ export class Chunk {
 }
 
 export class World {
-  constructor(seed) {
+  constructor(seed, dimension = 'overworld') {
     this.seed = seed;
+    this.dimension = dimension; // 'overworld' | 'cinderdeep' | 'hollow' (see dimensions/dims.js)
     this.chunks = new Map();
     this.saved = new Map();      // modified chunks that were unloaded
     this.light = new LightEngine(this);
@@ -45,6 +48,18 @@ export class World {
     this.scheduled = new Map();  // posKey -> {x,y,z,tick}
     this.tickCount = 0;
     this.listeners = { blockChanged: [], fallingBlock: [], dropItems: [], fireCrackle: [] };
+    this._lastKey = -1; this._lastChunk = null;
+  }
+
+  /** Terrain generator of the current dimension (the overworld one stays in `gen`). */
+  get dimGenerator() { return createGenerator(this.dimension, this.seed); }
+
+  /** Switch to another dimension (call after unloading every chunk): new chunk store, no pending ticks. */
+  setDimension(dimension, saved = new Map()) {
+    this.dimension = dimension;
+    this.chunks = new Map();
+    this.saved = saved;
+    this.scheduled = new Map();
     this._lastKey = -1; this._lastChunk = null;
   }
 
@@ -177,6 +192,8 @@ export class World {
     if (d.fluid) this.scheduleTick(x, y, z, fluidDelay(id));
     else if (id === B.FIRE) {
       if (!fireCanStay(this, x, y, z)) this.setBlock(x, y, z, B.AIR);
+    } else if (id === B.RIFT) {
+      if (!riftCanStay(this, x, y, z)) this.setBlock(x, y, z, B.AIR); // portal sheet collapses with its frame
     } else if (d.gravity) {
       const below = this.getBlock(x, y - 1, z);
       if (!SOLID[below] || isFluid(below)) this.scheduleTick(x, y, z, 2);

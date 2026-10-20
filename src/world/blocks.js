@@ -41,13 +41,16 @@ export const B = {
   VINES: 117, LILY_PAD: 118, BROWN_MUSHROOM: 119, RED_MUSHROOM: 120,
   BROWN_MUSHROOM_BLOCK: 121, RED_MUSHROOM_BLOCK: 122, MUSHROOM_STEM: 123, MYCELIUM: 124,
   SKYBELL: 125, ROSETTE: 126,
+  // Other dimensions (ids from 160 up, see world/dimensions/): the Cinderdeep and the Hollow
+  CINDERSTONE: 160, GLOWSHARD: 161, MOURNSAND: 162, EMBERQUARTZ_ORE: 163, SCORCHED_BRICKS: 164, RIFT: 165,
+  HOLLOWSTONE: 166, HOLLOW_FRAME: 167, HOLLOW_FRAME_EYE: 168, HOLLOW_GATE: 169, WYRM_EGG: 170,
 };
 
 const defaults = {
   hardness: 1, resistance: 1, tool: null, tier: TIER.ANY, solid: true, opaque: true,
   shape: SHAPE.CUBE, layer: LAYER.OPAQUE, emit: 0, opacity: 15, gravity: false,
   replaceable: false, tint: null, flammable: false, drops: 'self', tex: null,
-  stack: 64, sound: 'stone', slipperiness: 0.6, fluid: null, needsSupport: false,
+  stack: 64, sound: 'stone', slipperiness: 0.6, fluid: null, needsSupport: false, speedFactor: 1,
 };
 
 export const BLOCKS = [];
@@ -220,6 +223,21 @@ def(B.MYCELIUM, 'Mycelium', { hardness: 0.6, resistance: 0.6, tool: TOOL.SHOVEL,
 def(B.SKYBELL, 'Skybell', plant);
 def(B.ROSETTE, 'Rosette', plant);
 def(B.GLASS_PANE, 'Glass Pane', { hardness: 0.3, resistance: 0.3, opaque: false, shape: SHAPE.PANE, layer: LAYER.CUTOUT, drops: null, sound: 'glass', tex: { all: 'glass' } });
+
+// The Cinderdeep (fiery underworld) and the Hollow (void dimension); see world/dimensions/.
+def(B.CINDERSTONE, 'Cinderstone', { hardness: 0.4, resistance: 0.4, tool: TOOL.PICKAXE, tier: TIER.WOOD });
+def(B.GLOWSHARD, 'Glowshard', { hardness: 0.3, resistance: 0.3, emit: 15, sound: 'glass', drops: { item: 'GLOWSHARD_DUST', min: 2, max: 4 } });
+def(B.MOURNSAND, 'Mournsand', { hardness: 0.5, resistance: 0.5, tool: TOOL.SHOVEL, sound: 'sand', speedFactor: 0.4 });
+def(B.EMBERQUARTZ_ORE, 'Emberquartz Ore', { ...ore(TIER.WOOD, { item: 'EMBER_QUARTZ', min: 1, max: 1 }), tex: { all: 'emberquartz_ore' } });
+def(B.SCORCHED_BRICKS, 'Scorched Bricks', { hardness: 2, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD });
+// Rift: the portal sheet inside a lit obsidian frame; meta 0 = spans x, 1 = spans z.
+def(B.RIFT, 'Rift', { hardness: -1, resistance: 0, solid: false, opaque: false, opacity: 0, layer: LAYER.TRANSLUCENT, emit: 11, drops: null, sound: 'glass' });
+def(B.HOLLOWSTONE, 'Hollowstone', { hardness: 3, resistance: 9, tool: TOOL.PICKAXE, tier: TIER.WOOD });
+def(B.HOLLOW_FRAME, 'Hollow Frame', { hardness: -1, resistance: 3600000, emit: 1, drops: null, tex: { top: 'hollow_frame_top', bottom: 'hollowstone', side: 'hollow_frame_side' } });
+def(B.HOLLOW_FRAME_EYE, 'Hollow Frame with Eye', { hardness: -1, resistance: 3600000, emit: 1, drops: null, tex: { top: 'hollow_frame_eye', bottom: 'hollowstone', side: 'hollow_frame_side' } });
+// Hollow Gate: the starry gateway to and from the Hollow (not solid; you fall in).
+def(B.HOLLOW_GATE, 'Hollow Gate', { hardness: -1, resistance: 3600000, solid: false, opaque: false, opacity: 0, emit: 15, drops: null, sound: 'glass' });
+def(B.WYRM_EGG, 'Wyrm Egg', { hardness: 3, resistance: 9, emit: 1, tex: { top: 'wyrm_egg_top', bottom: 'wyrm_egg_top', side: 'wyrm_egg' } });
 
 export const NUM_BLOCKS = BLOCKS.length;
 

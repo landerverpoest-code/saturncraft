@@ -1,5 +1,5 @@
 // Web Worker: terrain generation + initial lighting, and section meshing.
-import { TerrainGenerator } from './generator.js';
+import { createGenerator } from './dimensions/dims.js';
 import { computeChunkLight } from './lighting.js';
 import { meshSection } from './mesher.js';
 import { sectionVisibility, sectionHasSky } from './visibility.js';
@@ -10,13 +10,13 @@ let gen = null;
 self.onmessage = (e) => {
   const m = e.data;
   if (m.type === 'init') {
-    gen = new TerrainGenerator(m.seed);
+    gen = createGenerator(m.dimension || 'overworld', m.seed);
   } else if (m.type === 'gen') {
     const c = gen.generate(m.cx, m.cz);
     const light = new Uint8Array(CHUNK_VOLUME);
     computeChunkLight(c.blocks, light);
     self.postMessage(
-      { type: 'gen', jobId: m.jobId, cx: m.cx, cz: m.cz, blocks: c.blocks, meta: c.meta, light, biomes: c.biomes, colors: c.colors, heightmap: c.heightmap },
+      { type: 'gen', jobId: m.jobId, epoch: m.epoch, cx: m.cx, cz: m.cz, blocks: c.blocks, meta: c.meta, light, biomes: c.biomes, colors: c.colors, heightmap: c.heightmap },
       [c.blocks.buffer, c.meta.buffer, light.buffer, c.biomes.buffer, c.colors.buffer, c.heightmap.buffer],
     );
   } else if (m.type === 'mesh') {

@@ -191,6 +191,67 @@ MODELS.player = {
   ],
 };
 
+// ---- Cinderdeep and Hollow mobs ----
+// Ashwraith: a huge pale shroud with a sorrowful face and nine trailing tendrils.
+MODELS.ashwraith = {
+  parts: [
+    ['head', [60, 52, 60], [0, 38, 0], [0, 0, 0], '#e6e1da', { face: 'ashwraith' }],
+    ...[-1, 0, 1].flatMap((i) => [-1, 0, 1].map((j) => [`tendril${i}${j}`, [5, 30, 5], [i * 18, 12, j * 18], [0, -15, 0], '#d4cec6', { anim: 'tendril', idx: (i + 1) * 3 + j + 1 }])),
+  ],
+};
+// Cinder Brute: hulking fire-immune brawler, charred hide split by molten seams.
+MODELS.cinder_brute = {
+  parts: [
+    ['head', [10, 9, 9], [0, 26, 0], [0, 4.5, -1], '#4a221c', { face: 'cinder_brute' }],
+    ['tuskL', [2, 4, 2], [0, 26, 0], [3.5, 1.5, -6], '#e8d8b0'],
+    ['tuskR', [2, 4, 2], [0, 26, 0], [-3.5, 1.5, -6], '#e8d8b0'],
+    ['body', [12, 14, 7], [0, 19, 0], [0, 0, 0], '#5a2a22'],
+    ['seam', [6, 8, 1], [0, 19, 0], [0, 1, -3.8], '#ff7a1a', { emissive: '#ff5a00' }],
+    ['armL', [5, 14, 5], [8.5, 25, 0], [0, -5, 0], '#4a221c', { anim: 'armForward' }],
+    ['armR', [5, 14, 5], [-8.5, 25, 0], [0, -5, 0], '#4a221c', { anim: 'armForward' }],
+    ['legL', [5, 12, 5], [3, 12, 0], [0, -6, 0], '#3a1814', { anim: 'legA' }],
+    ['legR', [5, 12, 5], [-3, 12, 0], [0, -6, 0], '#3a1814', { anim: 'legB' }],
+  ],
+};
+// Ember Lord: a burning mask circled by two rings of glowing rods over a smoky core.
+MODELS.ember_lord = {
+  parts: [
+    ['head', [8, 8, 8], [0, 22, 0], [0, 4, 0], '#e8a52a', { face: 'ember_lord', emissive: '#a05000' }],
+    ['core', [4, 10, 4], [0, 10, 0], [0, 4, 0], '#3a2a24'],
+    ...[0, 1, 2, 3].map((i) => [`rodA${i}`, [2, 8, 2], [0, 16, 0], [8, 0, 0], '#ffb83a', { anim: 'orbit', idx: i, emissive: '#ff8a10' }]),
+    ...[0, 1, 2, 3].map((i) => [`rodB${i}`, [2, 8, 2], [0, 6, 0], [6, 0, 0], '#ffb83a', { anim: 'orbitB', idx: i, emissive: '#ff8a10' }]),
+  ],
+};
+// Mending Crystal: a glowing core spinning inside two frames.
+MODELS.void_crystal = {
+  parts: [
+    ['core', [8, 8, 8], [0, 14, 0], [0, 0, 0], '#ffb8f4', { anim: 'spin', emissive: '#e070d0' }],
+    ['frameA', [14, 14, 1.5], [0, 14, 0], [0, 0, 0], '#c8c0ff', { anim: 'spinA', emissive: '#6050a0' }],
+    ['frameB', [1.5, 14, 14], [0, 14, 0], [0, 0, 0], '#c8c0ff', { anim: 'spinB', emissive: '#6050a0' }],
+  ],
+};
+// Void Wyrm: long dark serpent-dragon with membrane wings, a spined back and a swaying tail.
+MODELS.void_wyrm = {
+  parts: [
+    ['body', [26, 20, 46], [0, 16, 0], [0, 0, 0], '#45375e'],
+    ['belly', [20, 4, 40], [0, 6, 0], [0, 0, 0], '#7a6a98'],
+    ...[-16, -6, 4, 14].map((z, i) => [`spine${i}`, [3, 7, 4], [0, 26, z], [0, 3, 0], '#b6a6de']),
+    ['neck', [12, 12, 20], [0, 19, -22], [0, 0, -9], '#45375e', { anim: 'wyrmNeck' }],
+    ['head', [16, 13, 22], [0, 21, -40], [0, 0, -6], '#4e3f6a', { face: 'void_wyrm' }],
+    ['snout', [12, 7, 10], [0, 21, -40], [0, -2, -21], '#3e3254'],
+    ['hornL', [3, 3, 12], [0, 21, -40], [5, 7.5, 3], '#ece6ff'],
+    ['hornR', [3, 3, 12], [0, 21, -40], [-5, 7.5, 3], '#ece6ff'],
+    ['jaw', [12, 3, 16], [0, 16, -40], [0, -1.5, -12], '#2a2038', { anim: 'jaw' }],
+    ['wingL', [72, 2, 34], [13, 24, -6], [36, 0, 4], '#5a3f86', { anim: 'wyrmWingL', emissive: '#1c0c30' }],
+    ['wingR', [72, 2, 34], [-13, 24, -6], [-36, 0, 4], '#5a3f86', { anim: 'wyrmWingR', emissive: '#1c0c30' }],
+    ['armL', [5, 14, 5], [9, 10, -14], [0, -6, 0], '#45375e'],
+    ['armR', [5, 14, 5], [-9, 10, -14], [0, -6, 0], '#45375e'],
+    ['legL', [7, 14, 8], [10, 10, 16], [0, -6, 0], '#45375e'],
+    ['legR', [7, 14, 8], [-10, 10, 16], [0, -6, 0], '#45375e'],
+    ...[0, 1, 2, 3, 4, 5, 6].map((i) => [`tail${i}`, [14 - i * 1.6, 12 - i * 1.3, 14], [0, 16 - i * 0.5, 30 + i * 13.5], [0, 0, 0], i % 2 ? '#3c3054' : '#45375e', { anim: 'tailSeg', idx: i }]),
+  ],
+};
+
 const FACES = {
   settler: (c) => {
     px(c, '#3a2a1a', [[1, 3, 14, 1]]); px(c, '#ffffff', [[3, 5, 3, 2], [10, 5, 3, 2]]); px(c, '#2a6a3a', [[4, 5, 2, 2], [11, 5, 2, 2]]);
@@ -215,6 +276,23 @@ const FACES = {
     px(c, '#ffb03a', [[5, 11, 6, 1], [4, 12, 1, 2], [11, 12, 1, 2], [6, 13, 4, 1]]);
   },
   skitterer: (c) => { px(c, '#ff3a2a', [[2, 5, 2, 2], [12, 5, 2, 2], [5, 4, 2, 2], [9, 4, 2, 2], [4, 8], [11, 8], [6, 7], [9, 7]]); },
+  ashwraith: (c) => {
+    px(c, '#3a3436', [[3, 5, 3, 1], [10, 5, 3, 1], [4, 6, 1, 3], [11, 6, 1, 3]]);
+    px(c, '#9a3a3a', [[4, 8, 1, 2], [11, 8, 1, 2]]);
+    px(c, '#2a2426', [[6, 11, 4, 3], [5, 12, 1, 1], [10, 12, 1, 1]]);
+  },
+  cinder_brute: (c) => {
+    px(c, '#ffb03a', [[3, 6, 3, 2], [10, 6, 3, 2]]); px(c, '#fff0b0', [[4, 6], [11, 6]]);
+    px(c, '#2a100c', [[2, 4, 5, 1], [9, 4, 5, 1], [5, 11, 6, 2]]); px(c, '#ff6a1a', [[7, 2, 2, 2]]);
+  },
+  ember_lord: (c) => {
+    px(c, '#2a1406', [[3, 6, 3, 2], [10, 6, 3, 2], [6, 11, 4, 1]]);
+    px(c, '#fff2a0', [[4, 6], [11, 6]]); px(c, '#ffd060', [[0, 0, 16, 2]]);
+  },
+  void_wyrm: (c) => {
+    px(c, '#d070ff', [[1, 6, 4, 2], [11, 6, 4, 2]]); px(c, '#ffffff', [[2, 6, 2, 1], [12, 6, 2, 1]]);
+    px(c, '#0c0812', [[3, 12, 10, 2]]);
+  },
   voidwalker: (c) => {
     px(c, '#5ff0ff', [[2, 8, 4, 1], [10, 8, 4, 1]]); px(c, '#b8ffff', [[3, 8, 2, 1], [11, 8, 2, 1]]);
     px(c, '#3a2a6a', [[5, 2], [11, 3], [8, 13]]);
@@ -252,7 +330,7 @@ export function buildModel(type) {
     mesh.position.set(offset[0] / 16, offset[1] / 16, offset[2] / 16);
     mesh.castShadow = true;
     pivotGroup.add(mesh);
-    pivotGroup.userData = { anim: opts.anim, idx: opts.idx };
+    pivotGroup.userData = { anim: opts.anim, idx: opts.idx, baseX: pivot[0] / 16, baseY: pivot[1] / 16 };
     root.add(pivotGroup);
     parts[name] = pivotGroup;
   }
@@ -279,6 +357,17 @@ export function animateModel(root, mob, alpha, L, sec) {
       case 'armSwingB': g.rotation.x = Math.cos(swing) * amt * 0.8 - (mob.angry ? 0.4 : 0); break;
       case 'wingL': g.rotation.z = mob.body.onGround ? 0 : Math.sin(sec * 30) * 0.8; break;
       case 'wingR': g.rotation.z = mob.body.onGround ? 0 : -Math.sin(sec * 30) * 0.8; break;
+      case 'tendril': g.rotation.x = Math.sin(sec * 1.7 + g.userData.idx * 1.3) * 0.25; g.rotation.z = Math.cos(sec * 1.3 + g.userData.idx) * 0.15; break;
+      case 'orbit': g.rotation.y = sec * 1.6 + g.userData.idx * Math.PI / 2; g.position.y = g.userData.baseY + Math.sin(sec * 3 + g.userData.idx) * 0.08; break;
+      case 'orbitB': g.rotation.y = -sec * 1.2 + g.userData.idx * Math.PI / 2 + Math.PI / 4; break;
+      case 'spin': g.rotation.set(sec * 0.9, sec * 1.4, 0); g.position.y = g.userData.baseY + Math.sin(sec * 2) * 0.12; break;
+      case 'spinA': g.rotation.y = sec * 0.8; g.position.y = g.userData.baseY + Math.sin(sec * 2) * 0.12; break;
+      case 'spinB': g.rotation.x = sec * 0.7; g.position.y = g.userData.baseY + Math.sin(sec * 2) * 0.12; break;
+      case 'wyrmWingL': g.rotation.z = Math.sin(sec * 2.6) * 0.55 + 0.1; break;
+      case 'wyrmWingR': g.rotation.z = -Math.sin(sec * 2.6) * 0.55 - 0.1; break;
+      case 'wyrmNeck': g.rotation.x = Math.sin(sec * 1.3) * 0.08; break;
+      case 'jaw': g.rotation.x = 0.15 + Math.max(0, Math.sin(sec * 1.1)) * 0.35; break;
+      case 'tailSeg': g.position.x = g.userData.baseX + Math.sin(sec * 2.2 - g.userData.idx * 0.7) * g.userData.idx * 0.13; g.rotation.y = Math.cos(sec * 2.2 - g.userData.idx * 0.7) * 0.25; break;
       case 'spiderL':
       case 'spiderR': {
         const s = a === 'spiderL' ? 1 : -1;

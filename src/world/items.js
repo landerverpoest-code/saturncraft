@@ -145,6 +145,12 @@ for (const [mat, m] of Object.entries(ARMOR_MATERIALS)) {
 
 // Added after the armour so earlier item ids stay stable for old saves
 item('mushroom_stew', 'Mushroom Stew', { stack: 1, food: { hunger: 6, saturation: 7.2, leaves: 'bowl' } });
+// Cinderdeep / Hollow items (iconStyle: [template, colours] for ui/icons.js)
+item('ember_rod', 'Ember Rod', { fuel: 2400, iconStyle: ['stick', { s: '#ffb030' }] });
+item('ember_powder', 'Ember Powder', { iconStyle: ['dust', { h: '#ff9a20' }] });
+item('ember_quartz', 'Ember Quartz', { iconStyle: ['gem', { h: '#f0d8c8' }] });
+item('glowshard_dust', 'Glowshard Dust', { iconStyle: ['dust', { h: '#ffd860' }] });
+item('eye_of_the_void', 'Eye of the Void', { stack: 16, voidEye: true, iconStyle: ['pearl', { h: '#3aa88a', H: '#c8ff6a' }] });
 
 // Fuel for block items
 for (const id of [B.OAK_PLANKS, B.SPRUCE_PLANKS, B.BIRCH_PLANKS, B.JUNGLE_PLANKS, B.ACACIA_PLANKS, B.DARK_OAK_PLANKS, B.OAK_LOG, B.BIRCH_LOG, B.SPRUCE_LOG, B.JUNGLE_LOG, B.ACACIA_LOG, B.DARK_OAK_LOG, B.WORKBENCH]) ITEMS[id].fuel = 300;

@@ -90,6 +90,8 @@ export async function saveGame(game) {
     boats: game.entities.list.filter((e) => e.kind === 'boat' && !e.dead).map((e) => ({ x: e.x, y: e.y, z: e.z, yaw: e.yaw })),
     generated: [...game.spawner.generated],
     savedMobs, liveMobs, chunks,
+    // which dimension the player (and the fields above) are in, plus the other dimensions' state
+    ...(game.dims ? game.dims.saveData(packChunk) : {}),
   };
   const db = await openDB();
   await txn(db, 'readwrite', (s) => s.put(data, 'current'));
@@ -117,6 +119,7 @@ export async function deleteSave() {
 /** Apply loaded data to a freshly constructed (not yet started) game. */
 export function applySave(game, data) {
   for (const [k, p] of Object.entries(data.chunks)) game.world.saved.set(+k, unpackChunk(p));
+  if (game.dims) game.dims.loadData(data, unpackChunk);
   game.time = data.time;
   // the world remembers its own rules (older saves keep the player's settings)
   if (data.gameRules) {

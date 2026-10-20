@@ -38,7 +38,7 @@ export class SpawnerBlocks {
     if (--delay > 0) { this.state.set(k, delay); return; }
     this.state.set(k, SPAWN_DELAY[0] + Math.floor(Math.random() * (SPAWN_DELAY[1] - SPAWN_DELAY[0])));
     if (g.settings && g.settings.hostileMobs === false) return;
-    const type = SPAWNER_TYPES[w.getMeta(x, y, z) % 3];
+    const type = SPAWNER_TYPES[w.getMeta(x, y, z) % SPAWNER_TYPES.length];
     let nearby = 0;
     for (const e of g.entities.list) {
       if (e.kind === 'mob' && e.type === type && !e.dead && Math.abs(e.x - x - 0.5) < 4.5 && Math.abs(e.y - y) < 4 && Math.abs(e.z - z - 0.5) < 4.5) nearby++;

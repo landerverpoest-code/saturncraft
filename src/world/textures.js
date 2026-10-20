@@ -2,6 +2,7 @@
 // runtime from seeded noise and hand-picked palettes; no external images.
 import { BLOCKS, B } from './blocks.js';
 import { mulberry32, hash4 } from './noise.js';
+import { DIM_TEX } from './dimensions/dimTextures.js';
 
 export const TEX_SIZE = 16;
 
@@ -762,6 +763,7 @@ function paint(c, name) {
   else if (name.startsWith('beetroots_')) rootCrop(c, +name.slice(10), '#3f8a2a', '#9a2a3a', '#8a1e2e', 2);
   else if (name.startsWith('bed_head_top_') || name.startsWith('bed_foot_top_')) bedTop(c, name.startsWith('bed_head'), +name.slice(-1));
   else if (GEN[name]) GEN[name](c);
+  else if (DIM_TEX[name]) DIM_TEX[name](c, { hex, mix, shade });
   else c.noiseFill(P.stone);
 }
 

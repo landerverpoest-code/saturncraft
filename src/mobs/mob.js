@@ -165,6 +165,8 @@ export class Mob {
 
   hurt(dmg, source, attacker = null, knockback = 0.4, projectile = null) {
     if (this.deathTime > 0 || this.removed) return false;
+    if (this.def.fireImmune && (source === 'fire' || source === 'lava' || source === 'fireball')) return false;
+    if (this.def.onHurt) { dmg = this.def.onHurt(this, dmg, source, attacker); if (dmg <= 0) return false; }
     if (this.type === 'voidwalker' && projectile) {
       // Voidwalkers dodge projectiles by teleporting
       this.teleportRandom(this._game);
@@ -214,6 +216,7 @@ export class Mob {
     this.killedByPlayer = killedByPlayer;
     if (killedByPlayer) g.player.stats.kills++;
     if (killedByPlayer && this.def.category === CATEGORY.MONSTER && g.milestones) g.milestones.event('kill');
+    if (this.def.onDeath) this.def.onDeath(this, g, killedByPlayer);
     if (this.age < 0) { this.killedByPlayer = false; return; } // babies drop nothing
     for (const d of rollDrops(this.type, { killedByPlayer, onFire: this.fireTicks > 0, sheared: this.sheared })) {
       if (d.id === B.WOOL) d.id = WOOL_ITEMS[this.woolColor || 0];
@@ -295,7 +298,7 @@ export class Mob {
     const p = g.player;
     const pdx = p.x - this.x, pdy = p.y - this.y, pdz = p.z - this.z;
     const pdist = Math.hypot(pdx, pdy, pdz);
-    if (!this.persistent) {
+    if (!this.persistent && !this.def.noDespawn) {
       if (pdist < 32) this.noActionTime = 0;
       if (shouldDespawn(pdist, this.noActionTime)) { this.removed = true; this.dead = true; return; }
     }
@@ -306,7 +309,8 @@ export class Mob {
 
     const mv = this.move || { forward: 0, jump: false };
     const jump = mv.jump || (b.inWater && b.y + this.height * 0.4 < Math.floor(b.y) + 1.2) || (b.inLava);
-    b.travel(g.world, { forward: mv.forward, strafe: mv.strafe || 0, yaw: this.yaw, jump, speed: mv.forward ? this.speed() * (mv.mod || 1) : this.speed(), climbing: this.def.climbs && b.horizontalCollision && !!this.move });
+    if (this.def.flying) this.flyMove(g);
+    else b.travel(g.world, { forward: mv.forward, strafe: mv.strafe || 0, yaw: this.yaw, jump, speed: mv.forward ? this.speed() * (mv.mod || 1) : this.speed(), climbing: this.def.climbs && b.horizontalCollision && !!this.move });
     if (this.type === 'cluckling' && !b.onGround && b.vy < 0) { b.vy *= 0.6; b.fallDistance = 0; }
 
     // Limb animation
@@ -317,8 +321,19 @@ export class Mob {
     this.environment(g);
   }
 
+  /** Flying mobs: no gravity, velocity set by their AI, air drag (noclip ones ignore blocks). */
+  flyMove(g) {
+    const b = this.body;
+    if (this.def.noclip) b.setPos(b.x + b.vx, b.y + b.vy, b.z + b.vz);
+    else b.move(g.world, b.vx, b.vy, b.vz);
+    const drag = this.def.noclip ? 1 : 0.91;
+    b.vx *= drag; b.vy *= drag; b.vz *= drag;
+    b.fallDistance = 0;
+  }
+
   environment(g) {
     const b = this.body, w = g.world;
+    if (this.def.fireImmune) { this.fireTicks = 0; if (b.inLava) b.vy = Math.max(b.vy, 0.06); }
     if (b.onGround) {
       if (b.fallDistance > 0 && !this.def.noFallDamage) {
         const dmg = fallDamage(b.fallDistance);
@@ -327,8 +342,8 @@ export class Mob {
       b.fallDistance = 0;
     }
     if (b.inWater) { b.fallDistance = 0; this.fireTicks = 0; }
-    if (b.inLava) { this.fireTicks = Math.max(this.fireTicks, 300); this.hurt(4, 'lava'); }
-    if (b.inFire && !b.inWater) { this.fireTicks = Math.max(this.fireTicks, 160); this.hurt(1, 'fire'); }
+    if (b.inLava && !this.def.fireImmune) { this.fireTicks = Math.max(this.fireTicks, 300); this.hurt(4, 'lava'); }
+    if (b.inFire && !b.inWater && !this.def.fireImmune) { this.fireTicks = Math.max(this.fireTicks, 160); this.hurt(1, 'fire'); }
     // Undead burn in combined sunlight from the three suns
     if (this.def.burnsInSun && g.ticks % 2 === 0) {
       const st = g.sky.state;
@@ -363,6 +378,7 @@ export class Mob {
     if (this.def.villager) return this.settlerAI(g, p, pdist);
     if (this.def.tameable) return this.howlerAI(g, p, pdist);
     if (this.def.category === CATEGORY.CREATURE) return this.passiveAI(g);
+    if (this.def.customAI) return this.def.customAI(this, g, p, pdist); // Cinderdeep / Hollow mobs (dimensionMobs.js)
     switch (this.type) {
       case 'shambler': return this.meleeAI(g, p, pdist);
       case 'skitterer': return this.spiderAI(g, p, pdist);
@@ -720,6 +736,7 @@ export class Mob {
     m.rotation.set(0, yaw, 0);
     if (this.deathTime > 0) m.rotation.z = Math.min(1, (this.deathTime + alpha) / 10) * Math.PI / 2;
     animateModel(m, this, alpha, L, sec);
+    if (this.def.customRender) this.def.customRender(this, m, alpha, sec);
     if (parts && parts.collar) {
       parts.collar.visible = this.tamed;
       for (const k of ['snout', 'nose', 'earL', 'earR']) parts[k].rotation.x = parts.head.rotation.x;

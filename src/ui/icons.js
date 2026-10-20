@@ -168,7 +168,7 @@ function itemIcon(d) {
     tpl = T[d.armor.piece];
     colors = { h: ARMOR_MATERIALS[d.armor.material].color };
   } else {
-    const st = ITEM_STYLE[d.key] || ['lump', { h: '#ff00ff' }];
+    const st = d.iconStyle || ITEM_STYLE[d.key] || ['lump', { h: '#ff00ff' }];
     tpl = T[st[0]]; colors = st[1];
   }
   const c = document.createElement('canvas'); c.width = c.height = 32;

@@ -12,6 +12,7 @@ import { B, SOLID, OPAQUE, isFluid } from '../world/blocks.js';
 import { LEAVES } from '../world/trees.js';
 import { MIN_Y } from '../world/constants.js';
 import { chunkKey } from '../world/world.js';
+import { attemptDimensionSpawn } from './dimensionMobs.js';
 
 const NO_MONSTER_FLOOR = new Set([B.BEDROCK, B.GLASS, ...LEAVES, B.ICE, B.CACTUS]);
 const MAX_PER_CHUNK = 4;
@@ -73,6 +74,7 @@ export class MobSpawner {
   /** One spawn attempt in a chunk; `surface` starts the pack on top of the terrain instead of a random height. */
   attempt(cx, cz, category, surface = false) {
     const g = this.game, w = g.world, p = g.player;
+    if (w.dimension && w.dimension !== 'overworld') return attemptDimensionSpawn(this, cx, cz, category);
     const x0 = cx * 16 + Math.floor(Math.random() * 16), z0 = cz * 16 + Math.floor(Math.random() * 16);
     const top = w.heightAt(x0, z0);
     const y = surface ? top + 1 : MIN_Y + Math.floor(Math.random() * (top + 2 - MIN_Y));
@@ -147,6 +149,7 @@ export class MobSpawner {
     }
     if (this.generated.has(k)) return;
     this.generated.add(k);
+    if (this.game.world.dimension && this.game.world.dimension !== 'overworld') return; // no villages or herds in the Cinderdeep / Hollow
     // settlers of village houses in this chunk
     for (const v of villagesNear(this.game.world.gen, cx * 16, cz * 16, cx * 16 + 15, cz * 16 + 15)) {
       for (const p of v.pieces) {
@@ -179,7 +182,7 @@ export class MobSpawner {
     const k = chunkKey(cx, cz);
     const list = [];
     for (const e of this.game.entities.list) {
-      if (e.kind !== 'mob' || e.dead) continue;
+      if (e.kind !== 'mob' || e.dead || e.noFreeze) continue;
       if (Math.floor(e.x / 16) !== cx || Math.floor(e.z / 16) !== cz) continue;
       if (e.persistent && e.deathTime === 0) list.push(e.saveData());
       e.removed = true; e.dead = true;

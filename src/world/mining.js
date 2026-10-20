@@ -53,6 +53,7 @@ export function blockDrops(blockId, tool = HAND, rng = Math.random, meta = 0) {
   const d = b.drops;
   if (d === 'self') return [{ id: blockId, count: 1 }];
   if (typeof d === 'number') return [{ id: d, count: 1 }];
+  if (typeof d === 'object') return [{ id: I[d.item], count: randInt(rng, d.min, d.max) }]; // { item: 'KEY', min, max }
   switch (d) {
     case 'coal': return [{ id: I.COAL, count: 1 }];
     case 'raw_iron': return [{ id: I.RAW_IRON, count: 1 }];
