@@ -559,6 +559,12 @@ const GEN = {
       }
     }
   },
+  cobweb: (c) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
+    const col = [236, 236, 240];
+    for (let k = 0; k < 16; k++) { c.set(k, k, col); c.set(15 - k, k, col); c.set(7, k, col); c.set(k, 8, col); }
+    for (const r of [3, 6]) for (let a = 0; a < 32; a++) { const t = a / 32 * Math.PI * 2; c.set(Math.round(7.5 + Math.cos(t) * r), Math.round(7.5 + Math.sin(t) * r), col, 200); }
+  },
   rail: (c) => railTex(c, false),
   rail_corner: (c) => railTex(c, true),
   oak_trapdoor: (c) => {

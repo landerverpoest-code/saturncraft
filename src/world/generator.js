@@ -1,6 +1,7 @@
 // Deterministic terrain generator. Runs inside Web Workers (see gen.worker.js)
 // but is a pure module so it can be unit-tested and used for spawn search.
 import { stampVillages } from './villages.js';
+import { stampMineshafts } from './mineshafts.js';
 import { stampSanctums } from './dimensions/sanctum.js';
 import { treeShape, LEAVES, LOGS, PLANTS } from './trees.js';
 import { B, DEEP_VARIANT } from './blocks.js';
@@ -362,6 +363,7 @@ export class TerrainGenerator {
 
     // 6b. Dungeons (monster rooms)
     for (let k = 0; k < 14; k++) this.tryDungeon(blocks, meta, rng); // 10 + 4 attempts like the reference
+    if (!this.noStructures) stampMineshafts(this.seed, blocks, meta, cx, cz);
 
     // 7. Water
     for (let z = 0; z < 16; z++) for (let x = 0; x < 16; x++) {

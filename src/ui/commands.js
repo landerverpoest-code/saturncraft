@@ -1,5 +1,6 @@
 // Chat commands (T or / opens the chat). Each returns a message to print.
 import { ITEMS, maxStack } from '../world/items.js';
+import { mineshaftsNear } from '../world/mineshafts.js';
 import { BLOCKS } from '../world/blocks.js';
 import { MOBS, MOB_KEYS } from '../mobs/mobTypes.js';
 import { skyState } from '../sky/suns.js';
@@ -55,7 +56,7 @@ export const HELP = [
   '/give <item> [count]',
   '/summon <mob> [x y z]',
   '/xp <amount> [levels]',
-  '/locate <village|sanctum|bastion>',
+  '/locate <village|mineshaft|sanctum|bastion>',
   '/dimension <overworld|cinderdeep|hollow>',
   '/kill,  /clear,  /spawnpoint,  /seed,  /heal',
 ];
@@ -178,7 +179,14 @@ export function runCommand(game, text) {
         const b = list.reduce((a, c) => (Math.hypot(c.cx - p.x, c.cz - p.z) < Math.hypot(a.cx - p.x, a.cz - p.z) ? c : a));
         return `The nearest Ember Bastion is at ${b.cx}, ${b.y + 1}, ${b.cz} (${Math.round(Math.hypot(b.cx - p.x, b.cz - p.z))} blocks away)`;
       }
-      if (what !== 'village') return 'Usage: /locate <village|sanctum|bastion>';
+      if (what === 'mineshaft') {
+        if (game.world.dimension !== 'overworld') return 'Mineshafts are only found in the overworld';
+        const list = mineshaftsNear(game.world.gen.seed, p.x - 1200, p.z - 1200, p.x + 1200, p.z + 1200);
+        if (!list.length) return 'No mineshaft found nearby';
+        const m = list.reduce((a, c) => (Math.hypot(c.cx - p.x, c.cz - p.z) < Math.hypot(a.cx - p.x, a.cz - p.z) ? c : a));
+        return `The nearest mineshaft is at ${m.cx}, ${m.y}, ${m.cz} (${Math.round(Math.hypot(m.cx - p.x, m.cz - p.z))} blocks away)`;
+      }
+      if (what !== 'village') return 'Usage: /locate <village|mineshaft|sanctum|bastion>';
       const R = VILLAGE_REGION, prx = Math.floor(p.x / R), prz = Math.floor(p.z / R);
       let best = null;
       // search rings of regions outwards; one ring past the first find, since a neighbour can be closer

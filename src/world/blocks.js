@@ -42,7 +42,7 @@ export const B = {
   BROWN_MUSHROOM_BLOCK: 121, RED_MUSHROOM_BLOCK: 122, MUSHROOM_STEM: 123, MYCELIUM: 124,
   SKYBELL: 125, ROSETTE: 126,
   // Other dimensions (ids from 160 up, see world/dimensions/): the Cinderdeep and the Hollow
-  SNOW_LAYER: 130, COBBLESTONE_WALL: 131, MOSSY_COBBLESTONE_WALL: 132, OAK_TRAPDOOR: 133, RAIL: 140,
+  SNOW_LAYER: 130, COBBLESTONE_WALL: 131, MOSSY_COBBLESTONE_WALL: 132, OAK_TRAPDOOR: 133, RAIL: 140, COBWEB: 141,
   CINDERSTONE: 160, GLOWSHARD: 161, MOURNSAND: 162, EMBERQUARTZ_ORE: 163, SCORCHED_BRICKS: 164, RIFT: 165,
   HOLLOWSTONE: 166, HOLLOW_FRAME: 167, HOLLOW_FRAME_EYE: 168, HOLLOW_GATE: 169, WYRM_EGG: 170,
 };
@@ -112,6 +112,8 @@ def(B.SNOW_BLOCK, 'Snow Block', { hardness: 0.2, resistance: 0.2, tool: TOOL.SHO
 def(B.COBBLESTONE_WALL, 'Cobblestone Wall', { hardness: 2, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD, opaque: false, shape: SHAPE.WALL, tex: { all: 'cobblestone' } });
 def(B.MOSSY_COBBLESTONE_WALL, 'Mossy Cobblestone Wall', { hardness: 2, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD, opaque: false, shape: SHAPE.WALL, tex: { all: 'mossy_cobblestone' } });
 def(B.OAK_TRAPDOOR, 'Oak Trapdoor', { hardness: 3, resistance: 3, tool: TOOL.AXE, sound: 'wood', flammable: true, opaque: false, shape: SHAPE.TRAPDOOR, layer: LAYER.CUTOUT, tex: { all: 'oak_trapdoor' } });
+// Cobwebs slow anything inside them to a crawl; swords and shears cut them for string.
+def(B.COBWEB, 'Cobweb', { hardness: 4, resistance: 4, tool: TOOL.SWORD, solid: false, opaque: false, shape: SHAPE.CROSS, layer: LAYER.CUTOUT, drops: 'cobweb', sound: 'wool' });
 // Rails: meta = shape (see world/rails.js); minecarts ride on them.
 def(B.RAIL, 'Rail', { hardness: 0.7, resistance: 0.7, tool: TOOL.PICKAXE, sound: 'metal', solid: false, opaque: false, shape: SHAPE.RAIL, layer: LAYER.CUTOUT, needsSupport: true, tex: { all: 'rail' } });
 // Snow layers: meta = layers - 1 (1..8 layers of 2/16 block); falls in cold biomes while it snows.

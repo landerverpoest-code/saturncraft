@@ -120,13 +120,14 @@ export class Body {
   /** Update inWater/inLava flags from overlapping fluid blocks. */
   updateFluidState(world, eyeHeight) {
     const b = this.box();
-    this.inWater = false; this.inLava = false; this.eyeInWater = false; this.eyeInLava = false; this.inFire = false;
+    this.inWater = false; this.inLava = false; this.eyeInWater = false; this.eyeInLava = false; this.inFire = false; this.inWeb = false;
     const ey = this.y + eyeHeight;
     for (let x = Math.floor(b[0] + 0.001); x <= Math.floor(b[3] - 0.001); x++)
       for (let z = Math.floor(b[2] + 0.001); z <= Math.floor(b[5] - 0.001); z++)
         for (let y = Math.floor(b[1] + 0.001); y <= Math.floor(b[4] - 0.001); y++) {
           const id = world.getBlock(x, y, z);
           if (id === B.FIRE) { this.inFire = true; continue; }
+          if (id === B.COBWEB) { this.inWeb = true; continue; }
           if (id !== B.WATER && id !== B.LAVA) continue;
           const top = y + (world.getBlock(x, y + 1, z) === id ? 1 : liquidHeight(world.getMeta(x, y, z)));
           if (b[1] < top) {
@@ -152,7 +153,8 @@ export class Body {
     const yaw = input.yaw || 0;
     let fwd = (input.forward || 0) * PHYS.INPUT_SCALE, str = (input.strafe || 0) * PHYS.INPUT_SCALE;
     if (input.sneak) { fwd *= PHYS.SNEAK_MULTIPLIER; str *= PHYS.SNEAK_MULTIPLIER; }
-    const speed = (input.speed ?? PHYS.WALK_SPEED) * (input.sprint ? PHYS.SPRINT_MULTIPLIER : 1);
+    let speed = (input.speed ?? PHYS.WALK_SPEED) * (input.sprint ? PHYS.SPRINT_MULTIPLIER : 1);
+    if (this.inWeb) { this.vx *= 0.25; this.vy *= 0.05; this.vz *= 0.25; this.fallDistance = 0; speed *= 0.25; } // stuck in a cobweb
 
     if (this.inWater || this.inLava) {
       if (input.jump) this.vy += PHYS.WATER_JUMP;
