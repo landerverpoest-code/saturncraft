@@ -8,6 +8,7 @@ import { itemCanvas } from '../ui/icons.js';
 import { texturePixels } from '../world/textures.js';
 import { MIN_Y } from '../world/constants.js';
 import { addXp, splitOrbs } from '../player/experience.js';
+import { RAIL_EXITS, RAIL_UP, railHeight } from '../world/rails.js';
 
 let nextEntityId = 1;
 export const ENTITY_RENDER_DIST = 64;
@@ -183,6 +184,85 @@ export class Boat {
   }
 }
 
+/**
+ * Minecarts ride like boats (same mounting, hits and multiplayer sync) but
+ * follow rails: the velocity is projected on the track between the rail's two
+ * exits, slopes pull them down (1/128 per tick), drag is 0.997 ridden / 0.96
+ * empty, top speed 0.4 blocks per tick; off the rails they slide to a stop.
+ */
+export class Minecart extends Boat {
+  constructor(x, y, z, yaw = 0) {
+    super(x, y, z, yaw);
+    this.cart = true;
+    this.body = new Body(0.98, 0.7);
+    this.body.stepHeight = 0;
+    this.body.setPos(x, y, z);
+    this.seatY = 0.1;
+    this.dropId = I.MINECART;
+    this.pitch = 0; this.prevPitch = 0;
+  }
+  get width() { return 0.98; } get height() { return 0.7; }
+
+  railAt(w, x, y, z) {
+    for (const dy of [0, -1, 1]) if (w.getBlock(x, y + dy, z) === B.RAIL) return y + dy;
+    return null;
+  }
+
+  tick(game, input) {
+    const b = this.body, w = game.world;
+    this.prev = [b.x, b.y, b.z];
+    this.prevYaw = this.yaw; this.prevPitch = this.pitch;
+    if (this.hitTime > 0 && --this.hitTime === 0) this.hits = 0;
+    const bx = Math.floor(b.x), bz = Math.floor(b.z), ry = this.railAt(w, bx, Math.floor(b.y + 0.1), bz);
+    if (ry === null) {
+      // derailed: plain physics
+      b.vy -= 0.04;
+      if (b.onGround) { b.vx *= 0.5; b.vz *= 0.5; } else { b.vx *= 0.95; b.vz *= 0.95; }
+      b.move(w, b.vx, b.vy, b.vz);
+      this.pitch *= 0.8;
+      if (b.y < MIN_Y - 64) this.dead = true;
+      return;
+    }
+    const m = w.getMeta(bx, ry, bz) % 10;
+    const [[ax, az], [cx, cz]] = RAIL_EXITS[m];
+    // track: from the middle of edge a to the middle of edge b (curves cut the corner, as in the reference)
+    let dx = cx - ax, dz = cz - az; const dl = Math.hypot(dx, dz); dx /= dl; dz /= dl;
+    let s = b.vx * dx + b.vz * dz;
+    const up = RAIL_UP[m];
+    if (up) s -= (up[0] * dx + up[1] * dz) * 0.0078125; // gravity along the slope
+    if (this.rider && input && input.forward) {
+      const lx = -Math.sin(this.rider.yaw), lz = -Math.cos(this.rider.yaw);
+      s += Math.sign(lx * dx + lz * dz) * 0.006 * input.forward;
+    }
+    s *= this.rider ? 0.997 : 0.96;
+    s = Math.max(-0.4, Math.min(0.4, s));
+    // snap onto the track line
+    const ox = bx + 0.5 + ax * 0.5, oz = bz + 0.5 + az * 0.5;
+    const t = (b.x - ox) * dx + (b.z - oz) * dz;
+    let nx = ox + dx * t + dx * s, nz = oz + dz * t + dz * s;
+    // blocked by a wall ahead
+    const fx = Math.floor(nx + Math.sign(dx * s) * 0.49), fz = Math.floor(nz + Math.sign(dz * s) * 0.49);
+    if (SOLID[w.getBlock(fx, ry, fz)] && (fx !== bx || fz !== bz) && !(up && w.getBlock(fx, ry + 1, fz) === B.RAIL)) { s = 0; nx = ox + dx * t; nz = oz + dz * t; }
+    const nbx = Math.floor(nx), nbz = Math.floor(nz);
+    const nry = this.railAt(w, nbx, ry, nbz);
+    let ny;
+    if (nry !== null) ny = nry + railHeight(w.getMeta(nbx, nry, nbz) % 10, nx - nbx, nz - nbz);
+    else ny = ry + railHeight(m, Math.max(0, Math.min(1, nx - bx)), Math.max(0, Math.min(1, nz - bz)));
+    b.vx = dx * s; b.vz = dz * s; b.vy = 0;
+    b.setPos(nx, ny, nz);
+    b.onGround = true; b.fallDistance = 0;
+    if (Math.abs(s) > 0.001) {
+      const yaw = Math.atan2(-dx * Math.sign(s), -dz * Math.sign(s));
+      let d = yaw - this.yaw; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2;
+      // a cart has no front: turn the short way
+      if (Math.abs(d) > Math.PI / 2) d += d > 0 ? -Math.PI : Math.PI;
+      this.yaw += d;
+    }
+    this.pitch = up ? Math.atan2(1, 1) * Math.sign(-(up[0] * Math.sin(this.yaw) + up[1] * Math.cos(this.yaw))) : 0;
+    if (Math.abs(s) > 0.1 && game.ticks % 6 === 0) game.audio.play('rail', [nx, ny, nz], Math.min(1, Math.abs(s) * 2.5));
+  }
+}
+
 export class FallingBlock {
   constructor(x, y, z, blockId) {
     this.id = nextEntityId++;
@@ -320,7 +400,7 @@ export class EntityManager {
     if (this.netSpawn('xp', { x, y, z, n: Math.round(amount) })) return;
     for (const v of splitOrbs(Math.round(amount))) this.add(new XPOrb(x, y, z, v));
   }
-  spawnBoat(x, y, z, yaw) { return this.netSpawn('boat', { x, y, z, yaw }) ? null : this.add(new Boat(x, y, z, yaw)); }
+  spawnBoat(x, y, z, yaw, cart = false) { return this.netSpawn('boat', { x, y, z, yaw, cart }) ? null : this.add(cart ? new Minecart(x, y, z, yaw) : new Boat(x, y, z, yaw)); }
   spawnFallingBlock(x, y, z, id) { return this.netSpawn('falling', {}) ? null : this.add(new FallingBlock(x, y, z, id)); }
   spawnArrow(x, y, z, vx, vy, vz, shooter, crit, thrown = null) { return this.netSpawn('arrow', { x, y, z, v: [vx, vy, vz], crit, thrown }) ? null : this.add(new Arrow(x, y, z, vx, vy, vz, shooter, crit, thrown)); }
 
@@ -459,7 +539,7 @@ export class EntityManager {
       } else if (e.kind === 'boat') {
         m.position.set(px, py, pz);
         let dy = e.yaw - e.prevYaw; while (dy > Math.PI) dy -= Math.PI * 2; while (dy < -Math.PI) dy += Math.PI * 2;
-        m.rotation.set(0, e.prevYaw + dy * alpha, e.hitTime > 0 ? Math.sin(e.hitTime) * 0.1 : 0);
+        m.rotation.set(e.cart ? (e.prevPitch + (e.pitch - e.prevPitch) * alpha) : 0, e.prevYaw + dy * alpha, e.hitTime > 0 ? Math.sin(e.hitTime) * 0.1 : 0, 'YXZ');
         m.userData.mats[0].color.setScalar(L);
       } else if (e.kind === 'xp') {
         m.position.set(px, py + 0.2, pz);
@@ -484,6 +564,19 @@ export class EntityManager {
       const s = new THREE.Sprite(mat);
       s.scale.setScalar(0.38);
       return s;
+    }
+    if (e.kind === 'boat' && e.cart) {
+      const g = new THREE.Group();
+      const mat = new THREE.MeshLambertMaterial({ map: blockFaceTexture('iron_block'), color: 0x9a9aa0 });
+      const box = (w, h, d, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); m.castShadow = true; g.add(m); };
+      box(0.9, 0.08, 1.2, 0, 0.12, 0);                                        // floor
+      box(0.08, 0.5, 1.2, -0.45, 0.4, 0); box(0.08, 0.5, 1.2, 0.45, 0.4, 0); // sides
+      box(0.9, 0.5, 0.08, 0, 0.4, -0.6); box(0.9, 0.5, 0.08, 0, 0.4, 0.6);   // ends
+      const wheel = new THREE.MeshLambertMaterial({ color: 0x2a2a2e });
+      for (const [wx, wz] of [[-0.4, -0.4], [0.4, -0.4], [-0.4, 0.4], [0.4, 0.4]]) { const wm = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.16, 0.16), wheel); wm.position.set(wx, 0.08, wz); g.add(wm); }
+      g.userData.mats = [mat];
+      g.userData.dispose = () => { g.traverse((o) => { if (o.geometry) o.geometry.dispose(); }); mat.dispose(); wheel.dispose(); };
+      return g;
     }
     if (e.kind === 'boat') {
       const g = new THREE.Group();

@@ -313,7 +313,7 @@ export class Game {
   /** Keep the rider on the seat. */
   seatPlayer() {
     const p = this.player, b = p.riding.body;
-    p.body.setPos(b.x, b.y - 0.3, b.z);
+    p.body.setPos(b.x, b.y + (p.riding.seatY ?? -0.3), b.z);
     p.body.vx = p.body.vy = p.body.vz = 0;
     p.body.fallDistance = 0;
   }

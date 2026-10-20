@@ -8,6 +8,7 @@ import { EXHAUSTION } from './survival.js';
 import { lightAt } from '../entities/entities.js';
 import { canLight, FIRE_DELAY } from '../world/fire.js';
 import { Bobber } from '../entities/bobber.js';
+import { updateRails } from '../world/rails.js';
 import { tryLightRift, findHollowRing, fillHollowGate } from '../world/dimensions/portal.js';
 import { LEAVES, SAPLING_TREE, growTree } from '../world/trees.js';
 import { sideOf, SIDE_DIRS, DOOR_OPEN, DOOR_UPPER, BED_HEAD, SLAB_TOP, SLAB_DOUBLE, STAIRS_UPSIDE, GATE_OPEN, TRAPDOOR_OPEN, TRAPDOOR_TOP } from '../world/shapes.js';
@@ -86,7 +87,7 @@ export class Interaction {
         if (boat.hits >= 3 || p.creative) {
           boat.dead = true;
           if (boat.rider) g.dismount();
-          if (!p.creative) g.entities.spawnItem(boat.x, boat.y + 0.5, boat.z, { id: I.OAK_BOAT, count: 1 });
+          if (!p.creative) g.entities.spawnItem(boat.x, boat.y + 0.5, boat.z, { id: boat.dropId || I.OAK_BOAT, count: 1 });
         }
         return;
       }
@@ -278,6 +279,15 @@ export class Interaction {
         return true;
       }
       return false;
+    }
+    if (d && d.minecart) {
+      // carts go on rails
+      if (!this.target || this.target.id !== B.RAIL) return false;
+      const t = this.target;
+      g.entities.spawnBoat(t.x + 0.5, t.y + 1 / 16, t.z + 0.5, p.yaw, true);
+      if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
+      this.swing = SWING_TICKS;
+      return true;
     }
     if (d && d.boat) {
       // on the water surface (looked at through the water) or on top of a block
@@ -547,6 +557,7 @@ export class Interaction {
     if (LEAVES.has(id)) meta = 1; // placed leaves never decay
     g.world.setBlockUrgent(x, y, z, id, meta);
     if (id === B.PUMPKIN || id === B.JACK_O_LANTERN) this.tryBuildIronguard(x, y, z);
+    if (id === B.RAIL) updateRails(g.world, x, y, z);
     g.audio.play('place_' + BLOCKS[id].sound, [x + 0.5, y + 0.5, z + 0.5]);
     p.inventory.removeFromSlot(p.inventory.selected, 1);
     this.swing = SWING_TICKS;

@@ -348,6 +348,7 @@ poison from eyes) follow the documented table.
 * 16 dye colours: bone meal (white), flowers (yellow/red), azurite (blue), cactus in a furnace (green), coal (black) and mixes; dyed wool; sheep come in natural colours (white, black, grays, brown, rare pink), can be dyed and drop/shear their colour
 * Pumpkin patches (plains, taiga) and melons (forests): pumpkin + torch = pumpkin lantern (light 15), melons drop 3–7 slices, pumpkin pie
 * Howlers (wolves) in packs of 4 in forests and taiga: they hunt Fleecers and Clucklings and the whole pack turns on whoever hurts one; tame with bones (1 in 3), then they sit/stand on right-click, follow you (teleporting when over 12 blocks away), attack what hurts you or what you hit, heal and breed with meat (pups are tame), red collar
+* Rails and minecarts: rails (6 iron + stick → 16) join up automatically into straights, curves and slopes one block up or down; minecarts (5 iron) are placed on rails, ridden like boats (right-click, `Shift` to get out, W to push), coast with the reference drag (0.997 ridden), roll down slopes, top out at 8 blocks/s and derail at the end of the line; saved and shared in multiplayer
 * Fishing: a rod (3 sticks + 2 string) casts a bobber with a sagging line; after 5–30 s (faster in rain) a fish bites, the bobber dips and splashes and reeling in lands a catch (85 % fish: Silverfin, Redfin, poisonous Spinefish, rare Glimmerfin; 10 % junk; 5 % treasure) plus 1–6 XP; fish can be cooked
 * Wobblers (slimes): see-through green cubes in three sizes (health size², contact damage = size, the smallest is harmless) that hop towards you and split into 2–4 smaller ones on death; they spawn in swamps at night and below y 40 in one chunk out of ten; the smallest drop slimeballs
 * Ironguards (iron golems): one guards every village well; 100 health, they smash hostile mobs (not Fizzlers) within 16 blocks for 7–21 damage and fling them up, turn on players who hurt Settlers or them, drop 3–5 iron and redblooms; build your own from a T of four iron blocks with a pumpkin on top (it never turns on you)
@@ -387,7 +388,7 @@ poison from eyes) follow the documented table.
 * Double chests and other storage containers
 * Witches, drowned, husks/strays as separate variants, baby mobs, mob equipment
 * Difficulty levels (fixed at Normal), spectator/adventure modes, multiplayer
-* Sprint-swimming/crawling poses, minecarts, elytra
+* Sprint-swimming/crawling poses, elytra
 
 ## Other dimensions
 

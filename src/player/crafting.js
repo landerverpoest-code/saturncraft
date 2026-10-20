@@ -59,6 +59,8 @@ for (let c = 1; c < 16; c++) shapeless([DYES[c], B.WOOL], WOOL_ITEMS[c], 1);
 shaped([' I', 'I '], { I: I.IRON_INGOT }, I.SHEARS, 1);
 shapeless([I.IRON_INGOT, I.FLINT], I.FLINT_AND_STEEL);
 shaped(['SS', 'SS'], { S: I.SNOWBALL }, B.SNOW_BLOCK, 1);
+shaped(['I I', 'I I', 'ISI'], { I: I.IRON_INGOT, S: I.STICK }, B.RAIL, 16);
+shaped(['I I', 'III'], { I: I.IRON_INGOT }, I.MINECART, 1);
 shaped(['  S', ' SW', 'S W'], { S: I.STICK, W: I.STRING }, I.FISHING_ROD, 1);
 shaped(['CCC', 'CCC'], { C: B.COBBLESTONE }, B.COBBLESTONE_WALL, 6);
 shaped(['CCC', 'CCC'], { C: B.MOSSY_COBBLESTONE }, B.MOSSY_COBBLESTONE_WALL, 6);

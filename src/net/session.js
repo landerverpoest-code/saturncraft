@@ -397,7 +397,7 @@ export class HostSession extends Session {
     } else if (m.k === 'arrow' && v) {
       ents.spawnArrow(m.x, m.y, m.z, v[0], v[1], v[2], c.rp.target, !!m.crit, m.thrown === 'egg' || m.thrown === 'snowball' ? m.thrown : null);
     } else if (m.k === 'boat') {
-      ents.spawnBoat(m.x, m.y, m.z, +m.yaw || 0);
+      ents.spawnBoat(m.x, m.y, m.z, +m.yaw || 0, !!m.cart);
     }
   }
 
@@ -466,7 +466,7 @@ export class HostSession extends Session {
     if (b.hits >= 3 || s.creative) {
       b.dead = true;
       if (b.rider) g.dismount();
-      if (!s.creative) g.entities.spawnItem(b.x, b.y + 0.5, b.z, { id: I.OAK_BOAT, count: 1 });
+      if (!s.creative) g.entities.spawnItem(b.x, b.y + 0.5, b.z, { id: b.dropId || I.OAK_BOAT, count: 1 });
     }
   }
 

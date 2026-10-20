@@ -5,6 +5,7 @@ import { B, BLOCKS, OPAQUE, SHAPES, LAYERS, SHAPE, LAYER } from './blocks.js';
 import { LEAVES } from './trees.js';
 import { FACE_TILE, FRONT_TILE, texId } from './textures.js';
 import { WOOL_RGB } from './colors.js';
+import { railHeight } from './rails.js';
 import { doorBox, ladderBox, SIDE_DIRS, DOOR_UPPER, BED_HEAD, BED_BOX, slabBox, stairBoxes, fenceConnects, fenceRenderBoxes, gateRenderBoxes, paneConnects, paneBoxes, snowBox, wallConnects, wallBoxes, trapdoorBox } from './shapes.js';
 
 export const PAD = 18;
@@ -46,6 +47,7 @@ const FURNACE_FRONT_DIR = [5, 0, 4, 1];
 const CROP_TILES = { [B.WHEAT]: [0, 1, 2, 3, 4, 5, 6, 7].map((i) => texId('wheat_' + i)), [B.CARROTS]: [0, 0, 1, 1, 2, 2, 2, 3].map((i) => texId('carrots_' + i)),
   [B.POTATOES]: [0, 0, 1, 1, 2, 2, 2, 3].map((i) => texId('potatoes_' + i)), [B.BEETROOTS]: [0, 0, 1, 1, 2, 2, 2, 3].map((i) => texId('beetroots_' + i)) };
 const FARMLAND_MOIST = texId('farmland_moist');
+const RAIL_CORNER = texId('rail_corner');
 const DOOR_LOWER = texId('door_lower'), DOOR_UPPER_TILE = texId('door_upper');
 const BED_TOPS = [0, 1, 2, 3].map((r) => [texId('bed_foot_top_' + r), texId('bed_head_top_' + r)]);
 const BED_SIDE = texId('bed_side'), BED_BOTTOM = texId('oak_planks');
@@ -248,6 +250,18 @@ export function meshSection(sec) {
           buf.pos[v * 3] -= dx * h * 0.41; buf.pos[v * 3 + 2] -= dz * h * 0.41;
         }
       }
+    } else if (shape === SHAPE.RAIL) {
+      // one textured quad on the floor (sloped for ascending rails), rotated to the rail's shape
+      const l = light[i], m = meta[i] % 10, sky = (l >> 4) * 17, blk = (l & 15) * 17;
+      const tile = m >= 6 ? RAIL_CORNER : FACE_TILE[id * 6 + 2];
+      const rot = m >= 6 ? m - 6 : (m === 1 || m === 2 || m === 3) ? 1 : 0;
+      const cx = [0, 1, 1, 0], cz = [0, 0, 1, 1], bu = [0, 1, 1, 0], bv = [0, 0, 1, 1];
+      buf.ensure(4);
+      for (let k = 3; k >= 0; k--) { // counter-clockwise seen from above
+        const j = (k - rot + 4) & 3;
+        buf.vert(x + cx[k], y + railHeight(m, cx[k], cz[k]), z + cz[k], 0, 1, 0, bu[j], bv[j], 255, 255, 255, sky, blk, 0, tile);
+      }
+      buf.quad(false);
     } else if (shape === SHAPE.WALL || shape === SHAPE.TRAPDOOR) {
       const l = light[i], tile = FACE_TILE[id * 6 + 2];
       let boxes;

@@ -27,6 +27,7 @@ for (let i = 0; i < 8; i++) addTex('wheat_' + i);
 for (let i = 0; i < 4; i++) addTex('carrots_' + i);
 for (let i = 0; i < 4; i++) { addTex('potatoes_' + i); addTex('beetroots_' + i); }
 addTex('water_flow');
+addTex('rail_corner');
 for (let i = 0; i < 8; i++) addTex('fire_' + i);
 addTex('lava_flow');
 for (let i = 0; i < 10; i++) addTex('destroy_' + i);
@@ -266,6 +267,26 @@ function sapling(c, leaf, dark, stem, conifer) {
   }
   for (let y = 7; y < 12; y++) c.set(7, y, s);
   c.set(6, 9, s); c.set(8, 8, s);
+}
+
+// Rails: wooden sleepers under two iron rails (straight along the texture's v axis, or a curve joining the bottom and right edges)
+function railTex(c, corner) {
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
+  const wood = hex('#6a4a2a'), woodD = hex('#4a321c'), iron = hex('#a8a8ac'), ironL = hex('#d8d8dc');
+  if (!corner) {
+    for (let y = 1; y < 16; y += 3) for (let x = 1; x < 15; x++) c.set(x, y, x % 4 ? wood : woodD), c.set(x, y + 1, woodD);
+    for (let y = 0; y < 16; y++) { c.set(3, y, iron); c.set(4, y, ironL); c.set(11, y, iron); c.set(12, y, ironL); }
+    return;
+  }
+  // sleepers fanning around the corner at (16,16)
+  for (let a = 0; a < 6; a++) {
+    const ang = (a + 0.5) / 6 * Math.PI / 2;
+    for (let r = 2; r < 15; r += 0.5) { const x = Math.round(16 - Math.cos(ang) * r), y = Math.round(16 - Math.sin(ang) * r); c.set(x, y, wood); }
+  }
+  for (let t = 0; t <= 64; t++) {
+    const ang = t / 64 * Math.PI / 2;
+    for (const [r, col] of [[12.5, iron], [11.5, ironL], [4.5, iron], [3.5, ironL]]) c.set(Math.round(16 - Math.cos(ang) * r), Math.round(16 - Math.sin(ang) * r), col);
+  }
 }
 
 function crossPlant(c, stem, petals, center) {
@@ -538,6 +559,8 @@ const GEN = {
       }
     }
   },
+  rail: (c) => railTex(c, false),
+  rail_corner: (c) => railTex(c, true),
   oak_trapdoor: (c) => {
     // a plank frame with four square openings
     planks(c, '#a7834e');

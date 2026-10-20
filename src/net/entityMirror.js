@@ -4,7 +4,7 @@
 // latest snapshot. Hitting, picking up and riding them are requests to the host.
 import { Mob } from '../mobs/mob.js';
 import { MOBS } from '../mobs/mobTypes.js';
-import { ItemEntity, XPOrb, Arrow, Boat, FallingBlock } from '../entities/entities.js';
+import { ItemEntity, XPOrb, Arrow, Boat, Minecart, FallingBlock } from '../entities/entities.js';
 import { I, ITEMS, maxStack } from '../world/items.js';
 import { unpackEntity, roomFor } from './protocol.js';
 
@@ -62,7 +62,7 @@ export class EntityMirror {
       case 'item': e = new ItemEntity(s.x, s.y, s.z, s.stack); break;
       case 'xp': e = new XPOrb(s.x, s.y, s.z, s.value); break;
       case 'arrow': e = new Arrow(s.x, s.y, s.z, s.vx, s.vy, s.vz, null, false, s.thrown); break;
-      case 'boat': e = new Boat(s.x, s.y, s.z, s.yaw); break;
+      case 'boat': e = s.cart ? new Minecart(s.x, s.y, s.z, s.yaw) : new Boat(s.x, s.y, s.z, s.yaw); break;
       case 'falling': e = new FallingBlock(0, 0, 0, s.blockId); break;
       default: return null;
     }
@@ -97,6 +97,7 @@ export class EntityMirror {
       e.vx = s.vx; e.vy = s.vy; e.vz = s.vz; e.stuck = s.stuck; e.pickup = s.pickup;
     } else if (e.kind === 'boat') {
       e.hitTime = s.hitTime;
+      if (e.cart) { e.prevPitch = e.pitch; e.pitch = s.pitch; }
       const mine = this.game.player.riding === e;
       e.remoteRider = !mine && s.rider !== -1 ? s.rider : null;
     }

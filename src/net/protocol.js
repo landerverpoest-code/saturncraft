@@ -180,7 +180,7 @@ export function packEntity(e, riderOf = () => -1) {
     case 'item': return ['i', e.id, r2(e.x), r2(e.y), r2(e.z), e.stack.id, e.stack.count, e.stack.damage | 0, e.pickupDelay > 0 ? 1 : 0];
     case 'xp': return ['x', e.id, r2(e.x), r2(e.y), r2(e.z), e.value];
     case 'arrow': return ['a', e.id, r2(e.x), r2(e.y), r2(e.z), r2(e.vx), r2(e.vy), r2(e.vz), e.stuck ? 1 : 0, e.pickup ? 1 : 0, e.thrown === 'egg' ? 2 : e.thrown ? 1 : 0];
-    case 'boat': return ['b', e.id, r2(e.x), r2(e.y), r2(e.z), r2(e.yaw), e.hitTime | 0, riderOf(e)];
+    case 'boat': return ['b', e.id, r2(e.x), r2(e.y), r2(e.z), r2(e.yaw), e.hitTime | 0, riderOf(e), e.cart ? 1 : 0, r2(e.pitch || 0)];
     case 'falling': return ['f', e.id, r2(e.x), r2(e.y), r2(e.z), e.blockId];
     default: return null;
   }
@@ -195,7 +195,7 @@ export function unpackEntity(a) {
   if (k === 'i') Object.assign(o, { stack: { id: a[5] | 0, count: a[6] | 0, damage: a[7] | 0 }, delayed: !!a[8] });
   else if (k === 'x') o.value = a[5] | 0;
   else if (k === 'a') Object.assign(o, { vx: a[5], vy: a[6], vz: a[7], stuck: !!a[8], pickup: !!a[9], thrown: a[10] === 2 ? 'egg' : a[10] === 1 ? 'snowball' : null });
-  else if (k === 'b') Object.assign(o, { yaw: a[5], hitTime: a[6] | 0, rider: a[7] });
+  else if (k === 'b') Object.assign(o, { yaw: a[5], hitTime: a[6] | 0, rider: a[7], cart: !!a[8], pitch: +a[9] || 0 });
   else if (k === 'f') o.blockId = a[5] | 0;
   return o;
 }

@@ -241,6 +241,7 @@ const FIRE_BOX = [0, 0, 0, 1, 1 / 16, 1];
 export function selectionBox(id, meta) {
   if (id === B.DOOR) return doorBox(meta);
   if (id === B.SNOW_LAYER) return snowBox(meta);
+  if (id === B.RAIL) return [0, 0, 0, 1, meta >= 2 && meta <= 5 ? 0.5 : 2 / 16, 1];
   if (id === B.OAK_TRAPDOOR) return trapdoorBox(meta);
   if (BLOCKS[id].shape === SHAPE.WALL) return [4 / 16, 0, 4 / 16, 12 / 16, 1, 12 / 16];
   if (BLOCKS[id].shape === SHAPE.FENCE) return [P0, 0, P0, P1, 1, P1];
