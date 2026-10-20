@@ -290,7 +290,7 @@ export class EntityManager {
 
   spawnItem(x, y, z, st, vel = null) {
     if (!st || st.count <= 0) return null;
-    if (this.redirect && this.game.net && this.game.net.redirectSpawn(this.redirect, 'item', x, y, z, st)) return null; // multiplayer: drops for a guest
+    if (this.netSpawn('item', { x, y, z, st, v: vel, pd: vel ? 40 : 10 })) return null;
     const e = new ItemEntity(x, y, z, st);
     if (vel) { e.body.vx = vel[0]; e.body.vy = vel[1]; e.body.vz = vel[2]; }
     else { e.body.vx = (Math.random() - 0.5) * 0.2; e.body.vy = 0.2; e.body.vz = (Math.random() - 0.5) * 0.2; }
@@ -298,12 +298,20 @@ export class EntityManager {
   }
   /** Drop experience as one or more orbs. */
   spawnXp(x, y, z, amount) {
-    if (this.redirect && this.game.net && this.game.net.redirectSpawn(this.redirect, 'xp', x, y, z, Math.round(amount))) return;
+    if (this.netSpawn('xp', { x, y, z, n: Math.round(amount) })) return;
     for (const v of splitOrbs(Math.round(amount))) this.add(new XPOrb(x, y, z, v));
   }
-  spawnBoat(x, y, z, yaw) { return this.add(new Boat(x, y, z, yaw)); }
-  spawnFallingBlock(x, y, z, id) { return this.add(new FallingBlock(x, y, z, id)); }
-  spawnArrow(x, y, z, vx, vy, vz, shooter, crit) { return this.add(new Arrow(x, y, z, vx, vy, vz, shooter, crit)); }
+  spawnBoat(x, y, z, yaw) { return this.netSpawn('boat', { x, y, z, yaw }) ? null : this.add(new Boat(x, y, z, yaw)); }
+  spawnFallingBlock(x, y, z, id) { return this.netSpawn('falling', {}) ? null : this.add(new FallingBlock(x, y, z, id)); }
+  spawnArrow(x, y, z, vx, vy, vz, shooter, crit) { return this.netSpawn('arrow', { x, y, z, v: [vx, vy, vz], crit }) ? null : this.add(new Arrow(x, y, z, vx, vy, vz, shooter, crit)); }
+
+  /** Multiplayer guest: dropped items, orbs, arrows and boats are made (and shared) by the host. */
+  netSpawn(kind, data) {
+    const n = this.game.net;
+    if (!n || !n.isClient || n.applyingRemote) return false;
+    n.requestSpawn(kind, data);
+    return true;
+  }
 
   blockOccupied(x, y, z) {
     for (const e of this.list) {
@@ -346,6 +354,7 @@ export class EntityManager {
     if (this.game.net) cands.push(...this.game.net.remoteTargets(proj));
     for (const e of cands) {
       if (e === proj.shooter || (proj.shooter && proj.shooter.isPlayer && e.isPlayer && proj.age < 5)) continue;
+      if (this.game.net && !this.game.net.pvp && proj.shooter && proj.shooter.isPlayer && e.isPlayer) continue; // PvP off
       const hw = e.width / 2 + 0.3;
       const t = rayAABB(ox, oy, oz, dx, dy, dz, e.x - hw, e.y - 0.3, e.z - hw, e.x + hw, e.y + e.height + 0.3, e.z + hw);
       if (t !== null && t <= maxDist && t < bestT) { best = e; bestT = t; }
@@ -357,9 +366,9 @@ export class EntityManager {
     const g = this.game, p = g.player;
     for (const e of this.list) {
       if (e.dead || this.frozen(e)) continue;
-      if (e.kind === 'boat') { e.tick(g, e.rider ? g.boatInput : null); continue; }
-      if (e.netProxy) { e.netTick(); continue; }          // multiplayer client: a mob simulated by the host
-      if (g.net && e.kind === 'mob') g.net.tickMob(e); else e.tick(g);
+      if (e.netProxy) { e.netTick(); continue; }          // multiplayer guest: an entity simulated by the host
+      if (e.kind === 'boat') { if (!e.remoteRider) e.tick(g, e.rider ? g.boatInput : null); continue; } // a guest steers its own boat
+      if (g.net && (e.kind === 'mob' || e.kind === 'xp')) g.net.tickNear(e); else e.tick(g);
       if (e.kind === 'xp' && !e.dead && !p.dead && p.xpDelay === 0) {
         const b = p.body.box();
         if (e.x > b[0] - 0.5 && e.x < b[3] + 0.5 && e.y > b[1] - 0.5 && e.y < b[4] + 0.5 && e.z > b[2] - 0.5 && e.z < b[5] + 0.5) {

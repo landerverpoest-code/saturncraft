@@ -78,8 +78,12 @@ export class DimensionManager {
   switchTo(dim, arrival) {
     const g = this.game, w = g.world, p = g.player, old = w.dimension;
     if (!DIMENSIONS[dim]) return false;
-    // multiplayer sessions share one world: other dimensions are single-player only for now
-    if (g.net) { if (g.hud) g.hud.toast('Other dimensions are not available in multiplayer yet'); return false; }
+    // multiplayer: the group travels together; a guest asks the host, who takes everyone along
+    if (g.net && g.net.isClient && !this.netFollow) {
+      g.net.requestTravel(dim, arrival);
+      this.portalTicks = 0; this.portalCooldown = 100;
+      return false;
+    }
     if (p.riding) g.dismount();
     if (p.sleeping) p.sleeping = null;
     // unload every chunk (modified ones go to world.saved, persistent mobs to the spawner)
@@ -116,6 +120,7 @@ export class DimensionManager {
       this.loadEl.style.display = 'flex';
     }
     if (g.milestones) g.milestones.event(dim === DIM.CINDERDEEP ? 'enter_cinderdeep' : dim === DIM.HOLLOW ? 'enter_hollow' : 'enter_overworld');
+    if (g.net && g.net.isHost) g.net.onSwitchDimension(dim, this.pending, old);
     return true;
   }
 
@@ -182,6 +187,7 @@ export class DimensionManager {
       y = Math.max(y, yy);
     }
     p.setPosition(x, y, z);
+    if (g.net && g.net.isHost) g.net.onArrived(x, y, z); // the guests land next to us
   }
 
   /** An open standing spot near (x, z): solid (non-lava) ground and two free blocks. */
@@ -239,7 +245,6 @@ export class DimensionManager {
     const dim = dimensionByName(name);
     if (!dim) return `Usage: /dimension <${Object.keys(DIMENSIONS).join('|')}>`;
     if (dim === this.current) return `You are already in ${DIMENSIONS[dim].name}`;
-    if (this.game.net) return 'Other dimensions are not available in multiplayer yet';
     const p = this.game.player, from = this.current;
     if (dim === DIM.HOLLOW) this.switchTo(dim, { mode: 'hollowArrival' });
     else if (from === DIM.HOLLOW) this.switchTo(dim, dim === DIM.OVERWORLD ? { mode: 'spawn', x: p.spawn.x, y: p.spawn.y, z: p.spawn.z } : { mode: 'safe', x: p.spawn.x / 8, y: 64, z: p.spawn.z / 8 });
@@ -252,7 +257,7 @@ export class DimensionManager {
     const g = this.game, p = g.player, w = g.world;
     if (this.pending) { this.tickPending(); return; }
     if (this.portalEl) this.portalEl.style.opacity = (Math.min(1, this.portalTicks / PORTAL_TICKS) * 0.85).toFixed(3);
-    if (this.current === DIM.HOLLOW) this.tickHollow();
+    if (this.current === DIM.HOLLOW && !(g.net && g.net.isClient)) this.tickHollow(); // the host runs the boss fight
     this.ambience();
     if (p.dead) { this.portalTicks = 0; return; }
     const box = p.body.box();

@@ -56,6 +56,13 @@ export class ChunkRenderer {
     this.stats = { chunks: 0, meshed: 0, drawn: 0, visibleSections: 0 };
     this.visDirty = true;
     this.visKey = '';
+    this.extraCenters = []; // [cx, cz, radius]: also keep chunks loaded here (a multiplayer host simulating its guests' surroundings)
+  }
+
+  /** Is a chunk within `pad` of one of the extra centres? */
+  nearExtra(cx, cz, pad = 0) {
+    for (const [x, z, r] of this.extraCenters) if (Math.max(Math.abs(cx - x), Math.abs(cz - z)) <= r + pad) return true;
+    return false;
   }
 
   setRenderDistance(r) { this.renderDistance = r; }
@@ -73,7 +80,7 @@ export class ChunkRenderer {
       this.workers.forEach((w) => { if (w._jobs && w._jobs.has(m.jobId)) { w._jobs.delete(m.jobId); w.busy--; } });
       if (m.epoch !== this.epoch) return;
       const [pcx, pcz] = this.center;
-      if (Math.max(Math.abs(m.cx - pcx), Math.abs(m.cz - pcz)) > this.renderDistance + 2) return;
+      if (Math.max(Math.abs(m.cx - pcx), Math.abs(m.cz - pcz)) > this.renderDistance + 2 && !this.nearExtra(m.cx, m.cz, 1)) return;
       if (this.world.isChunkLoaded(m.cx, m.cz)) return;
       this.world.addChunk(m.cx, m.cz, m);
       if (this.onChunkLoaded) this.onChunkLoaded(m.cx, m.cz);
@@ -124,6 +131,8 @@ export class ChunkRenderer {
   flushUrgent() {
     for (const c of this.world.chunks.values()) {
       if (!c.urgent || !c.urgent.size) continue;
+      // chunks only kept for simulation (beyond the view) are meshed when the player comes near
+      if (Math.max(Math.abs(c.cx - this.center[0]), Math.abs(c.cz - this.center[1])) > this.renderDistance) { c.urgent.clear(); continue; }
       if (!this.neighboursLoaded(c)) { c.urgent.clear(); continue; }
       for (const sy of c.urgent) {
         c.dirty.delete(sy);
@@ -156,7 +165,7 @@ export class ChunkRenderer {
 
     // Unload far chunks
     for (const c of [...w.chunks.values()]) {
-      if (Math.max(Math.abs(c.cx - pcx), Math.abs(c.cz - pcz)) > R + 2) {
+      if (Math.max(Math.abs(c.cx - pcx), Math.abs(c.cz - pcz)) > R + 2 && !this.nearExtra(c.cx, c.cz, 2)) {
         this.disposeChunk(c);
         w.removeChunk(c.cx, c.cz);
         if (this.onChunkUnloaded) this.onChunkUnloaded(c.cx, c.cz);
@@ -173,9 +182,17 @@ export class ChunkRenderer {
         if (w.chunks.has(k) || this.pendingGen.has(k)) continue;
         want.push([dx * dx + dz * dz, cx, cz, k]);
       }
+      for (const [ex, ez, er] of this.extraCenters) {
+        for (let dz = -er; dz <= er; dz++) for (let dx = -er; dx <= er; dx++) {
+          const cx = ex + dx, cz = ez + dz, k = chunkKey(cx, cz);
+          if (w.chunks.has(k) || this.pendingGen.has(k)) continue;
+          want.push([1e6 + dx * dx + dz * dz, cx, cz, k]); // after the player's own surroundings
+        }
+      }
       want.sort((a, b) => a[0] - b[0]);
       for (const [, cx, cz, k] of want) {
         if (this.pendingGen.size >= maxInflight) break;
+        if (this.pendingGen.has(k)) continue;
         this.pendingGen.add(k);
         this.post(this.pickWorker(), { type: 'gen', cx, cz, epoch: this.epoch });
       }

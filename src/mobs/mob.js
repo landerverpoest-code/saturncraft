@@ -60,6 +60,7 @@ export class Mob {
 
   tame(g) {
     this.tamed = true; this.sitting = true; this.enemy = null; this.target = null; this.path = null; this.wander = null;
+    if (g.player && g.player.netName) this.ownerName = g.player.netName; // multiplayer: it follows this player
     this.health = this.def.tamedHealth;
     this.persistent = true;
     this.hearts(g, 7);
@@ -75,13 +76,13 @@ export class Mob {
   }
 
   /** State kept when the mob is saved with its chunk. */
-  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor, profession: this.profession, trades: this.trades, home: this.home, lastRestock: this.lastRestock, tamed: this.tamed, sitting: this.sitting }; }
+  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor, profession: this.profession, trades: this.trades, home: this.home, lastRestock: this.lastRestock, tamed: this.tamed, sitting: this.sitting, ownerName: this.ownerName }; }
   loadData(s) {
     this.health = s.health; this.yaw = s.yaw;
     if (s.age < 0) { this.setBaby(true); this.age = s.age; } else this.age = s.age || 0;
     this.sheared = !!s.sheared;
     if (s.woolColor !== undefined) this.woolColor = s.woolColor;
-    if (s.tamed) { this.tamed = true; this.sitting = !!s.sitting; }
+    if (s.tamed) { this.tamed = true; this.sitting = !!s.sitting; if (s.ownerName) this.ownerName = s.ownerName; }
     if (s.profession) { this.profession = s.profession; this.trades = s.trades || []; this.home = s.home || null; this.lastRestock = s.lastRestock || 0; }
   }
 

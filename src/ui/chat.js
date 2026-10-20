@@ -2,6 +2,7 @@
 // slash is optional), Esc closes, Up/Down walk the history. Messages fade
 // out after ten seconds and reappear while the chat is open.
 import { runCommand } from './commands.js';
+import { WORLD_COMMANDS, commandName } from '../net/protocol.js';
 
 export class Chat {
   constructor(game) {
@@ -50,9 +51,11 @@ export class Chat {
     if (text) {
       this.history.push(text);
       if (text.startsWith('/') || this.game.player) {
+        const net = this.game.net;
+        // a guest's world-changing commands (/time, /weather, /summon...) are run by the host for everyone
+        if (text.startsWith('/') && net && net.isClient && WORLD_COMMANDS.has(commandName(text))) { net.sendCommand(text); this.game.ui.close(); return; }
         const out = text.startsWith('/') ? runCommand(this.game, text) : null;
         if (!text.startsWith('/')) {
-          const net = this.game.net;
           this.add(`<${net ? net.name : 'Player'}> ${text}`);
           if (net) net.sendChat(text);
         }
