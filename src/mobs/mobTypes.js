@@ -61,6 +61,11 @@ export const MOBS = {
     health: 8, tamedHealth: 20, speed: 0.3, width: 0.6, height: 0.85, attack: 2, tamedAttack: 4, sound: 'howl',
     drops: [], food: [I.RAW_PORK, I.COOKED_PORK, I.RAW_BEEF, I.STEAK, I.RAW_CHICKEN, I.COOKED_CHICKEN, I.RAW_MUTTON, I.COOKED_MUTTON, I.ROTTEN_FLESH],
   },
+  ironguard: {
+    name: 'Ironguard', role: 'iron golem', category: CATEGORY.CREATURE, guard: true,
+    health: 100, speed: 0.25, width: 1.4, height: 2.7, attack: 7, sound: 'clank', noFallDamage: true, knockbackResist: true,
+    drops: [{ id: I.IRON_INGOT, min: 3, max: 5 }, { id: B.REDBLOOM, min: 0, max: 2 }],
+  },
   settler: {
     name: 'Settler', role: 'villager', category: CATEGORY.CREATURE, villager: true,
     health: 20, speed: 0.3, width: 0.6, height: 1.95, panicSpeed: 1.6, sound: 'hmm',

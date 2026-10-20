@@ -532,10 +532,30 @@ export class Interaction {
     if (p.intersectsBlock(x, y, z) && meta === SLAB_DOUBLE) return false;
     if (LEAVES.has(id)) meta = 1; // placed leaves never decay
     g.world.setBlockUrgent(x, y, z, id, meta);
+    if (id === B.PUMPKIN || id === B.JACK_O_LANTERN) this.tryBuildIronguard(x, y, z);
     g.audio.play('place_' + BLOCKS[id].sound, [x + 0.5, y + 0.5, z + 0.5]);
     p.inventory.removeFromSlot(p.inventory.selected, 1);
     this.swing = SWING_TICKS;
     return true;
+  }
+
+  /** A pumpkin on top of a T of four iron blocks comes alive as an Ironguard. */
+  tryBuildIronguard(x, y, z) {
+    const g = this.game, w = g.world;
+    if (w.getBlock(x, y - 1, z) !== B.IRON_BLOCK || w.getBlock(x, y - 2, z) !== B.IRON_BLOCK) return false;
+    for (const [ax, az] of [[1, 0], [0, 1]]) {
+      if (w.getBlock(x + ax, y - 1, z + az) !== B.IRON_BLOCK || w.getBlock(x - ax, y - 1, z - az) !== B.IRON_BLOCK) continue;
+      for (const [bx, by, bz] of [[x, y, z], [x, y - 1, z], [x, y - 2, z], [x + ax, y - 1, z + az], [x - ax, y - 1, z - az]]) {
+        w.setBlockUrgent(bx, by, bz, B.AIR);
+        g.particles.smoke(bx + 0.5, by + 0.5, bz + 0.5, 6, 1);
+      }
+      const m = g.spawner.spawnMob('ironguard', x + 0.5, y - 2, z + 0.5);
+      if (m) { m.playerMade = true; m.home = { x: x + 0.5, y: y - 2, z: z + 0.5 }; }
+      g.audio.play('clank', [x + 0.5, y, z + 0.5]);
+      if (g.milestones) g.milestones.event('golem');
+      return true;
+    }
+    return false;
   }
 
   /** Doors take two blocks: the clicked spot (or the one beside it) and the one above. */

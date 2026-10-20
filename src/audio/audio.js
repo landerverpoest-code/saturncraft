@@ -138,6 +138,7 @@ export class Audio {
       case 'fire': this.noise(t, 0.9, 700, 0.6, 0.12 * gain, out, 'lowpass'); for (let k = 0; k < 4; k++) this.noise(t + Math.random() * 0.8, 0.02, 2500, 5, 0.12 * gain, out); break;
       case 'thunder': this.noise(t, 0.6, 400, 0.5, 0.9 * gain, out, 'lowpass'); this.noise(t + 0.3, 4, 110, 0.4, 1.2 * gain, out, 'lowpass'); this.noise(t + 1.2, 3, 70, 0.4, 0.9 * gain, out, 'lowpass'); break;
       case 'lightning': this.noise(t, 0.25, 6000, 0.3, 0.8 * gain, out, 'highpass'); this.noise(t, 0.6, 1500, 0.4, 0.6 * gain, out); break;
+      case 'clank': this.tone(t, 0.18, 220, 120, 0.25 * gain, out, 'square'); this.noise(t, 0.15, 1800, 2, 0.3 * gain, out); break;
       case 'howl': this.tone(t, 0.12, 380, 520, 0.2 * gain, out, 'sawtooth'); this.tone(t + 0.18, 0.1, 400, 300, 0.18 * gain, out, 'sawtooth'); break;
       case 'shear': this.noise(t, 0.06, 4000, 3, 0.25 * gain, out); this.noise(t + 0.08, 0.06, 3500, 3, 0.25 * gain, out); break;
       case 'hmm': this.tone(t, 0.12, 180, 210, 0.2 * gain, out, 'sawtooth'); this.tone(t + 0.13, 0.22, 210, 150, 0.2 * gain, out, 'sawtooth'); break;

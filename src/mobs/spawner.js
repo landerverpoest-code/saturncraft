@@ -160,6 +160,11 @@ export class MobSpawner {
         m.profession = p.profession; m.home = h; m.trades = makeTrades(p.profession); m.lastRestock = this.game.time;
       }
     }
+    // one Ironguard keeps watch by each village well
+    for (const v of villagesNear(this.game.world.gen, cx * 16, cz * 16, cx * 16 + 15, cz * 16 + 15)) {
+      if (Math.floor((v.cx + 3) / 16) !== cx || Math.floor(v.cz / 16) !== cz) continue;
+      this.spawnMob('ironguard', v.cx + 3.5, this.game.world.heightAt(v.cx + 3, v.cz) + 1, v.cz + 0.5);
+    }
     // Herds placed at chunk generation time
     const w = this.game.world;
     while (Math.random() < CHUNK_GEN_CREATURE_CHANCE) {

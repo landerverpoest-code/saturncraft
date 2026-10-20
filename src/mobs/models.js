@@ -166,6 +166,21 @@ MODELS.howler = {
   ],
 };
 
+// Ironguards: hulking iron golems with long arms and a little vine growth.
+MODELS.ironguard = {
+  parts: [
+    ['legL', [6, 16, 5], [5, 16, 0], [0, -8, 0], '#b8b2a8', { anim: 'legA' }],
+    ['legR', [6, 16, 5], [-5, 16, 0], [0, -8, 0], '#b8b2a8', { anim: 'legB' }],
+    ['waist', [9, 6, 7], [0, 19, 0], [0, 0, 0], '#c4beb4'],
+    ['body', [18, 12, 11], [0, 28, 0], [0, 0, 0], '#cfc9bf'],
+    ['vine', [6, 8, 1], [0, 28, 0], [-4, -1, -5.8], '#4a7a2a'],
+    ['head', [8, 10, 8], [0, 34, -2], [0, 5, -2], '#cfc9bf', { face: 'ironguard' }],
+    ['nose', [2, 4, 2], [0, 34, -2], [0, 3, -7], '#b8b2a8'],
+    ['armL', [4, 30, 6], [11, 33, 0], [0, -13, 0], '#c4beb4', { anim: 'armSwing' }],
+    ['armR', [4, 30, 6], [-11, 33, 0], [0, -13, 0], '#c4beb4', { anim: 'armSwingB' }],
+  ],
+};
+
 // Settlers: big-nosed villagers in a robe whose colour shows the profession.
 MODELS.settler = {
   parts: [
@@ -261,6 +276,7 @@ const FACES = {
     px(c, '#ffffff', [[3, 7, 3, 2], [10, 7, 3, 2]]); px(c, '#3a5ab0', [[4, 7, 2, 2], [11, 7, 2, 2]]);
     px(c, '#9a6a4a', [[7, 10, 2, 2]]); px(c, '#7a3a2a', [[5, 12, 6, 1]]);
   },
+  ironguard: (c) => { px(c, '#7a7468', [[2, 4, 12, 2]]); px(c, '#8a1a10', [[4, 6, 2, 2], [10, 6, 2, 2]]); px(c, '#a8a298', [[3, 12, 10, 1]]); },
   howler: (c) => { px(c, '#f0f0f0', [[2, 6, 3, 2], [11, 6, 3, 2]]); px(c, '#2a2418', [[3, 6, 2, 2], [11, 6, 2, 2]]); px(c, '#7a7a80', [[2, 4, 4, 1], [10, 4, 4, 1]]); },
   bristleback: (c) => { px(c, '#1a1010', [[3, 5, 2, 2], [11, 5, 2, 2]]); px(c, '#ffffff', [[3, 5], [11, 5]]); },
   mooxen: (c) => { px(c, '#101820', [[2, 6, 2, 2], [12, 6, 2, 2]]); px(c, '#c8b8a0', [[4, 10, 8, 6]]); px(c, '#3a2a2a', [[5, 12, 2, 2], [9, 12, 2, 2]]); },

@@ -76,12 +76,13 @@ export class Mob {
   }
 
   /** State kept when the mob is saved with its chunk. */
-  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor, profession: this.profession, trades: this.trades, home: this.home, lastRestock: this.lastRestock, tamed: this.tamed, sitting: this.sitting, ownerName: this.ownerName }; }
+  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor, profession: this.profession, trades: this.trades, home: this.home, lastRestock: this.lastRestock, playerMade: this.playerMade, tamed: this.tamed, sitting: this.sitting, ownerName: this.ownerName }; }
   loadData(s) {
     this.health = s.health; this.yaw = s.yaw;
     if (s.age < 0) { this.setBaby(true); this.age = s.age; } else this.age = s.age || 0;
     this.sheared = !!s.sheared;
     if (s.woolColor !== undefined) this.woolColor = s.woolColor;
+    if (s.playerMade) this.playerMade = true;
     if (s.tamed) { this.tamed = true; this.sitting = !!s.sitting; if (s.ownerName) this.ownerName = s.ownerName; }
     if (s.profession) { this.profession = s.profession; this.trades = s.trades || []; this.home = s.home || null; this.lastRestock = s.lastRestock || 0; }
   }
@@ -193,7 +194,15 @@ export class Mob {
       if (b.onGround) b.vy = Math.min(0.4, b.vy / 2 + knockback);
     }
     const g = this._game;
-    if (this.def.tameable) {
+    if (this.def.villager && attacker && attacker.isPlayer && g) {
+      // hurting a Settler angers the village's Ironguards
+      for (const e of g.entities.list) if (e.def && e.def.guard && !e.dead && Math.hypot(e.x - this.x, e.z - this.z) < 32) { e.lastSettlerAttacker = 'player'; e.enemy = 'player'; }
+    }
+    if (this.def.guard) {
+      // Ironguards shrug off knockback and go after whoever hit them (players they made, never)
+      this.body.vx *= 0.2; this.body.vz *= 0.2;
+      if (attacker && attacker !== this && !(attacker.isPlayer && this.playerMade)) this.enemy = attacker.isPlayer ? 'player' : attacker;
+    } else if (this.def.tameable) {
       // a hurt Howler stands up and fights back; a wild one calls its pack
       this.sitting = false;
       const foe = attacker && attacker.isPlayer ? (this.tamed ? null : 'player') : attacker;
@@ -294,6 +303,7 @@ export class Mob {
     if (this.hurtTime > 0) this.hurtTime--;
     if (this.lastHurtByPlayer > 0) this.lastHurtByPlayer--;
     if (this.attackCooldown > 0) this.attackCooldown--;
+    if (this.swingTime > 0) this.swingTime--;
     this.noActionTime++;
 
     const p = g.player;
@@ -378,6 +388,7 @@ export class Mob {
   ai(g, p, pdist) {
     if (this.def.villager) return this.settlerAI(g, p, pdist);
     if (this.def.tameable) return this.howlerAI(g, p, pdist);
+    if (this.def.guard) return this.guardAI(g, p, pdist);
     if (this.def.category === CATEGORY.CREATURE) return this.passiveAI(g);
     if (this.def.customAI) return this.def.customAI(this, g, p, pdist); // Cinderdeep / Hollow mobs (dimensionMobs.js)
     switch (this.type) {
@@ -508,6 +519,42 @@ export class Mob {
       }
     }
     this.wanderAI(g, 1);
+  }
+
+  /** Ironguards patrol near where they were made and smash hostile mobs (not Fizzlers) within 16 blocks. */
+  guardAI(g, p, pdist) {
+    const alive = (e) => e && (e === 'player' ? !p.dead && !p.creative && pdist < 24 : !e.dead && e.deathTime === 0 && Math.hypot(e.x - this.x, e.z - this.z) < 24);
+    if (this.enemy && !alive(this.enemy)) this.enemy = null;
+    if (!this.enemy && g.ticks % 10 === this.id % 10) {
+      let best = null, bd = 16 * 16;
+      for (const e of g.entities.list) {
+        if (e.kind !== 'mob' || e.deathTime > 0 || e.def.category !== CATEGORY.MONSTER || e.type === 'fizzler') continue;
+        const d2 = (e.x - this.x) ** 2 + (e.z - this.z) ** 2;
+        if (d2 < bd && Math.abs(e.y - this.y) < 8) { bd = d2; best = e; }
+      }
+      // players who hurt a Settler become a target too
+      if (!best && this.lastSettlerAttacker === 'player' && !p.dead && !p.creative && pdist < 16) best = 'player';
+      this.enemy = best;
+    }
+    if (!this.home) this.home = { x: this.x, y: this.y, z: this.z };
+    this.headPitch = 0;
+    if (this.enemy) {
+      const t = this.enemy === 'player' ? p : this.enemy;
+      this.chase(g, t, 0.9);
+      const dx = t.x - this.x, dz = t.z - this.z;
+      if (dx * dx + dz * dz <= (this.width / 2 + (t.width || 0.6) / 2 + 1.2) ** 2 && Math.abs(t.y - this.y) < 2.5 && this.attackCooldown <= 0) {
+        // the reference golem hits for 7-21 and flings its target into the air
+        this.attackCooldown = 20; this.swingTime = 10;
+        const dmg = 7 + Math.floor(Math.random() * 15);
+        if (t === p) { p.hurt(dmg, 'mob:' + this.def.name, this); p.body.vy += 0.6; }
+        else { t.hurt(dmg, 'mob:' + this.def.name, this, 0.4); t.body.vy += 0.6; }
+        g.audio.play('clank', [this.x, this.y + 1.5, this.z]);
+      }
+      return;
+    }
+    const h = this.home;
+    if (Math.hypot(h.x - this.x, h.z - this.z) > 20) { if (!this.path || g.ticks % 40 === 0) this.pathTo(g, h.x, h.y, h.z); if (!this.followPath(g, 0.6)) this.steer(h.x, h.z, 0.6); return; }
+    this.wanderAI(g, 0.5);
   }
 
   howlerBite(g, t) {
@@ -737,6 +784,7 @@ export class Mob {
     m.rotation.set(0, yaw, 0);
     if (this.deathTime > 0) m.rotation.z = Math.min(1, (this.deathTime + alpha) / 10) * Math.PI / 2;
     animateModel(m, this, alpha, L, sec);
+    if (parts && parts.armL && this.def.guard && this.swingTime > 0) parts.armL.rotation.x = parts.armR.rotation.x = -2 * Math.sin((this.swingTime - alpha) / 10 * Math.PI);
     if (this.def.customRender) this.def.customRender(this, m, alpha, sec);
     if (parts && parts.collar) {
       parts.collar.visible = this.tamed;
