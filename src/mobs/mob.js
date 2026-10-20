@@ -54,6 +54,16 @@ export class Mob {
     this.profession = null; this.trades = []; this.home = null; this.lastRestock = 0;
     // Howlers: tamed by the player (owner), sitting, current enemy
     this.tamed = false; this.sitting = false; this.enemy = null;
+    // Wobblers (slimes) come in three sizes
+    if (type === 'wobbler') this.setSize([1, 2, 4][Math.floor(Math.random() * 3)]);
+  }
+
+  setSize(n) {
+    this.size = n;
+    this.body.width = this.def.width * n; this.body.height = this.def.height * n;
+    this.health = n * n;
+    this.jumpDelay = 10 + Math.floor(Math.random() * 20);
+    this.squish = 0;
   }
 
   get maxHealth() { return this.tamed ? this.def.tamedHealth : this.def.health; }
@@ -76,13 +86,14 @@ export class Mob {
   }
 
   /** State kept when the mob is saved with its chunk. */
-  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor, profession: this.profession, trades: this.trades, home: this.home, lastRestock: this.lastRestock, playerMade: this.playerMade, tamed: this.tamed, sitting: this.sitting, ownerName: this.ownerName }; }
+  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor, profession: this.profession, trades: this.trades, home: this.home, lastRestock: this.lastRestock, size: this.size, playerMade: this.playerMade, tamed: this.tamed, sitting: this.sitting, ownerName: this.ownerName }; }
   loadData(s) {
     this.health = s.health; this.yaw = s.yaw;
     if (s.age < 0) { this.setBaby(true); this.age = s.age; } else this.age = s.age || 0;
     this.sheared = !!s.sheared;
     if (s.woolColor !== undefined) this.woolColor = s.woolColor;
     if (s.playerMade) this.playerMade = true;
+    if (s.size) { this.setSize(s.size); this.health = s.health; }
     if (s.tamed) { this.tamed = true; this.sitting = !!s.sitting; if (s.ownerName) this.ownerName = s.ownerName; }
     if (s.profession) { this.profession = s.profession; this.trades = s.trades || []; this.home = s.home || null; this.lastRestock = s.lastRestock || 0; }
   }
@@ -221,6 +232,16 @@ export class Mob {
     if (this.deathTime > 0) return;
     this.deathTime = 1;
     this.health = 0;
+    if (this.type === 'wobbler' && this.size > 1 && g && (!g.net || g.net.isHost)) {
+      // splits into 2-4 Wobblers of half the size
+      const n = 2 + Math.floor(Math.random() * 3);
+      for (let k = 0; k < n; k++) {
+        const c = g.spawner.spawnMob('wobbler', this.x + (Math.random() - 0.5) * this.size * 0.5, this.y + 0.3, this.z + (Math.random() - 0.5) * this.size * 0.5);
+        if (c) { c.setSize(this.size / 2); c.yaw = Math.random() * Math.PI * 2; }
+      }
+      if (this.lastHurtByPlayer > 0) g.player.stats.kills++;
+      return; // only the smallest drop slimeballs
+    }
     if (!g) return;
     const killedByPlayer = this.lastHurtByPlayer > 0;
     this.killedByPlayer = killedByPlayer;
@@ -397,6 +418,7 @@ export class Mob {
       case 'rattler': return this.rangedAI(g, p, pdist);
       case 'fizzler': return this.fizzlerAI(g, p, pdist);
       case 'voidwalker': return this.voidwalkerAI(g, p, pdist);
+      case 'wobbler': return this.wobblerAI(g, p, pdist);
     }
   }
 
@@ -555,6 +577,29 @@ export class Mob {
     const h = this.home;
     if (Math.hypot(h.x - this.x, h.z - this.z) > 20) { if (!this.path || g.ticks % 40 === 0) this.pathTo(g, h.x, h.y, h.z); if (!this.followPath(g, 0.6)) this.steer(h.x, h.z, 0.6); return; }
     this.wanderAI(g, 0.5);
+  }
+
+  /** Wobblers hop: a jump every 10-30 ticks (three times as often when chasing), steering only in the air; big ones hurt on contact. */
+  wobblerAI(g, p, pdist) {
+    const b = this.body, has = this.acquire(g, p, pdist, this.def.followRange);
+    if (has) this.yaw += wrap(angleTo(p.x - this.x, p.z - this.z) - this.yaw) * 0.3;
+    else if (b.onGround && Math.random() < 0.02) this.yaw += (Math.random() - 0.5) * 2;
+    if (b.onGround) {
+      this.squish *= 0.6;
+      if (this.wasAirborne) { this.squish = -0.5; this.wasAirborne = false; g.audio.play('squish', [this.x, this.y, this.z], 0.4 + this.size * 0.15); }
+      if (--this.jumpDelay <= 0) {
+        this.jumpDelay = Math.floor((10 + Math.random() * 20) / (has ? 3 : 1));
+        b.vy = 0.42; this.squish = 1; this.wasAirborne = true;
+      }
+    } else this.squish *= 0.85;
+    if (!b.onGround) this.move = { forward: this.speed() * (0.6 + this.size * 0.2), jump: false, mod: 1 };
+    if (has && this.size > 1) {
+      const dx = p.x - this.x, dz = p.z - this.z, r = this.width / 2 + 0.6;
+      if (dx * dx + dz * dz < r * r && Math.abs(p.y - this.y) < this.height && this.attackCooldown <= 0) {
+        this.attackCooldown = 10;
+        p.hurt(this.size, 'mob:' + this.def.name, this);
+      }
+    }
   }
 
   howlerBite(g, t) {
@@ -766,6 +811,7 @@ export class Mob {
   renderUpdate(m, px, py, pz, alpha, L, sec) {
     m.position.set(px, py, pz);
     m.scale.setScalar(this.age < 0 ? 0.5 : 1);
+    if (this.size) { const q = this.squish || 0; m.scale.set(this.size * (1 - q * 0.15), this.size * (1 + q * 0.3), this.size * (1 - q * 0.15)); }
     const parts = m.userData.parts;
     if (parts && parts.robe && this.profession && m.userData.prof !== this.profession) {
       m.userData.prof = this.profession;

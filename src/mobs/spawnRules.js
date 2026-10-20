@@ -22,6 +22,7 @@ const DEFAULT_MONSTERS = [
   { type: 'rattler', weight: 100, min: 4, max: 4 },
   { type: 'fizzler', weight: 100, min: 4, max: 4 },
   { type: 'voidwalker', weight: 10, min: 1, max: 4 },
+  { type: 'wobbler', weight: 100, min: 4, max: 4 }, // only valid in swamps (y 51-69) or slime chunks below y 40
 ];
 const FARM_ANIMALS = [
   { type: 'fleecer', weight: 12, min: 4, max: 4 },
@@ -57,6 +58,14 @@ export const SPAWN_TABLES = {
     default: [],
   },
 };
+
+/** One chunk in ten lets Wobblers (slimes) spawn below y 40, fixed per world seed. */
+export function isSlimeChunk(seed, cx, cz) {
+  let h = 2166136261;
+  for (const ch of String(seed)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  h = Math.imul(h ^ cx, 0x27d4eb2d); h = Math.imul(h ^ (h >>> 15) ^ cz, 0x165667b1); h ^= h >>> 13;
+  return ((h >>> 0) % 10) === 0;
+}
 
 export function spawnTable(category, biomeId) {
   const key = BIOMES[biomeId] ? BIOMES[biomeId].key : 'plains';

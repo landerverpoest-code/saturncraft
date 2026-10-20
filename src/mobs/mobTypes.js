@@ -51,6 +51,12 @@ export const MOBS = {
     health: 16, speed: 0.3, width: 1.4, height: 0.9, attack: 2, followRange: 16, climbs: true, sound: 'skitter',
     drops: [{ id: I.STRING, min: 0, max: 2 }, { id: I.SPIDER_EYE, min: -1, max: 1, playerOnly: true }],
   },
+  wobbler: {
+    name: 'Wobbler', role: 'slime', category: CATEGORY.MONSTER, sound: 'squish', followRange: 16, noFallDamage: true,
+    // size 1, 2 or 4 (set per mob): health size², attack = size (the small ones are harmless), 0.51 blocks per size
+    health: 1, speed: 0.3, width: 0.51, height: 0.51, attack: 1,
+    drops: [{ id: I.SLIMEBALL, min: 0, max: 2 }],
+  },
   voidwalker: {
     name: 'Voidwalker', role: 'enderman', category: CATEGORY.MONSTER,
     health: 40, speed: 0.3, width: 0.6, height: 2.9, attack: 7, followRange: 64, neutral: true, sound: 'warble',

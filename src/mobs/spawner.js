@@ -5,7 +5,7 @@ import { makeTrades } from './trades.js';
 import { Mob } from './mob.js';
 import { MOBS, CATEGORY } from './mobTypes.js';
 import {
-  spawnTable, weightedPick, scaledCap, isDarkEnoughToSpawn, isBrightEnoughForAnimal,
+  spawnTable, weightedPick, scaledCap, isDarkEnoughToSpawn, isBrightEnoughForAnimal, isSlimeChunk,
   SPAWN_MIN_DIST, DESPAWN_FAR, CREATURE_SPAWN_INTERVAL, CHUNK_GEN_CREATURE_CHANCE,
 } from './spawnRules.js';
 import { B, SOLID, OPAQUE, isFluid } from '../world/blocks.js';
@@ -13,6 +13,7 @@ import { LEAVES } from '../world/trees.js';
 import { MIN_Y } from '../world/constants.js';
 import { chunkKey } from '../world/world.js';
 import { attemptDimensionSpawn } from './dimensionMobs.js';
+import { BIOMES } from '../world/biomes.js';
 
 const NO_MONSTER_FLOOR = new Set([B.BEDROCK, B.GLASS, ...LEAVES, B.ICE, B.CACTUS]);
 const MAX_PER_CHUNK = 4;
@@ -66,6 +67,12 @@ export class MobSpawner {
     const raw = w.skyLight(x, y, z), blk = w.blockLight(x, y, z);
     if (category === CATEGORY.MONSTER) {
       if (NO_MONSTER_FLOOR.has(below)) return false;
+      if (type === 'wobbler') {
+        // swamp surface at night, or anywhere below y 40 in one chunk out of ten (fixed per world)
+        const swamp = BIOMES[w.biomeAt(x, z)] && BIOMES[w.biomeAt(x, z)].key === 'swamp' && y > 50 && y < 70;
+        if (!swamp && !(y < 40 && isSlimeChunk(w.seed, x >> 4, z >> 4))) return false;
+        if (!swamp) return true; // slime chunks ignore light, as in the reference game
+      }
       return isDarkEnoughToSpawn(raw, blk, this.game.sky.state.skyDarken);
     }
     return (below === B.GRASS || below === B.MYCELIUM) && isBrightEnoughForAnimal(raw, blk);

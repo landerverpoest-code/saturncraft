@@ -181,6 +181,17 @@ MODELS.ironguard = {
   ],
 };
 
+// Wobblers: a see-through green cube with a solid core and a face (size 1; scaled by size).
+MODELS.wobbler = {
+  parts: [
+    ['core', [5, 5, 5], [0, 4, 0], [0, 0, 0], '#4f9a32'],
+    ['eyeL', [1.4, 1.4, 1], [0, 4, 0], [1.6, 1.2, -3.3], '#1a2a10'],
+    ['eyeR', [1.4, 1.4, 1], [0, 4, 0], [-1.6, 1.2, -3.3], '#1a2a10'],
+    ['mouth', [1.2, 0.8, 1], [0, 4, 0], [0.5, -1.2, -3.3], '#1a2a10'],
+    ['shell', [8, 8, 8], [0, 4, 0], [0, 0, 0], '#7ad05a', { alpha: 0.55 }],
+  ],
+};
+
 // Settlers: big-nosed villagers in a robe whose colour shows the profession.
 MODELS.settler = {
   parts: [
@@ -322,9 +333,9 @@ export function buildModel(type) {
   const mats = [];
   const matCache = new Map();
   const matFor = (color, opts) => {
-    const k = color + (opts.emissive || '') + (opts.glow ? 'g' : '');
+    const k = color + (opts.emissive || '') + (opts.glow ? 'g' : '') + (opts.alpha ? 'a' : '');
     if (matCache.has(k)) return matCache.get(k);
-    const m = new THREE.MeshLambertMaterial({ map: noiseTexture(type + color), color });
+    const m = new THREE.MeshLambertMaterial({ map: noiseTexture(type + color), color, ...(opts.alpha ? { transparent: true, opacity: opts.alpha, depthWrite: false } : {}) });
     m.userData.base = new THREE.Color(color);
     if (opts.emissive) { m.emissive = new THREE.Color(opts.emissive); m.userData.emissive = m.emissive.clone(); }
     matCache.set(k, m); mats.push(m);

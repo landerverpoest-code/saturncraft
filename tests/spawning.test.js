@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { isSlimeChunk } from '../src/mobs/spawnRules.js';
 import {
   SPAWN_TABLES, spawnTable, weightedPick, pickProbabilities, scaledCap, isDarkEnoughToSpawn, darkSpawnProbability,
   isBrightEnoughForAnimal, shouldDespawn, shouldBurnInSun, MOB_CAPS, SPAWN_MIN_DIST, DESPAWN_FAR, DESPAWN_NEAR,
@@ -8,14 +9,21 @@ import { skyState, findNextPhase } from '../src/sky/suns.js';
 import { rng } from './helpers.js';
 
 describe('spawn tables', () => {
-  it('default monster weights match the documented table (slime/witch absent)', () => {
+  it('default monster weights match the documented table (witch absent)', () => {
     const p = pickProbabilities(SPAWN_TABLES.monster.default);
-    const total = 410;
+    const total = 510;
     expect(p.skitterer).toBeCloseTo(100 / total, 9);
     expect(p.shambler).toBeCloseTo(100 / total, 9);
     expect(p.rattler).toBeCloseTo(100 / total, 9);
     expect(p.fizzler).toBeCloseTo(100 / total, 9);
     expect(p.voidwalker).toBeCloseTo(10 / total, 9);
+    expect(p.wobbler).toBeCloseTo(100 / total, 9);
+  });
+  it('one chunk in ten is a slime chunk, fixed per seed', () => {
+    let n = 0;
+    for (let x = 0; x < 100; x++) for (let z = 0; z < 100; z++) if (isSlimeChunk(42, x, z)) n++;
+    expect(n / 10000).toBeGreaterThan(0.08); expect(n / 10000).toBeLessThan(0.12);
+    expect(isSlimeChunk(42, 3, 5)).toBe(isSlimeChunk(42, 3, 5));
   });
   it('farm animals use weights 12/10/10/8 in grassy biomes', () => {
     const p = pickProbabilities(spawnTable('creature', BIOME.PLAINS));
