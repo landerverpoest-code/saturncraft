@@ -863,7 +863,7 @@ export class Mob {
     animateModel(m, this, alpha, L, sec);
     if (parts && parts.armL && this.def.guard && this.swingTime > 0) parts.armL.rotation.x = parts.armR.rotation.x = -2 * Math.sin((this.swingTime - alpha) / 10 * Math.PI);
     if (this.def.customRender) this.def.customRender(this, m, alpha, sec);
-    if (parts && parts.mane) {
+    if (parts && parts.saddle) {
       if (m.userData.coat !== this.coat) {
         m.userData.coat = this.coat;
         const [body, mane] = [['#8a5a32', '#3a2414'], ['#e8e2d8', '#b8b0a4'], ['#2a2420', '#141210'], ['#a8682e', '#5a3418'], ['#7a7470', '#4a4440']][this.coat || 0];

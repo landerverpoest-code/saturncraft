@@ -1,5 +1,5 @@
-// Desert temples: one 256 x 256-block region in three may hold one if its
-// spot is desert. A 21 x 21 sandstone hall with two corner towers, a
+// Temples: one 256 x 256-block region in three may hold one: a desert temple,
+// a jungle temple or (in snowy biomes) an igloo, depending on the biome. A 21 x 21 sandstone hall with two corner towers, a
 // terracotta star in the floor and, 12 blocks under its centre, a hidden
 // chamber with four loot chests above a trap of nine TNT. Planned from the
 // seed alone; each chunk stamps its own part.
@@ -22,7 +22,9 @@ export function templeInRegion(gen, rx, rz) {
     const col = gen.column(cx, cz), top = gen.surfaceAt(cx, cz, col);
     // only on fairly level ground: the corners within 4 blocks of the centre's height
     const flat = [[-10, -10], [10, -10], [-10, 10], [10, 10]].every(([dx, dz]) => Math.abs(gen.surfaceAt(cx + dx, cz + dz) - top) <= 4);
-    if (flat && gen.biomeFor(col, top) === BIOME.DESERT && top > SEA_LEVEL) t = { cx, cz, y: top + 1, x0: cx - 10, z0: cz - 10, x1: cx + 10, z1: cz + 10 };
+    const biome = gen.biomeFor(col, top);
+    const kind = biome === BIOME.DESERT ? 'desert' : biome === BIOME.JUNGLE ? 'jungle' : (biome === BIOME.SNOWY_PLAINS || biome === BIOME.SNOWY_TAIGA) ? 'igloo' : null;
+    if (kind && flat && top > SEA_LEVEL) t = { kind, cx, cz, y: top + 1, x0: cx - 10, z0: cz - 10, x1: cx + 10, z1: cz + 10 };
   }
   if (cache.size > 64) cache.clear();
   cache.set(key, t);
@@ -47,6 +49,8 @@ export function stampTemples(gen, blocks, meta, cx, cz) {
       if (!inChunk(x, z) || y <= MIN_Y || y >= MIN_Y + WORLD_HEIGHT) return;
       const i = cidx(x - X0, y, z - Z0); blocks[i] = id; meta[i] = m;
     };
+    if (t.kind === 'jungle') { jungleTemple(t, set); continue; }
+    if (t.kind === 'igloo') { igloo(t, set); continue; }
     const { y, x0, z0, x1, z1, cx: tx, cz: tz } = t;
     for (let x = x0; x <= x1; x++) for (let z = z0; z <= z1; z++) {
       if (!inChunk(x, z)) continue;
@@ -89,4 +93,61 @@ export function stampTemples(gen, blocks, meta, cx, cz) {
     // the way down: a one-block shaft under the floor centre
     for (let yy = cy + 4; yy < y - 1; yy++) set(tx, yy, tz, B.AIR);
   }
+}
+
+/** Jungle temple: a 12 x 15 mossy cobblestone building on two floors with vines, a stair to the roof and a loot chest. */
+function jungleTemple(t, set) {
+  const { cx, cz, y } = t;
+  const x0 = cx - 6, x1 = cx + 5, z0 = cz - 7, z1 = cz + 7;
+  const stone = (x, yy, z) => ((x * 7 + yy * 13 + z * 3) % 5 < 2 ? B.MOSSY_COBBLESTONE : B.COBBLESTONE);
+  for (let x = x0; x <= x1; x++) for (let z = z0; z <= z1; z++) {
+    for (let yy = y - 4; yy < y; yy++) set(x, yy, z, stone(x, yy, z)); // foundation
+    for (let yy = y; yy < y + 10; yy++) set(x, yy, z, 0);
+    const edge = x === x0 || x === x1 || z === z0 || z === z1;
+    const inner = x > x0 + 1 && x < x1 - 1 && z > z0 + 1 && z < z1 - 1;
+    for (let yy = y; yy < y + 4; yy++) if (edge) set(x, yy, z, stone(x, yy, z));
+    set(x, y + 4, z, stone(x, y + 4, z)); // first floor ceiling
+    // upper storey, set back one block
+    const edge2 = x === x0 + 1 || x === x1 - 1 || z === z0 + 1 || z === z1 - 1;
+    if (!edge && (edge2 || inner)) {
+      for (let yy = y + 5; yy < y + 8; yy++) if (edge2) set(x, yy, z, stone(x, yy, z));
+      set(x, y + 8, z, stone(x, y + 8, z));
+    }
+    if (inner && x > x0 + 2 && x < x1 - 2 && z > z0 + 2 && z < z1 - 2) set(x, y + 9, z, stone(x, y + 9, z));
+    // vines down the walls
+    if (edge && (x + z) % 3 === 0) for (let yy = y + 1; yy < y + 4; yy++) {
+      const s = z === z0 ? 2 : z === z1 ? 0 : x === x0 ? 1 : 3; // hang on the wall behind
+      const dx = s === 1 ? -1 : s === 3 ? 1 : 0, dz = s === 2 ? -1 : s === 0 ? 1 : 0;
+      set(x + dx, yy, z + dz, B.VINES, s);
+    }
+  }
+  // doorway, windows and inner rooms
+  for (let x = cx - 1; x <= cx; x++) for (let yy = y; yy < y + 3; yy++) set(x, yy, z0, 0);
+  for (const z of [cz - 3, cz + 3]) { set(x0, y + 2, z, 0); set(x1, y + 2, z, 0); }
+  for (let z = z0 + 1; z < z1; z++) if (z !== cz) set(cx - 2, y + 1, z, B.COBBLESTONE_WALL);
+  // a hole in the floor down to the treasure room
+  for (let x = cx + 1; x <= cx + 3; x++) for (let z = cz + 2; z <= cz + 4; z++) for (let yy = y - 4; yy < y - 1; yy++) set(x, yy, z, 0);
+  set(cx + 2, y - 4, cz + 3, B.CHEST, 2 | 8);
+  set(cx - 4, y, cz + 5, B.CHEST, 1 | 8);
+  for (let yy = y - 3; yy < y; yy++) set(cx + 1, yy, cz + 2, B.LADDER, 0);
+}
+
+/** Igloo: a snow dome with a bed, a workbench, a furnace, a torch and a carpet of wool. */
+function igloo(t, set) {
+  const { cx, cz, y } = t;
+  // clear trees and snow around the dome
+  for (let x = cx - 6; x <= cx + 6; x++) for (let z = cz - 7; z <= cz + 6; z++) for (let yy = y; yy < y + 14; yy++) set(x, yy, z, 0);
+  for (let x = cx - 4; x <= cx + 4; x++) for (let z = cz - 4; z <= cz + 4; z++) for (let yy = y - 1; yy < y + 5; yy++) {
+    const d = Math.hypot((x - cx) / 4.2, (yy - y + 0.5) / 4.2, (z - cz) / 4.2);
+    if (yy === y - 1 && d < 1) set(x, yy, z, B.SNOW_BLOCK);
+    else if (d < 1 && d > 0.72) set(x, yy, z, B.SNOW_BLOCK);
+    else if (d <= 0.72) set(x, yy, z, 0);
+  }
+  for (let z = cz - 5; z <= cz - 3; z++) for (let yy = y; yy < y + 2; yy++) set(cx, yy, z, 0); // tunnel entrance
+  set(cx, y + 2, cz - 4, B.ICE);
+  for (let x = cx - 1; x <= cx + 1; x++) for (let z = cz - 1; z <= cz + 1; z++) set(x, y - 1, z, B.WOOL, 14);
+  set(cx - 2, y, cz + 1, B.BED, 0 | 8); set(cx - 2, y, cz + 2, B.BED, 0);
+  set(cx + 2, y, cz + 1, B.WORKBENCH); set(cx + 2, y, cz - 1, B.FURNACE, 3);
+  set(cx - 2, y, cz - 1, B.TORCH, 0);
+  set(cx + 1, y, cz + 2, B.CHEST, 0 | 8);
 }
