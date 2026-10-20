@@ -23,6 +23,12 @@ export class MobSpawner {
     this.enabled = true;
   }
 
+  /** Hostile mobs can be switched off in the settings (/gamerule doHostileSpawning). */
+  hostileEnabled() {
+    const s = this.game.settings;
+    return !s || s.hostileMobs !== false;
+  }
+
   counts() {
     let m = 0, c = 0;
     for (const e of this.game.entities.list) if (e.kind === 'mob' && !e.dead) { if (e.def.category === CATEGORY.MONSTER) m++; else c++; }
@@ -63,11 +69,12 @@ export class MobSpawner {
     return below === B.GRASS && isBrightEnoughForAnimal(raw, blk);
   }
 
-  attempt(cx, cz, category) {
+  /** One spawn attempt in a chunk; `surface` starts the pack on top of the terrain instead of a random height. */
+  attempt(cx, cz, category, surface = false) {
     const g = this.game, w = g.world, p = g.player;
     const x0 = cx * 16 + Math.floor(Math.random() * 16), z0 = cz * 16 + Math.floor(Math.random() * 16);
     const top = w.heightAt(x0, z0);
-    const y = MIN_Y + Math.floor(Math.random() * (top + 2 - MIN_Y));
+    const y = surface ? top + 1 : MIN_Y + Math.floor(Math.random() * (top + 2 - MIN_Y));
     if (SOLID[w.getBlock(x0, y, z0)]) return 0;
     const biome = w.biomeAt(x0, z0);
     const table = spawnTable(category, biome);
@@ -106,10 +113,24 @@ export class MobSpawner {
     const pcx = Math.floor(p.x / 16), pcz = Math.floor(p.z / 16);
     const chunks = [];
     for (let dx = -R; dx <= R; dx++) for (let dz = -R; dz <= R; dz++) if (w.isChunkLoaded(pcx + dx, pcz + dz)) chunks.push([pcx + dx, pcz + dz]);
-    let monsters = 0, creatures = 0;
-    for (const e of g.entities.list) if (e.kind === 'mob' && !e.dead) { if (e.def.category === CATEGORY.MONSTER) monsters++; else creatures++; }
-    if (monsters < scaledCap(CATEGORY.MONSTER, chunks.length)) {
-      for (const [cx, cz] of chunks) monsters += this.attempt(cx, cz, CATEGORY.MONSTER);
+    let monsters = 0, creatures = 0, surface = 0;
+    for (const e of g.entities.list) {
+      if (e.kind !== 'mob' || e.dead) continue;
+      if (e.def.category !== CATEGORY.MONSTER) { creatures++; continue; }
+      monsters++;
+      if (e.y >= w.heightAt(Math.floor(e.x), Math.floor(e.z)) - 1) surface++;
+    }
+    const cap = scaledCap(CATEGORY.MONSTER, chunks.length);
+    if (this.hostileEnabled()) {
+      if (monsters < cap) {
+        for (const [cx, cz] of chunks) monsters += this.attempt(cx, cz, CATEGORY.MONSTER);
+      }
+      // Monsters in caves fill the cap quickly in this deep world, which would leave the
+      // surface empty at night. Half the cap is reserved for packs on the open surface;
+      // in daylight the light test rejects these attempts.
+      if (surface < Math.ceil(cap / 2)) {
+        for (const [cx, cz] of chunks) surface += this.attempt(cx, cz, CATEGORY.MONSTER, true);
+      }
     }
     if (g.ticks % CREATURE_SPAWN_INTERVAL === 0 && creatures < scaledCap(CATEGORY.CREATURE, chunks.length)) {
       for (const [cx, cz] of chunks) creatures += this.attempt(cx, cz, CATEGORY.CREATURE);

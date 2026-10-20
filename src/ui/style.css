@@ -134,3 +134,6 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 .milestone-row.done { opacity: 1; filter: none; border: 1px solid #f0b04a; }
 .milestone-row img { width: 32px; height: 32px; image-rendering: pixelated; }
 .milestone-row .d { font-size: 12px; opacity: .8; }
+
+.btn-row { display: flex; gap: 8px; width: 300px; }
+.btn-row .btn { flex: 1; min-width: 0; width: auto; font-size: 13px; padding-left: 4px; padding-right: 4px; }

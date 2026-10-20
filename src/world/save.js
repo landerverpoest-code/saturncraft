@@ -75,6 +75,7 @@ export async function saveGame(game) {
     version: 1,
     seed: game.seed,
     time: game.time,
+    gameRules: { doDaylightCycle: game.settings.daylightCycle !== false, doHostileSpawning: game.settings.hostileMobs !== false },
     savedAt: Date.now(),
     player: {
       x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, health: p.health,
@@ -117,6 +118,11 @@ export async function deleteSave() {
 export function applySave(game, data) {
   for (const [k, p] of Object.entries(data.chunks)) game.world.saved.set(+k, unpackChunk(p));
   game.time = data.time;
+  // the world remembers its own rules (older saves keep the player's settings)
+  if (data.gameRules) {
+    if (typeof data.gameRules.doDaylightCycle === 'boolean') game.settings.daylightCycle = data.gameRules.doDaylightCycle;
+    if (typeof data.gameRules.doHostileSpawning === 'boolean') game.settings.hostileMobs = data.gameRules.doHostileSpawning;
+  }
   game.weather.load(data.weather);
   game.milestones.load(data.milestones);
   for (const b of data.boats || []) game.entities.spawnBoat(b.x, b.y, b.z, b.yaw);

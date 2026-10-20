@@ -37,6 +37,7 @@ export class SpawnerBlocks {
     if (delay === undefined) delay = 20;
     if (--delay > 0) { this.state.set(k, delay); return; }
     this.state.set(k, SPAWN_DELAY[0] + Math.floor(Math.random() * (SPAWN_DELAY[1] - SPAWN_DELAY[0])));
+    if (g.settings && g.settings.hostileMobs === false) return;
     const type = SPAWNER_TYPES[w.getMeta(x, y, z) % 3];
     let nearby = 0;
     for (const e of g.entities.list) {

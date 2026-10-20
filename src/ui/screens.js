@@ -486,6 +486,8 @@ export class UI {
       <div class="field"><label>Volume: <b id="volv">${Math.round(g.settings.volume * 100)}</b>%</label><input type="range" min="0" max="100" value="${Math.round(g.settings.volume * 100)}" id="vol"></div>
       <div class="field"><label>Music: <b id="musv">${Math.round((g.settings.music ?? 0.5) * 100)}</b>%</label><input type="range" min="0" max="100" value="${Math.round((g.settings.music ?? 0.5) * 100)}" id="mus"></div>
       <div class="field"><label><input type="checkbox" id="sh" ${g.settings.shadows ? 'checked' : ''}> Sun shadows (3 shadow-casting lights)</label></div>
+      <div class="btn-row"><button class="btn" id="dlc">Day/night cycle: ${g.settings.daylightCycle !== false ? 'On' : 'Off'}</button>
+      <button class="btn" id="hm">Hostile mobs: ${g.settings.hostileMobs !== false ? 'On' : 'Off'}</button></div>
       <button class="btn" data-a="ms">Milestones</button>
       <button class="btn" data-a="title">Save &amp; Quit to Title</button>
     </div>`);
@@ -496,6 +498,12 @@ export class UI {
     bind('vol', 'volv', (v) => { g.setSetting('volume', v / 100); return v; });
     bind('mus', 'musv', (v) => { g.setSetting('music', v / 100); return v; });
     s.querySelector('#sh').addEventListener('change', (e) => g.setSetting('shadows', e.target.checked));
+    const toggle = (id, key, label) => {
+      const b = s.querySelector('#' + id);
+      b.onclick = () => { const on = g.settings[key] === false; g.setSetting(key, on); b.textContent = `${label}: ${on ? 'On' : 'Off'}`; };
+    };
+    toggle('dlc', 'daylightCycle', 'Day/night cycle');
+    toggle('hm', 'hostileMobs', 'Hostile mobs');
     s.querySelector('[data-a=resume]').onclick = () => { this.open = null; this.clear(); g.onUIClosed(); };
     s.querySelector('[data-a=title]').onclick = () => g.quitToTitle();
     s.querySelector('[data-a=ms]').onclick = () => this.showMilestones();

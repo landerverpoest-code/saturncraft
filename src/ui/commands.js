@@ -42,9 +42,13 @@ function nextTime(t0, pred) {
   return t0;
 }
 
+/** Game rules: command name -> settings key. */
+export const GAME_RULES = { doDaylightCycle: 'daylightCycle', doHostileSpawning: 'hostileMobs' };
+
 export const HELP = [
   '/gamemode <survival|creative>  (or /gm 0|1)',
   '/time set <day|night|noon|midnight|ticks>,  /time add <ticks>,  /time query',
+  '/gamerule doDaylightCycle <true|false>,  /gamerule doHostileSpawning <true|false>',
   '/weather <clear|rain|thunder> [ticks]',
   '/tp <x> <y> <z>  (~ for relative)',
   '/give <item> [count]',
@@ -83,6 +87,17 @@ export function runCommand(game, text) {
         return `Set the time to ${t}`;
       }
       return 'Usage: /time <set|add|query> ...';
+    }
+    case 'gamerule': {
+      const usage = `Usage: /gamerule <${Object.keys(GAME_RULES).join('|')}> [true|false]`;
+      const rule = Object.keys(GAME_RULES).find((k) => k.toLowerCase() === (args[0] || '').toLowerCase());
+      if (!rule) return usage;
+      const key = GAME_RULES[rule];
+      const v = (args[1] || '').toLowerCase();
+      if (v === '') return `Gamerule ${rule} is currently set to: ${game.settings[key] !== false}`;
+      if (v !== 'true' && v !== 'false') return usage;
+      game.setSetting(key, v === 'true');
+      return `Gamerule ${rule} is now set to: ${v}`;
     }
     case 'weather': {
       const v = (args[0] || '').toLowerCase(), w = game.weather;

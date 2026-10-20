@@ -51,7 +51,7 @@ THREE.ShaderChunk.fog_vertex = `#ifdef USE_FOG
     'directLight.color *= ( directLight.visible && receiveShadow && SUN_MASK && dot( directLight.color, vec3( 1.0 ) ) > 0.0 && dot( geometryNormal, directLight.direction ) > 0.0 ) ? getShadow(');
 }
 
-export const DEFAULT_SETTINGS = { renderDistance: 8, fov: 75, sensitivity: 100, volume: 0.5, music: 0.5, shadows: true, shadowMapSize: 1024, pixelRatioCap: 1.25 };
+export const DEFAULT_SETTINGS = { renderDistance: 8, fov: 75, sensitivity: 100, volume: 0.5, music: 0.5, shadows: true, shadowMapSize: 1024, pixelRatioCap: 1.25, daylightCycle: true, hostileMobs: true };
 
 export class Game {
   constructor(canvas, seed, settings, hooks = {}, saveData = null) {
@@ -204,7 +204,19 @@ export class Game {
     if (k === 'volume') this.audio.setVolume(v);
     if (k === 'music') this.music.setVolume(v);
     if (k === 'shadows') this.sky.setShadowsEnabled(v);
+    if (k === 'hostileMobs' && !v) this.removeHostileMobs();
     if (this.hooks.saveSettings) this.hooks.saveSettings(this.settings);
+  }
+
+  /** Is the day/night cycle running (time advancing)? */
+  get daylightCycle() { return this.settings.daylightCycle !== false; }
+
+  /** Hostile mobs switched off: clear the monsters that are already around (like peaceful). */
+  removeHostileMobs() {
+    if (!this.entities) return;
+    for (const e of this.entities.list) {
+      if (e.kind === 'mob' && !e.dead && e.def.category === CATEGORY.MONSTER) { e.removed = true; e.dead = true; }
+    }
   }
 
   onUIClosed() { this.input.lock(); }
@@ -455,7 +467,9 @@ export class Game {
   // -------------------------------------------------------------------------
   tick() {
     this.ticks++;
-    this.time++;
+    if (this.daylightCycle) this.time++;
+    // keep the sun state current for game logic (spawning, burning) even when no frame is rendered
+    this.sky.state = skyState(this.time);
     const inp = this.input;
     const blocking = this.ui.blocking;
     const mv = blocking ? { forward: 0, strafe: 0, jump: false, sneak: false, sprint: false } : inp.movement();
@@ -594,7 +608,7 @@ export class Game {
 
     this.chunks.update(x, z, 6);
     if (this.chunks.edited) { this.chunks.edited = false; this.sky.refreshShadows(); }
-    const smoothTime = this.time + alpha;
+    const smoothTime = this.time + (this.daylightCycle ? alpha : 0);
     this.sky.rain = this.weather.level;
     this.sky.thunder = this.weather.storm;
     this.sky.flash = this.lightning.flash;
