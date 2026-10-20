@@ -101,6 +101,7 @@ const ITEM_STYLE = {
   flint: ['lump', { h: '#4a4a4e' }], clay_ball: ['lump', { h: '#a0a6b4' }], leather: ['meat', { h: '#9a5a2a', w: '#7a4a2a' }],
   feather: ['feather', { h: '#f0f0f0', s: '#cfcfcf' }], string: ['string', { h: '#eeeeee' }], bone: ['bone', { h: '#e8e4d0' }], gunpowder: ['dust', { h: '#5a5a5a' }],
   void_pearl: ['pearl', { h: '#1e6b6b' }], egg: ['egg', { h: '#efe3c8' }],
+  snowball: ['pearl', { h: '#f4f8ff' }],
   raw_pork: ['meat', { h: '#f19a9a', w: '#fff0f0' }], cooked_pork: ['meat', { h: '#c8824a', w: '#f0d8b0' }],
   raw_beef: ['meat', { h: '#c83a3a', w: '#f0e0e0' }], steak: ['meat', { h: '#7a4a2a', w: '#c8a080' }],
   raw_chicken: ['meat', { h: '#f4cdb0', w: '#fff8f0' }], cooked_chicken: ['meat', { h: '#d29a5a', w: '#f6e0c0' }],

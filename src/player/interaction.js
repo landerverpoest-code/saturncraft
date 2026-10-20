@@ -121,6 +121,15 @@ export class Interaction {
       else if (this.bowDraw > 0) { this.releaseBow(); this.bowDraw = 0; }
       return;
     }
+    if (d && d.throwable && input.rightPressed) {
+      // snowballs and eggs: thrown at 1.5 blocks/tick from the eye
+      const [ex, ey, ez] = p.eyePos(), [dx, dy, dz] = p.lookDir();
+      g.entities.spawnArrow(ex + dx * 0.4, ey - 0.1 + dy * 0.4, ez + dz * 0.4, dx * 1.5, dy * 1.5 + 0.05, dz * 1.5, p, false, d.throwable);
+      if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
+      g.audio.play('bow', [ex, ey, ez], 0.5);
+      this.swing = SWING_TICKS;
+      return;
+    }
     if (input.right && this.useDelay === 0) {
       if (this.use()) this.useDelay = USE_DELAY;
     }

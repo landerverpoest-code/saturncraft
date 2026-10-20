@@ -61,7 +61,7 @@ export class EntityMirror {
         break;
       case 'item': e = new ItemEntity(s.x, s.y, s.z, s.stack); break;
       case 'xp': e = new XPOrb(s.x, s.y, s.z, s.value); break;
-      case 'arrow': e = new Arrow(s.x, s.y, s.z, s.vx, s.vy, s.vz, null, false); break;
+      case 'arrow': e = new Arrow(s.x, s.y, s.z, s.vx, s.vy, s.vz, null, false, s.thrown); break;
       case 'boat': e = new Boat(s.x, s.y, s.z, s.yaw); break;
       case 'falling': e = new FallingBlock(0, 0, 0, s.blockId); break;
       default: return null;

@@ -217,9 +217,10 @@ export class FallingBlock {
 }
 
 export class Arrow {
-  constructor(x, y, z, vx, vy, vz, shooter, crit = false) {
+  constructor(x, y, z, vx, vy, vz, shooter, crit = false, thrown = null) {
     this.id = nextEntityId++;
     this.kind = 'arrow';
+    this.thrown = thrown; // 'snowball' / 'egg': breaks on impact instead of sticking
     this.x = x; this.y = y; this.z = z;
     this.vx = vx; this.vy = vy; this.vz = vz;
     this.shooter = shooter;
@@ -228,7 +229,18 @@ export class Arrow {
     this.age = 0;
     this.dead = false;
     this.prev = [x, y, z];
-    this.pickup = shooter && shooter.isPlayer;
+    this.pickup = !thrown && shooter && shooter.isPlayer;
+  }
+
+  /** A snowball or egg hits something: puff, and an egg may hatch Clucklings (1/8, of which 1/32 four). */
+  shatter(game) {
+    this.dead = true;
+    const col = this.thrown === 'egg' ? [0.95, 0.9, 0.78] : [0.95, 0.97, 1];
+    for (let k = 0; k < 8; k++) game.particles.emit(this.x, this.y, this.z, (Math.random() - 0.5) * 0.12, Math.random() * 0.1, (Math.random() - 0.5) * 0.12, col[0], col[1], col[2], 14, -0.004);
+    if (this.thrown === 'egg' && (!game.net || game.net.isHost) && Math.random() < 1 / 8) {
+      const n = Math.random() < 1 / 32 ? 4 : 1;
+      for (let k = 0; k < n; k++) { const c = game.spawner.spawnMob('cluckling', this.x, this.y, this.z); if (c) c.setBaby(true); }
+    }
   }
   tick(game) {
     this.prev = [this.x, this.y, this.z];
@@ -248,6 +260,12 @@ export class Arrow {
     let endT = hit ? hit.dist : speed;
     // entity collision
     const target = game.entities.sweepHit(this, this.x, this.y, this.z, this.vx / speed, this.vy / speed, this.vz / speed, endT);
+    if (target && this.thrown) {
+      // no damage, just a knock (snowballs and eggs)
+      target.hurt(0.0001, 'thrown', this.shooter, 0.35, this);
+      this.shatter(game);
+      return;
+    }
     if (target) {
       let dmg = Math.ceil(speed * 2);
       if (this.crit) dmg += Math.floor(Math.random() * (dmg / 2 + 2));
@@ -257,6 +275,7 @@ export class Arrow {
       this.vx *= -0.1; this.vy *= -0.1; this.vz *= -0.1;
       return;
     }
+    if (hit && this.thrown) { this.x += this.vx / speed * hit.dist; this.y += this.vy / speed * hit.dist; this.z += this.vz / speed * hit.dist; this.shatter(game); return; }
     if (hit) {
       this.x += this.vx / speed * hit.dist; this.y += this.vy / speed * hit.dist; this.z += this.vz / speed * hit.dist;
       this.stuck = true; this.age = 0;
@@ -267,7 +286,7 @@ export class Arrow {
     const inWater = w.getBlock(Math.floor(this.x), Math.floor(this.y), Math.floor(this.z)) === B.WATER;
     const drag = inWater ? 0.6 : 0.99;
     this.vx *= drag; this.vy *= drag; this.vz *= drag;
-    this.vy -= 0.05;
+    this.vy -= this.thrown ? 0.03 : 0.05;
     if (this.y < MIN_Y - 64 || this.age > 1200) this.dead = true;
   }
 }
@@ -303,7 +322,7 @@ export class EntityManager {
   }
   spawnBoat(x, y, z, yaw) { return this.netSpawn('boat', { x, y, z, yaw }) ? null : this.add(new Boat(x, y, z, yaw)); }
   spawnFallingBlock(x, y, z, id) { return this.netSpawn('falling', {}) ? null : this.add(new FallingBlock(x, y, z, id)); }
-  spawnArrow(x, y, z, vx, vy, vz, shooter, crit) { return this.netSpawn('arrow', { x, y, z, v: [vx, vy, vz], crit }) ? null : this.add(new Arrow(x, y, z, vx, vy, vz, shooter, crit)); }
+  spawnArrow(x, y, z, vx, vy, vz, shooter, crit, thrown = null) { return this.netSpawn('arrow', { x, y, z, v: [vx, vy, vz], crit, thrown }) ? null : this.add(new Arrow(x, y, z, vx, vy, vz, shooter, crit, thrown)); }
 
   /** Multiplayer guest: dropped items, orbs, arrows and boats are made (and shared) by the host. */
   netSpawn(kind, data) {
@@ -451,7 +470,7 @@ export class EntityManager {
         for (const mat of m.material) mat.color.setScalar(L);
       } else if (e.kind === 'arrow') {
         m.position.set(px, py, pz);
-        if (!e.stuck) m.lookAt(px + e.vx, py + e.vy, pz + e.vz);
+        if (!e.stuck && !e.thrown) m.lookAt(px + e.vx, py + e.vy, pz + e.vz);
         m.material.color.setScalar(L);
       } else if (e.renderUpdate) {
         e.renderUpdate(m, px, py, pz, alpha, L, timeSec); // mobs and custom entities (fireballs, thrown eyes)
@@ -489,6 +508,11 @@ export class EntityManager {
       const top = new THREE.MeshLambertMaterial({ map: blockFaceTexture(d.tex.top) });
       const m = new THREE.Mesh(this.cubeGeo, [side, side, top, top, side, side]);
       m.castShadow = true;
+      return m;
+    }
+    if (e.kind === 'arrow' && e.thrown) {
+      const m = new THREE.Mesh(this.cubeGeo, new THREE.MeshLambertMaterial({ color: e.thrown === 'egg' ? 0xefe3c8 : 0xf4f8ff }));
+      m.scale.setScalar(0.22);
       return m;
     }
     if (e.kind === 'arrow') {

@@ -395,7 +395,7 @@ export class HostSession extends Session {
     } else if (m.k === 'xp') {
       if (m.n > 0) ents.spawnXp(m.x, m.y, m.z, Math.min(100000, m.n | 0));
     } else if (m.k === 'arrow' && v) {
-      ents.spawnArrow(m.x, m.y, m.z, v[0], v[1], v[2], c.rp.target, !!m.crit);
+      ents.spawnArrow(m.x, m.y, m.z, v[0], v[1], v[2], c.rp.target, !!m.crit, m.thrown === 'egg' || m.thrown === 'snowball' ? m.thrown : null);
     } else if (m.k === 'boat') {
       ents.spawnBoat(m.x, m.y, m.z, +m.yaw || 0);
     }
