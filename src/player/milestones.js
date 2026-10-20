@@ -27,6 +27,7 @@ export const MILESTONES = [
   { id: 'tame', title: 'Best Friends', desc: 'Tame a Howler with a bone', icon: I.BONE, event: 'tame' },
   { id: 'golem', title: 'Heavy Metal', desc: 'Build an Ironguard', icon: B.IRON_BLOCK, event: 'golem' },
   { id: 'fish', title: 'Gone Fishing', desc: 'Catch something with a fishing rod', icon: I.FISHING_ROD, event: 'fish' },
+  { id: 'tame_horse', title: 'Saddle Up', desc: 'Tame a Galloper by riding it', icon: I.SADDLE, event: 'tame_horse' },
   { id: 'trade', title: 'Fair Trade', desc: 'Trade with a Settler', icon: I.BERYL, event: 'trade' },
   { id: 'dungeon', title: 'Cage Breaker', desc: 'Break a monster spawner', icon: B.SPAWNER, event: 'spawner' },
   { id: 'enchanter', title: 'Spellbound', desc: 'Make an enchanting table', icon: B.ENCHANTING_TABLE, inv: (g) => has(g, B.ENCHANTING_TABLE) },

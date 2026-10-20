@@ -349,6 +349,7 @@ poison from eyes) follow the documented table.
 * 16 dye colours: bone meal (white), flowers (yellow/red), azurite (blue), cactus in a furnace (green), coal (black) and mixes; dyed wool; sheep come in natural colours (white, black, grays, brown, rare pink), can be dyed and drop/shear their colour
 * Pumpkin patches (plains, taiga) and melons (forests): pumpkin + torch = pumpkin lantern (light 15), melons drop 3–7 slices, pumpkin pie
 * Howlers (wolves) in packs of 4 in forests and taiga: they hunt Fleecers and Clucklings and the whole pack turns on whoever hurts one; tame with bones (1 in 3), then they sit/stand on right-click, follow you (teleporting when over 12 blocks away), attack what hurts you or what you hit, heal and breed with meat (pups are tame), red collar
+* Gallopers (horses) in plains and savannas, in five coats with their own health and jump strength: climb on with an empty hand; a wild one bucks you off after a few seconds but may accept you (the chance grows each time and with wheat or apples); saddle a tame one (3 leather + iron) to ride it with WASD, sprint and Space to jump; they step up whole blocks
 * Shields (6 planks + iron ingot, 336 uses): hold right-click to raise one (after a quarter second); it stops melee hits and arrows from in front, wears with the damage it takes, pushes attackers back and slows you to a fifth
 * Desert temples (one 256 × 256 region in three, on level desert ground): a 21 × 21 sandstone hall with two towers, terracotta bands and a terracotta star on the floor; dig down through its red centre to a hidden chamber with four loot chests — above nine TNT; `/locate temple`
 * TNT (5 blast powder + 4 sand): lit by flint and steel, fire or another explosion (chain reactions with a 10–30-tick fuse), it hops, swells and flashes for 4 s and explodes with power 4; works for guests in multiplayer too
@@ -394,7 +395,7 @@ poison from eyes) follow the documented table.
 =======
 * Potions and status-effect UI (only hunger/poison effects exist); armour is not drawn on the third-person player model
 >>>>>>> worktree-agent-a5bca350fd4490d08
-* Taming of animals other than Howlers, cocoa and ink sacs
+* Taming of animals other than Howlers and Gallopers, cocoa and ink sacs
 * Large structures beyond villages, dungeons, sanctums and bastions; villager breeding and job sites; redstone-style circuitry; Hollow outer-island cities
 * Double chests and other storage containers
 * Witches, drowned, husks/strays as separate variants, baby mobs, mob equipment

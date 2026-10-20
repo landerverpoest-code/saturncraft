@@ -72,6 +72,11 @@ export const MOBS = {
     health: 100, speed: 0.25, width: 1.4, height: 2.7, attack: 7, sound: 'clank', noFallDamage: true, knockbackResist: true,
     drops: [{ id: I.IRON_INGOT, min: 3, max: 5 }, { id: B.REDBLOOM, min: 0, max: 2 }],
   },
+  galloper: {
+    name: 'Galloper', role: 'horse', category: CATEGORY.CREATURE, rideable: true, sound: 'neigh',
+    health: 22, speed: 0.225, width: 1.4, height: 1.6, panicSpeed: 1.4,
+    drops: [{ id: I.LEATHER, min: 0, max: 2 }], food: [I.WHEAT, I.APPLE],
+  },
   settler: {
     name: 'Settler', role: 'villager', category: CATEGORY.CREATURE, villager: true,
     health: 20, speed: 0.3, width: 0.6, height: 1.95, panicSpeed: 1.6, sound: 'hmm',

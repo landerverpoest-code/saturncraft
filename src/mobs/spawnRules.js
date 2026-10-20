@@ -44,9 +44,9 @@ export const SPAWN_TABLES = {
     mushroom_fields: [],
   },
   creature: {
-    plains: FARM_ANIMALS, birch_forest: FARM_ANIMALS, flower_forest: FARM_ANIMALS, dark_forest: FARM_ANIMALS,
+    plains: [...FARM_ANIMALS, { type: 'galloper', weight: 5, min: 2, max: 6 }], birch_forest: FARM_ANIMALS, flower_forest: FARM_ANIMALS, dark_forest: FARM_ANIMALS,
     // swamps and savannas: the same farm animals (reference swamps add slimes, savannas horses)
-    swamp: FARM_ANIMALS, savanna: FARM_ANIMALS,
+    swamp: FARM_ANIMALS, savanna: [...FARM_ANIMALS, { type: 'galloper', weight: 6, min: 2, max: 6 }],
     // jungles: mostly pigs and chickens
     jungle: [{ type: 'cluckling', weight: 10, min: 4, max: 4 }, { type: 'bristleback', weight: 10, min: 4, max: 4 }, { type: 'mooxen', weight: 4, min: 4, max: 4 }],
     // the mushroom islands keep only their cattle

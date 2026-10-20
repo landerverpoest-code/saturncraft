@@ -54,6 +54,8 @@ export class Mob {
     this.profession = null; this.trades = []; this.home = null; this.lastRestock = 0;
     // Howlers: tamed by the player (owner), sitting, current enemy
     this.tamed = false; this.sitting = false; this.enemy = null;
+    // Gallopers: coat colour, temper (rises with every failed ride), saddle
+    if (type === 'galloper') { this.coat = Math.floor(Math.random() * 5); this.temper = 0; this.saddled = false; this.health = 15 + Math.floor(Math.random() * 16); this.maxHp = this.health; this.jumpPower = 0.5 + Math.random() * 0.2; this.seatY = 0.85; }
     // Wobblers (slimes) come in three sizes
     if (type === 'wobbler') this.setSize([1, 2, 4][Math.floor(Math.random() * 3)]);
   }
@@ -66,7 +68,7 @@ export class Mob {
     this.squish = 0;
   }
 
-  get maxHealth() { return this.tamed ? this.def.tamedHealth : this.def.health; }
+  get maxHealth() { return this.maxHp || (this.tamed ? this.def.tamedHealth : this.def.health); }
 
   tame(g) {
     this.tamed = true; this.sitting = true; this.enemy = null; this.target = null; this.path = null; this.wander = null;
@@ -86,7 +88,7 @@ export class Mob {
   }
 
   /** State kept when the mob is saved with its chunk. */
-  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor, profession: this.profession, trades: this.trades, home: this.home, lastRestock: this.lastRestock, size: this.size, playerMade: this.playerMade, tamed: this.tamed, sitting: this.sitting, ownerName: this.ownerName }; }
+  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor, profession: this.profession, trades: this.trades, home: this.home, lastRestock: this.lastRestock, size: this.size, coat: this.coat, temper: this.temper, saddled: this.saddled, maxHp: this.maxHp, playerMade: this.playerMade, tamed: this.tamed, sitting: this.sitting, ownerName: this.ownerName }; }
   loadData(s) {
     this.health = s.health; this.yaw = s.yaw;
     if (s.age < 0) { this.setBaby(true); this.age = s.age; } else this.age = s.age || 0;
@@ -94,6 +96,7 @@ export class Mob {
     if (s.woolColor !== undefined) this.woolColor = s.woolColor;
     if (s.playerMade) this.playerMade = true;
     if (s.size) { this.setSize(s.size); this.health = s.health; }
+    if (this.type === 'galloper') { if (s.coat !== undefined) this.coat = s.coat; this.temper = s.temper || 0; this.saddled = !!s.saddled; if (s.maxHp) this.maxHp = s.maxHp; }
     if (s.tamed) { this.tamed = true; this.sitting = !!s.sitting; if (s.ownerName) this.ownerName = s.ownerName; }
     if (s.profession) { this.profession = s.profession; this.trades = s.trades || []; this.home = s.home || null; this.lastRestock = s.lastRestock || 0; }
   }
@@ -338,7 +341,8 @@ export class Mob {
 
     b.updateFluidState(g.world, this.height * 0.85);
     this.move = null;
-    this.ai(g, p, pdist);
+    if (this.rider && this.def.rideable) this.riddenAI(g);
+    else this.ai(g, p, pdist);
 
     const mv = this.move || { forward: 0, jump: false };
     const jump = mv.jump || (b.inWater && b.y + this.height * 0.4 < Math.floor(b.y) + 1.2) || (b.inLava);
@@ -603,6 +607,32 @@ export class Mob {
     }
   }
 
+  /**
+   * A ridden Galloper: wild ones buck their rider off after a few seconds
+   * (a chance to be tamed each time, growing with temper); tamed and saddled
+   * ones follow WASD and jump with Space.
+   */
+  riddenAI(g) {
+    const input = g.boatInput, b = this.body;
+    if (!this.tamed) {
+      if (this.buck === undefined) this.buck = 40 + Math.floor(Math.random() * 40);
+      this.yaw += (Math.random() - 0.5) * 0.4;
+      this.move = { forward: this.speed() * 0.5, jump: Math.random() < 0.05 && b.onGround, mod: 1 };
+      if (--this.buck <= 0) {
+        this.buck = undefined;
+        if (Math.random() * 100 < this.temper) { this.tamed = true; this.persistent = true; this.ownerName = g.player.netName || null; this.hearts(g, 7); if (g.milestones) g.milestones.event('tame_horse'); }
+        else { this.temper = Math.min(100, this.temper + 5); g.audio.play('neigh', [this.x, this.y + 1.5, this.z]); g.particles.smoke(this.x, this.y + this.height, this.z, 7, 0.6); g.dismount(); }
+      }
+      return;
+    }
+    if (!this.saddled || !input) { this.move = null; return; }
+    this.yaw = this.rider.yaw;
+    const sp = this.speed() * (input.sprint ? 1.25 : 1);
+    this.move = { forward: input.forward > 0 ? sp : input.forward < 0 ? -sp * 0.25 : 0, strafe: (input.strafe || 0) * sp * 0.5, jump: false, mod: 1 };
+    if (input.jump && b.onGround) { b.vy = this.jumpPower; this.jumped = true; }
+    b.stepHeight = 1.1;
+  }
+
   howlerBite(g, t) {
     const dx = t.x - this.x, dz = t.z - this.z;
     if (dx * dx + dz * dz <= (this.width + (t.width || 0.6)) ** 2 + 0.6 && Math.abs(t.y - this.y) < 1.5 && this.attackCooldown <= 0) {
@@ -833,6 +863,17 @@ export class Mob {
     animateModel(m, this, alpha, L, sec);
     if (parts && parts.armL && this.def.guard && this.swingTime > 0) parts.armL.rotation.x = parts.armR.rotation.x = -2 * Math.sin((this.swingTime - alpha) / 10 * Math.PI);
     if (this.def.customRender) this.def.customRender(this, m, alpha, sec);
+    if (parts && parts.mane) {
+      if (m.userData.coat !== this.coat) {
+        m.userData.coat = this.coat;
+        const [body, mane] = [['#8a5a32', '#3a2414'], ['#e8e2d8', '#b8b0a4'], ['#2a2420', '#141210'], ['#a8682e', '#5a3418'], ['#7a7470', '#4a4440']][this.coat || 0];
+        const tint = (k, col) => { const mm = parts[k].children[0].material; (Array.isArray(mm) ? mm[0] : mm).userData.base.set(col); };
+        for (const k of ['body', 'neck', 'head', 'legFL', 'legFR', 'legBL', 'legBR']) tint(k, body);
+        for (const k of ['mane', 'tail']) tint(k, mane);
+      }
+      parts.saddle.visible = !!this.saddled;
+      parts.tail.rotation.x = 0.5 + Math.sin(sec * 3 + this.id) * 0.1;
+    }
     if (parts && parts.collar) {
       parts.collar.visible = this.tamed;
       for (const k of ['snout', 'nose', 'earL', 'earR']) parts[k].rotation.x = parts.head.rotation.x;

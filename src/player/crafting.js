@@ -64,6 +64,7 @@ shaped(['SS', 'SS'], { S: I.SNOWBALL }, B.SNOW_BLOCK, 1);
 shaped(['GSG', 'SGS', 'GSG'], { G: I.GUNPOWDER, S: B.SAND }, B.TNT, 1);
 shaped(['I I', 'I I', 'ISI'], { I: I.IRON_INGOT, S: I.STICK }, B.RAIL, 16);
 shaped(['I I', 'III'], { I: I.IRON_INGOT }, I.MINECART, 1);
+shaped(['LLL', 'LIL'], { L: I.LEATHER, I: I.IRON_INGOT }, I.SADDLE, 1);
 shaped(['PIP', 'PPP', ' P '], { P: 'planks', I: I.IRON_INGOT }, I.SHIELD, 1);
 shaped(['  S', ' SW', 'S W'], { S: I.STICK, W: I.STRING }, I.FISHING_ROD, 1);
 shaped(['CCC', 'CCC'], { C: B.COBBLESTONE }, B.COBBLESTONE_WALL, 6);

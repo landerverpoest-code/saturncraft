@@ -26,7 +26,7 @@ describe('spawn tables', () => {
     expect(isSlimeChunk(42, 3, 5)).toBe(isSlimeChunk(42, 3, 5));
   });
   it('farm animals use weights 12/10/10/8 in grassy biomes', () => {
-    const p = pickProbabilities(spawnTable('creature', BIOME.PLAINS));
+    const p = pickProbabilities(spawnTable('creature', BIOME.BIRCH_FOREST));
     expect(p.fleecer).toBeCloseTo(12 / 40, 9);
     expect(p.bristleback).toBeCloseTo(10 / 40, 9);
     expect(p.cluckling).toBeCloseTo(10 / 40, 9);

@@ -546,6 +546,16 @@ export class Interaction {
     if (mob.netProxy) return g.net.interactMob(mob); // multiplayer guest: the host feeds, shears, tames or trades
     if (mob.def.villager && mob.deathTime === 0 && mob.trades.length && !(d && d.food && mob.def.food)) { g.ui.openTrade(mob); g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); return true; }
     if (mob.def.tameable && mob.deathTime === 0 && this.interactHowler(mob, st, d)) return true;
+    if (mob.def.rideable && mob.deathTime === 0 && mob.age >= 0) {
+      // Gallopers: saddle a tame one, feed it (taming goes faster), or climb on
+      const use = () => { if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1); this.swing = SWING_TICKS; };
+      if (d && d.saddle && mob.tamed && !mob.saddled) { mob.saddled = true; use(); g.audio.play('equip', [mob.x, mob.y + 1, mob.z]); return true; }
+      if (d && d.food && mob.def.food.includes(st.id)) {
+        if (mob.health < mob.maxHealth || !mob.tamed) { mob.health = Math.min(mob.maxHealth, mob.health + 2); mob.temper = Math.min(100, (mob.temper || 0) + 3); use(); g.audio.play('eat', [mob.x, mob.y + 1, mob.z]); mob.hearts(g, 2, true); return true; }
+        if (mob.feed(g)) { use(); return true; }
+      }
+      if (!mob.rider && !p.riding && !p.sneaking) { g.mount(mob); return true; }
+    }
     if (!d || mob.deathTime > 0 || mob.def.category !== 'creature') return false;
     if (d.dye && mob.type === 'fleecer' && mob.woolColor !== d.dye) {
       mob.woolColor = d.dye;
