@@ -94,7 +94,7 @@ export function stampMineshafts(seed, blocks, meta, cx, cz) {
         }
         if (c.rails && h(k, 1) < 0.9) set(x, c.y, z, B.RAIL, dx ? 1 : 0);
         if (c.webs && !support && h(k, 2) < 0.12) set(x + sx * (h(k, 3) < 0.5 ? -1 : 1), c.y + 2, z + sz * (h(k, 3) < 0.5 ? -1 : 1), B.COBWEB);
-        if (k === c.chest && !support) set(x - sx, c.y, z - sz, B.CHEST, ((c.dir + 1) & 3) | 8);
+        if (k === c.chest && !support) set(x - sx, c.y, z - sz, B.CHEST, ((c.dir + 1) & 3) | 8 | (1 << 4));
       }
     }
   }

@@ -441,7 +441,7 @@ export class Game {
       // dungeon chests roll their loot the first time they are opened or broken
       const meta = metaHint ?? this.world.getMeta(x, y, z);
       if (meta & 8) {
-        c.slots = dungeonLoot();
+        c.slots = dungeonLoot(Math.random, (meta >> 4) & 15);
         if (this.world.getBlock(x, y, z) === B.CHEST) this.world.setBlockUrgent(x, y, z, B.CHEST, meta & 3, false);
       }
     }

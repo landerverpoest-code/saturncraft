@@ -18,3 +18,14 @@ describe('fishing', () => {
     expect(SMELTING[I.RAW_SILVERFIN]).toBe(I.COOKED_SILVERFIN);
   });
 });
+
+import { dungeonLoot, LOOT } from '../src/mobs/spawnerBlocks.js';
+describe('structure loot', () => {
+  it('each structure rolls from its own table', () => {
+    for (const kind of Object.values(LOOT)) {
+      const slots = dungeonLoot(rng(kind + 1), kind).filter(Boolean);
+      expect(slots.length).toBeGreaterThan(0);
+      for (const s of slots) expect(s.id).toBeDefined();
+    }
+  });
+});

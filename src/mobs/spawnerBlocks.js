@@ -2,7 +2,7 @@
 // blocks; every 200-800 ticks they try 4 spawns within 4 blocks, unless 6 of
 // their kind are already close. Mobs need light 11 or lower and room to stand.
 // Also rolls the loot of dungeon chests.
-import { SOLID } from '../world/blocks.js';
+import { B, SOLID } from '../world/blocks.js';
 import { I } from '../world/items.js';
 
 export const SPAWNER_TYPES = ['shambler', 'rattler', 'skitterer'];
@@ -71,11 +71,27 @@ function pick(table, rng) {
 }
 
 /** 27 chest slots filled with dungeon loot at random positions. */
-export function dungeonLoot(rng = Math.random) {
+// Structure loot (chest meta bits 4-7): [table, rolls min, rolls max] per structure
+export const LOOT = { DUNGEON: 0, MINESHAFT: 1, DESERT: 2, JUNGLE: 3, IGLOO: 4, WRECK: 5 };
+const STRUCTURE_LOOT = {
+  [LOOT.MINESHAFT]: [[[I.IRON_INGOT, 1, 5, 10], [I.GOLD_INGOT, 1, 3, 5], [I.CINNABAR, 4, 9, 5], [I.AZURITE, 4, 9, 5], [I.DIAMOND, 1, 2, 3], [I.COAL, 3, 8, 10], [I.BREAD, 1, 3, 15], [B.RAIL, 4, 8, 20], [I.MELON_SLICE, 2, 4, 10], [I.PUMPKIN_PIE, 1, 2, 5], [I.IRON_PICKAXE, 1, 1, 2]], 3, 6],
+  [LOOT.DESERT]: [[[I.DIAMOND, 1, 3, 5], [I.IRON_INGOT, 1, 5, 15], [I.GOLD_INGOT, 2, 7, 15], [I.BERYL, 1, 3, 15], [I.BONE, 4, 6, 25], [I.SPIDER_EYE, 1, 3, 25], [I.ROTTEN_FLESH, 3, 7, 25], [I.SADDLE, 1, 1, 20], [I.GOLD_CHESTPLATE, 1, 1, 3]], 2, 5],
+  [LOOT.JUNGLE]: [[[I.DIAMOND, 1, 3, 3], [I.IRON_INGOT, 1, 5, 10], [I.GOLD_INGOT, 2, 7, 15], [I.BERYL, 1, 3, 2], [I.BONE, 4, 6, 20], [I.ROTTEN_FLESH, 3, 7, 16], [I.SADDLE, 1, 1, 3], [I.COCOA_BEANS, 2, 5, 10]], 2, 6],
+  [LOOT.IGLOO]: [[[I.APPLE, 1, 3, 15], [I.COAL, 1, 4, 15], [I.GOLD_INGOT, 1, 1, 1], [I.STONE_AXE, 1, 1, 2], [I.ROTTEN_FLESH, 1, 1, 10], [I.WHEAT, 2, 3, 10], [I.EMERALD ?? I.BERYL, 1, 1, 1]], 2, 8],
+  [LOOT.WRECK]: [[[I.IRON_INGOT, 1, 5, 20], [I.GOLD_INGOT, 1, 5, 10], [I.BERYL, 1, 5, 20], [I.DIAMOND, 1, 1, 5], [I.PAPER, 1, 12, 20], [I.COAL, 2, 8, 15], [I.WHEAT, 8, 21, 10], [I.CARROT, 4, 8, 10], [I.POTATO, 2, 6, 10], [I.LEATHER_HELMET, 1, 1, 3], [I.COMPASS, 1, 1, 5]], 3, 8],
+};
+
+export function dungeonLoot(rng = Math.random, kind = LOOT.DUNGEON) {
   const items = [];
-  const rollsA = 1 + Math.floor(rng() * 3);
-  for (let k = 0; k < rollsA; k++) items.push(pick(LOOT_A, rng));
-  for (let k = 0; k < 3; k++) items.push(pick(LOOT_B, rng));
+  const t = STRUCTURE_LOOT[kind];
+  if (t) {
+    const [table, a, b] = t;
+    for (let k = 0, n = a + Math.floor(rng() * (b - a + 1)); k < n; k++) items.push(pick(table.filter((e) => e[0] !== undefined), rng));
+  } else {
+    const rollsA = 1 + Math.floor(rng() * 3);
+    for (let k = 0; k < rollsA; k++) items.push(pick(LOOT_A, rng));
+    for (let k = 0; k < 3; k++) items.push(pick(LOOT_B, rng));
+  }
   const slots = new Array(27).fill(null);
   for (const [id, min, max] of items) {
     let s;

@@ -89,7 +89,7 @@ export function stampTemples(gen, blocks, meta, cx, cz) {
     }
     for (let x = tx - 1; x <= tx + 1; x++) for (let z = tz - 1; z <= tz + 1; z++) set(x, cy - 2, z, B.TNT);
     set(tx, cy - 1, tz, B.RED_TERRACOTTA);
-    for (const [ax, az, face] of [[0, -3, 2], [3, 0, 3], [0, 3, 0], [-3, 0, 1]]) set(tx + ax, cy, tz + az, B.CHEST, face | 8);
+    for (const [ax, az, face] of [[0, -3, 2], [3, 0, 3], [0, 3, 0], [-3, 0, 1]]) set(tx + ax, cy, tz + az, B.CHEST, face | 8 | (2 << 4));
     // the way down: a one-block shaft under the floor centre
     for (let yy = cy + 4; yy < y - 1; yy++) set(tx, yy, tz, B.AIR);
   }
@@ -127,8 +127,8 @@ function jungleTemple(t, set) {
   for (let z = z0 + 1; z < z1; z++) if (z !== cz) set(cx - 2, y + 1, z, B.COBBLESTONE_WALL);
   // a hole in the floor down to the treasure room
   for (let x = cx + 1; x <= cx + 3; x++) for (let z = cz + 2; z <= cz + 4; z++) for (let yy = y - 4; yy < y - 1; yy++) set(x, yy, z, 0);
-  set(cx + 2, y - 4, cz + 3, B.CHEST, 2 | 8);
-  set(cx - 4, y, cz + 5, B.CHEST, 1 | 8);
+  set(cx + 2, y - 4, cz + 3, B.CHEST, 2 | 8 | (3 << 4));
+  set(cx - 4, y, cz + 5, B.CHEST, 1 | 8 | (3 << 4));
   for (let yy = y - 3; yy < y; yy++) set(cx + 1, yy, cz + 2, B.LADDER, 0);
 }
 
@@ -149,7 +149,7 @@ function igloo(t, set) {
   set(cx - 2, y, cz + 1, B.BED, 0 | 8); set(cx - 2, y, cz + 2, B.BED, 0);
   set(cx + 2, y, cz + 1, B.WORKBENCH); set(cx + 2, y, cz - 1, B.FURNACE, 3);
   set(cx - 2, y, cz - 1, B.TORCH, 0);
-  set(cx + 1, y, cz + 2, B.CHEST, 0 | 8);
+  set(cx + 1, y, cz + 2, B.CHEST, 0 | 8 | (4 << 4));
 }
 
 // ---- shipwrecks -------------------------------------------------------------------
@@ -210,7 +210,7 @@ export function stampWrecks(gen, blocks, meta, cx, cz) {
       }
     }
     for (let h = 1; h <= 8; h++) if (h < 6 || rng() < 0.6) set(0, y + h, 0, h > 3 ? B.OAK_FENCE : B.OAK_LOG); // the mast, snapped
-    set(-5, y + 1, 0, B.CHEST, (wk.alongX ? 1 : 2) | 8);
-    set(5, y + 1, 0, B.CHEST, (wk.alongX ? 3 : 0) | 8);
+    set(-5, y + 1, 0, B.CHEST, (wk.alongX ? 1 : 2) | 8 | (5 << 4));
+    set(5, y + 1, 0, B.CHEST, (wk.alongX ? 3 : 0) | 8 | (5 << 4));
   }
 }

@@ -360,7 +360,8 @@ poison from eyes) follow the documented table.
 * Shields (6 planks + iron ingot, 336 uses): hold right-click to raise one (after a quarter second); it stops melee hits and arrows from in front, wears with the damage it takes, pushes attackers back and slows you to a fifth
 * Flitters (bats): up to 15 flutter about in dark caves near you (light ≤ 3), squeak, and hang upside down from ceilings until you come close
 * Inklings (squid) in deep ocean water: they drift in pulses with sweeping tentacles, squirt ink and dart away when hit, and drop 1–3 ink sacs (black dye)
-* Shipwrecks on the ocean floor (40 % of 160 × 160 regions): an oak or spruce hull with a broken deck, a snapped mast and two loot chests; `/locate shipwreck`
+* Shipwrecks on the ocean floor (40 % of 160 × 160 regions): an oak or spruce hull with a broken deck, a snapped mast and two loot chests
+* Every structure has its own chest loot (dungeons, mineshafts with rails, desert and jungle temples with gold and beryl, igloos with food, shipwrecks with paper, crops and a compass); `/locate shipwreck`
 * Jungle temples (mossy cobblestone, two storeys, vines, a ladder down to a hidden chest) and igloos in snowy biomes (a snow dome with bed, workbench, furnace and chest), in the same regions as desert temples
 * Desert temples (one 256 × 256 region in three, on level desert ground): a 21 × 21 sandstone hall with two towers, terracotta bands and a terracotta star on the floor; dig down through its red centre to a hidden chamber with four loot chests — above nine TNT; `/locate temple`
 * TNT (5 blast powder + 4 sand): lit by flint and steel, fire or another explosion (chain reactions with a 10–30-tick fuse), it hops, swells and flashes for 4 s and explodes with power 4; works for guests in multiplayer too
