@@ -420,7 +420,7 @@ poison from eyes) follow the documented table.
 **Not yet implemented**
 
 * Lingering elixirs and tipped arrows, Turtle Master / Decay / Luck elixirs, beacons (Haste only comes from `/effect`), Mining Fatigue, Absorption and Wither effects; effect particles of other players in multiplayer
-* Taming of animals other than Howlers, Purrlings and Gallopers
+* Taming of animals other than Howlers, Purrlings, Squawklets and Gallopers
 * Large structures beyond villages, temples, wrecks, outposts, dungeons, sanctums and bastions; job-site blocks; Hollow outer-island cities
 * Hoppers, dispensers and other item-moving containers
 * Witches (elixir-throwing monsters), drowned, husks/strays as separate variants, baby mobs, mob equipment
