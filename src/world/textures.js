@@ -654,6 +654,12 @@ const GEN = {
     for (let y = 4; y < 12; y++) c.set(11, y, hex('#6b4a2a'));
     c.set(10, 4, hex('#9a9a9a')); c.set(12, 4, hex('#9a9a9a')); c.set(11, 3, hex('#9a9a9a'));
   },
+  turtle_egg: (c) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const spot = ((x * 7 + y * 11) % 13) < 2;
+      c.set(x, y, spot ? hex('#6aa84a') : shade(hex('#f0ecd8'), 0.95 + ((x + y) % 3) * 0.03));
+    }
+  },
   nest_side: (c) => {
     for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
       const band = ((y + (x >> 2)) >> 2) & 1, n = ((x * 13 + y * 7) % 5) * 0.03;

@@ -102,7 +102,7 @@ export class Mob {
   }
 
   /** State kept when the mob is saved with its chunk. */
-  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor, profession: this.profession, trades: this.trades, home: this.home, lastRestock: this.lastRestock, size: this.size, coat: this.coat, temper: this.temper, saddled: this.saddled, maxHp: this.maxHp, playerMade: this.playerMade, tamed: this.tamed, sitting: this.sitting, ownerName: this.ownerName, horns: this.horns, hive: this.hive, nectar: this.nectar }; }
+  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor, profession: this.profession, trades: this.trades, home: this.home, lastRestock: this.lastRestock, size: this.size, coat: this.coat, temper: this.temper, saddled: this.saddled, maxHp: this.maxHp, playerMade: this.playerMade, tamed: this.tamed, sitting: this.sitting, ownerName: this.ownerName, horns: this.horns, hive: this.hive, nectar: this.nectar, beach: this.beach, pregnant: this.pregnant }; }
   loadData(s) {
     this.health = s.health; this.yaw = s.yaw;
     if (s.age < 0) { this.setBaby(true); this.age = s.age; } else this.age = s.age || 0;
@@ -110,6 +110,7 @@ export class Mob {
     if (s.woolColor !== undefined) this.woolColor = s.woolColor;
     if (s.horns !== undefined) this.horns = s.horns;
     if (s.hive) { this.hive = s.hive; this.nectar = !!s.nectar; }
+    if (s.beach) { this.beach = s.beach; this.pregnant = !!s.pregnant; }
     if (s.playerMade) this.playerMade = true;
     if (s.size) { this.setSize(s.size); this.health = s.health; }
     if (this.type === 'galloper') { if (s.coat !== undefined) this.coat = s.coat; this.temper = s.temper || 0; this.saddled = !!s.saddled; if (s.maxHp) this.maxHp = s.maxHp; }
@@ -201,6 +202,14 @@ export class Mob {
   }
 
   breed(g, mate) {
+    if (this.def.turtle) {
+      // Shellbacks carry eggs back to their home beach instead
+      for (const m of [this, mate]) { m.loveTicks = 0; m.age = 6000; m.breedTime = 0; }
+      this.pregnant = true; this.hearts(g, 7);
+      g.entities.spawnXp(this.x, this.y + 0.5, this.z, 1 + Math.floor(Math.random() * 7));
+      if (g.milestones) g.milestones.event('breed');
+      return;
+    }
     const baby = g.spawner.spawnMob(this.type, (this.x + mate.x) / 2, Math.max(this.y, mate.y), (this.z + mate.z) / 2);
     baby.setBaby(true);
     baby.woolColor = Math.random() < 0.5 ? this.woolColor : mate.woolColor; // (the reference blends dye colours)
@@ -506,6 +515,7 @@ export class Mob {
     if (this.def.villager) return this.settlerAI(g, p, pdist);
     if (this.def.feline) return this.catAI(g, p, pdist);
     if (this.def.goat) return this.goatAI(g, p, pdist);
+    if (this.def.turtle) return this.turtleAI(g, p, pdist);
     if (this.def.tameable) return this.howlerAI(g, p, pdist);
     if (this.def.neutralBeast) return this.bearAI(g, p, pdist);
     if (this.def.fox) return this.foxAI(g, p, pdist);
@@ -787,6 +797,32 @@ export class Mob {
     }
     fly(...this.target3, 0.06);
     if (Math.random() < 1 / 300) g.audio.play('buzz', [this.x, this.y, this.z], 0.5);
+  }
+
+  /**
+   * Shellbacks plod slowly on land and swim fast; each remembers the beach it
+   * was born on (or first seen on). After breeding, one goes home and lays
+   * 1-4 eggs on the sand. A hatchling drops a scute when it grows up.
+   */
+  turtleAI(g, p, pdist) {
+    const b = this.body, w = g.world;
+    if (!this.beach) this.beach = { x: Math.floor(this.x), y: Math.floor(this.y), z: Math.floor(this.z) };
+    if (this.age === -1) g.entities.spawnItem(this.x, this.y + 0.3, this.z, { id: I.SCUTE, count: 1, damage: 0 }); // grows up this tick
+    const swim = b.inWater ? 3.5 : 1;
+    if (this.pregnant) {
+      const h = this.beach, d = Math.hypot(h.x + 0.5 - this.x, h.z + 0.5 - this.z);
+      if (d > 2) { this.steer(h.x + 0.5, h.z + 0.5, swim); if (this.move) this.move.jump = this.move.jump || b.inWater; return; }
+      const x = Math.floor(this.x), y = Math.floor(this.y), z = Math.floor(this.z);
+      if (b.onGround && w.getBlock(x, y - 1, z) === B.SAND && !w.getBlock(x, y, z)) {
+        w.setBlockUrgent(x, y, z, B.TURTLE_EGG, Math.floor(Math.random() * 4));
+        g.audio.play('place_stone', [x + 0.5, y, z + 0.5]);
+        this.pregnant = false;
+      } else this.wanderAI(g, 1);
+      return;
+    }
+    if (this.panicTicks > 0 || this.loveTicks > 0 || this.tempted(g)) return this.passiveAI(g);
+    if (this.age < 0) { if (++this.age === 0) this.setBaby(false); } else if (this.age > 0) this.age--;
+    this.wanderAI(g, swim);
   }
 
   /** Bees of a nest (or near a spot) turn on whoever disturbed it. */

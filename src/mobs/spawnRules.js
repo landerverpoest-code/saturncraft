@@ -59,6 +59,8 @@ export const SPAWN_TABLES = {
     stony_peaks: [{ type: 'cragbuck', weight: 5, min: 1, max: 3 }], snowy_peaks: [{ type: 'cragbuck', weight: 5, min: 1, max: 3 }],
     snowy_plains: [{ type: 'hopper', weight: 10, min: 2, max: 3 }, { type: 'frostbear', weight: 2, min: 1, max: 2 }],
     desert: [{ type: 'hopper', weight: 4, min: 2, max: 3 }],
+    // Shellbacks (turtles) come ashore on beaches
+    beach: [{ type: 'shellback', weight: 5, min: 2, max: 5 }],
     default: [],
   },
 };

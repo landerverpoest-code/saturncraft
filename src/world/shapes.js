@@ -231,6 +231,8 @@ const LANTERN_HANGING = [[5 / 16, 1 / 16, 5 / 16, 11 / 16, 8 / 16, 11 / 16], [6 
 const ALEMBIC_BOXES = [[2 / 16, 0, 2 / 16, 14 / 16, 2 / 16, 14 / 16], [7 / 16, 2 / 16, 7 / 16, 9 / 16, 14 / 16, 9 / 16],
   [3 / 16, 11 / 16, 7.5 / 16, 13 / 16, 12 / 16, 8.5 / 16], [7.5 / 16, 11 / 16, 3 / 16, 8.5 / 16, 12 / 16, 13 / 16]];
 const ALEMBIC_COLLISION = [ALEMBIC_BOXES[0], [7 / 16, 2 / 16, 7 / 16, 9 / 16, 14 / 16, 9 / 16]];
+// up to four Shellback eggs
+const EGG_BOXES = [[3, 7, 4, 4], [9, 3, 3, 4], [9, 9, 4, 5], [4, 11, 3, 3]].map(([x, z, s, h]) => [x / 16, 0, z / 16, (x + s) / 16, h / 16, (z + s) / 16]);
 export function blockBoxes(id, meta) {
   if (id === B.ANVIL) return meta & 1 ? ANVIL_Z : ANVIL_X;
   if (id === B.CAMPFIRE) return CAMPFIRE_BOXES;
@@ -240,6 +242,7 @@ export function blockBoxes(id, meta) {
   if (id === B.COCOA) return [cocoaBox(meta)];
   if (id === B.LANTERN) return meta & 1 ? LANTERN_HANGING : LANTERN_STANDING;
   if (id === B.BREWING_STAND) return ALEMBIC_BOXES;
+  if (id === B.TURTLE_EGG) return EGG_BOXES.slice(0, (meta & 3) + 1);
   return TABLE_BOXES;
 }
 /** One box enclosing all of a SHAPE.BOXES block (selection outline). */
@@ -255,7 +258,7 @@ SHAPED_COLLISION[B.DOOR] = 1;
 SHAPED_COLLISION[B.BED] = 1;
 SHAPED_COLLISION[B.GLASS_PANE] = 1;
 SHAPED_COLLISION[B.SNOW_LAYER] = 1;
-for (const id of [B.COBBLESTONE_WALL, B.MOSSY_COBBLESTONE_WALL, B.OAK_TRAPDOOR, B.ENCHANTING_TABLE, B.ANVIL, B.CAMPFIRE, B.LANTERN, B.BREWING_STAND]) SHAPED_COLLISION[id] = 1;
+for (const id of [B.COBBLESTONE_WALL, B.MOSSY_COBBLESTONE_WALL, B.OAK_TRAPDOOR, B.ENCHANTING_TABLE, B.ANVIL, B.CAMPFIRE, B.LANTERN, B.BREWING_STAND, B.TURTLE_EGG]) SHAPED_COLLISION[id] = 1;
 /** Snow layer box (n = meta + 1 layers); collision is one layer lower, so a single layer has none. */
 export const snowBox = (meta, collide = false) => [0, 0, 0, 1, ((meta & 7) + (collide ? 0 : 1)) * 2 / 16, 1];
 for (const id of [B.OAK_FENCE, B.SPRUCE_FENCE, B.BIRCH_FENCE, B.OAK_FENCE_GATE]) SHAPED_COLLISION[id] = 1;

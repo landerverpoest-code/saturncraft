@@ -169,6 +169,8 @@ for (const [mat, m] of Object.entries(ARMOR_MATERIALS)) {
     });
   });
 }
+// the Shellback Helmet is made separately (from scutes), after the loop above, so item ids stay put
+ARMOR_MATERIALS.turtle = { defense: [2, 0, 0, 0], durability: 25, toughness: 0, color: '#4a9a3a', name: 'Shellback' };
 
 // Added after the armour so earlier item ids stay stable for old saves
 item('mushroom_stew', 'Mushroom Stew', { stack: 1, food: { hunger: 6, saturation: 7.2, leaves: 'bowl' } });
@@ -204,6 +206,8 @@ for (const kind of POTION_KEYS) {
 item('empty_map', 'Empty Map', { emptyMap: true, iconStyle: ['map', { p: '#e8dcb8', e: '#a89868', g: '#e8dcb8', w: '#e8dcb8' }] });
 item('honeycomb', 'Honeycomb', { iconStyle: ['lump', { h: '#f0a828', H: '#ffd060', s: '#b87010' }] });
 item('honey_bottle', 'Honey Bottle', { stack: 16, food: { hunger: 6, saturation: 1.2, leaves: 'vial', cures: 'poison' }, iconStyle: ['vial', { g: '#dbe8f5', h: '#f0a020', H: '#ffd060' }] });
+item('scute', 'Shellback Scute', { iconStyle: ['lump', { h: '#4a9a3a', H: '#7ac860', s: '#2a6a2a' }] });
+item('turtle_shell', 'Shellback Helmet', { stack: 1, durability: 275, armor: { slot: 0, piece: 'helmet', material: 'turtle', defense: 2, toughness: 0 } });
 item('crag_horn', 'Crag Horn', { stack: 1, horn: true, iconStyle: ['horn', { h: '#c8bca0', H: '#e8dcc0', s: '#8a7a5a' }] });
 item('filled_map', 'Map', { stack: 1, filledMap: true, iconStyle: ['map', { p: '#e8dcb8', e: '#a89868', g: '#5a9a3a', w: '#3a6ad8' }] });
 

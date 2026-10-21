@@ -231,7 +231,7 @@ export class MobSpawner {
         const z = Math.max(cz * 16, Math.min(cz * 16 + 15, bz + Math.floor(Math.random() * 5) - 2));
         const y = w.heightAt(x, z) + 1;
         const ground = w.getBlock(x, y - 1, z);
-        const soil = ground === B.GRASS || ground === B.MYCELIUM || ground === B.SNOWY_GRASS || ground === B.SNOW_LAYER || (ground === B.SAND && entry.type === 'hopper') || (entry.type === 'cragbuck' && SOLID[ground]);
+        const soil = ground === B.GRASS || ground === B.MYCELIUM || ground === B.SNOWY_GRASS || ground === B.SNOW_LAYER || (ground === B.SAND && (entry.type === 'hopper' || entry.type === 'shellback')) || (entry.type === 'cragbuck' && SOLID[ground]);
         if (!soil || !this.canFit(entry.type, x, y, z)) continue;
         this.spawnMob(entry.type, x + 0.5, y, z + 0.5);
       }

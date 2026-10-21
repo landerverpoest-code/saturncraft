@@ -112,6 +112,19 @@ export class Game {
     this.weather = new Weather();
     // fire checks this: rain puts out (and stops) fires that are open to the sky
     this.world.onTNT = (x, y, z) => igniteTNT(this, x, y, z);
+    // Shellback eggs crack at night (rarely by day) and hatch after the third crack
+    this.world.onEggTick = (x, y, z) => {
+      if (this.net && this.net.isClient) return;
+      if (this.sky.state.combined > 0.35 && Math.random() > 1 / 500) return;
+      const m = this.world.getMeta(x, y, z), stage = (m >> 2) & 3;
+      if (stage < 2) { this.world.setBlockUrgent(x, y, z, B.TURTLE_EGG, m + 4); this.audio.play('crack', [x + 0.5, y, z + 0.5]); return; }
+      this.world.setBlockUrgent(x, y, z, B.AIR);
+      this.audio.play('crack', [x + 0.5, y, z + 0.5]);
+      for (let k = 0; k <= (m & 3); k++) {
+        const t = this.spawner.spawnMob('shellback', x + 0.3 + Math.random() * 0.4, y, z + 0.3 + Math.random() * 0.4);
+        if (t) { t.setBaby(true); t.beach = { x, y, z }; t.persistent = true; }
+      }
+    };
     this.world.rainingAt = (x, y, z) => this.world.dimension === 'overworld' && this.weather.level >= 0.2 && Weather.precipitation(this.world.biomeAt(x, z)) === 'rain' && this.world.heightAt(x, z) <= y;
     this.chat = this.chat || new Chat(this);
     this.weatherFx = new WeatherRenderer(this.scene);

@@ -4,6 +4,7 @@ import { PHYS, fallDamage } from '../physics/constants.js';
 import { HungerManager, EXHAUSTION, MAX_HEALTH, MAX_AIR, SPRINT_MIN_FOOD } from './survival.js';
 import { Inventory } from './inventory.js';
 import { B, SOLID } from '../world/blocks.js';
+import { I } from '../world/items.js';
 import { MIN_Y } from '../world/constants.js';
 import { armorReduce, armorTotals, wearArmor, BYPASSES_ARMOR } from './armor.js';
 import { newXp } from './experience.js';
@@ -249,6 +250,9 @@ export class Player {
       if (this.fireTicks % 20 === 0) this.hurt(1, 'fire');
       this.fireTicks--;
     }
+    // a Shellback Helmet gives 10 s of Water Breathing, kept full while the head is above water
+    const helm = this.inventory.armor[0];
+    if (helm && helm.id === I.TURTLE_SHELL && !b.eyeInWater && (!fx.water_breathing || fx.water_breathing.ticks < 100)) this.addEffect('water_breathing', 200);
     if (b.eyeInWater && !fx.water_breathing) {
       this.air--;
       if (this.air <= -20) { this.air = 0; this.hurt(2, 'drown'); }
