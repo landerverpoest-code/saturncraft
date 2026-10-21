@@ -1,6 +1,7 @@
 // The player: physics body, survival stats and environmental damage.
 import { Body } from '../physics/body.js';
 import { PHYS, fallDamage } from '../physics/constants.js';
+import { isStalagmiteTip, stalagmiteFallDamage } from '../world/caves.js';
 import { HungerManager, EXHAUSTION, MAX_HEALTH, MAX_AIR, SPRINT_MIN_FOOD } from './survival.js';
 import { Inventory } from './inventory.js';
 import { B, SOLID } from '../world/blocks.js';
@@ -244,8 +245,11 @@ export class Player {
     if (b.onGround) {
       if (b.fallDistance > 0) {
         const onHay = world.getBlock(Math.floor(b.x), Math.floor(b.y - 0.01), Math.floor(b.z)) === B.HAY_BALE;
-        const dmg = fallDamageWithEffects(Math.floor(fallDamage(b.fallDistance) * (onHay ? 0.2 : 1)), fx); // hay softens a fall by 80 %
-        if (dmg > 0) this.hurt(dmg, 'fall');
+        // landing on the point of an upward Seepstone spike: as if fallen 2 blocks further, doubled
+        const spike = isStalagmiteTip(world, Math.floor(b.x), Math.floor(b.y - 0.01), Math.floor(b.z));
+        const base = spike ? stalagmiteFallDamage(b.fallDistance) : fallDamage(b.fallDistance);
+        const dmg = fallDamageWithEffects(Math.floor(base * (onHay ? 0.2 : 1)), fx); // hay softens a fall by 80 %
+        if (dmg > 0) this.hurt(dmg, spike ? 'stalagmite' : 'fall');
         this.landedFrom = b.fallDistance;
       }
       b.fallDistance = 0;

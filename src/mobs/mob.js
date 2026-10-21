@@ -3,6 +3,7 @@
 // teleporter.
 import { Body } from '../physics/body.js';
 import { fallDamage } from '../physics/constants.js';
+import { isStalagmiteTip, stalagmiteFallDamage } from '../world/caves.js';
 import { B, SOLID, CROPS } from '../world/blocks.js';
 import { I } from '../world/items.js';
 import { MOBS, CATEGORY } from './mobTypes.js';
@@ -500,7 +501,7 @@ export class Mob {
     if (this.def.fireImmune) { this.fireTicks = 0; if (b.inLava) b.vy = Math.max(b.vy, 0.06); }
     if (b.onGround) {
       if (b.fallDistance > 0 && !this.def.noFallDamage) {
-        const dmg = fallDamage(b.fallDistance);
+        const dmg = isStalagmiteTip(w, Math.floor(b.x), Math.floor(b.y - 0.01), Math.floor(b.z)) ? stalagmiteFallDamage(b.fallDistance) : fallDamage(b.fallDistance);
         if (dmg > 0) this.hurt(dmg, 'fall');
       }
       b.fallDistance = 0;

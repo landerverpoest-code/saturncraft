@@ -252,11 +252,22 @@ export function chooseIngredients(layout, stacks) {
 /** A representative item id for an ingredient (tags show their first member). */
 export function ingredientIcon(ing) { return typeof ing === 'string' ? TAGS[ing][0] : ing; }
 
+// Caves content: copper blocks and sealing, the Storm Rod, Violite, Shaded Glass, the Farglass, Seepstone
+shaped(['CCC', 'CCC', 'CCC'], { C: I.COPPER_INGOT }, B.COPPER_BLOCK, 1);
+shapeless([B.COPPER_BLOCK], I.COPPER_INGOT, 9);
+[[B.COPPER_BLOCK, B.WAXED_COPPER_BLOCK], [B.DULLED_COPPER, B.WAXED_DULLED_COPPER], [B.TARNISHED_COPPER, B.WAXED_TARNISHED_COPPER], [B.VERDIGRIS_COPPER, B.WAXED_VERDIGRIS_COPPER]]
+  .forEach(([plain, waxed]) => shapeless([plain, I.HONEYCOMB], waxed, 1));
+shaped(['C', 'C', 'C'], { C: I.COPPER_INGOT }, B.STORM_ROD, 1);
+shaped(['SS', 'SS'], { S: I.VIOLITE_SHARD }, B.VIOLITE_BLOCK, 1);
+shaped([' S ', 'SGS', ' S '], { S: I.VIOLITE_SHARD, G: B.GLASS }, B.SHADED_GLASS, 2);
+shaped(['S', 'C', 'C'], { S: I.VIOLITE_SHARD, C: I.COPPER_INGOT }, I.FARGLASS, 1);
+shaped(['PP', 'PP'], { P: B.SEEPSTONE_SPIKE }, B.SEEPSTONE, 1);
+
 // Smelting: input -> output; 200 ticks per item (10 s)
 export const SMELT_TIME = 200;
 export const SMELTING = {
   [I.RAW_IRON]: I.IRON_INGOT, [I.RAW_GOLD]: I.GOLD_INGOT, [I.RAW_COPPER]: I.COPPER_INGOT,
-  [B.IRON_ORE]: I.IRON_INGOT, [B.GOLD_ORE]: I.GOLD_INGOT,
+  [B.IRON_ORE]: I.IRON_INGOT, [B.GOLD_ORE]: I.GOLD_INGOT, [B.COPPER_ORE]: I.COPPER_INGOT, [B.DEEP_COPPER_ORE]: I.COPPER_INGOT,
   [B.SAND]: B.GLASS, [I.CLAY_BALL]: I.BRICK, [B.CLAY]: B.BRICKS, [B.CACTUS]: DYES[COLOR.GREEN], [B.COBBLESTONE]: B.STONE, [B.COBBLED_DEEPSTONE]: B.DEEPSTONE,
   [I.RAW_PORK]: I.COOKED_PORK, [I.POTATO]: I.BAKED_POTATO, [I.RAW_RABBIT]: I.COOKED_RABBIT, [I.RAW_SILVERFIN]: I.COOKED_SILVERFIN, [I.RAW_REDFIN]: I.COOKED_REDFIN, [I.RAW_BEEF]: I.STEAK, [I.RAW_CHICKEN]: I.COOKED_CHICKEN,
   [I.RAW_MUTTON]: I.COOKED_MUTTON, [B.OAK_LOG]: I.COAL, [B.SPRUCE_LOG]: I.COAL, [B.BIRCH_LOG]: I.COAL,

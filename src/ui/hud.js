@@ -33,6 +33,7 @@ export class HUD {
       <div id="overlay-lava" class="hidden"></div>
       <div id="overlay-fire" class="hidden"></div>
       <div id="overlay-vignette"></div>
+      <div id="overlay-scope" class="hidden"></div>
       <div id="crosshair"></div>
       <div id="attack-indicator" class="hidden"><div></div></div>
       <div id="skyinfo"><canvas width="192" height="96"></canvas><div><div id="phase-label">Day</div><div id="time-label" style="opacity:.7;font-size:11px"></div></div></div>
@@ -75,6 +76,7 @@ export class HUD {
       water: this.root.querySelector('#overlay-water'), lava: this.root.querySelector('#overlay-lava'),
       fire: this.root.querySelector('#overlay-fire'), vign: this.root.querySelector('#overlay-vignette'),
     };
+    this.scopeEl = this.root.querySelector('#overlay-scope');
     this.frame = 0;
     this.lastHotbarKey = '';
     this.lastSel = -1;
@@ -85,6 +87,13 @@ export class HUD {
   makeIcons(el, n) { for (let i = 0; i < n; i++) { const img = document.createElement('img'); img.className = 'icon'; el.appendChild(img); } }
 
   setVisible(v) { this.visible = v; this.root.style.display = v ? '' : 'none'; }
+  /** The dark ring of a Farglass while looking through it (also hides the crosshair). */
+  setScope(on) {
+    if (on === this.scoped) return;
+    this.scoped = on;
+    this.scopeEl.classList.toggle('hidden', !on);
+    this.root.querySelector('#crosshair').style.opacity = on ? '0' : '';
+  }
 
   /** Slide-in card for a reached milestone. */
   milestone(m) {

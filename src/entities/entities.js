@@ -2,7 +2,8 @@
 // manager that ticks and renders every entity (mobs included).
 import * as THREE from 'three';
 import { Body } from '../physics/body.js';
-import { B, BLOCKS, SOLID, isFluid } from '../world/blocks.js';
+import { B, BLOCKS, SOLID, SHAPE, isFluid } from '../world/blocks.js';
+import { stalactiteDamage, crystalTex, FACING_DOWN } from '../world/caves.js';
 import { ITEMS, I, maxStack } from '../world/items.js';
 import { itemCanvas } from '../ui/icons.js';
 import { texturePixels } from '../world/textures.js';
@@ -278,6 +279,10 @@ export class FallingBlock {
     this.dead = false;
     this.age = 0;
     this.prev = [x + 0.5, y, z + 0.5];
+    this.meta = 0;
+    this.startY = y;
+    this.hurtLength = 0;   // a falling Seepstone spike tip: hurts what it falls on (length of the spike)
+    this.shatters = false; // breaks into its item when it lands
   }
   get x() { return this.body.x; } get y() { return this.body.y; } get z() { return this.body.z; }
   tick(game) {
@@ -287,6 +292,13 @@ export class FallingBlock {
     b.move(game.world, 0, b.vy, 0);
     b.vy *= 0.98;
     this.age++;
+    if (this.hurtLength) this.hurtBelow(game);
+    if (this.shatters && (b.onGround || this.age > 600)) {
+      game.entities.spawnItem(b.x, b.y + 0.3, b.z, { id: this.blockId, count: 1 });
+      game.audio.play('break_stone', [b.x, b.y, b.z]);
+      this.dead = true;
+      return;
+    }
     if (b.onGround || this.age > 600) {
       const w = game.world;
       const bx = Math.floor(b.x), by = Math.round(b.y), bz = Math.floor(b.z);
@@ -296,6 +308,19 @@ export class FallingBlock {
         w.setBlock(bx, by, bz, this.blockId);
       } else game.entities.spawnItem(b.x, b.y + 0.5, b.z, { id: this.blockId, count: 1 });
       this.dead = true;
+    }
+  }
+  /** A falling stalactite hits each creature under it once (reference: per block fallen, at most max(length, 6)). */
+  hurtBelow(game) {
+    const b = this.body, hit = this.hitIds || (this.hitIds = new Set());
+    const over = (e, w, h) => Math.abs(e.x - b.x) < 0.49 + w / 2 && Math.abs(e.z - b.z) < 0.49 + w / 2 && b.y < e.y + h && b.y + 0.98 > e.y;
+    const dmg = stalactiteDamage(this.startY - b.y, this.hurtLength);
+    if (dmg <= 0) return;
+    const p = game.player;
+    if (!p.dead && !p.creative && !hit.has('player') && over(p, 0.6, 1.8)) { hit.add('player'); p.hurt(dmg, 'stalactite'); }
+    for (const e of game.entities.list) {
+      if (e.kind !== 'mob' || e.deathTime !== 0 || hit.has(e.id) || !over(e, e.body ? e.body.width : 0.6, e.body ? e.body.height : 1.8)) continue;
+      hit.add(e.id); e.hurt(dmg, 'stalactite', null, 0);
     }
   }
 }
@@ -608,6 +633,20 @@ export class EntityManager {
       const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: xpOrbTexture(), alphaTest: 0.3 }));
       s.scale.setScalar(0.18 + Math.min(0.2, Math.log2(e.value + 1) * 0.03));
       return s;
+    }
+    if (e.kind === 'falling' && BLOCKS[e.blockId].shape === SHAPE.CRYSTAL) {
+      // a spike: two crossed sprites, turned over when it hung from the ceiling
+      const mat = new THREE.MeshLambertMaterial({ map: blockFaceTexture(crystalTex(e.blockId, e.meta)), alphaTest: 0.5, side: THREE.DoubleSide });
+      const g = new THREE.BufferGeometry(), h = 0.5;
+      g.setAttribute('position', new THREE.Float32BufferAttribute([-h, -h, -h, h, -h, h, h, h, h, -h, h, -h, -h, -h, h, h, -h, -h, h, h, -h, -h, h, h], 3));
+      g.setAttribute('normal', new THREE.Float32BufferAttribute(Array(8).fill([0, 1, 0]).flat(), 3));
+      g.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1], 2));
+      g.setIndex([0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7]);
+      g.addGroup(0, 12, 0);
+      const m = new THREE.Mesh(g, [mat]);
+      if ((e.meta & 7) === FACING_DOWN) m.rotation.x = Math.PI;
+      m.userData.dispose = () => { g.dispose(); mat.dispose(); };
+      return m;
     }
     if (e.kind === 'falling') {
       const d = BLOCKS[e.blockId];

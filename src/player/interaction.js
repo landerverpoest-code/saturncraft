@@ -21,6 +21,7 @@ import { tryLightRift, findHollowRing, fillHollowGate } from '../world/dimension
 import { LEAVES, SAPLING_TREE, growTree } from '../world/trees.js';
 import { useSkyRocket } from '../entities/skyRocket.js';
 import { hushfruitTeleport } from '../world/dimensions/hushvine.js';
+import { cavePlaceMeta, waxCopper, scrapeCopper } from '../world/caves.js';
 import { sideOf, SIDE_DIRS, DOOR_OPEN, DOOR_UPPER, BED_HEAD, SLAB_TOP, SLAB_DOUBLE, STAIRS_UPSIDE, GATE_OPEN, TRAPDOOR_OPEN, TRAPDOOR_TOP } from '../world/shapes.js';
 
 /** Brightness for block particles: local light, dimmed with the combined sunlight (as the held item). */
@@ -140,6 +141,9 @@ export class Interaction {
       return;
     }
     this.eating = 0;
+    // Farglass: hold right mouse to look through it (game.render narrows the view)
+    p.zooming = !!(d && d.spyglass && input.right);
+    if (p.zooming) return;
     if (d && d.bow) {
       if (input.right) this.bowDraw++;
       else if (this.bowDraw > 0) { this.releaseBow(); this.bowDraw = 0; }
@@ -367,6 +371,20 @@ export class Interaction {
       inv.changed();
       g.audio.play('equip');
       return true;
+    }
+    // Honeycomb seals copper against weathering; an axe takes the seal off, or scrapes a stage of weathering away
+    const ct = this.target;
+    if (ct && d && (st.id === I.HONEYCOMB || (d.tool && d.tool.type === 'axe'))) {
+      const next = st.id === I.HONEYCOMB ? waxCopper(ct.id) : scrapeCopper(ct.id);
+      if (next != null) {
+        w.setBlockUrgent(ct.x, ct.y, ct.z, next, 0);
+        if (!p.creative) { if (st.id === I.HONEYCOMB) p.inventory.removeFromSlot(p.inventory.selected, 1); else p.inventory.damageSelected(1); }
+        const col = st.id === I.HONEYCOMB ? [1, 0.7, 0.2] : [0.9, 0.95, 1];
+        for (let k = 0; k < 10; k++) g.particles.emit(ct.x + Math.random(), ct.y + Math.random(), ct.z + Math.random(), 0, 0.02, 0, col[0], col[1], col[2], 20, -0.001);
+        g.audio.play(st.id === I.HONEYCOMB ? 'squish' : 'shear', [ct.x + 0.5, ct.y + 0.5, ct.z + 0.5]);
+        this.swing = SWING_TICKS;
+        return true;
+      }
     }
     // Glass vials fill at a water source (which stays)
     if (st && st.id === I.GLASS_VIAL && !(usable && !p.sneaking)) {
@@ -630,6 +648,11 @@ export class Interaction {
       if (meta < 0) return false;
     }
     if (placeId === B.ANVIL) meta = Math.abs(ldx) > Math.abs(ldz) ? 1 : 0; // the long side faces across the player's view
+    if (BLOCKS[placeId].crystal || placeId === B.STORM_ROD) {
+      // buds point away from the clicked face, spikes up or down, rods stand or hang
+      meta = cavePlaceMeta(w, px, py, pz, placeId, t.face);
+      if (meta < 0) return false;
+    }
     if (BLOCKS[placeId].needsSupport && !w.hasSupport(px, py, pz, placeId, meta)) return false;
     if ((placeId === B.TALL_GRASS || placeId === B.SUNPETAL || placeId === B.REDBLOOM) && !w.hasSupport(px, py, pz, placeId)) return false;
     if (placeId === B.FURNACE || BLOCKS[placeId].tex.front) {

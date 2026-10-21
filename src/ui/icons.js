@@ -44,7 +44,7 @@ function blockIcon(b, forceTint = null) {
   }
   if (b.shape === SHAPE.TRAPDOOR) { ctx.drawImage(texCanvas(b.tex.side), 0, 0, 32, 32); return c; }
   if (b.shape === SHAPE.CIRCUIT && b.tex.top !== 'piston_top' && b.tex.top !== 'piston_top_sticky') return circuitIcon(ctx, c, b);
-  if (b.shape === SHAPE.CROSS || b.shape === SHAPE.TORCH || b.shape === SHAPE.LADDER || b.shape === SHAPE.PANE || b.shape === SHAPE.PAD) {
+  if (b.shape === SHAPE.CROSS || b.shape === SHAPE.TORCH || b.shape === SHAPE.LADDER || b.shape === SHAPE.PANE || b.shape === SHAPE.PAD || b.flatIcon) {
     ctx.drawImage(texCanvas(b.tex.side, b.tint ? GRASS_TINT : null), 0, 0, 32, 32);
     return c;
   }

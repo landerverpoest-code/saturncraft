@@ -10,7 +10,9 @@ export const TIER = { ANY: -1, WOOD: 0, STONE: 1, IRON: 2, DIAMOND: 3 };
 // Render shapes understood by the mesher
 export const SHAPE = { NONE: 0, CUBE: 1, CROSS: 2, LIQUID: 3, TORCH: 4, CACTUS: 5, CROP: 6, DOOR: 7, LADDER: 8, BED: 9, SLAB: 10, STAIRS: 11, FENCE: 12, GATE: 13, PANE: 14, FIRE: 15, PAD: 16, SNOW: 17, WALL: 18, TRAPDOOR: 19, RAIL: 20, BOXES: 21, PAINTING: 22,
   // Cinnabar circuitry (ids from 30 to stay clear of other shapes): flat wire, and parts drawn from boxes (world/circuitShapes.js)
-  WIRE: 30, CIRCUIT: 31 };
+  WIRE: 30, CIRCUIT: 31,
+  // Caves content (world/caves.js): crossed sprites pointing along meta's facing (crystal buds, Seepstone spikes)
+  CRYSTAL: 40 };
 
 // Render layers
 export const LAYER = { OPAQUE: 0, CUTOUT: 1, TRANSLUCENT: 2 };
@@ -59,6 +61,12 @@ export const B = {
   WISP_ROD: 200, FAR_GATE: 201, GLOOMSHELL_BOX: 202, WYRM_HEAD: 203, HUSHVINE: 204, HUSHVINE_FLOWER: 205,
   // Tide Citadels (ocean monuments, see world/monuments.js): ids 216-230
   TIDESTONE: 216, TIDESTONE_BRICKS: 217, DARK_TIDESTONE: 218, TIDE_LANTERN: 219, SOAKMOSS: 220, WET_SOAKMOSS: 221,
+  // Caves content (see world/caves.js): copper weathering, Violite geodes, Seepstone
+  COPPER_BLOCK: 231, DULLED_COPPER: 232, TARNISHED_COPPER: 233, VERDIGRIS_COPPER: 234,
+  WAXED_COPPER_BLOCK: 235, WAXED_DULLED_COPPER: 236, WAXED_TARNISHED_COPPER: 237, WAXED_VERDIGRIS_COPPER: 238,
+  STORM_ROD: 239, VIOLITE_BLOCK: 240, BUDDING_VIOLITE: 241, SMALL_VIOLITE_BUD: 242, MEDIUM_VIOLITE_BUD: 243,
+  LARGE_VIOLITE_BUD: 244, VIOLITE_CLUSTER: 245, CHALKSTONE: 246, SMOOTH_BASALT: 247, SHADED_GLASS: 248,
+  SEEPSTONE: 249, SEEPSTONE_SPIKE: 250,
 };
 
 const defaults = {
@@ -350,6 +358,34 @@ def(B.TIDE_LANTERN, 'Tide Lantern', { hardness: 0.3, resistance: 0.3, emit: 15, 
 // Soakmoss drinks up the water around it (world/sponge.js) and turns wet; a furnace dries it again.
 def(B.SOAKMOSS, 'Soakmoss', { hardness: 0.6, resistance: 0.6, tool: TOOL.HOE, sound: 'grass' });
 def(B.WET_SOAKMOSS, 'Wet Soakmoss', { hardness: 0.6, resistance: 0.6, tool: TOOL.HOE, sound: 'grass' });
+// Caves content (world/caves.js). Copper weathers fresh -> dulled -> tarnished -> verdigris on random
+// ticks unless sealed with honeycomb (the waxed ids look the same). Storm Rod: meta 0 standing, 1 hanging.
+// Buds, clusters and spikes (SHAPE.CRYSTAL): meta bits 0-2 = facing (0 up, 1 down, 2 -z, 3 +z, 4 -x, 5 +x);
+// spikes only point up or down and keep their thickness in bits 3-4 (0 tip, 1 frustum, 2 middle, 3 base).
+const copper = { hardness: 3, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.STONE, sound: 'metal' };
+def(B.COPPER_BLOCK, 'Copper Block', copper);
+def(B.DULLED_COPPER, 'Dulled Copper', copper);
+def(B.TARNISHED_COPPER, 'Tarnished Copper', copper);
+def(B.VERDIGRIS_COPPER, 'Verdigris Copper', copper);
+def(B.WAXED_COPPER_BLOCK, 'Sealed Copper Block', { ...copper, tex: { all: 'copper_block' } });
+def(B.WAXED_DULLED_COPPER, 'Sealed Dulled Copper', { ...copper, tex: { all: 'dulled_copper' } });
+def(B.WAXED_TARNISHED_COPPER, 'Sealed Tarnished Copper', { ...copper, tex: { all: 'tarnished_copper' } });
+def(B.WAXED_VERDIGRIS_COPPER, 'Sealed Verdigris Copper', { ...copper, tex: { all: 'verdigris_copper' } });
+def(B.STORM_ROD, 'Storm Rod', { ...copper, solid: false, opaque: false, shape: SHAPE.BOXES, flatIcon: true, tex: { all: 'storm_rod' } });
+const violite = { hardness: 1.5, resistance: 1.5, tool: TOOL.PICKAXE, sound: 'glass' };
+def(B.VIOLITE_BLOCK, 'Violite Block', violite);
+def(B.BUDDING_VIOLITE, 'Budding Violite', { ...violite, drops: null, noSilk: true });
+const bud = { ...violite, solid: false, opaque: false, shape: SHAPE.CRYSTAL, layer: LAYER.CUTOUT, needsSupport: true, crystal: true, flatIcon: true, silkSelf: true, drops: null };
+def(B.SMALL_VIOLITE_BUD, 'Small Violite Bud', { ...bud, emit: 1 });
+def(B.MEDIUM_VIOLITE_BUD, 'Medium Violite Bud', { ...bud, emit: 2 });
+def(B.LARGE_VIOLITE_BUD, 'Large Violite Bud', { ...bud, emit: 4 });
+def(B.VIOLITE_CLUSTER, 'Violite Cluster', { ...bud, emit: 5, drops: 'violite_cluster' });
+def(B.CHALKSTONE, 'Chalkstone', { hardness: 0.75, resistance: 0.75, tool: TOOL.PICKAXE, tier: TIER.WOOD });
+def(B.SMOOTH_BASALT, 'Smooth Basalt', { hardness: 1.25, resistance: 4.2, tool: TOOL.PICKAXE, tier: TIER.WOOD });
+// Shaded Glass: see-through but blocks light completely
+def(B.SHADED_GLASS, 'Shaded Glass', { hardness: 0.3, resistance: 0.3, opaque: false, opacity: 15, layer: LAYER.TRANSLUCENT, sound: 'glass' });
+def(B.SEEPSTONE, 'Seepstone', { hardness: 1.5, resistance: 1, tool: TOOL.PICKAXE, tier: TIER.WOOD });
+def(B.SEEPSTONE_SPIKE, 'Seepstone Spike', { hardness: 1.5, resistance: 3, tool: TOOL.PICKAXE, opaque: false, shape: SHAPE.CRYSTAL, layer: LAYER.CUTOUT, flatIcon: true, crystal: true, drops: B.SEEPSTONE_SPIKE, tex: { all: 'seepstone_spike_0' } });
 
 export const NUM_BLOCKS = BLOCKS.length;
 

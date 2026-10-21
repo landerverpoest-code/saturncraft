@@ -6,6 +6,7 @@ import { stampTemples, stampWrecks, stampOutposts } from './temples.js';
 import { stampHuts } from './swampHuts.js';
 import { stampSanctums } from './dimensions/sanctum.js';
 import { stampMonuments } from './monuments.js';
+import { stampCaveFeatures } from './caveGen.js';
 import { treeShape, LEAVES, LOGS, PLANTS } from './trees.js';
 import { B, DEEP_VARIANT } from './blocks.js';
 import { Simplex, hash4, hashf, mulberry32 } from './noise.js';
@@ -373,6 +374,7 @@ export class TerrainGenerator {
     // 6b. Dungeons (monster rooms)
     for (let k = 0; k < 14; k++) this.tryDungeon(blocks, meta, rng); // 10 + 4 attempts like the reference
     if (!this.noStructures) stampMineshafts(this.seed, blocks, meta, cx, cz);
+    stampCaveFeatures(this, blocks, meta, cx, cz, heightmap); // Violite geodes, Seepstone caves (caveGen.js)
 
     // 7. Water
     for (let z = 0; z < 16; z++) for (let x = 0; x < 16; x++) {

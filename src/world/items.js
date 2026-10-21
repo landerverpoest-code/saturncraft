@@ -213,6 +213,9 @@ item('filled_map', 'Map', { stack: 1, filledMap: true, iconStyle: ['map', { p: '
 // Tide Citadel loot (reference: prismarine shard / prismarine crystals); appended so earlier ids stay stable
 item('tide_shard', 'Tide Shard', { iconStyle: ['shard', { h: '#5aa898', H: '#9adcc8', s: '#2f6a62' }] });
 item('tide_crystal', 'Tide Crystals', { iconStyle: ['seeds', { h: '#d8f4ea', H: '#ffffff' }] });
+// Caves content (world/caves.js); appended so earlier ids stay stable
+item('violite_shard', 'Violite Shard', { iconStyle: ['gem', { h: '#9a6ae0', H: '#d4b8ff' }] });
+item('farglass', 'Farglass', { stack: 1, spyglass: true, iconStyle: ['horn', { h: '#d47a4c', H: '#f0a070', s: '#5a2e8a' }] });
 
 // Fuel for block items
 for (const id of [B.OAK_PLANKS, B.SPRUCE_PLANKS, B.BIRCH_PLANKS, B.JUNGLE_PLANKS, B.ACACIA_PLANKS, B.DARK_OAK_PLANKS, B.OAK_LOG, B.BIRCH_LOG, B.SPRUCE_LOG, B.JUNGLE_LOG, B.ACACIA_LOG, B.DARK_OAK_LOG, B.WORKBENCH]) ITEMS[id].fuel = 300;

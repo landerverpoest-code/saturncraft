@@ -52,7 +52,7 @@ export function breakTicks(blockId, tool = HAND, ctx = {}) {
 const randInt = (rng, min, max) => min + Math.floor(rng() * (max - min + 1));
 
 // Ore-like drops that Bounty multiplies
-const BOUNTY_DROPS = new Set(['coal', 'raw_iron', 'raw_gold', 'raw_copper', 'cinnabar', 'azurite', 'diamond', 'beryl']);
+const BOUNTY_DROPS = new Set(['violite_cluster', 'coal', 'raw_iron', 'raw_gold', 'raw_copper', 'cinnabar', 'azurite', 'diamond', 'beryl']);
 
 /**
  * Items dropped by a broken block. Returns [{id, count}].
@@ -63,7 +63,7 @@ export function blockDrops(blockId, tool = HAND, rng = Math.random, meta = 0, en
   if (!b || !canHarvest(blockId, tool)) return [];
   if (ench && ench.gentle_hand && silkDropsSelf(blockId)) return [{ id: blockId, count: 1 }];
   if (b.drops === null) return [];
-  const out = baseDrops(blockId, b, rng, meta);
+  const out = baseDrops(blockId, b, rng, meta, tool);
   const bounty = ench ? ench.bounty | 0 : 0;
   if (bounty && (BOUNTY_DROPS.has(b.drops) || (typeof b.drops === 'object' && b.drops && blockId === B.EMBERQUARTZ_ORE))) {
     for (const o of out) o.count = bountyCount(o.count, bounty, rng);
@@ -71,7 +71,7 @@ export function blockDrops(blockId, tool = HAND, rng = Math.random, meta = 0, en
   return out;
 }
 
-function baseDrops(blockId, b, rng, meta) {
+function baseDrops(blockId, b, rng, meta, tool) {
   const d = b.drops;
   if (d === 'self') return [{ id: blockId, count: 1 }];
   if (typeof d === 'number') return [{ id: d, count: 1 }];
@@ -86,6 +86,8 @@ function baseDrops(blockId, b, rng, meta) {
     case 'diamond': return [{ id: I.DIAMOND, count: 1 }];
     case 'beryl': return [{ id: I.BERYL, count: 1 }];
     case 'clay': return [{ id: I.CLAY_BALL, count: 4 }];
+    // Violite clusters: 4 shards with a pickaxe, 2 otherwise (reference)
+    case 'violite_cluster': return [{ id: I.VIOLITE_SHARD, count: tool && tool.type === 'pickaxe' ? 4 : 2 }];
     case 'gravel': return rng() < 0.1 ? [{ id: I.FLINT, count: 1 }] : [{ id: B.GRAVEL, count: 1 }];
     case 'cobweb': return tool && (tool.type === 'sword' || tool.shears) ? [{ id: I.STRING, count: 1 }] : [];
     case 'melon_stem': return [{ id: I.MELON_SEEDS, count: 1 + ((meta & 7) === 7 && rng() < 0.5 ? 1 : 0) }];

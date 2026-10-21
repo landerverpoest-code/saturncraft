@@ -9,6 +9,7 @@ import { lavaIgnite, FIRE_DELAY } from './fire.js';
 import { LEAVES, SAPLING_TREE, growTree, leavesConnected } from './trees.js';
 import { CIRCUIT_SETTLE } from './circuits.js';
 import { tickHushFlower } from './dimensions/hushvine.js';
+import { caveRandomTick, CAVE_TICKING } from './caves.js';
 
 export const RANDOM_TICK_SPEED = 3;
 
@@ -100,6 +101,8 @@ export function randomTickBlock(world, x, y, z, id, rng = Math.random) {
     // grows on Mournsand in any light: 10 % per random tick, four stages
     const stage = world.getMeta(x, y, z);
     if (stage < 3 && rng() < 0.1) world.setBlock(x, y, z, id, stage + 1);
+  } else if (CAVE_TICK[id]) {
+    caveRandomTick(world, x, y, z, id, rng); // copper weathering, budding Violite, Seepstone spikes
   } else if (CIRCUIT_SETTLE[id]) {
     if (world.circuits) world.circuits.enqueue(x, y, z); // circuits settle again after a reload
   } else if (CROPS.has(id)) {
@@ -144,6 +147,8 @@ function rawBlockLight(world, x, y, z) { return world.getLight(x, y, z) & 15; }
 export const RANDOM_TICKS = new Uint8Array(256);
 for (const id of [B.HUSHVINE_FLOWER, B.CINDERROOT, B.GRASS, B.FARMLAND, B.SUGAR_CANE, B.LAVA, B.FIRE, B.SNOW_LAYER, B.ICE, B.COCOA, B.TURTLE_EGG, ...CROPS, ...LEAVES, ...Object.keys(SAPLING_TREE).map(Number)]) RANDOM_TICKS[id] = 1;
 for (let id = 0; id < 256; id++) if (CIRCUIT_SETTLE[id]) RANDOM_TICKS[id] = 1;
+const CAVE_TICK = new Uint8Array(256);
+for (const id of CAVE_TICKING) { CAVE_TICK[id] = 1; RANDOM_TICKS[id] = 1; }
 
 /** Run one tick's worth of random ticks in all chunks within `radius` chunks of (cx, cz). */
 export function runRandomTicks(world, cx, cz, radius, rng = Math.random) {

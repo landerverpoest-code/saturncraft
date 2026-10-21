@@ -6,6 +6,7 @@ import { mulberry32, hash4 } from './noise.js';
 import { DIM_TEX } from './dimensions/dimTextures.js';
 import { CIRCUIT_TEX } from './circuitTextures.js';
 import { MONUMENT_TEX } from './monumentTextures.js';
+import { CAVE_TEX } from './caveTextures.js';
 
 export const TEX_SIZE = 16;
 
@@ -35,6 +36,7 @@ addTex('rail_corner');
 addTex('nest_front_honey'); addTex('hive_front_honey');
 addTex('chest_front_l'); addTex('chest_front_r'); // the halves of a double chest
 for (const n of Object.keys(CIRCUIT_TEX)) addTex(n); // circuit parts (world/circuitTextures.js)
+for (const n of Object.keys(CAVE_TEX)) addTex(n); // caves content (world/caveTextures.js)
 ARTS.forEach(([, w, h], art) => { for (let p = 0; p < w * h; p++) addTex(`painting_${art}_${p}`); });
 for (let i = 0; i < 8; i++) addTex('fire_' + i);
 addTex('lava_flow');
@@ -995,6 +997,7 @@ function paint(c, name) {
   else if (DIM_TEX[name]) DIM_TEX[name](c, { hex, mix, shade });
   else if (MONUMENT_TEX[name]) MONUMENT_TEX[name](c, { hex, mix, shade });
   else if (CIRCUIT_TEX[name]) CIRCUIT_TEX[name](c, { hex, mix, shade, gen: GEN, planks });
+  else if (CAVE_TEX[name]) CAVE_TEX[name](c, { hex, mix, shade });
   else c.noiseFill(P.stone);
 }
 
