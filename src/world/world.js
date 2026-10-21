@@ -248,6 +248,7 @@ export class World {
       return !!SOLID[below] && below !== B.DOOR && this.getBlock(x, y + 1, z) === B.DOOR;
     }
     if (id === B.RAIL) return railSupported(this, x, y, z);
+    if (id === B.COCOA) { const [dx, , dz] = SIDE_DIRS[(metaIn ?? this.getMeta(x, y, z)) & 3]; return this.getBlock(x + dx, y, z + dz) === B.JUNGLE_LOG; }
     if (id === B.ITEM_FRAME) { const [dx, , dz] = SIDE_DIRS[(metaIn ?? this.getMeta(x, y, z)) & 3]; return !!SOLID[this.getBlock(x + dx, y, z + dz)]; }
     if (id === B.OAK_WALL_SIGN) { const [dx, , dz] = SIDE_DIRS[(metaIn ?? this.getMeta(x, y, z)) & 3]; return !!SOLID[this.getBlock(x + dx, y, z + dz)]; }
     if (id === B.OAK_SIGN) return !!SOLID[below];

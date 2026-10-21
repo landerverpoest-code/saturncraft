@@ -148,6 +148,8 @@ const BIG_SHAPES = {
     oakCrown(out, rng, h, B.JUNGLE_LEAVES, 2);
     trunk(out, B.JUNGLE_LOG, h);
     addVines(out, rng, 0.25, 3, true);
+    // cocoa pods on the trunk (side = towards the log)
+    if (rng() < 0.4) for (const [dx, dz, side] of [[1, 0, 3], [-1, 0, 1], [0, 1, 0], [0, -1, 2]]) if (rng() < 0.4) out.push([dx, 2 + Math.floor(rng() * 2), dz, B.COCOA, false, side | (Math.floor(rng() * 3) << 2)]);
     return finish(out);
   },
   // Giant jungle tree: 2x2 trunk, side branches with leaf tufts, a big crown and vines

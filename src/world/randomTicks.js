@@ -79,6 +79,9 @@ export function randomTickBlock(world, x, y, z, id, rng = Math.random) {
     else growTree(world, x, y, z, SAPLING_TREE[id], rng);
   } else if (LEAVES.has(id)) {
     if (world.getMeta(x, y, z) === 0 && !leavesConnected(world, x, y, z)) world.breakBlock(x, y, z, true);
+  } else if (id === B.COCOA) {
+    const m = world.getMeta(x, y, z);
+    if (((m >> 2) & 3) < 2 && rng() < 0.2) world.setBlock(x, y, z, B.COCOA, m + 4);
   } else if (id === B.SNOW_LAYER || id === B.ICE) {
     // torches and other lights melt snow and ice
     if (rawBlockLight(world, x, y + (id === B.ICE ? 1 : 0), z) > 11) world.setBlock(x, y, z, id === B.ICE ? B.WATER : B.AIR);
@@ -116,7 +119,7 @@ function rawBlockLight(world, x, y, z) { return world.getLight(x, y, z) & 15; }
 
 /** Ids that react to random ticks (fast pre-filter). */
 export const RANDOM_TICKS = new Uint8Array(256);
-for (const id of [B.GRASS, B.FARMLAND, B.SUGAR_CANE, B.LAVA, B.FIRE, B.SNOW_LAYER, B.ICE, ...CROPS, ...LEAVES, ...Object.keys(SAPLING_TREE).map(Number)]) RANDOM_TICKS[id] = 1;
+for (const id of [B.GRASS, B.FARMLAND, B.SUGAR_CANE, B.LAVA, B.FIRE, B.SNOW_LAYER, B.ICE, B.COCOA, ...CROPS, ...LEAVES, ...Object.keys(SAPLING_TREE).map(Number)]) RANDOM_TICKS[id] = 1;
 
 /** Run one tick's worth of random ticks in all chunks within `radius` chunks of (cx, cz). */
 export function runRandomTicks(world, cx, cz, radius, rng = Math.random) {

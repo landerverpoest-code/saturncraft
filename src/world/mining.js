@@ -85,6 +85,7 @@ function baseDrops(blockId, b, rng, meta) {
     case 'clay': return [{ id: I.CLAY_BALL, count: 4 }];
     case 'gravel': return rng() < 0.1 ? [{ id: I.FLINT, count: 1 }] : [{ id: B.GRAVEL, count: 1 }];
     case 'cobweb': return tool && (tool.type === 'sword' || tool.shears) ? [{ id: I.STRING, count: 1 }] : [];
+    case 'cocoa': return [{ id: I.COCOA_BEANS, count: ((meta >> 2) & 3) >= 2 ? 2 + Math.floor(rng() * 2) : 1 }];
     case 'item_frame': return [{ id: I.ITEM_FRAME, count: 1 }];
     case 'sign': return [{ id: I.SIGN, count: 1 }];
     case 'painting': return ((meta >> 2) & 15) === 0 ? [{ id: I.PAINTING, count: 1 }] : []; // one item per picture (from its first part)

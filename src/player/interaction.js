@@ -307,6 +307,15 @@ export class Interaction {
       }
       return false;
     }
+    if (d && d.cocoa && this.target && this.target.id === B.JUNGLE_LOG && this.target.face[1] === 0) {
+      // plant beans on the side of a jungle log
+      const t = this.target, x = t.x + t.face[0], z = t.z + t.face[2];
+      if (w.getBlock(x, t.y, z)) return false;
+      w.setBlockUrgent(x, t.y, z, B.COCOA, sideOf(-t.face[0], -t.face[2]));
+      if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
+      this.swing = SWING_TICKS;
+      return true;
+    }
     if (d && d.itemFrame) {
       // hang a frame on the clicked wall
       if (!this.target || this.target.face[1] !== 0) return false;

@@ -97,6 +97,8 @@ item('bowl', 'Bowl');
 item('beetroot_soup', 'Beetroot Soup', { stack: 1, food: { hunger: 6, saturation: 7.2, leaves: 'bowl' } });
 item('shears', 'Shears', { stack: 1, durability: 238, shears: true });
 item('flint_and_steel', 'Flint and Steel', { stack: 1, durability: 64, igniter: true });
+item('cocoa_beans', 'Cocoa Beans', { cocoa: true, iconStyle: ['seeds', { h: '#7a4a24', H: '#5a3418' }] });
+item('cookie', 'Cookie', { food: { hunger: 2, saturation: 0.4 }, iconStyle: ['bread', { h: '#c8904a', H: '#e0b070', w: '#5a3418' }] });
 item('ink_sac', 'Ink Sac', { iconStyle: ['lump', { h: '#1a1a24' }] });
 item('item_frame', 'Item Frame', { itemFrame: true, iconStyle: ['frame', { h: '#c8a068', H: '#a7834e', s: '#6a4a28', w: '#c8a068' }] });
 item('compass', 'Compass', { stack: 1, dial: 'compass' });

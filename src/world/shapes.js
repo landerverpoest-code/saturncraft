@@ -212,6 +212,13 @@ const ANVIL_Z = ANVIL_X.map(([x0, y0, z0, x1, y1, z1]) => [z0, y0, x0, z1, y1, x
 const SIGN_Z = [[0, 8 / 16, 7 / 16, 1, 1, 9 / 16], [7 / 16, 0, 7 / 16, 9 / 16, 8 / 16, 9 / 16]];
 const SIGN_X = SIGN_Z.map(([x0, y0, z0, x1, y1, z1]) => [z0, y0, x0, z1, y1, x1]);
 const WALL_SIGN = [[0, 4.5 / 16, 0, 1, 12.5 / 16, 2 / 16], [14 / 16, 4.5 / 16, 0, 1, 12.5 / 16, 1], [0, 4.5 / 16, 14 / 16, 1, 12.5 / 16, 1], [0, 4.5 / 16, 0, 2 / 16, 12.5 / 16, 1]].map((b) => [b]);
+/** Cocoa pod: grows from 4 to 8 pixels wide, hanging from the log at side meta & 3. */
+export function cocoaBox(meta) {
+  const age = Math.min(2, (meta >> 2) & 3), w = (4 + age * 2) / 16, h = (5 + age * 2) / 16;
+  const [dx, , dz] = SIDE_DIRS[meta & 3];
+  const cx = 0.5 + dx * (0.5 - w / 2 - 1 / 16), cz = 0.5 + dz * (0.5 - w / 2 - 1 / 16);
+  return [cx - w / 2, 12 / 16 - h, cz - w / 2, cx + w / 2, 12 / 16, cz + w / 2];
+}
 const FRAME_BOXES = [[2 / 16, 2 / 16, 0, 14 / 16, 14 / 16, 1 / 16], [15 / 16, 2 / 16, 2 / 16, 1, 14 / 16, 14 / 16], [2 / 16, 2 / 16, 15 / 16, 14 / 16, 14 / 16, 1], [0, 2 / 16, 2 / 16, 1 / 16, 14 / 16, 14 / 16]].map((b) => [b]);
 // campfire: two logs along x, two across on top, a bed of embers between
 const CAMPFIRE_BOXES = [[0, 0, 1 / 16, 1, 4 / 16, 5 / 16], [0, 0, 11 / 16, 1, 4 / 16, 15 / 16],
@@ -225,6 +232,7 @@ export function blockBoxes(id, meta) {
   if (id === B.OAK_SIGN) return (meta & 1) ? SIGN_X : SIGN_Z;
   if (id === B.OAK_WALL_SIGN) return WALL_SIGN[meta & 3];
   if (id === B.ITEM_FRAME) return FRAME_BOXES[meta & 3];
+  if (id === B.COCOA) return [cocoaBox(meta)];
   if (id === B.LANTERN) return meta & 1 ? LANTERN_HANGING : LANTERN_STANDING;
   return TABLE_BOXES;
 }
