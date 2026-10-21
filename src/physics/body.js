@@ -157,6 +157,15 @@ export class Body {
     if (this.inWeb) { this.vx *= 0.25; this.vy *= 0.05; this.vz *= 0.25; this.fallDistance = 0; speed *= 0.25; } // stuck in a cobweb
 
     if (this.inWater || this.inLava) {
+      if (input.swim && this.inWater) {
+        // swimming: thrust along the full look direction, no sinking (about 5.6 blocks/s)
+        const pitch = input.pitch || 0, cp = Math.cos(pitch);
+        if (fwd > 0) { this.vx += -Math.sin(yaw) * cp * 0.034; this.vz += -Math.cos(yaw) * cp * 0.034; this.vy += Math.sin(pitch) * 0.034; }
+        this.move(world, this.vx, this.vy, this.vz);
+        this.vx *= 0.9; this.vz *= 0.9; this.vy *= 0.9;
+        this.fallDistance = 0;
+        return;
+      }
       if (input.jump) this.vy += PHYS.WATER_JUMP;
       this.accelerate(fwd, str, yaw, PHYS.WATER_ACCEL);
       this.move(world, this.vx, this.vy, this.vz);

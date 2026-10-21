@@ -39,7 +39,7 @@ export class Player {
   }
 
   get x() { return this.body.x; } get y() { return this.body.y; } get z() { return this.body.z; }
-  get eyeHeight() { return this.sneaking ? PHYS.PLAYER_SNEAK_EYE : PHYS.PLAYER_EYE; }
+  get eyeHeight() { return this.swimming ? 0.4 : this.sneaking ? PHYS.PLAYER_SNEAK_EYE : PHYS.PLAYER_EYE; }
   get food() { return this.hunger.food; }
 
   setPosition(x, y, z) {
@@ -157,11 +157,17 @@ export class Player {
     b.height = this.sneaking ? PHYS.PLAYER_SNEAK_HEIGHT : PHYS.PLAYER_HEIGHT;
 
     b.updateFluidState(world, this.eyeHeight);
+    // Sprint-swimming: sprinting with your head under water lays you flat (0.6 high) and you swim where you look;
+    // you stand up again once out of the water with room above
+    if (!this.swimming && this.sprinting && b.inWater && b.eyeInWater && !this.flying) this.swimming = true;
+    if (this.swimming && (!b.inWater || !this.sprinting) && !world.boxCollides(b.x - 0.3, b.y, b.z - 0.3, b.x + 0.3, b.y + PHYS.PLAYER_HEIGHT, b.z + 0.3)) this.swimming = false;
+    if (this.swimming) b.height = 0.6;
 
     // Sprint rules
     const canSprint = (this.creative || this.hunger.food >= SPRINT_MIN_FOOD) && !this.sneaking && input.forward > 0 && !this.effects.blindness;
     if (input.sprint && canSprint) this.sprinting = true;
     if (!canSprint || (b.horizontalCollision && !b.inWater)) this.sprinting = false;
+    if (this.swimming && input.forward > 0 && (this.creative || this.hunger.food >= SPRINT_MIN_FOOD)) this.sprinting = true; // keep swimming while W is held
 
     const wasOnGround = b.onGround;
     const x0 = b.x, z0 = b.z, y0 = b.y;
@@ -169,7 +175,7 @@ export class Player {
       // raising a shield slows you to a fifth, like sneaking
       forward: input.forward * (this.blocking ? 0.2 : 1), strafe: input.strafe * (this.blocking ? 0.2 : 1), yaw: this.yaw,
       jump: input.jump && (this.jumpCooldown === 0 || b.inWater || b.inLava),
-      sprint: this.sprinting, sneak: this.sneaking,
+      sprint: this.sprinting, sneak: this.sneaking, swim: this.swimming, pitch: this.pitch,
       flying: this.flying, descend: this.flying && !!input.sneak,
     });
     if (this.jumpCooldown > 0) this.jumpCooldown--;
