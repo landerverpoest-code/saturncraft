@@ -521,6 +521,16 @@ export class Mob {
         this.fireTicks = Math.max(this.fireTicks, 160);
       }
     }
+    // Daybreak: monsters out in the open (enough sky light, also in the shade of trees) fade away in a puff
+    // of smoke within a few seconds once it is broad daylight; cave monsters and structure guards stay.
+    if (this.def.category === CATEGORY.MONSTER && !this.persistent && this.deathTime === 0 && g.ticks % 10 === this.id % 10
+      && (!w.dimension || w.dimension === 'overworld') && !this.def.aquatic && !this.def.breathesWater && g.sky.state.combined >= 0.6
+      && w.skyLight(Math.floor(this.x), Math.floor(this.eyeY), Math.floor(this.z)) >= 10 && Math.random() < 0.15) {
+      g.particles.smoke(this.x, this.y + this.height / 2, this.z, 14, Math.max(0.5, this.width));
+      g.audio.play('fizz', [this.x, this.y + 0.5, this.z], 0.4);
+      this.removed = true; this.dead = true;
+      return;
+    }
     if (this.fireTicks > 0) {
       if (this.fireTicks % 20 === 0) this.hurt(1, 'fire');
       this.fireTicks--;
