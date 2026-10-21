@@ -1,6 +1,7 @@
 // Procedural 16x16 pixel art for every block face. All art is generated at
 // runtime from seeded noise and hand-picked palettes; no external images.
 import { BLOCKS, B } from './blocks.js';
+import { ARTS, paintingPart } from './paintings.js';
 import { mulberry32, hash4 } from './noise.js';
 import { DIM_TEX } from './dimensions/dimTextures.js';
 
@@ -28,6 +29,7 @@ for (let i = 0; i < 4; i++) addTex('carrots_' + i);
 for (let i = 0; i < 4; i++) { addTex('potatoes_' + i); addTex('beetroots_' + i); }
 addTex('water_flow');
 addTex('rail_corner');
+ARTS.forEach(([, w, h], art) => { for (let p = 0; p < w * h; p++) addTex(`painting_${art}_${p}`); });
 for (let i = 0; i < 8; i++) addTex('fire_' + i);
 addTex('lava_flow');
 for (let i = 0; i < 10; i++) addTex('destroy_' + i);
@@ -583,6 +585,7 @@ const GEN = {
     }
   },
   lantern_top: (c) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, shade(hex('#3a3a42'), 0.85 + c.h(x, y) * 0.25)); },
+  painting_back: (c) => planks(c, '#8a6a42'),
   rail: (c) => railTex(c, false),
   rail_corner: (c) => railTex(c, true),
   oak_trapdoor: (c) => {
@@ -843,6 +846,7 @@ function fire(c, frame) {
 
 function paint(c, name) {
   if (name.startsWith('destroy_')) destroyStage(c, +name.slice(8));
+  else if (name.startsWith('painting_') && name !== 'painting_back') { const [, a, p] = name.split('_'); c.data.set(paintingPart(+a, +p)); }
   else if (name === 'fire') fire(c, 0);
   else if (name.startsWith('fire_')) fire(c, +name.slice(5));
   else if (name.startsWith('wheat_')) wheat(c, +name.slice(6));

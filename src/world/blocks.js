@@ -8,7 +8,7 @@ export const TOOL = { NONE: null, PICKAXE: 'pickaxe', AXE: 'axe', SHOVEL: 'shove
 export const TIER = { ANY: -1, WOOD: 0, STONE: 1, IRON: 2, DIAMOND: 3 };
 
 // Render shapes understood by the mesher
-export const SHAPE = { NONE: 0, CUBE: 1, CROSS: 2, LIQUID: 3, TORCH: 4, CACTUS: 5, CROP: 6, DOOR: 7, LADDER: 8, BED: 9, SLAB: 10, STAIRS: 11, FENCE: 12, GATE: 13, PANE: 14, FIRE: 15, PAD: 16, SNOW: 17, WALL: 18, TRAPDOOR: 19, RAIL: 20, BOXES: 21 };
+export const SHAPE = { NONE: 0, CUBE: 1, CROSS: 2, LIQUID: 3, TORCH: 4, CACTUS: 5, CROP: 6, DOOR: 7, LADDER: 8, BED: 9, SLAB: 10, STAIRS: 11, FENCE: 12, GATE: 13, PANE: 14, FIRE: 15, PAD: 16, SNOW: 17, WALL: 18, TRAPDOOR: 19, RAIL: 20, BOXES: 21, PAINTING: 22 };
 
 // Render layers
 export const LAYER = { OPAQUE: 0, CUTOUT: 1, TRANSLUCENT: 2 };
@@ -42,7 +42,7 @@ export const B = {
   BROWN_MUSHROOM_BLOCK: 121, RED_MUSHROOM_BLOCK: 122, MUSHROOM_STEM: 123, MYCELIUM: 124,
   SKYBELL: 125, ROSETTE: 126,
   // Other dimensions (ids from 160 up, see world/dimensions/): the Cinderdeep and the Hollow
-  SNOW_LAYER: 130, COBBLESTONE_WALL: 131, MOSSY_COBBLESTONE_WALL: 132, OAK_TRAPDOOR: 133, RAIL: 140, COBWEB: 141, TNT: 142, CAMPFIRE: 150, LANTERN: 151,
+  SNOW_LAYER: 130, COBBLESTONE_WALL: 131, MOSSY_COBBLESTONE_WALL: 132, OAK_TRAPDOOR: 133, RAIL: 140, COBWEB: 141, TNT: 142, CAMPFIRE: 150, LANTERN: 151, PAINTING: 152, PAINTING_B: 153,
   SNOW_LAYER: 130, COBBLESTONE_WALL: 131, MOSSY_COBBLESTONE_WALL: 132, OAK_TRAPDOOR: 133,
   ENCHANTING_TABLE: 134, ANVIL: 135,
   CINDERSTONE: 160, GLOWSHARD: 161, MOURNSAND: 162, EMBERQUARTZ_ORE: 163, SCORCHED_BRICKS: 164, RIFT: 165,
@@ -118,6 +118,9 @@ def(B.TNT, 'TNT', { hardness: 0, resistance: 0, sound: 'grass', flammable: true,
 // Campfires: logs with a fire on top (light 15, smoke, burns what stands in it); lanterns: light 15, standing or hanging (meta 1).
 def(B.CAMPFIRE, 'Campfire', { hardness: 2, resistance: 2, tool: TOOL.AXE, sound: 'wood', opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, emit: 15, drops: 'campfire', tex: { top: 'oak_log_top', bottom: 'oak_log_top', side: 'oak_log' } });
 def(B.LANTERN, 'Lantern', { hardness: 3.5, resistance: 3.5, tool: TOOL.PICKAXE, sound: 'metal', opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, emit: 15, tex: { top: 'lantern_top', bottom: 'lantern_top', side: 'lantern' } });
+// Paintings: parts of a picture hung on a wall (see world/paintings.js)
+def(B.PAINTING, 'Painting', { hardness: 0, resistance: 0, solid: false, opaque: false, shape: SHAPE.PAINTING, sound: 'wood', needsSupport: true, drops: 'painting', tex: { all: 'painting_back' } });
+def(B.PAINTING_B, 'Painting', { hardness: 0, resistance: 0, solid: false, opaque: false, shape: SHAPE.PAINTING, sound: 'wood', needsSupport: true, drops: 'painting', tex: { all: 'painting_back' } });
 // Cobwebs slow anything inside them to a crawl; swords and shears cut them for string.
 def(B.COBWEB, 'Cobweb', { hardness: 4, resistance: 4, tool: TOOL.SWORD, solid: false, opaque: false, shape: SHAPE.CROSS, layer: LAYER.CUTOUT, drops: 'cobweb', sound: 'wool' });
 // Rails: meta = shape (see world/rails.js); minecarts ride on them.

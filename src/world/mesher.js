@@ -6,6 +6,7 @@ import { LEAVES } from './trees.js';
 import { FACE_TILE, FRONT_TILE, texId } from './textures.js';
 import { WOOL_RGB } from './colors.js';
 import { railHeight } from './rails.js';
+import { ARTS, artOf, partOf } from './paintings.js';
 import { doorBox, ladderBox, SIDE_DIRS, DOOR_UPPER, BED_HEAD, BED_BOX, slabBox, stairBoxes, fenceConnects, fenceRenderBoxes, gateRenderBoxes, paneConnects, paneBoxes, snowBox, wallConnects, wallBoxes, trapdoorBox, blockBoxes } from './shapes.js';
 
 export const PAD = 18;
@@ -48,6 +49,7 @@ const CROP_TILES = { [B.WHEAT]: [0, 1, 2, 3, 4, 5, 6, 7].map((i) => texId('wheat
   [B.POTATOES]: [0, 0, 1, 1, 2, 2, 2, 3].map((i) => texId('potatoes_' + i)), [B.BEETROOTS]: [0, 0, 1, 1, 2, 2, 2, 3].map((i) => texId('beetroots_' + i)) };
 const FARMLAND_MOIST = texId('farmland_moist');
 const RAIL_CORNER = texId('rail_corner');
+const PAINT_TILES = ARTS.map(([, w, h], art) => Array.from({ length: w * h }, (_, p) => texId(`painting_${art}_${p}`)));
 const DOOR_LOWER = texId('door_lower'), DOOR_UPPER_TILE = texId('door_upper');
 const BED_TOPS = [0, 1, 2, 3].map((r) => [texId('bed_foot_top_' + r), texId('bed_head_top_' + r)]);
 const BED_SIDE = texId('bed_side'), BED_BOTTOM = texId('oak_planks');
@@ -250,6 +252,20 @@ export function meshSection(sec) {
           buf.pos[v * 3] -= dx * h * 0.41; buf.pos[v * 3 + 2] -= dz * h * 0.41;
         }
       }
+    } else if (shape === SHAPE.PAINTING) {
+      // a thin board against the wall with the picture's part on its front
+      const l = light[i], m = meta[i], side = m & 3, [dx, , dz] = SIDE_DIRS[side];
+      const sky = (l >> 4) * 17, blk = (l & 15) * 17, T = 1 / 16;
+      const bx0 = dx > 0 ? 1 - T : 0, bx1 = dx < 0 ? T : 1, bz0 = dz > 0 ? 1 - T : 0, bz1 = dz < 0 ? T : 1;
+      emitBox(buf, x, y, z, dx ? bx0 : 0, 0, dz ? bz0 : 0, dx ? bx1 : 1, 1, dz ? bz1 : 1, FACE_TILE[id * 6 + 2], sky, blk, 'box');
+      const art = artOf(id, m), tile = PAINT_TILES[art][partOf(m)];
+      const rx = -dz, rz = dx, cxp = x + 0.5 + dx * (0.5 - T - 0.002), czp = z + 0.5 + dz * (0.5 - T - 0.002);
+      buf.ensure(4);
+      buf.vert(cxp - rx * 0.5, y, czp - rz * 0.5, -dx, 0, -dz, 0, 1, 255, 255, 255, sky, blk, 0, tile);
+      buf.vert(cxp + rx * 0.5, y, czp + rz * 0.5, -dx, 0, -dz, 1, 1, 255, 255, 255, sky, blk, 0, tile);
+      buf.vert(cxp + rx * 0.5, y + 1, czp + rz * 0.5, -dx, 0, -dz, 1, 0, 255, 255, 255, sky, blk, 0, tile);
+      buf.vert(cxp - rx * 0.5, y + 1, czp - rz * 0.5, -dx, 0, -dz, 0, 0, 255, 255, 255, sky, blk, 0, tile);
+      buf.quad(false);
     } else if (shape === SHAPE.RAIL) {
       // one textured quad on the floor (sloped for ascending rails), rotated to the rail's shape
       const l = light[i], m = meta[i] % 10, sky = (l >> 4) * 17, blk = (l & 15) * 17;

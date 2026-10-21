@@ -11,6 +11,7 @@ import { canLight, FIRE_DELAY } from '../world/fire.js';
 import { Bobber } from '../entities/bobber.js';
 import { igniteTNT } from '../entities/tnt.js';
 import { updateRails } from '../world/rails.js';
+import { choosePainting, placePainting } from '../world/paintings.js';
 import { tryLightRift, findHollowRing, fillHollowGate } from '../world/dimensions/portal.js';
 import { LEAVES, SAPLING_TREE, growTree } from '../world/trees.js';
 import { sideOf, SIDE_DIRS, DOOR_OPEN, DOOR_UPPER, BED_HEAD, SLAB_TOP, SLAB_DOUBLE, STAIRS_UPSIDE, GATE_OPEN, TRAPDOOR_OPEN, TRAPDOOR_TOP } from '../world/shapes.js';
@@ -296,6 +297,18 @@ export class Interaction {
         return true;
       }
       return false;
+    }
+    if (d && d.painting) {
+      // hang the largest picture that fits on the clicked wall
+      if (!this.target || this.target.face[1] !== 0) return false;
+      const t = this.target, side = sideOf(-t.face[0], -t.face[2]);
+      const pick = choosePainting(w, side, t.x + t.face[0], t.y, t.z + t.face[2]);
+      if (!pick) return false;
+      placePainting(w, side, pick, (x, y, z, id, m) => w.setBlockUrgent(x, y, z, id, m, false));
+      g.audio.play('place_wood', [t.x + 0.5, t.y + 0.5, t.z + 0.5]);
+      if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
+      this.swing = SWING_TICKS;
+      return true;
     }
     if (d && d.minecart) {
       // carts go on rails
