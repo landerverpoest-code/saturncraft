@@ -2,7 +2,7 @@
 // but is a pure module so it can be unit-tested and used for spawn search.
 import { stampVillages } from './villages.js';
 import { stampMineshafts } from './mineshafts.js';
-import { stampTemples, stampWrecks } from './temples.js';
+import { stampTemples, stampWrecks, stampOutposts } from './temples.js';
 import { stampSanctums } from './dimensions/sanctum.js';
 import { treeShape, LEAVES, LOGS, PLANTS } from './trees.js';
 import { B, DEEP_VARIANT } from './blocks.js';
@@ -383,6 +383,7 @@ export class TerrainGenerator {
     stampVillages(this, blocks, meta, cx, cz);
     stampTemples(this, blocks, meta, cx, cz);
     stampWrecks(this, blocks, meta, cx, cz);
+    stampOutposts(this, blocks, meta, cx, cz);
     stampSanctums(this, blocks, meta, cx, cz); // Hollow Sanctums (world/dimensions/sanctum.js)
 
     // Final heightmap: highest non-air block

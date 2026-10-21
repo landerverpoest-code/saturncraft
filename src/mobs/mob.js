@@ -427,7 +427,7 @@ export class Mob {
     switch (this.type) {
       case 'shambler': return this.meleeAI(g, p, pdist);
       case 'skitterer': return this.spiderAI(g, p, pdist);
-      case 'rattler': return this.rangedAI(g, p, pdist);
+      case 'rattler': case 'marauder': return this.rangedAI(g, p, pdist);
       case 'fizzler': return this.fizzlerAI(g, p, pdist);
       case 'voidwalker': return this.voidwalkerAI(g, p, pdist);
       case 'wobbler': return this.wobblerAI(g, p, pdist);

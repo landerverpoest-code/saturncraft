@@ -361,6 +361,7 @@ poison from eyes) follow the documented table.
 * Flitters (bats): up to 15 flutter about in dark caves near you (light ≤ 3), squeak, and hang upside down from ceilings until you come close
 * Inklings (squid) in deep ocean water: they drift in pulses with sweeping tentacles, squirt ink and dart away when hit, and drop 1–3 ink sacs (black dye)
 * Shipwrecks on the ocean floor (40 % of 160 × 160 regions): an oak or spruce hull with a broken deck, a snapped mast and two loot chests
+* Raider outposts (one 288 × 288 region in four, on plains, taiga, desert, savanna or snowy plains): a dark oak watchtower with a lookout and a loot chest, guarded by five Marauders (pillagers) — crossbow-like archers that strafe and shoot and do not burn in daylight; `/locate outpost`
 * Every structure has its own chest loot (dungeons, mineshafts with rails, desert and jungle temples with gold and beryl, igloos with food, shipwrecks with paper, crops and a compass); `/locate shipwreck`
 * Jungle temples (mossy cobblestone, two storeys, vines, a ladder down to a hidden chest) and igloos in snowy biomes (a snow dome with bed, workbench, furnace and chest), in the same regions as desert temples
 * Desert temples (one 256 × 256 region in three, on level desert ground): a 21 × 21 sandstone hall with two towers, terracotta bands and a terracotta star on the floor; dig down through its red centre to a hidden chamber with four loot chests — above nine TNT; `/locate temple`

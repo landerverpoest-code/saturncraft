@@ -72,12 +72,13 @@ function pick(table, rng) {
 
 /** 27 chest slots filled with dungeon loot at random positions. */
 // Structure loot (chest meta bits 4-7): [table, rolls min, rolls max] per structure
-export const LOOT = { DUNGEON: 0, MINESHAFT: 1, DESERT: 2, JUNGLE: 3, IGLOO: 4, WRECK: 5 };
+export const LOOT = { DUNGEON: 0, MINESHAFT: 1, DESERT: 2, JUNGLE: 3, IGLOO: 4, WRECK: 5, OUTPOST: 6 };
 const STRUCTURE_LOOT = {
   [LOOT.MINESHAFT]: [[[I.IRON_INGOT, 1, 5, 10], [I.GOLD_INGOT, 1, 3, 5], [I.CINNABAR, 4, 9, 5], [I.AZURITE, 4, 9, 5], [I.DIAMOND, 1, 2, 3], [I.COAL, 3, 8, 10], [I.BREAD, 1, 3, 15], [B.RAIL, 4, 8, 20], [I.MELON_SLICE, 2, 4, 10], [I.PUMPKIN_PIE, 1, 2, 5], [I.IRON_PICKAXE, 1, 1, 2]], 3, 6],
   [LOOT.DESERT]: [[[I.DIAMOND, 1, 3, 5], [I.IRON_INGOT, 1, 5, 15], [I.GOLD_INGOT, 2, 7, 15], [I.BERYL, 1, 3, 15], [I.BONE, 4, 6, 25], [I.SPIDER_EYE, 1, 3, 25], [I.ROTTEN_FLESH, 3, 7, 25], [I.SADDLE, 1, 1, 20], [I.GOLD_CHESTPLATE, 1, 1, 3]], 2, 5],
   [LOOT.JUNGLE]: [[[I.DIAMOND, 1, 3, 3], [I.IRON_INGOT, 1, 5, 10], [I.GOLD_INGOT, 2, 7, 15], [I.BERYL, 1, 3, 2], [I.BONE, 4, 6, 20], [I.ROTTEN_FLESH, 3, 7, 16], [I.SADDLE, 1, 1, 3], [I.COCOA_BEANS, 2, 5, 10]], 2, 6],
   [LOOT.IGLOO]: [[[I.APPLE, 1, 3, 15], [I.COAL, 1, 4, 15], [I.GOLD_INGOT, 1, 1, 1], [I.STONE_AXE, 1, 1, 2], [I.ROTTEN_FLESH, 1, 1, 10], [I.WHEAT, 2, 3, 10], [I.EMERALD ?? I.BERYL, 1, 1, 1]], 2, 8],
+  [LOOT.OUTPOST]: [[[I.WHEAT, 3, 5, 7], [I.POTATO, 2, 5, 5], [I.CARROT, 3, 5, 5], [I.ARROW, 2, 7, 4], [I.IRON_INGOT, 1, 3, 3], [I.STRING, 1, 6, 4], [I.BOW, 1, 1, 2], [B.DARK_OAK_LOG, 2, 3, 10]], 2, 4],
   [LOOT.WRECK]: [[[I.IRON_INGOT, 1, 5, 20], [I.GOLD_INGOT, 1, 5, 10], [I.BERYL, 1, 5, 20], [I.DIAMOND, 1, 1, 5], [I.PAPER, 1, 12, 20], [I.COAL, 2, 8, 15], [I.WHEAT, 8, 21, 10], [I.CARROT, 4, 8, 10], [I.POTATO, 2, 6, 10], [I.LEATHER_HELMET, 1, 1, 3], [I.COMPASS, 1, 1, 5]], 3, 8],
 };
 

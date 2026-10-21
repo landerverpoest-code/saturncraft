@@ -14,6 +14,7 @@ import { MIN_Y } from '../world/constants.js';
 import { chunkKey } from '../world/world.js';
 import { attemptDimensionSpawn } from './dimensionMobs.js';
 import { BIOMES } from '../world/biomes.js';
+import { outpostsNear } from '../world/temples.js';
 
 const NO_MONSTER_FLOOR = new Set([B.BEDROCK, B.GLASS, ...LEAVES, B.ICE, B.CACTUS]);
 const MAX_PER_CHUNK = 4;
@@ -172,6 +173,14 @@ export class MobSpawner {
         if (Math.floor(h.x / 16) !== cx || Math.floor(h.z / 16) !== cz) continue;
         const m = this.spawnMob('settler', h.x, h.y, h.z);
         m.profession = p.profession; m.home = h; m.trades = makeTrades(p.profession); m.lastRestock = this.game.time;
+      }
+    }
+    // Marauders guard their outposts
+    for (const o of outpostsNear(this.game.world.gen, cx * 16, cz * 16, cx * 16 + 15, cz * 16 + 15)) {
+      if (Math.floor(o.cx / 16) !== cx || Math.floor(o.cz / 16) !== cz || !this.hostileEnabled()) continue;
+      for (const [dx, dy, dz] of [[0, 13, 0], [-2, 13, 2], [5, 0, 5], [-5, 0, 4], [6, 0, -5]]) {
+        const m = this.spawnMob('marauder', o.cx + dx + 0.5, dy ? o.y + dy : this.game.world.heightAt(o.cx + dx, o.cz + dz) + 1, o.cz + dz + 0.5);
+        if (m) m.persistent = true;
       }
     }
     // one Ironguard keeps watch by each village well

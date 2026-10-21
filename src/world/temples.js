@@ -214,3 +214,67 @@ export function stampWrecks(gen, blocks, meta, cx, cz) {
     set(5, y + 1, 0, B.CHEST, (wk.alongX ? 3 : 0) | 8 | (5 << 4));
   }
 }
+
+// ---- raider outposts ----------------------------------------------------------------
+export const OUTPOST_REGION = 288;
+const outpostCache = new Map();
+
+/** A dark oak watchtower in one 288 x 288 region in four, on plains, taiga, desert or savanna. */
+export function outpostInRegion(gen, rx, rz) {
+  const key = `${gen.seed}:${rx},${rz}`;
+  if (outpostCache.has(key)) return outpostCache.get(key);
+  const rng = mulberry32(hash4(gen.seed, rx, rz, 7373));
+  let o = null;
+  if (rng() < 0.25) {
+    const R = OUTPOST_REGION, M = 24;
+    const cx = rx * R + M + Math.floor(rng() * (R - 2 * M)), cz = rz * R + M + Math.floor(rng() * (R - 2 * M));
+    const col = gen.column(cx, cz), top = gen.surfaceAt(cx, cz, col), biome = gen.biomeFor(col, top);
+    const flat = [[-4, -4], [4, -4], [-4, 4], [4, 4]].every(([dx, dz]) => Math.abs(gen.surfaceAt(cx + dx, cz + dz) - top) <= 3);
+    if (flat && top > SEA_LEVEL && [BIOME.PLAINS, BIOME.TAIGA, BIOME.DESERT, BIOME.SAVANNA, BIOME.SNOWY_PLAINS].includes(biome)) o = { cx, cz, y: top + 1 };
+  }
+  if (outpostCache.size > 64) outpostCache.clear();
+  outpostCache.set(key, o);
+  return o;
+}
+
+export function outpostsNear(gen, x0, z0, x1, z1) {
+  const out = [], R = OUTPOST_REGION;
+  for (let rx = Math.floor((x0 - 8) / R); rx <= Math.floor((x1 + 8) / R); rx++) for (let rz = Math.floor((z0 - 8) / R); rz <= Math.floor((z1 + 8) / R); rz++) {
+    const o = outpostInRegion(gen, rx, rz);
+    if (o && o.cx + 8 >= x0 && o.cx - 8 <= x1 && o.cz + 8 >= z0 && o.cz - 8 <= z1) out.push(o);
+  }
+  return out;
+}
+
+/** The tower: cobblestone base, dark oak walls with windows, two floors joined by ladders, a wide lookout on top. */
+export function stampOutposts(gen, blocks, meta, cx, cz) {
+  const X0 = cx * 16, Z0 = cz * 16;
+  for (const o of outpostsNear(gen, X0, Z0, X0 + 15, Z0 + 15)) {
+    const set = (x, y, z, id, m = 0) => {
+      if (x < X0 || x >= X0 + 16 || z < Z0 || z >= Z0 + 16 || y <= MIN_Y || y >= MIN_Y + WORLD_HEIGHT) return;
+      const i = cidx(x - X0, y, z - Z0); blocks[i] = id; meta[i] = m;
+    };
+    const { cx: tx, cz: tz, y } = o;
+    for (let x = tx - 3; x <= tx + 3; x++) for (let z = tz - 3; z <= tz + 3; z++) {
+      const edge = Math.abs(x - tx) === 3 || Math.abs(z - tz) === 3, corner = Math.abs(x - tx) === 3 && Math.abs(z - tz) === 3;
+      for (let yy = y - 4; yy < y; yy++) set(x, yy, z, B.COBBLESTONE);
+      for (let yy = y; yy < y + 16; yy++) set(x, yy, z, 0);
+      for (let yy = y; yy < y + 12; yy++) {
+        if (corner) set(x, yy, z, B.DARK_OAK_LOG);
+        else if (edge) set(x, yy, z, (yy - y) % 4 === 2 && (x === tx || z === tz) ? 0 : B.DARK_OAK_PLANKS); // windows
+      }
+      for (const fy of [y - 1, y + 4, y + 8]) if (!edge) set(x, fy, z, fy === y - 1 ? B.COBBLESTONE : B.DARK_OAK_PLANKS);
+    }
+    // the lookout: a wider platform with a fence railing and a roof
+    for (let x = tx - 4; x <= tx + 4; x++) for (let z = tz - 4; z <= tz + 4; z++) {
+      set(x, y + 12, z, B.DARK_OAK_PLANKS);
+      if (Math.abs(x - tx) === 4 || Math.abs(z - tz) === 4) set(x, y + 13, z, B.OAK_FENCE);
+      set(x, y + 16, z, Math.abs(x - tx) + Math.abs(z - tz) < 7 ? B.DARK_OAK_PLANKS : 0);
+    }
+    for (const [x, z] of [[tx - 4, tz - 4], [tx + 4, tz - 4], [tx - 4, tz + 4], [tx + 4, tz + 4]]) for (let yy = y + 13; yy < y + 16; yy++) set(x, yy, z, B.DARK_OAK_LOG);
+    // door gap, ladders through the floors, a chest of loot on the lookout
+    for (let yy = y; yy < y + 2; yy++) set(tx, yy, tz - 3, 0);
+    for (let yy = y; yy < y + 13; yy++) set(tx + 2, yy, tz + 2, B.LADDER, 2);
+    set(tx - 2, y + 13, tz - 2, B.CHEST, 1 | 8 | (6 << 4));
+  }
+}

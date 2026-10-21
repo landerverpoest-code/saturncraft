@@ -57,6 +57,11 @@ export const MOBS = {
     health: 1, speed: 0.3, width: 0.51, height: 0.51, attack: 1,
     drops: [{ id: I.SLIMEBALL, min: 0, max: 2 }],
   },
+  marauder: {
+    name: 'Marauder', role: 'pillager', category: CATEGORY.MONSTER, raider: true,
+    health: 24, speed: 0.35, width: 0.6, height: 1.95, followRange: 32, ranged: true, sound: 'hmm',
+    drops: [{ id: I.ARROW, min: 0, max: 2 }, { id: I.BERYL, min: 0, max: 1, playerOnly: true }],
+  },
   voidwalker: {
     name: 'Voidwalker', role: 'enderman', category: CATEGORY.MONSTER,
     health: 40, speed: 0.3, width: 0.6, height: 2.9, attack: 7, followRange: 64, neutral: true, sound: 'warble',
