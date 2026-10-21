@@ -46,6 +46,7 @@ export class Sky {
       uRingInner: { value: PLANET.ringInner },
       uRingOuter: { value: PLANET.ringOuter },
       uUnderwater: { value: 0 },
+      uCave: { value: 0 },
       uRain: { value: 0 },
     };
     const mat = new THREE.ShaderMaterial({

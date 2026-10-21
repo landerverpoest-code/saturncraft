@@ -8,6 +8,8 @@ import { stampSanctums } from './dimensions/sanctum.js';
 import { treeShape, LEAVES, LOGS, PLANTS } from './trees.js';
 import { B, DEEP_VARIANT } from './blocks.js';
 import { Simplex, hash4, hashf, mulberry32 } from './noise.js';
+import { carveChunk } from './carvers.js';
+import { stampRuins } from './ruinedPortals.js';
 import { BIOME, BIOMES } from './biomes.js';
 import { MIN_Y, WORLD_HEIGHT, SEA_LEVEL, CHUNK_VOLUME, cidx } from './constants.js';
 import { grassColor, foliageColor } from './textures.js';
@@ -41,21 +43,23 @@ function smoothstep(e0, e1, x) {
 // Ore placement configs mirroring the documented count/height/size per chunk.
 export const ORE_FEATURES = [
   { block: B.COAL_ORE, count: 30, dist: 'uniform', min: 136, max: 320, size: 17 },
-  { block: B.COAL_ORE, count: 20, dist: 'triangle', min: 0, max: 192, size: 17, discard: 0.5 },
+  { block: B.COAL_ORE, count: 30, dist: 'triangle', min: 0, max: 192, size: 17 },
   { block: B.IRON_ORE, count: 90, dist: 'triangle', min: 80, max: 384, size: 9 },
   { block: B.IRON_ORE, count: 10, dist: 'triangle', min: -24, max: 56, size: 9 },
   { block: B.IRON_ORE, count: 10, dist: 'uniform', min: -64, max: 72, size: 4 },
   { block: B.COPPER_ORE, count: 16, dist: 'triangle', min: -16, max: 112, size: 10 },
-  { block: B.GOLD_ORE, count: 4, dist: 'triangle', min: -64, max: 32, size: 9, discard: 0.5 },
+  { block: B.GOLD_ORE, count: 4, dist: 'triangle', min: -64, max: 32, size: 9, discard: 0.2 },
   { block: B.GOLD_ORE, count: 0.5, dist: 'uniform', min: -64, max: -48, size: 9, discard: 0.5 },
   { block: B.CINNABAR_ORE, count: 4, dist: 'uniform', min: -64, max: 15, size: 8 },
   { block: B.CINNABAR_ORE, count: 8, dist: 'triangle', min: -96, max: -32, size: 8 },
   { block: B.AZURITE_ORE, count: 2, dist: 'triangle', min: -32, max: 32, size: 7 },
-  { block: B.AZURITE_ORE, count: 4, dist: 'uniform', min: -64, max: 64, size: 7, discard: 1 },
-  { block: B.DIAMOND_ORE, count: 7, dist: 'triangle', min: -144, max: 16, size: 4, discard: 0.5 },
-  { block: B.DIAMOND_ORE, count: 1 / 9, dist: 'triangle', min: -144, max: 16, size: 12, discard: 0.7 },
-  { block: B.DIAMOND_ORE, count: 4, dist: 'triangle', min: -144, max: 16, size: 8, discard: 1 },
+  { block: B.AZURITE_ORE, count: 4, dist: 'uniform', min: -64, max: 64, size: 7, discard: 0.3 },
+  { block: B.DIAMOND_ORE, count: 7, dist: 'triangle', min: -144, max: 16, size: 4, discard: 0.2 },
+  { block: B.DIAMOND_ORE, count: 1 / 9, dist: 'triangle', min: -144, max: 16, size: 12, discard: 0.3 },
+  { block: B.DIAMOND_ORE, count: 4, dist: 'triangle', min: -144, max: 16, size: 8, discard: 0.4 },
   { block: B.BERYL_ORE, count: 100, dist: 'triangle', min: -16, max: 480, size: 3, mountainsOnly: true },
+  // (Saturncraft extra) a little Beryl everywhere, so it can be found outside the mountains too
+  { block: B.BERYL_ORE, count: 2, dist: 'uniform', min: -32, max: 48, size: 3 },
   { block: B.GRANITE, count: 2, dist: 'uniform', min: 0, max: 60, size: 64 },
   { block: B.DIORITE, count: 2, dist: 'uniform', min: 0, max: 60, size: 64 },
   { block: B.ANDESITE, count: 2, dist: 'uniform', min: 0, max: 60, size: 64 },
@@ -199,9 +203,10 @@ export class TerrainGenerator {
     if (y < MIN_Y + 5) return false;
     const depth = surface - y;
     if (surface < SEA_LEVEL && depth < 9) return false; // keep ocean floors sealed
-    const cheeseT = 0.58 + Math.max(0, 14 - depth) * 0.04;
+    // big caverns grow more common with depth; tunnels widen a little below y 0
+    const cheeseT = (y < 0 ? 0.48 : y < 40 ? 0.52 : 0.56) + Math.max(0, 14 - depth) * 0.04;
     if (cheese > cheeseT) return true;
-    const width = 0.0045 * (y < 0 ? 1.4 : 1);
+    const width = 0.0058 * (y < 0 ? 1.4 : 1);
     return a * a + b * b < width;
   }
 
@@ -307,7 +312,8 @@ export class TerrainGenerator {
       this.applySurface(blocks, x, z, top, biome, x0 + x, z0 + z, false, col);
     }
 
-    // 4. Caves
+    // 4. Caves: worm tunnels and ravines (world/carvers.js), then the noise caves
+    if (!this.noCarvers) carveChunk(this.seed, cx, cz, blocks, heightmap);
     const cg = new Float32Array(5 * 5 * CNY * 3);
     const tmp = [0, 0, 0];
     for (let i = 0; i < 5; i++) for (let k = 0; k < 5; k++) for (let j = 0; j < CNY; j++) {
@@ -386,6 +392,7 @@ export class TerrainGenerator {
     stampHuts(this, blocks, meta, cx, cz);     // swamp huts (world/swampHuts.js)
     stampWrecks(this, blocks, meta, cx, cz);
     stampOutposts(this, blocks, meta, cx, cz);
+    stampRuins(this, blocks, meta, cx, cz); // Ruined Rifts (world/ruinedPortals.js)
     stampSanctums(this, blocks, meta, cx, cz); // Hollow Sanctums (world/dimensions/sanctum.js)
 
     // Final heightmap: highest non-air block

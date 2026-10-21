@@ -2,6 +2,7 @@
 import { ITEMS, I, maxStack } from '../world/items.js';
 import { mineshaftsNear } from '../world/mineshafts.js';
 import { templesNear, wrecksNear, outpostsNear } from '../world/temples.js';
+import { ruinsNear } from '../world/ruinedPortals.js';
 import { hutsNear } from '../world/swampHuts.js';
 import { BLOCKS } from '../world/blocks.js';
 import { MOBS, MOB_KEYS } from '../mobs/mobTypes.js';
@@ -63,7 +64,7 @@ export const HELP = [
   '/enchant <name> [level]  (the held item; names: ' + ENCH_KEYS.join(', ') + ')',
   '/summon <mob> [x y z]',
   '/xp <amount> [levels]',
-  '/locate <village|temple|outpost|shipwreck|mineshaft|sanctum|bastion|hut>',
+  '/locate <village|temple|outpost|shipwreck|mineshaft|sanctum|bastion|hut|ruin>',
   '/dimension <overworld|cinderdeep|hollow>',
   '/effect give <effect> [seconds] [level],  /effect clear  (effects: ' + EFFECT_KEYS.join(', ') + ')',
   '/kill,  /clear,  /spawnpoint,  /seed,  /heal',
@@ -221,6 +222,12 @@ export function runCommand(game, text) {
         if (!list.length) return 'No bastion found nearby';
         const b = list.reduce((a, c) => (Math.hypot(c.cx - p.x, c.cz - p.z) < Math.hypot(a.cx - p.x, a.cz - p.z) ? c : a));
         return `The nearest Ember Bastion is at ${b.cx}, ${b.y + 1}, ${b.cz} (${Math.round(Math.hypot(b.cx - p.x, b.cz - p.z))} blocks away)`;
+      }
+      if (what === 'ruin' || what === 'ruined_portal' || what === 'portal') {
+        const list = ruinsNear(game.world.gen, p.x - 1500, p.z - 1500, p.x + 1500, p.z + 1500);
+        if (!list.length) return 'No ruined rift found nearby';
+        const t = list.reduce((a, c) => (Math.hypot(c.cx - p.x, c.cz - p.z) < Math.hypot(a.cx - p.x, a.cz - p.z) ? c : a));
+        return `The nearest ruined rift is at ${t.cx}, ${t.y}, ${t.cz} (${Math.round(Math.hypot(t.cx - p.x, t.cz - p.z))} blocks away)`;
       }
       if (what === 'outpost') {
         const list = outpostsNear(game.world.gen, p.x - 2500, p.z - 2500, p.x + 2500, p.z + 2500);

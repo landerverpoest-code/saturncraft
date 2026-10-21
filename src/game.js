@@ -65,6 +65,7 @@ THREE.ShaderChunk.fog_vertex = `#ifdef USE_FOG
     'directLight.color *= ( directLight.visible && receiveShadow && SUN_MASK && dot( directLight.color, vec3( 1.0 ) ) > 0.0 && dot( geometryNormal, directLight.direction ) > 0.0 ) ? getShadow(');
 }
 
+const CAVE_FOG = new THREE.Color(0.012, 0.012, 0.018);
 export const DIFFICULTIES = ['peaceful', 'easy', 'normal', 'hard'];
 export const DEFAULT_SETTINGS = { renderDistance: 8, fov: 75, sensitivity: 100, volume: 0.5, music: 0.5, shadows: true, shadowMapSize: 1024, pixelRatioCap: 1.25, daylightCycle: true, hostileMobs: true, difficulty: 'normal' };
 
@@ -921,9 +922,18 @@ export class Game {
     if (this.frameRenderer) this.frameRenderer.update();
     const fogCol = this.sky.horizon;
     this.scene.fog.color.copy(fogCol);
+    // deep in caves the fog and the sky fade to black, so holes into unloaded land look like dark depths
+    const ex = Math.floor(x), ez = Math.floor(z), ey = Math.floor(y + eye);
+    const under = this.world.dimension === 'overworld' && this.world.skyLight(ex, ey, ez) < 4 ? Math.max(0, Math.min(1, (this.world.heightAt(ex, ez) - ey - 3) / 10)) : 0;
+    this.caveDark = (this.caveDark || 0) + (under - (this.caveDark || 0)) * 0.05;
+    const cd = this.caveDark * (1 - this.nightVision * 0.5);
+    if (cd > 0.001) this.scene.fog.color.lerp(CAVE_FOG, cd);
+    this.sky.uniforms.uCave.value = cd;
+    if (this.world.dimension === 'overworld') this.clouds.visible = cd < 0.6;
+    if (this.world.dimension === 'overworld' && this.sky.rings) for (const k of ['ring', 'particles']) if (this.sky.rings[k]) this.sky.rings[k].visible = cd < 0.6;
     if (b.eyeInWater) { this.scene.fog.color.setRGB(0.03, 0.1, 0.3); this.scene.fog.near = 1; this.scene.fog.far = 18; }
     else if (b.eyeInLava) { this.scene.fog.color.setRGB(0.6, 0.15, 0.02); this.scene.fog.near = 0; this.scene.fog.far = 2; }
-    else { this.scene.fog.near = R * 0.65; this.scene.fog.far = R; this.dims.adjustFog(this.scene.fog, R); }
+    else { this.scene.fog.near = R * (0.65 - cd * 0.45); this.scene.fog.far = R * (1 - cd * 0.25); this.dims.adjustFog(this.scene.fog, R); }
     this.sky.uniforms.uUnderwater.value = b.eyeInWater ? 1 : 0;
     this.audio.setListener(x, y + eye, z, p.yaw);
 
