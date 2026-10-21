@@ -806,6 +806,7 @@ export class UI {
     const s = el(`<div class="screen pause-screen">
       <h2>Paused</h2>
       <button class="btn" data-a="resume">Back to Game</button>
+      <button class="btn" data-a="save">Save Game</button>
       <div class="field"><label>Render distance: <b id="rdv">${g.settings.renderDistance}</b> chunks</label><input type="range" min="2" max="16" value="${g.settings.renderDistance}" id="rd"></div>
       <div class="field"><label>Field of view: <b id="fovv">${g.settings.fov}</b></label><input type="range" min="50" max="110" value="${g.settings.fov}" id="fov"></div>
       <div class="field"><label>Mouse sensitivity: <b id="msv">${g.settings.sensitivity}</b></label><input type="range" min="10" max="200" value="${g.settings.sensitivity}" id="ms"></div>
@@ -840,6 +841,14 @@ export class UI {
     db.onclick = () => { const order = ['peaceful', 'easy', 'normal', 'hard']; g.setSetting('difficulty', order[(order.indexOf(g.difficulty) + 1) % 4]); db.textContent = `Difficulty: ${cap(g.difficulty)}`; };
     s.querySelector('[data-a=resume]').onclick = () => { this.open = null; this.clear(); g.onUIClosed(); };
     s.querySelector('[data-a=title]').onclick = () => g.quitToTitle();
+    const sv = s.querySelector('[data-a=save]');
+    if (g.net && g.net.isClient) sv.disabled = true; // the host saves a friend's world
+    sv.onclick = async () => {
+      sv.disabled = true; sv.textContent = 'Saving…';
+      const ok = await g.save();
+      sv.textContent = ok ? 'Saved ✓' : 'Save failed';
+      setTimeout(() => { sv.disabled = false; sv.textContent = 'Save Game'; }, 1500);
+    };
     s.querySelector('[data-a=ms]').onclick = () => this.showMilestones();
     this.layer.appendChild(s);
   }
