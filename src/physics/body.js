@@ -226,7 +226,9 @@ export class Body {
     }
     if (ladder && (this.horizontalCollision || input.jump)) this.vy = 0.2; // climb
     // Slow Falling: a tenth of the gravity while descending
-    if (!this.noGravity) this.vy -= input.slowFall && this.vy <= 0 ? 0.01 : PHYS.GRAVITY;
+    // Levitation lifts instead (player/effects.js levitationVelocity)
+    if (input.levitation > 0) this.vy += (0.05 * input.levitation - this.vy) * 0.2;
+    else if (!this.noGravity) this.vy -= input.slowFall && this.vy <= 0 ? 0.01 : PHYS.GRAVITY;
     this.vy *= PHYS.DRAG_Y;
     const fr = this.onGround ? slip * PHYS.GROUND_FRICTION_MUL : PHYS.AIR_FRICTION;
     this.vx *= fr; this.vz *= fr;

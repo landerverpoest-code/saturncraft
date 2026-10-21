@@ -71,7 +71,7 @@ function joinLink(code) {
   return `${location.origin}${location.pathname}?${keep}`;
 }
 
-const CONTAINER_BLOCKS = new Set([B.CHEST, B.BARREL, B.FURNACE, B.FURNACE_LIT, B.BREWING_STAND]);
+const CONTAINER_BLOCKS = new Set([B.CHEST, B.BARREL, B.FURNACE, B.FURNACE_LIT, B.BREWING_STAND, B.GLOOMSHELL_BOX]);
 const contKey = (k, x, y, z) => `${k}:${x},${y},${z}`;
 const finite = (...v) => v.every(Number.isFinite);
 /** Stand-in for a player whose pet is waiting for them while they are offline. */
@@ -264,6 +264,7 @@ export class HostSession extends Session {
       case 'open': this.openFor(c, m); break;
       case 'close': { const v = this.viewers.get(contKey(m.k, m.x, m.y, m.z)); if (v) v.ids.delete(c.id); break; }
       case 'cset': this.containerSet(c, m); break;
+      case 'boxput': if (this.near(c, m.x + 0.5, m.y + 0.5, m.z + 0.5, 8)) g.onBoxPlaced(m.x | 0, m.y | 0, m.z | 0, { contents: m.s }, true); break;
       case 'ride': {
         const b = this.entity(m.id);
         if (!b || b.kind !== 'boat') break;
@@ -397,6 +398,14 @@ export class HostSession extends Session {
     if (attacker && attacker.kind === 'mob') t.lastHurtBy = attacker;
     const src = attacker && attacker.isPlayer && source === 'player' ? 'player:' + (attacker.netName || 'Player') : source;
     c.ch.send({ t: 'hurt', a: amount, s: src, x: attacker ? attacker.x : null, z: attacker ? attacker.z : null });
+    return true;
+  }
+
+  /** A lasting effect for a guest (Levitation from a Drift Spark...): their own game applies it. */
+  effectRemote(rp, type, ticks, amp = 0) {
+    const c = this.clients.get(rp.id);
+    if (!c) return false;
+    c.ch.send({ t: 'eff', e: type, d: ticks | 0, a: amp | 0 });
     return true;
   }
 
@@ -538,7 +547,7 @@ export class HostSession extends Session {
   // ---- containers -----------------------------------------------------------------
   container(kind, x, y, z) {
     const g = this.game, id = g.world.getBlock(x, y, z);
-    if (kind === 'chest') return id === B.CHEST || id === B.BARREL ? g.getChest(x, y, z) : null;
+    if (kind === 'chest') return id === B.CHEST || id === B.BARREL || id === B.GLOOMSHELL_BOX ? g.getChest(x, y, z) : null;
     if (kind === 'chest2') {
       const h = id === B.CHEST ? doubleChestHalves(g.world, x, y, z) : null;
       return h && h[0].x === x && h[0].z === z ? doubleChestView(g.getChest(h[0].x, y, h[0].z), g.getChest(h[1].x, y, h[1].z)) : null;
@@ -817,6 +826,7 @@ export class ClientSession extends Session {
         break;
       case 'ents': if (m.d === g.world.dimension && !g.dims.pending) this.ents.apply(m.m); break;
       case 'hurt': p.hurt(m.a, m.s, m.x != null ? { x: m.x, z: m.z } : null); break;
+      case 'eff': if (typeof m.e === 'string' && EFFECTS[m.e] && !EFFECTS[m.e].instant) p.addEffect(m.e, Math.max(0, Math.min(72000, m.d | 0)), Math.max(0, Math.min(10, m.a | 0))); break;
       case 'fx': {
         // a splash elixir reached us on the host
         const d = ITEMS[m.p | 0], f = Math.max(0, Math.min(1, +m.f || 0));
@@ -874,6 +884,9 @@ export class ClientSession extends Session {
 
   // ---- requests to the host ----------------------------------------------------------
   /** Items, orbs, arrows and boats we create become shared entities on the host. */
+  /** A guest placed a Gloomshell Box that carried items: the host's copy of it gets them. */
+  sendBoxContents(x, y, z, contents) { this.send({ t: 'boxput', x, y, z, s: contents }); }
+
   requestSpawn(kind, d) {
     if (kind === 'falling') return; // the host's own world simulation makes those
     const r2 = (v) => Math.round(v * 100) / 100;

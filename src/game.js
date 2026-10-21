@@ -7,6 +7,7 @@ import { World } from './world/world.js';
 import { B, BLOCKS } from './world/blocks.js';
 import { ITEMS, I, toolOf } from './world/items.js';
 import { blockDrops } from './world/mining.js';
+import { withExtras, cleanContents } from './world/enchantments.js';
 import { runRandomTicks } from './world/randomTicks.js';
 import { biomeName } from './world/biomes.js';
 import { MIN_Y, TICK_MS } from './world/constants.js';
@@ -559,6 +560,7 @@ export class Game {
       this.chests.delete(k); this.furnaces.delete(k); this.brewingStands.delete(k);
       return;
     }
+    if (id === B.GLOOMSHELL_BOX) this.dropBox(x, y, z);
     if (id === B.CHEST || id === B.BARREL) {
       const k = `${x},${y},${z}`;
       const c = (meta & 8) ? this.getChest(x, y, z, meta) : this.chests.get(k);
@@ -578,6 +580,23 @@ export class Game {
         if (this.ui.furnace === f) this.ui.close();
       }
     }
+  }
+
+  /** A broken Gloomshell Box drops itself with everything inside it kept in the item (stack.contents). */
+  dropBox(x, y, z) {
+    const k = `${x},${y},${z}`, c = this.chests.get(k);
+    const st = withExtras({ id: B.GLOOMSHELL_BOX, count: 1, damage: 0 }, { contents: c ? c.slots : null });
+    if (c) { this.chests.delete(k); if (this.ui.chest === c) this.ui.close(); }
+    if (st.contents || !this.player.creative) this.entities.spawnItem(x + 0.5, y + 0.5, z + 0.5, st);
+  }
+
+  /** A Gloomshell Box was placed: it unpacks what it carried (a guest's box: on the host). */
+  onBoxPlaced(x, y, z, st, fromGuest = false) {
+    const contents = st && cleanContents(st.contents);
+    if (!contents) return;
+    if (this.net && this.net.isClient) { this.net.sendBoxContents(x, y, z, contents); return; }
+    if (fromGuest && this.chests.get(`${x},${y},${z}`)) return; // never overwrite a box that is already there
+    this.getChest(x, y, z).slots = contents;
   }
 
   /** Spill a broken Brewing Alembic's vials, ingredient and fuel. */

@@ -41,6 +41,7 @@ export function wearArmor(root, ids) {
   ids.forEach((id, slot) => {
     const a = id && ITEMS[id] && ITEMS[id].armor;
     if (!a) return;
+    if (a.glider) { addWings(ud, a); return; } // a Voidwing: two membrane wings on the back
     const mat = new THREE.MeshLambertMaterial({ map: armorTexture(ARMOR_MATERIALS[a.material].color) });
     mat.userData.base = new THREE.Color(0xffffff);
     ud.armorMats.push(mat);
@@ -55,6 +56,24 @@ export function wearArmor(root, ids) {
     }
   });
   return ud.armorMats;
+}
+
+/** Voidwing: two folded membrane wings hanging from the shoulders, angled out like the reference elytra. */
+function addWings(ud, a) {
+  const mat = new THREE.MeshLambertMaterial({ map: armorTexture(ARMOR_MATERIALS[a.material].color), side: THREE.DoubleSide });
+  mat.userData.base = new THREE.Color(0xffffff);
+  ud.armorMats.push(mat);
+  const body = ud.parts.body;
+  if (!body) return;
+  for (const s of [-1, 1]) {
+    const wing = new THREE.Mesh(new THREE.BoxGeometry(10 / 16, 20 / 16, 1 / 16), mat);
+    wing.geometry.translate(s * 4 / 16, -8 / 16, 0); // hinge at the shoulder
+    wing.position.set(s * 1 / 16, 5 / 16, 3 / 16);
+    wing.rotation.set(0.26, 0, s * 0.26);
+    wing.castShadow = true;
+    body.add(wing);
+    ud.armorMeshes.push(wing);
+  }
 }
 
 /** Light the armour like the rest of the model. */

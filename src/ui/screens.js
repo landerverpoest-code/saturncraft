@@ -482,10 +482,14 @@ export class UI {
       for (let k = from; k < to && left; k++) if (!slots[k]) { slots[k] = { ...st, count: left }; left = 0; }
       return left;
     };
-    this.showContainer('chest', halves ? 'Large Chest' : this.game.world.getBlock(x, y, z) === B.BARREL ? 'Barrel' : 'Chest', (panel) => {
+    // a Gloomshell Box holds anything but other boxes
+    const box = this.game.world.getBlock(x, y, z) === B.GLOOMSHELL_BOX;
+    const fits = (st) => !box || st.id !== B.GLOOMSHELL_BOX;
+    this.showContainer('chest', box ? 'Gloomshell Box' : halves ? 'Large Chest' : this.game.world.getBlock(x, y, z) === B.BARREL ? 'Barrel' : 'Chest', (panel) => {
       const grid = el('<div class="grid" style="grid-template-columns:repeat(9,var(--slot));margin-bottom:12px"></div>');
       for (let i = 0; i < n; i++) {
         grid.appendChild(this.makeSlot(() => c.slots[i], (v) => { c.slots[i] = v; }, {
+          filter: fits,
           quickMove: () => {
             const st = c.slots[i];
             const left = insert(inv.slots, 0, 36, st);
@@ -496,6 +500,7 @@ export class UI {
       panel.appendChild(grid);
       panel.appendChild(this.inventoryGrid({
         accept: (st) => {
+          if (!fits(st)) return false;
           const left = insert(c.slots, 0, n, st);
           if (left === st.count) return false;
           if (left) { st.count = left; return 'partial'; }
@@ -933,6 +938,7 @@ export class UI {
       fall: 'hit the ground too hard', lava: 'tried to swim in lava', fire: 'burned to death', drown: 'drowned',
       starve: 'starved to death', cactus: 'was pricked to death', void: 'fell out of the world', explosion: 'was blown up',
       arrow: 'was shot by a Rattler', poison: 'succumbed to poison', magic: 'was killed by magic',
+      wall: 'experienced kinetic energy',
     };
     const text = msgs[cause] || (cause && cause.startsWith('mob:') ? `was slain by a ${cause.slice(4)}` : cause && cause.startsWith('player:') ? `was slain by ${cause.slice(7)}` : 'died');
     const s = el(`<div class="screen" id="death-screen"><h2>You Died!</h2><p class="sub">Player ${text}</p><button class="btn">Respawn</button></div>`);

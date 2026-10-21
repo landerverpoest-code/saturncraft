@@ -1,5 +1,6 @@
 // Procedural block textures for the Cinderdeep and the Hollow. Called from
 // textures.js paint() with the shared 16x16 canvas and colour helpers.
+import { HOLLOW_TEX } from './hollowTextures.js';
 
 /**
  * @param {object} c   Canvas16 (set, get, h, rng, noiseFill)
@@ -103,3 +104,5 @@ export const DIM_TEX = {
   },
   wyrm_egg_top: (c, { hex }) => c.noiseFill(['#1c1030', '#26163e', '#120a1c'].map(hex), 0.5),
 };
+
+Object.assign(DIM_TEX, HOLLOW_TEX); // the outer islands (hollowTextures.js)

@@ -695,3 +695,6 @@ export function animateModel(root, mob, alpha, L, sec) {
     else m.emissive.setRGB(hurt ? 0.45 : flash, flash, flash);
   }
 }
+
+// Other modules (e.g. mobs/gloomshell.js) register their own models and faces here.
+export { MODELS, FACES };

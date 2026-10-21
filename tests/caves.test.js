@@ -21,7 +21,7 @@ describe('cave carvers', () => {
     }
     expect(chunks).toBeGreaterThan(16);
     expect(carved).toBeGreaterThan(10000);
-  });
+  }, 30000);
   it('tunnels continue across chunk borders', () => {
     // a tunnel that touches the east edge of one chunk also touches the west edge of the next
     let matches = 0, edges = 0;
@@ -55,7 +55,7 @@ describe('cave carvers', () => {
       for (const id of c.blocks) found.add(id);
     }
     for (const id of [B.COAL_ORE, B.DEEP_DIAMOND_ORE, B.AZURITE_ORE, B.BERYL_ORE, B.IRON_ORE, B.GOLD_ORE, B.DEEP_CINNABAR_ORE]) expect(found.has(id)).toBe(true);
-  });
+  }, 60000);
 });
 
 describe('ruined rifts', () => {

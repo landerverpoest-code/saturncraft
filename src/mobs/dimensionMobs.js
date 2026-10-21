@@ -159,7 +159,7 @@ export const DIM_SPAWN_TABLES = {
   ],
   hollow: [{ type: 'voidwalker', weight: 100, min: 1, max: 4 }],
 };
-const DIM_Y = { cinderdeep: [32, 120], hollow: [20, 90] };
+const DIM_Y = { cinderdeep: [32, 120], hollow: [20, 120] };
 const NO_FLOOR = new Set([B.BEDROCK, B.OBSIDIAN, B.GLOWSHARD]);
 
 /** One natural spawn attempt in chunk (cx, cz) of a non-overworld dimension. */
@@ -171,7 +171,14 @@ export function attemptDimensionSpawn(spawner, cx, cz, category) {
   const y = y0 + Math.floor(Math.random() * (y1 - y0));
   if (SOLID[w.getBlock(x, y, z)] || isFluid(w.getBlock(x, y, z))) return 0;
   const bastion = dim === 'cinderdeep' && w.dimGenerator && w.dimGenerator.inBastion && w.dimGenerator.inBastion(x, y, z);
-  const table = bastion ? DIM_SPAWN_TABLES.bastion : DIM_SPAWN_TABLES[dim];
+  // Hollow Cities: Gloomshells (mobs/gloomshell.js) on the city's floors, a few per city
+  const city = dim === 'hollow' && DIM_SPAWN_TABLES.hollowCity && w.dimGenerator.cityAt && w.dimGenerator.cityAt(x, y, z);
+  if (city) {
+    let near = 0;
+    for (const e of g.entities.list) if (e.type === 'gloomshell' && !e.dead && Math.abs(e.x - city.x) < 40 && Math.abs(e.z - city.z) < 40) near++;
+    if (near >= 6) return 0;
+  }
+  const table = bastion ? DIM_SPAWN_TABLES.bastion : city ? DIM_SPAWN_TABLES.hollowCity : DIM_SPAWN_TABLES[dim];
   const entry = weightedPick(table);
   if (!entry) return 0;
   const def = MOBS[entry.type];

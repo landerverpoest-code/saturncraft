@@ -159,5 +159,7 @@ function makeTarget(rp) {
     applyEffect(type, ticks, amp = 0, factor = 1) {
       if (rp.session && rp.session.targetEffect) rp.session.targetEffect(rp, type, ticks, amp, factor);
     },
+    // a lasting effect (e.g. a Gloomshell's Levitation): their own game applies it
+    addEffect(type, ticks, amp = 0) { return rp.session ? rp.session.effectRemote(rp, type, ticks, amp) : false; },
   };
 }

@@ -6,7 +6,7 @@ import { durabilityLoss } from '../world/enchantments.js';
 export const ARMOR_SLOTS = ['helmet', 'chestplate', 'leggings', 'boots'];
 
 // Damage sources that armour does not reduce (reference "bypasses_armor").
-export const BYPASSES_ARMOR = new Set(['fall', 'drown', 'starve', 'fire', 'void', 'poison', 'generic', 'kill', 'magic']);
+export const BYPASSES_ARMOR = new Set(['fall', 'drown', 'starve', 'fire', 'void', 'poison', 'generic', 'kill', 'magic', 'wall']);
 
 /** Damage after armour: damage * (1 - min(20, max(armor / 5, armor - 4 * damage / (toughness + 8))) / 25). */
 export function armorReduce(damage, armor, toughness = 0) {
@@ -30,7 +30,7 @@ export function wearArmor(armor, damage, rng = Math.random) {
   const wear = Math.max(1, Math.floor(damage / 4));
   for (let i = 0; i < armor.length; i++) {
     const st = armor[i];
-    if (!st) continue;
+    if (!st || ITEMS[st.id].armor.glider) continue; // a Voidwing only wears by flying
     st.damage = (st.damage || 0) + durabilityLoss(st, wear, rng); // Steadfast spares some wear
     if (st.damage >= ITEMS[st.id].durability) { armor[i] = null; broke.push(i); }
   }

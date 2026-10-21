@@ -64,7 +64,7 @@ export const HELP = [
   '/enchant <name> [level]  (the held item; names: ' + ENCH_KEYS.join(', ') + ')',
   '/summon <mob> [x y z]',
   '/xp <amount> [levels]',
-  '/locate <village|temple|outpost|shipwreck|mineshaft|sanctum|bastion|hut|ruin>',
+  '/locate <village|temple|outpost|shipwreck|mineshaft|sanctum|bastion|hut|ruin|city|gate>',
   '/dimension <overworld|cinderdeep|hollow>',
   '/effect give <effect> [seconds] [level],  /effect clear  (effects: ' + EFFECT_KEYS.join(', ') + ')',
   '/kill,  /clear,  /spawnpoint,  /seed,  /heal',
@@ -214,6 +214,13 @@ export function runCommand(game, text) {
         if (game.world.dimension !== 'overworld') return 'Hollow Sanctums are only found in the overworld';
         const s = nearestSanctum(game.seed, p.x, p.z);
         return s ? `The nearest Hollow Sanctum is at ${s.x}, ${s.y}, ${s.z} (${Math.round(Math.hypot(s.x - p.x, s.z - p.z))} blocks away)` : 'No sanctum found nearby';
+      }
+      if (what === 'city' || what === 'gate') {
+        if (game.world.dimension !== 'hollow') return 'Hollow Cities and the Far Gate are only found in the Hollow';
+        const gen = game.world.dimGenerator;
+        if (what === 'gate') { const a = gen.gatewayMain(), b = gen.gatewayExit(); return `The Far Gate stands at ${a.x}, ${a.y + 1}, ${a.z}; it leads to ${b.x}, ${b.y + 1}, ${b.z}`; }
+        const c = gen.nearestCity(p.x, p.z);
+        return c ? `The nearest Hollow City is at ${c.x}, ${c.y}, ${c.z} (${Math.round(Math.hypot(c.x - p.x, c.z - p.z))} blocks away)${c.ship ? ', with a ship' : ''}` : 'No Hollow City found nearby';
       }
       if (what === 'bastion') {
         if (game.world.dimension !== 'cinderdeep') return 'Ember Bastions are only found in the Cinderdeep';
