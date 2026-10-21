@@ -13,6 +13,7 @@ import { canLight, FIRE_DELAY } from '../world/fire.js';
 import { Bobber } from '../entities/bobber.js';
 import { igniteTNT } from '../entities/tnt.js';
 import { updateRails } from '../world/rails.js';
+import { placeMeta as circuitPlaceMeta, useMeta as circuitUseMeta } from '../world/circuits.js';
 import { choosePainting, placePainting } from '../world/paintings.js';
 import { tryLightRift, findHollowRing, fillHollowGate } from '../world/dimensions/portal.js';
 import { LEAVES, SAPLING_TREE, growTree } from '../world/trees.js';
@@ -34,6 +35,8 @@ const ORE_XP = {
 const BREAK_DELAY = 5;
 /** Blocks that right-click opens / toggles instead of using the held item. */
 const USABLE_BLOCKS = new Set([B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.CHEST, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL, B.BREWING_STAND]);
+const CIRCUIT_USE = new Set([B.LEVER, B.STONE_BUTTON, B.REPEATER, B.CHIME_BLOCK]);
+const CIRCUIT_PLACE = new Set([B.LEVER, B.STONE_BUTTON, B.CINNABAR_WIRE, B.REPEATER, B.WOODEN_PRESSURE_PLATE, B.PISTON, B.STICKY_PISTON]);
 const USE_DELAY = 4;
 
 export class Interaction {
@@ -455,6 +458,16 @@ export class Interaction {
       if (t.id === B.ENCHANTING_TABLE) { g.ui.openEnchanting(t.x, t.y, t.z); return true; }
       if (t.id === B.ANVIL) { g.ui.openAnvil(t.x, t.y, t.z); return true; }
       if (t.id === B.BREWING_STAND) { g.ui.openBrewing(t.x, t.y, t.z); return true; }
+      if (CIRCUIT_USE.has(t.id)) {
+        // levers flip, buttons press (the host releases them), repeaters change delay, chime blocks change pitch
+        const um = circuitUseMeta(t.id, w.getMeta(t.x, t.y, t.z));
+        if (um >= 0) {
+          w.setBlockUrgent(t.x, t.y, t.z, t.id, um);
+          g.audio.play(t.id === B.CHIME_BLOCK ? 'chime_' + (um & 31) : 'click', [t.x + 0.5, t.y + 0.5, t.z + 0.5]);
+        }
+        this.swing = SWING_TICKS;
+        return true;
+      }
       if (t.id === B.OAK_TRAPDOOR) {
         const m = w.getMeta(t.x, t.y, t.z);
         w.setBlockUrgent(t.x, t.y, t.z, t.id, m ^ TRAPDOOR_OPEN);
@@ -550,10 +563,16 @@ export class Interaction {
       const s = t.face[1] === 0 ? sideOf(-t.face[0], -t.face[2]) : (Math.abs(ldx) > Math.abs(ldz) ? (ldx > 0 ? 1 : 3) : (ldz > 0 ? 2 : 0));
       meta = s | (upper ? TRAPDOOR_TOP : 0);
     }
-    if (placeId === B.TORCH || placeId === B.LADDER || placeId === B.VINES) {
+    const torch = placeId === B.TORCH || placeId === B.CINNABAR_TORCH;
+    if (torch || placeId === B.LADDER || placeId === B.VINES) {
       // torches stand on floors or hang on walls; ladders only hang on walls
-      if (t.face[1] === -1 || (placeId !== B.TORCH && t.face[1] === 1)) return false;
-      if (t.face[1] === 0) { const s = sideOf(-t.face[0], -t.face[2]); meta = placeId === B.TORCH ? 1 + s : s; }
+      if (t.face[1] === -1 || (!torch && t.face[1] === 1)) return false;
+      if (t.face[1] === 0) { const s = sideOf(-t.face[0], -t.face[2]); meta = torch ? 1 + s : s; }
+    }
+    if (CIRCUIT_PLACE.has(placeId)) {
+      // levers and buttons go on any face; wire, repeaters and plates on top; pistons face the player
+      meta = circuitPlaceMeta(placeId, t.face, [ldx, ldy, ldz]);
+      if (meta < 0) return false;
     }
     if (placeId === B.ANVIL) meta = Math.abs(ldx) > Math.abs(ldz) ? 1 : 0; // the long side faces across the player's view
     if (BLOCKS[placeId].needsSupport && !w.hasSupport(px, py, pz, placeId, meta)) return false;
@@ -813,7 +832,7 @@ export class Interaction {
 
   pickBlock(id) {
     const inv = this.game.player.inventory;
-    const asItem = { [B.DOOR]: I.OAK_DOOR, [B.BED]: I.BED, [B.WHEAT]: I.WHEAT_SEEDS, [B.MELON_STEM]: I.MELON_SEEDS, [B.PUMPKIN_STEM]: I.PUMPKIN_SEEDS, [B.CARROTS]: I.CARROT, [B.POTATOES]: I.POTATO, [B.BEETROOTS]: I.BEETROOT_SEEDS, [B.FURNACE_LIT]: B.FURNACE, [B.FARMLAND]: B.DIRT, [B.CINDERROOT]: I.CINDERROOT };
+    const asItem = { [B.CINNABAR_WIRE]: I.CINNABAR, [B.CINNABAR_TORCH_OFF]: B.CINNABAR_TORCH, [B.CINNABAR_LAMP_ON]: B.CINNABAR_LAMP, [B.DOOR]: I.OAK_DOOR, [B.BED]: I.BED, [B.WHEAT]: I.WHEAT_SEEDS, [B.MELON_STEM]: I.MELON_SEEDS, [B.PUMPKIN_STEM]: I.PUMPKIN_SEEDS, [B.CARROTS]: I.CARROT, [B.POTATOES]: I.POTATO, [B.BEETROOTS]: I.BEETROOT_SEEDS, [B.FURNACE_LIT]: B.FURNACE, [B.FARMLAND]: B.DIRT, [B.CINDERROOT]: I.CINDERROOT };
     const want = asItem[id] ?? id;
     for (let i = 0; i < 9; i++) if (inv.slots[i] && inv.slots[i].id === want) { inv.selected = i; return; }
     if (this.game.player.creative && ITEMS[want]) {

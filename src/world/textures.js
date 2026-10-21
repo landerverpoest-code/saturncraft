@@ -4,6 +4,7 @@ import { BLOCKS, B } from './blocks.js';
 import { ARTS, paintingPart } from './paintings.js';
 import { mulberry32, hash4 } from './noise.js';
 import { DIM_TEX } from './dimensions/dimTextures.js';
+import { CIRCUIT_TEX } from './circuitTextures.js';
 
 export const TEX_SIZE = 16;
 
@@ -30,6 +31,7 @@ for (let i = 0; i < 4; i++) { addTex('potatoes_' + i); addTex('beetroots_' + i);
 for (let i = 0; i < 8; i++) addTex('stem_' + i);
 addTex('water_flow');
 addTex('rail_corner');
+for (const n of Object.keys(CIRCUIT_TEX)) addTex(n); // circuit parts (world/circuitTextures.js)
 ARTS.forEach(([, w, h], art) => { for (let p = 0; p < w * h; p++) addTex(`painting_${art}_${p}`); });
 for (let i = 0; i < 8; i++) addTex('fire_' + i);
 addTex('lava_flow');
@@ -911,6 +913,7 @@ function paint(c, name) {
   else if (name.startsWith('bed_head_top_') || name.startsWith('bed_foot_top_')) bedTop(c, name.startsWith('bed_head'), +name.slice(-1));
   else if (GEN[name]) GEN[name](c);
   else if (DIM_TEX[name]) DIM_TEX[name](c, { hex, mix, shade });
+  else if (CIRCUIT_TEX[name]) CIRCUIT_TEX[name](c, { hex, mix, shade, gen: GEN, planks });
   else c.noiseFill(P.stone);
 }
 

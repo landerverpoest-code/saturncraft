@@ -102,6 +102,11 @@ export class Audio {
     else if (name.startsWith('hit_')) this.noise(t, 0.06, matFreq, 2, 0.25 * gain, out);
     else if (name.startsWith('place_')) this.noise(t, 0.1, matFreq * 0.8, 1.5, 0.5 * gain, out);
     else if (name.startsWith('step_')) this.noise(t, 0.07, matFreq * 0.7, 1.5, 0.12 * gain, out);
+    else if (name.startsWith('chime_')) {
+      // chime block: 25 semitones from F#3 like the reference note block, a bell-like pair of sines
+      const f = 185 * Math.pow(2, (+name.slice(6) || 0) / 12);
+      this.tone(t, 0.9, f, f * 0.995, 0.22 * gain, out, 'sine'); this.tone(t, 0.5, f * 2.01, f * 2, 0.07 * gain, out, 'sine');
+    }
     else switch (name) {
       case 'pop': this.tone(t, 0.08, 600 + Math.random() * 400, 1400, 0.2 * gain, out, 'triangle'); break;
       case 'eat': this.noise(t, 0.08, 1800, 3, 0.25 * gain, out); break;
@@ -129,6 +134,9 @@ export class Audio {
       case 'bucket_fill': this.noise(t, 0.3, 900, 1, 0.3 * gain, out); break;
       case 'fizz': this.noise(t, 0.5, 4000, 1, 0.3 * gain, out, 'highpass'); break;
       case 'click': this.tone(t, 0.04, 1200, 900, 0.15 * gain, out, 'square'); break;
+      case 'piston_out': this.noise(t, 0.16, 700, 1.2, 0.45 * gain, out, 'lowpass'); this.tone(t, 0.12, 180, 260, 0.15 * gain, out, 'triangle'); break;
+      case 'piston_in': this.noise(t, 0.14, 600, 1.2, 0.4 * gain, out, 'lowpass'); this.tone(t, 0.12, 260, 160, 0.15 * gain, out, 'triangle'); break;
+      case 'burnout': this.noise(t, 0.3, 4500, 1, 0.2 * gain, out, 'highpass'); break;
       case 'door_open': this.noise(t, 0.12, 900, 2, 0.25 * gain, out); this.tone(t, 0.18, 220, 300, 0.12 * gain, out, 'triangle'); break;
       case 'door_close': this.noise(t, 0.07, 600, 1.5, 0.4 * gain, out, 'lowpass'); this.tone(t, 0.08, 160, 110, 0.15 * gain, out, 'triangle'); break;
       case 'orb': this.tone(t, 0.12, 1200 + Math.random() * 500, 1800, 0.12 * gain, out, 'sine'); break;

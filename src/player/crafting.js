@@ -87,6 +87,18 @@ shaped(['CCC', 'CCC'], { C: B.MOSSY_COBBLESTONE }, B.MOSSY_COBBLESTONE_WALL, 6);
 shaped(['PPP', 'PPP'], { P: 'planks' }, B.OAK_TRAPDOOR, 2);
 shaped(['BBB'], { B: B.SNOW_BLOCK }, B.SNOW_LAYER, 6);
 shaped(['P P', ' P '], { P: 'planks' }, I.BOWL, 4);
+// Cinnabar circuitry (reference recipes; the lamp uses Glowshard for the glowing block)
+shaped(['C', 'S'], { C: I.CINNABAR, S: I.STICK }, B.CINNABAR_TORCH, 1);
+shaped(['S', 'C'], { S: I.STICK, C: B.COBBLESTONE }, B.LEVER, 1);
+shapeless([B.STONE], B.STONE_BUTTON, 1);
+shaped(['PP'], { P: 'planks' }, B.WOODEN_PRESSURE_PLATE, 1);
+shaped([' C ', 'CGC', ' C '], { C: I.CINNABAR, G: B.GLOWSHARD }, B.CINNABAR_LAMP, 1);
+shaped(['TCT', 'SSS'], { T: B.CINNABAR_TORCH, C: I.CINNABAR, S: B.STONE }, B.REPEATER, 1);
+shaped(['PPP', 'CIC', 'CRC'], { P: 'planks', C: 'stone_mat', I: I.IRON_INGOT, R: I.CINNABAR }, B.PISTON, 1);
+shaped(['S', 'P'], { S: I.SLIMEBALL, P: B.PISTON }, B.STICKY_PISTON, 1);
+shaped(['PPP', 'PCP', 'PPP'], { P: 'planks', C: I.CINNABAR }, B.CHIME_BLOCK, 1);
+shaped(['CCC', 'CCC', 'CCC'], { C: I.CINNABAR }, B.CINNABAR_BLOCK, 1);
+shapeless([B.CINNABAR_BLOCK], I.CINNABAR, 9);
 shapeless([I.BOWL, I.BEETROOT, I.BEETROOT, I.BEETROOT, I.BEETROOT, I.BEETROOT, I.BEETROOT], I.BEETROOT_SOUP);
 for (const [planks, fence] of [[B.OAK_PLANKS, B.OAK_FENCE], [B.SPRUCE_PLANKS, B.SPRUCE_FENCE], [B.BIRCH_PLANKS, B.BIRCH_FENCE]]) shaped(['PSP', 'PSP'], { P: planks, S: I.STICK }, fence, 3);
 shaped(['SPS', 'SPS'], { P: 'planks', S: I.STICK }, B.OAK_FENCE_GATE, 1);

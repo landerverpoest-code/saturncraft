@@ -7,7 +7,7 @@ import { canStack, hasEnch, isEnchantable, countBookshelves, tableOffers, rollOf
 import { spendLevels } from '../player/experience.js';
 import { mulberry32 } from '../world/noise.js';
 import { craft, RECIPES, recipeLayout, chooseIngredients } from '../player/crafting.js';
-import { B } from '../world/blocks.js';
+import { B, BLOCKS } from '../world/blocks.js';
 import { canTrade, doTrade, MAX_USES } from '../mobs/trades.js';
 import { MILESTONES } from '../player/milestones.js';
 import { loadPlayerName } from '../net/protocol.js';
@@ -693,7 +693,7 @@ export class UI {
     this.game.input.unlock();
     const g = this.game, inv = g.player.inventory;
     const hidden = new Set([B.AIR, B.CINDERROOT, B.WATER, B.LAVA, B.FURNACE_LIT, B.WHEAT, B.CARROTS, B.POTATOES, B.BEETROOTS, B.MELON_STEM, B.PUMPKIN_STEM, B.DOOR, B.BED, B.FIRE, B.PAINTING, B.PAINTING_B, B.OAK_WALL_SIGN, B.COCOA]);
-    const all = ITEMS.filter((d) => d && d.id && !hidden.has(d.id));
+    const all = ITEMS.filter((d) => d && d.id && !hidden.has(d.id) && !(d.block && BLOCKS[d.block] && BLOCKS[d.block].hidden));
     this.showContainer('creative', 'Creative Inventory', (panel) => {
       const search = el('<input class="creative-search" placeholder="Search items...">');
       search.addEventListener('keydown', (e) => e.stopPropagation());

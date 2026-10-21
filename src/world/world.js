@@ -11,6 +11,7 @@ import { createGenerator } from './dimensions/dims.js';
 import { LEAVES as LEAVES_SET } from './trees.js';
 import { railSupported } from './rails.js';
 import { paintingIntact } from './paintings.js';
+import { Circuits, CIRCUIT_BLOCK, CIRCUIT_REACT, CIRCUIT_SETTLE, supported as circuitSupported } from './circuits.js';
 import { SIDE_DIRS, selectionBox, collisionBoxes, SHAPED_COLLISION, DOOR_UPPER, BED_HEAD } from './shapes.js';
 
 export function chunkKey(cx, cz) { return (cx + 32768) * 65536 + (cz + 32768); }
@@ -30,8 +31,12 @@ export class Chunk {
     }
     // monster spawner positions (for the spawner logic)
     this.spawners = new Set();
-    for (let i = 0; i < this.blocks.length; i++) if (this.blocks[i] === B.SPAWNER) {
-      this.spawners.add(`${cx * 16 + (i & 15)},${MIN_Y + (i >> 8)},${cz * 16 + ((i >> 4) & 15)}`);
+    // circuit parts (re-evaluated when the chunk loads: scheduled ticks are not saved)
+    this.circuits = new Set();
+    for (let i = 0; i < this.blocks.length; i++) {
+      const b = this.blocks[i];
+      if (b === B.SPAWNER) this.spawners.add(`${cx * 16 + (i & 15)},${MIN_Y + (i >> 8)},${cz * 16 + ((i >> 4) & 15)}`);
+      else if (CIRCUIT_SETTLE[b]) this.circuits.add(i);
     }
     this.dirty = new Set();
     for (let s = 0; s < SECTION_COUNT; s++) this.dirty.add(s);
@@ -50,7 +55,8 @@ export class World {
     this.gen = new TerrainGenerator(seed); // main-thread copy for spawn search
     this.scheduled = new Map();  // posKey -> {x,y,z,tick}
     this.tickCount = 0;
-    this.listeners = { blockChanged: [], fallingBlock: [], dropItems: [], fireCrackle: [] };
+    this.listeners = { blockChanged: [], fallingBlock: [], dropItems: [], fireCrackle: [], pistonMoved: [], circuitFx: [] };
+    this.circuits = new Circuits(this); // Cinnabar circuitry (host / single player only)
     this._lastKey = -1; this._lastChunk = null;
   }
 
@@ -63,6 +69,7 @@ export class World {
     this.chunks = new Map();
     this.saved = saved;
     this.scheduled = new Map();
+    this.circuits.reset();
     this._lastKey = -1; this._lastChunk = null;
   }
 
@@ -156,6 +163,7 @@ export class World {
     c.meta[i] = meta;
     if (old === B.SPAWNER) c.spawners.delete(`${x},${y},${z}`);
     if (id === B.SPAWNER) c.spawners.add(`${x},${y},${z}`);
+    if (CIRCUIT_SETTLE[id]) c.circuits.add(i);
     c.modified = true;
     const s = (y - MIN_Y) >> 4;
     if (!old && id) c.sectionNonAir[s]++;
@@ -177,6 +185,7 @@ export class World {
       this.onNeighborChanged(x, y + 1, z); this.onNeighborChanged(x, y - 1, z);
       this.onNeighborChanged(x, y, z + 1); this.onNeighborChanged(x, y, z - 1);
     }
+    if (CIRCUIT_BLOCK[old] || CIRCUIT_BLOCK[id]) this.circuits.blockChanged(x, y, z, old, id);
     return true;
   }
 
@@ -207,6 +216,7 @@ export class World {
     } else if (id === B.FARMLAND && SOLID[this.getBlock(x, y + 1, z)]) {
       this.setBlock(x, y, z, B.DIRT, 0);
     }
+    if (CIRCUIT_REACT[this.getBlock(x, y, z)]) this.circuits.enqueue(x, y, z);
   }
 
   hasSupport(x, y, z, id, metaIn) {
@@ -226,6 +236,7 @@ export class World {
     }
     if (id === B.LILY_PAD) return below === B.WATER || below === B.ICE;
     if (id === B.BROWN_MUSHROOM || id === B.RED_MUSHROOM) return !!(SOLID[below] && OPAQUE[below]);
+    if (BLOCKS[id].circuitPart) return circuitSupported(this, x, y, z, id, metaIn ?? this.getMeta(x, y, z));
     if (id === B.TORCH || id === B.LADDER) {
       const meta = metaIn ?? this.getMeta(x, y, z);
       const side = id === B.TORCH ? meta - 1 : meta & 3;
@@ -278,7 +289,7 @@ export class World {
   /** Run scheduled block ticks that are due. */
   tick() {
     this.tickCount++;
-    if (!this.scheduled.size) return;
+    if (!this.scheduled.size) { if (this.circuits.queue.size) this.circuits.drain(); return; }
     const due = [];
     for (const [k, t] of this.scheduled) if (t.tick <= this.tickCount) { due.push(t); this.scheduled.delete(k); }
     // cap work per tick
@@ -296,8 +307,9 @@ export class World {
           this.setBlock(t.x, t.y, t.z, B.AIR);
           this.emit('fallingBlock', t.x, t.y, t.z, id);
         }
-      }
+      } else if (CIRCUIT_BLOCK[id]) this.circuits.tick(t.x, t.y, t.z, id);
     }
+    this.circuits.drain();
   }
 
   /** Voxel DDA raycast. Returns {x,y,z,id,face:[nx,ny,nz],dist} or null. */
@@ -336,6 +348,16 @@ export class World {
     this.chunks.set(k, c);
     this._lastKey = -1;
     this.light.stitchChunk(cx, cz);
+    // circuits here and on the borders of the neighbours settle again (scheduled ticks are not saved)
+    if (this.circuits.enabled) {
+      for (const [ox, oz] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const n = this.getChunk(cx + ox, cz + oz);
+        if (!n || !n.circuits.size) continue;
+        const pos = [];
+        for (const i of n.circuits) pos.push([(cx + ox) * 16 + (i & 15), MIN_Y + (i >> 8), (cz + oz) * 16 + ((i >> 4) & 15)]);
+        this.circuits.settle(pos);
+      }
+    }
     // resume pending fluid ticks for saved chunks is not needed: fluids settle before unload
     return c;
   }

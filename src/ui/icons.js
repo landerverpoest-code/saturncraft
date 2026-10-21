@@ -43,6 +43,7 @@ function blockIcon(b, forceTint = null) {
     return c;
   }
   if (b.shape === SHAPE.TRAPDOOR) { ctx.drawImage(texCanvas(b.tex.side), 0, 0, 32, 32); return c; }
+  if (b.shape === SHAPE.CIRCUIT && b.tex.top !== 'piston_top' && b.tex.top !== 'piston_top_sticky') return circuitIcon(ctx, c, b);
   if (b.shape === SHAPE.CROSS || b.shape === SHAPE.TORCH || b.shape === SHAPE.LADDER || b.shape === SHAPE.PANE || b.shape === SHAPE.PAD) {
     ctx.drawImage(texCanvas(b.tex.side, b.tint ? GRASS_TINT : null), 0, 0, 32, 32);
     return c;
@@ -57,6 +58,26 @@ function blockIcon(b, forceTint = null) {
   // right face
   ctx.save(); ctx.setTransform(1, -0.5, 0, 1, 16, 17); ctx.drawImage(side, 0, 0, 16, 16);
   ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(0, 0, 16, 16); ctx.restore();
+  return c;
+}
+
+/** Flat icons of the small circuit parts: lever, button, pressure plate, repeater. */
+function circuitIcon(ctx, c, b) {
+  const tex = (name, sx, sy, sw, sh, dx, dy, dw, dh) => ctx.drawImage(texCanvas(name), sx, sy, sw, sh, dx, dy, dw, dh);
+  const outline = (x, y, w, h) => { ctx.strokeStyle = 'rgba(20,20,20,0.7)'; ctx.lineWidth = 2; ctx.strokeRect(x + 1, y + 1, w - 2, h - 2); };
+  if (b.name === 'Lever') {
+    ctx.fillStyle = '#6a4a28';
+    for (let k = 0; k < 9; k++) ctx.fillRect(14 + k, 22 - k * 2, 3, 3);
+    ctx.fillStyle = '#a8845a'; ctx.fillRect(22, 4, 4, 4);
+    tex('cobblestone', 0, 0, 16, 6, 6, 20, 20, 8); outline(6, 20, 20, 8);
+  } else if (b.name === 'Stone Button') {
+    tex('stone', 0, 0, 12, 8, 7, 11, 18, 10); outline(7, 11, 18, 10);
+  } else if (b.name === 'Wooden Pressure Plate') {
+    tex('oak_planks', 0, 0, 16, 4, 2, 18, 28, 7); outline(2, 18, 28, 7);
+  } else {
+    tex('repeater', 0, 0, 16, 16, 2, 2, 28, 28); outline(2, 2, 28, 28);
+    ctx.fillStyle = '#e02a18'; ctx.fillRect(14, 4, 4, 4); ctx.fillRect(14, 18, 4, 4);
+  }
   return c;
 }
 

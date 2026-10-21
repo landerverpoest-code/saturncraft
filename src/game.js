@@ -45,6 +45,8 @@ import { DIMENSIONS } from './world/dimensions/dims.js';
 import { EnchantBooks } from './render/enchantBooks.js';
 import { newStand, tickStand } from './world/brewing.js';
 import { effectsColor } from './player/effects.js';
+import { changeSound, CIRCUIT_BLOCK } from './world/circuits.js';
+import { FACING6 } from './world/circuitShapes.js';
 
 // Spherical (radial distance) fog instead of view-depth fog, so chunk edges never show at screen corners
 THREE.ShaderChunk.fog_vertex = `#ifdef USE_FOG
@@ -139,6 +141,7 @@ export class Game {
 
     this.world.on('fallingBlock', (x, y, z, id) => this.entities.spawnFallingBlock(x, y, z, id));
     this.world.on('fireCrackle', (x, y, z) => this.audio.play('fire', [x + 0.5, y + 0.5, z + 0.5]));
+    this.initCircuits();
     this.world.on('dropItems', (x, y, z, id, meta) => {
       if (this.net && this.net.applyingRemote) return; // the player who made the edit gets the drops
       for (const st of blockDrops(id, toolOf(null), Math.random, meta)) this.entities.spawnItem(x + 0.5, y + 0.3, z + 0.5, st);
@@ -637,6 +640,60 @@ export class Game {
     while (this.acc >= TICK_MS) { this.tick(); this.acc -= TICK_MS; }
   }
 
+  // ---- Cinnabar circuitry (world/circuits.js) ------------------------------
+  initCircuits() {
+    const w = this.world, ci = w.circuits;
+    ci.entitiesOn = (x, y, z) => this.feetPositions().some(([ex, ey, ez]) => Math.floor(ex) === x && Math.floor(ey + 0.05) === y && Math.floor(ez) === z);
+    // sounds of changes made by the circuits (here, or on the host when we are a guest)
+    const OPENABLE = new Set([B.DOOR, B.OAK_TRAPDOOR, B.OAK_FENCE_GATE]);
+    w.on('blockChanged', (x, y, z, old, id) => {
+      if (!(CIRCUIT_BLOCK[old] || CIRCUIT_BLOCK[id] || OPENABLE.has(id))) return;
+      if (!ci.acting && !(this.net && this.net.applyingRemote)) return;
+      const s = changeSound(w, x, y, z, old, id);
+      if (s) this.audio.play(s, [x + 0.5, y + 0.5, z + 0.5]);
+    });
+    w.on('circuitFx', (x, y, z, kind) => {
+      if (kind === 'burnout') { this.particles.smoke(x + 0.5, y + 0.7, z + 0.5, 6, 0.3); this.audio.play('burnout', [x + 0.5, y + 0.5, z + 0.5]); }
+    });
+    // an extending piston shoves whoever stands where the blocks go
+    w.on('pistonMoved', (x, y, z, f, n, out) => {
+      if (!out) return;
+      const [dx, dy, dz] = FACING6[f];
+      const bodies = [this.player.body, ...this.entities.list.filter((e) => e.body && !e.dead).map((e) => e.body)];
+      for (const b of bodies) {
+        const [x0, y0, z0, x1, y1, z1] = b.aabb ? b.aabb() : [b.x - b.width / 2, b.y, b.z - b.width / 2, b.x + b.width / 2, b.y + b.height, b.z + b.width / 2];
+        for (let i = 1; i <= n + 1; i++) {
+          const cx = x + dx * i, cy = y + dy * i, cz = z + dz * i;
+          if (x1 > cx && x0 < cx + 1 && y1 > cy && y0 < cy + 1 && z1 > cz && z0 < cz + 1) {
+            b.setPos(b.x + dx, b.y + dy * 1.01, b.z + dz);
+            if (dy > 0) b.vy = Math.max(b.vy || 0, 0);
+            break;
+          }
+        }
+      }
+    });
+  }
+
+  /** Feet of everyone who can press a plate: the player, mobs, items, other players. */
+  feetPositions() {
+    const out = [];
+    const p = this.player;
+    if (!p.dead && !p.spectator) out.push([p.x, p.y, p.z]);
+    for (const e of this.entities.list) if (!e.dead && e.body) out.push([e.x, e.y, e.z]);
+    if (this.net && this.net.isHost) for (const rp of this.net.remotes.values()) if (rp.state) out.push([rp.state.x, rp.state.y, rp.state.z]);
+    return out;
+  }
+
+  tickCircuits() {
+    const w = this.world, ci = w.circuits;
+    ci.enabled = !(this.net && this.net.isClient); // guests apply the host's results
+    if (!ci.enabled) { if (ci.queue.size) ci.queue.clear(); return; }
+    for (const [ex, ey, ez] of this.feetPositions()) {
+      const bx = Math.floor(ex), by = Math.floor(ey + 0.05), bz = Math.floor(ez);
+      if (w.getBlock(bx, by, bz) === B.WOODEN_PRESSURE_PLATE) ci.press(bx, by, bz);
+    }
+  }
+
   // -------------------------------------------------------------------------
   tick() {
     this.ticks++;
@@ -646,6 +703,7 @@ export class Game {
     const inp = this.input;
     const blocking = this.ui.blocking;
     const mv = blocking ? { forward: 0, strafe: 0, jump: false, sneak: false, sprint: false } : inp.movement();
+    this.tickCircuits();
     this.world.tick();
     this.weather.tick();
     const overworld = this.world.dimension === 'overworld';

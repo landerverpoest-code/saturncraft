@@ -50,7 +50,7 @@ item('raw_copper', 'Raw Copper');
 item('copper_ingot', 'Copper Ingot');
 item('raw_gold', 'Raw Gold');
 item('gold_ingot', 'Gold Ingot');
-item('cinnabar', 'Cinnabar Dust');
+item('cinnabar', 'Cinnabar Dust', { places: B.CINNABAR_WIRE }); // laid down as Cinnabar Wire
 item('azurite', 'Azurite');
 item('diamond', 'Diamond');
 item('beryl', 'Beryl');
