@@ -7,7 +7,8 @@ export const terrainUniforms = {
   uAtlas: { value: null },
   uTorch: { value: new THREE.Color(1.0, 0.82, 0.6) },
   uMinLight: { value: 0.035 },
-  uHand: { value: 0 }, // light level of what the player holds (a torch lights the area around them)
+  uHand: { value: 0 },
+  uWind: { value: 1 }, // how hard plants and leaves sway (stronger in storms) // light level of what the player holds (a torch lights the area around them)
   uTime: { value: 0 },
   uFire: { value: texId('fire') },
   uFireFrames: { value: texId('fire_0') },
@@ -39,10 +40,21 @@ varying vec2 vTuv;
 varying vec3 vLit;
 varying float vShade;
 flat varying float vTile;
-uniform float uTime;`)
+uniform float uTime;
+uniform float uWind;`)
       .replace('#include <begin_vertex>', `#include <begin_vertex>
 vTuv = tuv;
-vLit = vec3(lit.x / 255.0, lit.y / 255.0, lit.z);
+float wave = floor(lit.z / 4.0 + 0.01);
+vLit = vec3(lit.x / 255.0, lit.y / 255.0, lit.z - wave * 4.0);
+if (wave > 0.5) {
+  // plants sway at the top, leaves rustle a little, in a breeze that rolls across the land
+  vec4 wp = modelMatrix * vec4(position, 1.0);
+  float amp = (wave > 1.5 ? 0.075 : 0.022) * uWind;
+  float ph = uTime * 1.7 + wp.x * 0.37 + wp.z * 0.23;
+  transformed.x += sin(ph) * amp + sin(ph * 2.3 + wp.y) * amp * 0.35;
+  transformed.z += cos(ph * 0.83 + wp.x * 0.11) * amp * 0.7;
+  if (wave < 1.5) transformed.y += sin(ph * 1.9 + wp.z) * amp * 0.4;
+}
 vTile = lit.w;
 vShade = abs(normal.y) > 0.5 ? (normal.y > 0.0 ? 1.0 : 0.55) : (abs(normal.z) > 0.5 ? 0.82 : 0.68);
 `);

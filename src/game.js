@@ -960,6 +960,7 @@ export class Game {
     const hb = hd ? BLOCKS[hd.block ?? hd.places] : null;
     this.handLight = hb && hb.emit ? hb.emit : 0;
     terrainUniforms.uHand.value = this.handLight;
+    terrainUniforms.uWind.value = 1 + wlevel * 1.2 + (this.weather.storm || 0) * 1.2; // plants sway harder in rain and storms
     const R = this.chunks.renderDistance * 16;
     this.clouds.update(this.camera, smoothTime, this.sky, Math.max(192, R * 1.8));
     if (this.signRenderer) this.signRenderer.update();

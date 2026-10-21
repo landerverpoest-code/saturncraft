@@ -101,6 +101,9 @@ class Buf {
   }
 }
 
+// wind: vertex 'ao' values carry a sway flag on top of the 0-3 occlusion (terrainMaterial.js decodes it)
+const WAVE_LEAF = 4, WAVE_TOP = 8;
+
 const opaqueBuf = new Buf();
 const cutoutBuf = new Buf(4096); // alpha-tested (leaves, plants, glass, torches)
 const transBuf = new Buf(4096);
@@ -128,6 +131,7 @@ export function meshSection(sec) {
     const buf = LAYERS[id] === LAYER.TRANSLUCENT ? transBuf : LAYERS[id] === LAYER.CUTOUT ? cutoutBuf : opaqueBuf;
     const ci = (x + z * 16) * 6;
     if (shape === SHAPE.CUBE) {
+      const leafWave = LEAVES.has(id) ? WAVE_LEAF : 0;
       const translucent = !OPAQUE[id];
       for (let d = 0; d < 6; d++) {
         const ni = i + FACE_N[d];
@@ -169,7 +173,7 @@ export function meshSection(sec) {
           const [s, t] = CORNERS[k];
           buf.vert(
             x + f.o[0] + s * f.u[0] + t * f.v[0], y + f.o[1] + s * f.u[1] + t * f.v[1], z + f.o[2] + s * f.u[2] + t * f.v[2],
-            f.n[0], f.n[1], f.n[2], s, 1 - t, r, g, b2, sk[k], bl[k], ao[k], tile);
+            f.n[0], f.n[1], f.n[2], s, 1 - t, r, g, b2, sk[k], bl[k], ao[k] + leafWave, tile);
         }
         buf.quad(ao[0] + ao[2] > ao[1] + ao[3]);
       }
@@ -188,8 +192,8 @@ export function meshSection(sec) {
         for (let side = 0; side < 2; side++) {
           buf.vert(x1, y, z1, 0, 1, 0, 0, 1, r, g, b2, sky, blk, 0, tile);
           buf.vert(x2, y, z2, 0, 1, 0, 1, 1, r, g, b2, sky, blk, 0, tile);
-          buf.vert(x2, y + 1, z2, 0, 1, 0, 1, 0, r, g, b2, sky, blk, 0, tile);
-          buf.vert(x1, y + 1, z1, 0, 1, 0, 0, 0, r, g, b2, sky, blk, 0, tile);
+          buf.vert(x2, y + 1, z2, 0, 1, 0, 1, 0, r, g, b2, sky, blk, WAVE_TOP, tile);
+          buf.vert(x1, y + 1, z1, 0, 1, 0, 0, 0, r, g, b2, sky, blk, WAVE_TOP, tile);
           buf.quad(false);
           if (side === 0) {
             // reverse winding for the back side
