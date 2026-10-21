@@ -114,6 +114,7 @@ export class Audio {
       case 'hurt': this.tone(t, 0.18, 320, 140, 0.35 * gain, out, 'square'); this.noise(t, 0.1, 800, 1, 0.2 * gain, out); break;
       case 'mob_hurt': this.tone(t, 0.15, 500 + Math.random() * 200, 200, 0.25 * gain, out, 'sawtooth'); break;
       case 'mob_death': this.tone(t, 0.4, 400, 60, 0.3 * gain, out, 'sawtooth'); break;
+      case 'buzz': this.tone(t, 0.6, 210 + Math.random() * 30, 230, 0.05 * gain, out, 'sawtooth'); break;
       case 'bleat': this.tone(t, 0.3, 520 + Math.random() * 80, 470, 0.14 * gain, out, 'sawtooth'); this.tone(t, 0.3, 530, 480, 0.06 * gain, out, 'square'); break;
       case 'ram': this.noise(t, 0.18, 300, 1, 0.4 * gain, out); this.tone(t, 0.12, 90, 50, 0.3 * gain, out, 'sine'); break;
       case 'horn': this.tone(t, 2.2, 196, 207, 0.22 * gain, out, 'sawtooth'); this.tone(t, 2.2, 294, 300, 0.12 * gain, out, 'sawtooth'); this.tone(t + 0.1, 2.0, 392, 380, 0.06 * gain, out, 'triangle'); break;

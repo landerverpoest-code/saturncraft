@@ -3,7 +3,7 @@
 // teleporter.
 import { Body } from '../physics/body.js';
 import { fallDamage } from '../physics/constants.js';
-import { B, SOLID } from '../world/blocks.js';
+import { B, SOLID, CROPS } from '../world/blocks.js';
 import { I } from '../world/items.js';
 import { MOBS, CATEGORY } from './mobTypes.js';
 import { BIOMES } from '../world/biomes.js';
@@ -30,6 +30,9 @@ const CAT_COATS = [['#c8883a', '#a86a2a'], ['#8a8a86', '#5a5a56'], ['#2a2626', '
 
 /** Blocks that knock a horn off a charging Cragbuck. */
 const HORN_BREAKERS = new Set([B.STONE, B.COBBLESTONE, B.OAK_LOG, B.BIRCH_LOG, B.SPRUCE_LOG, B.JUNGLE_LOG, B.ACACIA_LOG, B.DARK_OAK_LOG, B.COAL_ORE, B.IRON_ORE, B.GOLD_ORE, B.DIAMOND_ORE, B.ICE, B.GRANITE].filter((id) => id !== undefined));
+
+const HIVES = new Set([B.BEE_NEST, B.BEEHIVE]);
+const BEE_FLOWERS = new Set([B.SUNPETAL, B.REDBLOOM, B.SKYBELL, B.ROSETTE]);
 
 export class Mob {
   constructor(type, x, y, z) {
@@ -99,13 +102,14 @@ export class Mob {
   }
 
   /** State kept when the mob is saved with its chunk. */
-  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor, profession: this.profession, trades: this.trades, home: this.home, lastRestock: this.lastRestock, size: this.size, coat: this.coat, temper: this.temper, saddled: this.saddled, maxHp: this.maxHp, playerMade: this.playerMade, tamed: this.tamed, sitting: this.sitting, ownerName: this.ownerName, horns: this.horns }; }
+  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor, profession: this.profession, trades: this.trades, home: this.home, lastRestock: this.lastRestock, size: this.size, coat: this.coat, temper: this.temper, saddled: this.saddled, maxHp: this.maxHp, playerMade: this.playerMade, tamed: this.tamed, sitting: this.sitting, ownerName: this.ownerName, horns: this.horns, hive: this.hive, nectar: this.nectar }; }
   loadData(s) {
     this.health = s.health; this.yaw = s.yaw;
     if (s.age < 0) { this.setBaby(true); this.age = s.age; } else this.age = s.age || 0;
     this.sheared = !!s.sheared;
     if (s.woolColor !== undefined) this.woolColor = s.woolColor;
     if (s.horns !== undefined) this.horns = s.horns;
+    if (s.hive) { this.hive = s.hive; this.nectar = !!s.nectar; }
     if (s.playerMade) this.playerMade = true;
     if (s.size) { this.setSize(s.size); this.health = s.health; }
     if (this.type === 'galloper') { if (s.coat !== undefined) this.coat = s.coat; this.temper = s.temper || 0; this.saddled = !!s.saddled; if (s.maxHp) this.maxHp = s.maxHp; }
@@ -265,6 +269,10 @@ export class Mob {
       if (g) for (let k = 0; k < 20; k++) g.particles.emit(this.x, this.y + 0.4, this.z, (Math.random() - 0.5) * 0.3, (Math.random() - 0.5) * 0.3, (Math.random() - 0.5) * 0.3, 0.05, 0.05, 0.08, 40, 0);
       this.panicTicks = 40;
       if (attacker) { const dx = this.x - attacker.x, dz = this.z - attacker.z, d = Math.hypot(dx, dz) || 1; this.swimDir = [dx / d, 0.2, dz / d]; }
+    } else if (this.def.bee) {
+      // one stung bee calls the others nearby
+      const foe = attacker && attacker.isPlayer ? 'player' : attacker;
+      if (foe && foe !== this && g && !this.stung) Mob.angerBees(g, this.x, this.y, this.z, foe);
     } else if (this.def.feline) {
       this.sitting = false; this.panicTicks = 60 + Math.floor(Math.random() * 40);
     } else if (this.def.tameable) {
@@ -503,6 +511,7 @@ export class Mob {
     if (this.def.fox) return this.foxAI(g, p, pdist);
     if (this.def.aquatic) return this.inklingAI(g);
     if (this.type === 'flitter') return this.flitterAI(g, p, pdist);
+    if (this.def.bee) return this.beeAI(g, p, pdist);
     if (this.def.snowGolem) return this.frostlingAI(g, p, pdist);
     if (this.def.guard) return this.guardAI(g, p, pdist);
     if (this.def.category === CATEGORY.CREATURE) return this.passiveAI(g);
@@ -694,6 +703,94 @@ export class Mob {
       if (Math.random() < 0.3) g.audio.play('bleat', [this.x, this.y + 1, this.z]);
     }
     this.passiveAI(g);
+  }
+
+  /**
+   * Buzzlings fly from their nest to flowers within 22 blocks, gather nectar
+   * (dusting crops they pass over) and bring it home: each delivery adds a
+   * level of honey (5 = full). They stay by the nest at night and in the rain.
+   * Angered ones chase their attacker and sting once (2 damage + Poison),
+   * losing the sting and dying soon after.
+   */
+  beeAI(g, p, pdist) {
+    const b = this.body, w = g.world;
+    const fly = (tx, ty, tz, sp = 0.09) => {
+      const dx = tx - this.x, dy = ty - this.y, dz = tz - this.z, d = Math.hypot(dx, dy, dz) || 1;
+      b.vx += ((dx / d) * sp - b.vx) * 0.2; b.vy += ((dy / d) * sp - b.vy) * 0.2 + Math.sin(g.ticks * 0.3 + this.id) * 0.004; b.vz += ((dz / d) * sp - b.vz) * 0.2;
+      this.yaw = Math.atan2(-dx, -dz);
+      return d;
+    };
+    if (this.stung && --this.stung <= 0) { this.hurt(100, 'generic'); return; }
+    if (this.hive && !HIVES.has(w.getBlock(this.hive.x, this.hive.y, this.hive.z))) this.hive = null;
+    // angry: chase and sting
+    if (this.angryTicks > 0) {
+      this.angryTicks--;
+      const t = this.enemy === 'player' ? p : this.enemy;
+      if (!t || t.dead || (t.deathTime | 0) > 0 || (this.enemy === 'player' && (p.creative || pdist > 24))) { this.angryTicks = 0; this.enemy = null; }
+      else if (!this.stung) {
+        const d = fly(t.x, t.y + (t.height || 1.8) * 0.5, t.z, 0.16);
+        if (d < 1.2 && this.attackCooldown <= 0) {
+          this.attackCooldown = 20;
+          if (this.enemy === 'player') { if (p.hurt(2, 'mob:' + this.def.name, this)) p.addEffect('poison', 200); }
+          else t.hurt(2, 'mob:' + this.def.name, this, 0.3);
+          this.stung = 600 + Math.floor(Math.random() * 600); this.angryTicks = 0; this.enemy = null;
+        }
+        return;
+      }
+    }
+    const h = this.hive, sheltering = !g.sky || g.sky.state.aboveCount < 2 || (w.rainingAt && w.rainingAt(Math.floor(this.x), Math.floor(this.y), Math.floor(this.z)));
+    if (h && (this.nectar || sheltering || (this.restTicks | 0) > 0)) {
+      // home: hover at the entrance; deliver nectar
+      const [fx, fz] = [[0, -1], [1, 0], [0, 1], [-1, 0]][w.getMeta(h.x, h.y, h.z) & 3];
+      const d = fly(h.x + 0.5 + fx * 0.9, h.y + 0.3, h.z + 0.5 + fz * 0.9, 0.08);
+      if (this.restTicks > 0) this.restTicks--;
+      if (this.nectar && d < 1.2) {
+        this.nectar = false; this.restTicks = 200 + Math.floor(Math.random() * 200);
+        const m = w.getMeta(h.x, h.y, h.z), lvl = (m >> 2) & 7;
+        if (lvl < 5) w.setBlockUrgent(h.x, h.y, h.z, w.getBlock(h.x, h.y, h.z), (m & 3) | ((lvl + 1) << 2));
+      }
+      return;
+    }
+    // looking for a flower
+    if (!this.flower && g.ticks % 20 === this.id % 20) {
+      const cx = h ? h.x : Math.floor(this.x), cy = h ? h.y : Math.floor(this.y), cz = h ? h.z : Math.floor(this.z);
+      for (let k = 0; k < 24 && !this.flower; k++) {
+        const x = cx + Math.floor(Math.random() * 45) - 22, z = cz + Math.floor(Math.random() * 45) - 22;
+        const y = w.heightAt(x, z) + 1;
+        if (Math.abs(y - cy) < 12 && BEE_FLOWERS.has(w.getBlock(x, y, z))) this.flower = { x, y, z, t: 0 };
+      }
+    }
+    const f = this.flower;
+    if (f) {
+      if (!BEE_FLOWERS.has(w.getBlock(f.x, f.y, f.z)) || ++f.t > 1200) { this.flower = null; return; }
+      const d = fly(f.x + 0.5, f.y + 0.7, f.z + 0.5, 0.08);
+      if (d < 0.6 && (f.sip = (f.sip | 0) + 1) > 100 + (this.id % 80)) { this.nectar = true; this.flower = null; }
+      return;
+    }
+    if (this.nectar && g.ticks % 10 === 0) {
+      // dust the crops below on the way
+      const x = Math.floor(this.x), z = Math.floor(this.z);
+      for (let y = Math.floor(this.y); y > Math.floor(this.y) - 3; y--) {
+        const id = w.getBlock(x, y, z);
+        if (CROPS.has(id) && Math.random() < 0.1) { const m = w.getMeta(x, y, z); if (m < 7) w.setBlockUrgent(x, y, z, id, m + 1); break; }
+        if (id) break;
+      }
+    }
+    if (!this.target3 || Math.random() < 0.02 || Math.hypot(this.target3[0] - this.x, this.target3[2] - this.z) < 1) {
+      const cx = h ? h.x : this.x, cz = h ? h.z : this.z;
+      this.target3 = [cx + (Math.random() - 0.5) * 12, (h ? h.y : this.y) + (Math.random() - 0.3) * 3, cz + (Math.random() - 0.5) * 12];
+    }
+    fly(...this.target3, 0.06);
+    if (Math.random() < 1 / 300) g.audio.play('buzz', [this.x, this.y, this.z], 0.5);
+  }
+
+  /** Bees of a nest (or near a spot) turn on whoever disturbed it. */
+  static angerBees(g, x, y, z, foe = 'player') {
+    for (const e of g.entities.list) {
+      if (!e.def || !e.def.bee || e.dead || e.stung) continue;
+      const home = e.hive && e.hive.x === x && e.hive.y === y && e.hive.z === z;
+      if (home || (e.x - x) ** 2 + (e.y - y) ** 2 + (e.z - z) ** 2 < 100) { e.angryTicks = 500 + Math.floor(Math.random() * 300); e.enemy = foe; }
+    }
   }
 
   endRam() { this.ram = null; this.headPitch = 0; this.ramCooldown = 600 + Math.floor(Math.random() * 5400); }

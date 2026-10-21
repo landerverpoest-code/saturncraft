@@ -48,6 +48,7 @@ const FURNACE_FRONT_DIR = [5, 0, 4, 1];
 // double chests: does the partner on the + side of the chest's axis sit at the viewer's right (front faces -z, +x, +z, -x)?
 const CHEST_SEAM_RIGHT = [false, false, true, true];
 const CHEST_FRONT_L = texId('chest_front_l'), CHEST_FRONT_R = texId('chest_front_r');
+const NEST_HONEY = texId('nest_front_honey'), HIVE_HONEY = texId('hive_front_honey');
 // crop textures per growth stage 0..7 (carrots have 4 visual stages)
 const CROP_TILES = { [B.WHEAT]: [0, 1, 2, 3, 4, 5, 6, 7].map((i) => texId('wheat_' + i)), [B.CARROTS]: [0, 0, 1, 1, 2, 2, 2, 3].map((i) => texId('carrots_' + i)),
   [B.MELON_STEM]: [0, 1, 2, 3, 4, 5, 6, 7].map((i) => texId('stem_' + i)), [B.PUMPKIN_STEM]: [0, 1, 2, 3, 4, 5, 6, 7].map((i) => texId('stem_' + i)),
@@ -153,6 +154,7 @@ export function meshSection(sec) {
         } else if (FRONT_TILE[id] >= 0 && d === FURNACE_FRONT_DIR[meta[i] & 3]) {
           tile = FRONT_TILE[id];
           if (id === B.CHEST && (meta[i] & 4)) tile = CHEST_SEAM_RIGHT[meta[i] & 3] === !!(meta[i] & 128) ? CHEST_FRONT_R : CHEST_FRONT_L;
+          else if ((id === B.BEE_NEST || id === B.BEEHIVE) && ((meta[i] >> 2) & 7) >= 5) tile = id === B.BEE_NEST ? NEST_HONEY : HIVE_HONEY; // dripping with honey
         }
         else if (id === B.FARMLAND && d === 2 && meta[i] > 0) tile = FARMLAND_MOIST;
         let r = 255, g = 255, b2 = 255;

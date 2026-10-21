@@ -31,6 +31,7 @@ for (let i = 0; i < 4; i++) { addTex('potatoes_' + i); addTex('beetroots_' + i);
 for (let i = 0; i < 8; i++) addTex('stem_' + i);
 addTex('water_flow');
 addTex('rail_corner');
+addTex('nest_front_honey'); addTex('hive_front_honey');
 addTex('chest_front_l'); addTex('chest_front_r'); // the halves of a double chest
 for (const n of Object.keys(CIRCUIT_TEX)) addTex(n); // circuit parts (world/circuitTextures.js)
 ARTS.forEach(([, w, h], art) => { for (let p = 0; p < w * h; p++) addTex(`painting_${art}_${p}`); });
@@ -652,6 +653,44 @@ const GEN = {
     for (let y = 5; y < 11; y++) c.set(5, y, hex('#6b4a2a'));
     for (let y = 4; y < 12; y++) c.set(11, y, hex('#6b4a2a'));
     c.set(10, 4, hex('#9a9a9a')); c.set(12, 4, hex('#9a9a9a')); c.set(11, 3, hex('#9a9a9a'));
+  },
+  nest_side: (c) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const band = ((y + (x >> 2)) >> 2) & 1, n = ((x * 13 + y * 7) % 5) * 0.03;
+      c.set(x, y, shade(hex(band ? '#d8a840' : '#c89030'), 0.94 + n));
+    }
+    for (let x = 0; x < 16; x++) { c.set(x, 0, hex('#8a6020')); c.set(x, 15, hex('#8a6020')); }
+  },
+  nest_top: (c) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const r = Math.hypot(x - 7.5, y - 7.5);
+      c.set(x, y, shade(hex('#c89030'), r % 3 < 1 ? 0.8 : 1));
+    }
+  },
+  nest_front: (c) => {
+    GEN.nest_side(c);
+    for (let y = 6; y < 10; y++) for (let x = 6; x < 10; x++) c.set(x, y, hex('#3a2410')); // the entrance
+  },
+  nest_front_honey: (c) => {
+    GEN.nest_front(c);
+    for (const [x, y0, l] of [[2, 1, 4], [5, 1, 2], [11, 1, 5], [13, 1, 3], [7, 10, 3]]) for (let y = y0; y < y0 + l; y++) c.set(x, y, hex(y === y0 + l - 1 ? '#ffb020' : '#f0a018'));
+  },
+  hive_side: (c) => {
+    planks(c, '#b8904e');
+    for (let x = 0; x < 16; x++) { c.set(x, 3, hex('#8a6430')); c.set(x, 4, hex('#a07a40')); }
+  },
+  hive_top: (c) => {
+    planks(c, '#c49a58');
+    const d = hex('#8a6430');
+    for (let i = 0; i < 16; i++) { c.set(i, 0, d); c.set(i, 15, d); c.set(0, i, d); c.set(15, i, d); }
+  },
+  hive_front: (c) => {
+    GEN.hive_side(c);
+    for (let y = 8; y < 11; y++) for (let x = 5; x < 11; x++) c.set(x, y, hex('#2a1a0a'));
+  },
+  hive_front_honey: (c) => {
+    GEN.hive_front(c);
+    for (const [x, y0, l] of [[3, 5, 4], [6, 5, 2], [12, 5, 5], [9, 11, 3]]) for (let y = y0; y < y0 + l; y++) c.set(x, y, hex(y === y0 + l - 1 ? '#ffb020' : '#f0a018'));
   },
   barrel_side: (c) => {
     // vertical staves with two iron hoops

@@ -193,6 +193,21 @@ export class MobSpawner {
         this.spawnMob('purrling', x + 0.5, this.game.world.heightAt(x, z) + 1, z + 0.5);
       }
     }
+    // three Buzzlings live in every wild bee nest
+    {
+      const w = this.game.world;
+      for (let z = cz * 16; z < cz * 16 + 16; z++) for (let x = cx * 16; x < cx * 16 + 16; x++) {
+        const top = w.heightAt(x, z);
+        for (let y = top - 9; y <= top; y++) {
+          if (w.getBlock(x, y, z) !== B.BEE_NEST) continue;
+          const [fx, fz] = [[0, -1], [1, 0], [0, 1], [-1, 0]][w.getMeta(x, y, z) & 3];
+          for (let k = 0; k < 3; k++) {
+            const m = this.spawnMob('buzzling', x + 0.5 + fx, y + 0.2, z + 0.5 + fz);
+            if (m) { m.hive = { x, y, z }; m.persistent = true; }
+          }
+        }
+      }
+    }
     // Herds placed at chunk generation time
     const w = this.game.world;
     // Inklings in deep ocean water

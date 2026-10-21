@@ -679,6 +679,13 @@ export class TerrainGenerator {
       }
       const kind = this.treeKind(biome, hashf(this.seed, wx, wz, 52));
       this.placeTree(blocks, meta, kind, wx - x0, top + 1, wz - z0, hashf(this.seed, wx, wz, 53));
+      // a bee nest hangs on the side of some oaks and birches in sunny, flowery places
+      const nestOdds = biome === BIOME.PLAINS || biome === BIOME.FLOWER_FOREST ? 0.05 : biome === BIOME.BIRCH_FOREST || biome === BIOME.FOREST ? 0.01 : 0;
+      if (nestOdds && (kind === 'oak' || kind === 'birch') && hashf(this.seed, wx, wz, 54) < nestOdds) {
+        const side = Math.floor(hashf(this.seed, wx, wz, 55) * 4), [sx, sz] = [[0, -1], [1, 0], [0, 1], [-1, 0]][side];
+        const nx = wx - x0 + sx, nz = wz - z0 + sz, ny = top + 3;
+        if (nx >= 0 && nz >= 0 && nx < 16 && nz < 16 && (!blocks[cidx(nx, ny, nz)] || LEAVES.has(blocks[cidx(nx, ny, nz)]))) { blocks[cidx(nx, ny, nz)] = B.BEE_NEST; meta[cidx(nx, ny, nz)] = side; }
+      }
     }
     // A layer of snow on the ground and treetops of cold biomes (not on peaks that are already snow blocks)
     for (let z = 0; z < 16; z++) for (let x = 0; x < 16; x++) {

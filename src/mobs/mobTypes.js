@@ -72,6 +72,10 @@ export const MOBS = {
     health: 8, tamedHealth: 20, speed: 0.3, width: 0.6, height: 0.85, attack: 2, tamedAttack: 4, sound: 'howl',
     drops: [], food: [I.RAW_PORK, I.COOKED_PORK, I.RAW_BEEF, I.STEAK, I.RAW_CHICKEN, I.COOKED_CHICKEN, I.RAW_MUTTON, I.COOKED_MUTTON, I.ROTTEN_FLESH],
   },
+  buzzling: {
+    name: 'Buzzling', role: 'bee', category: CATEGORY.CREATURE, flying: true, bee: true, noFallDamage: true, noDespawn: true, sound: 'buzz',
+    health: 10, speed: 0.3, width: 0.7, height: 0.6, attack: 2, drops: [],
+  },
   cragbuck: {
     name: 'Cragbuck', role: 'goat', category: CATEGORY.CREATURE, goat: true, sound: 'bleat', noFallDamage: true,
     health: 10, speed: 0.3, width: 0.9, height: 1.3, attack: 2, panicSpeed: 2,

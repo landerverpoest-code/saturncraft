@@ -1,5 +1,6 @@
 // Player interaction with the world: mining (with break progress), placing,
 // attacking with the attack cooldown, eating, buckets and containers.
+import { Mob } from '../mobs/mob.js';
 import { pairOnPlace } from '../world/chests.js';
 import { B, BLOCKS, SOLID, SHAPE, isFluid, CROPS } from '../world/blocks.js';
 import { ITEMS, I, toolOf, isBlockItem, WOOL_ITEMS, POTION_ITEM } from '../world/items.js';
@@ -296,7 +297,8 @@ export class Interaction {
     p.hunger.eat(f.hunger, f.saturation);
     if (f.effect && Math.random() < f.effect.chance) p.addEffect(f.effect.type, f.effect.ticks);
     p.inventory.removeFromSlot(p.inventory.selected, 1);
-    if (f.leaves) p.inventory.add({ id: I.BOWL, count: 1, damage: 0 }); // soup leaves its bowl
+    if (f.leaves) p.inventory.add({ id: f.leaves === 'vial' ? I.GLASS_VIAL : I.BOWL, count: 1, damage: 0 }); // soup leaves its bowl, honey its vial
+    if (f.cures && p.effects[f.cures]) { delete p.effects[f.cures]; for (const fn of p.listeners.effect || []) fn(null); }
     g.audio.play('burp');
   }
 
@@ -457,6 +459,24 @@ export class Interaction {
     if (d && d.voidEye) return this.useVoidEye(this.target);
     const t = this.target;
     if (!t) return false;
+    if ((t.id === B.BEE_NEST || t.id === B.BEEHIVE) && st && (d.shears || st.id === I.GLASS_VIAL) && ((w.getMeta(t.x, t.y, t.z) >> 2) & 7) >= 5) {
+      // a full nest: shears cut 3 honeycomb, a vial fills with honey; the bees mind unless a campfire smokes below
+      const m = w.getMeta(t.x, t.y, t.z);
+      w.setBlockUrgent(t.x, t.y, t.z, t.id, m & 3);
+      if (d.shears) { g.entities.spawnItem(t.x + 0.5, t.y + 0.5, t.z + 0.5, { id: I.HONEYCOMB, count: 3, damage: 0 }); if (!p.creative) p.inventory.damageSelected(1); g.audio.play('shear', [t.x + 0.5, t.y + 0.5, t.z + 0.5]); }
+      else {
+        const honey = { id: I.HONEY_BOTTLE, count: 1, damage: 0 };
+        if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
+        if (!p.inventory.selectedStack) p.inventory.slots[p.inventory.selected] = honey; else if (p.inventory.add(honey)) g.entities.spawnItem(p.x, p.y + 1, p.z, honey);
+        p.inventory.changed();
+        g.audio.play('bucket_fill', [t.x + 0.5, t.y + 0.5, t.z + 0.5]);
+      }
+      let smoked = false;
+      for (let dy = 1; dy <= 5 && !smoked; dy++) smoked = w.getBlock(t.x, t.y - dy, t.z) === B.CAMPFIRE;
+      if (!smoked) Mob.angerBees(g, t.x, t.y, t.z);
+      this.swing = SWING_TICKS;
+      return true;
+    }
     // Interactive blocks
     if (!p.sneaking || !st) {
       if (t.id === B.WORKBENCH) { g.ui.openWorkbench(); return true; }

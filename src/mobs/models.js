@@ -258,6 +258,18 @@ MODELS.frostbear = {
     ['legBR', [5, 10, 5], [-4, 10, 9], [0, -5, 0], '#e2e3e6', { anim: 'legA' }],
   ],
 };
+MODELS.buzzling = {
+  parts: [
+    ['body', [7, 7, 10], [0, 5, 0], [0, 0, 0], '#f0c030', { face: 'buzzling' }],
+    ['stripeA', [7.4, 7.4, 1.6], [0, 5, 0], [0, 0, 0.5], '#3a2410'],
+    ['stripeB', [7.4, 7.4, 1.6], [0, 5, 0], [0, 0, 3.4], '#3a2410'],
+    ['sting', [1, 1, 2], [0, 5, 0], [0, -0.5, 5.8], '#2a1a0a'],
+    ['antL', [0.6, 3, 0.6], [0, 5, 0], [1.4, 4.5, -5], '#2a1a0a'],
+    ['antR', [0.6, 3, 0.6], [0, 5, 0], [-1.4, 4.5, -5], '#2a1a0a'],
+    ['wingL', [6, 0.4, 4], [1, 8.6, -1], [3, 0, 0], '#e8f4ff', { anim: 'beeL', alpha: 0.6 }],
+    ['wingR', [6, 0.4, 4], [-1, 8.6, -1], [-3, 0, 0], '#e8f4ff', { anim: 'beeR', alpha: 0.6 }],
+  ],
+};
 MODELS.cragbuck = {
   parts: [
     ['body', [9, 10, 16], [0, 15, 1], [0, 0, 0], '#e8e4da'],
@@ -432,6 +444,7 @@ const FACES = {
   frostling: (c) => { px(c, '#3a1a08', [[3, 5, 3, 3], [10, 5, 3, 3], [4, 11, 8, 2], [5, 10], [10, 10]]); px(c, '#ffd040', [[4, 6], [11, 6]]); },
   hopper: (c) => { px(c, '#1a1010', [[3, 6, 2, 2], [11, 6, 2, 2]]); px(c, '#e8a0a0', [[7, 10, 2, 1]]); },
   frostbear: (c) => { px(c, '#1a1a1a', [[3, 5, 2, 2], [11, 5, 2, 2]]); },
+  buzzling: (c) => { px(c, '#1a1010', [[1, 5, 4, 5], [11, 5, 4, 5]]); px(c, '#ffffff', [[2, 6], [12, 6]]); },
   cragbuck: (c) => { px(c, '#c8a020', [[3, 5, 3, 2], [10, 5, 3, 2]]); px(c, '#101010', [[4, 5, 1, 2], [11, 5, 1, 2]]); px(c, '#b8a8a0', [[6, 12, 4, 2]]); },
   purrling: (c) => { px(c, '#a0ffa0', [[3, 6, 3, 2], [10, 6, 3, 2]]); px(c, '#0a0a0a', [[4, 6, 1, 2], [11, 6, 1, 2]]); },
   vixling: (c) => { px(c, '#1a1010', [[2, 6, 3, 2], [11, 6, 3, 2]]); px(c, '#f4ece0', [[0, 9, 4, 4], [12, 9, 4, 4]]); },
@@ -531,6 +544,8 @@ export function animateModel(root, mob, alpha, L, sec) {
       case 'armAim': g.rotation.x = mob.target ? -Math.PI / 2 : Math.cos(swing + (g === parts.armL ? Math.PI : 0)) * amt; break;
       case 'armSwing': g.rotation.x = Math.cos(swing + Math.PI) * amt * 0.8 - (mob.angry ? 0.4 : 0); break;
       case 'armSwingB': g.rotation.x = Math.cos(swing) * amt * 0.8 - (mob.angry ? 0.4 : 0); break;
+      case 'beeL': g.rotation.z = Math.sin(sec * 60 + mob.id) * 0.7; break;
+      case 'beeR': g.rotation.z = -Math.sin(sec * 60 + mob.id) * 0.7; break;
       case 'batL': g.rotation.y = mob.roosting ? -1.2 : Math.sin(sec * 25 + mob.id) * 0.9; break;
       case 'batR': g.rotation.y = mob.roosting ? 1.2 : -Math.sin(sec * 25 + mob.id) * 0.9; break;
       case 'tentacle': { const ph = Math.sin(sec * 3 + mob.id) * 0.5 + 0.6, a = (g.userData.idx / 8) * Math.PI * 2; g.rotation.set(Math.cos(a) * ph, 0, -Math.sin(a) * ph); break; }

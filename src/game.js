@@ -1,4 +1,5 @@
 // Game orchestrator: fixed 20 TPS simulation with interpolated rendering.
+import { Mob } from './mobs/mob.js';
 import { newMap, updateMap, MAP_SIZE } from './world/maps.js';
 import { KEEP_BITS, unpairAfterBreak } from './world/chests.js';
 import * as THREE from 'three';
@@ -516,6 +517,7 @@ export class Game {
   }
 
   onBlockBroken(x, y, z, id, meta = 0) {
+    if ((id === B.BEE_NEST || id === B.BEEHIVE) && (!this.net || !this.net.isClient)) Mob.angerBees(this, x, y, z); // the bees defend their home
     if (id === B.SPAWNER) this.milestones.event('spawner');
     if (id === B.ITEM_FRAME) {
       // a broken frame drops what it held
