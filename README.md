@@ -522,7 +522,7 @@ Code: `src/world/dimensions/` (registry and scaling, generators, portal logic, s
   breaking a furnace drops its contents.
 * **Render/entity distance**: entities render up to 64 blocks away and only
   cast shadows within 24 blocks; three shadow maps update round-robin.
-* **Item stacks** drop as sprites rather than spinning 3-D models.
+* **Dropped items**: blocks drop as small turning 3-D cubes (two or three for stacks); other items drop as sprites rather than extruded 3-D models.
 * **Step-up** (0.6 blocks) is implemented, but without slabs or stairs in the
   block set it rarely comes into play; full blocks always need a jump.
 * **Saving** keeps modified chunks, the player, time, furnaces and animals;

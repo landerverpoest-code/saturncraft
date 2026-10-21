@@ -40,6 +40,12 @@ export function blockFaceTexture(name) {
   return t;
 }
 
+/** Is this item drawn as a little 3-D cube when dropped (full-block shapes only)? */
+function droppedCube(id) {
+  const d = id > 0 && id < 256 ? BLOCKS[id] : null;
+  return !!(d && d.tex && d.tex.side && (d.shape === SHAPE.CUBE || d.shape === SHAPE.CACTUS) && !d.flatIcon);
+}
+
 /** Brightness multiplier for entity rendering from the light at a position. */
 export function lightAt(game, x, y, z) {
   const w = game.world;
@@ -574,7 +580,10 @@ export class EntityManager {
       const L = lightAt(g, e.x, e.y + 0.5, e.z);
       if (e.kind === 'item') {
         m.position.set(px, py + 0.15 + Math.sin(timeSec * 2.5 + e.bob) * 0.05, pz);
-        m.material.color.setScalar(L);
+        if (m.userData.cube) {
+          m.rotation.y = timeSec * 1.1 + e.bob;
+          for (const mat of m.userData.mats) mat.color.set(mat.userData.tint).multiplyScalar(L);
+        } else m.material.color.setScalar(L);
       } else if (e.kind === 'boat') {
         m.position.set(px, py, pz);
         let dy = e.yaw - e.prevYaw; while (dy > Math.PI) dy -= Math.PI * 2; while (dy < -Math.PI) dy += Math.PI * 2;
@@ -598,6 +607,23 @@ export class EntityManager {
   }
 
   createMesh(e) {
+    if (e.kind === 'item' && droppedCube(e.stack.id)) {
+      // a dropped block: a small turning cube (two or three for bigger stacks)
+      const d = BLOCKS[e.stack.id];
+      const tint = d.tint === 'grass' ? 0x6eb446 : d.tint === 'foliage' ? 0x50962f : 0xffffff;
+      const side = new THREE.MeshLambertMaterial({ map: blockFaceTexture(d.tex.side), transparent: true, alphaTest: 0.3 });
+      const top = new THREE.MeshLambertMaterial({ map: blockFaceTexture(d.tex.top), transparent: true, alphaTest: 0.3 });
+      const bottom = new THREE.MeshLambertMaterial({ map: blockFaceTexture(d.tex.bottom || d.tex.top), transparent: true, alphaTest: 0.3 });
+      const mats = [side, side, top, bottom, side, side];
+      top.userData.tint = d.tint ? tint : 0xffffff; side.userData.tint = d.tint === 'foliage' ? tint : 0xffffff; bottom.userData.tint = 0xffffff;
+      const g = new THREE.Group();
+      const n = e.stack.count > 16 ? 3 : e.stack.count > 1 ? 2 : 1;
+      const geo = new THREE.BoxGeometry(0.25, 0.25, 0.25);
+      for (let k = 0; k < n; k++) { const c = new THREE.Mesh(geo, mats); c.position.set(k * 0.06 - 0.03 * (n - 1), k * 0.05, (k % 2) * 0.05); c.castShadow = true; g.add(c); }
+      g.userData.cube = true; g.userData.mats = [side, top, bottom]; g.userData.count = n;
+      g.userData.dispose = () => { geo.dispose(); for (const mt of [side, top, bottom]) mt.dispose(); };
+      return g;
+    }
     if (e.kind === 'item') {
       const mat = new THREE.SpriteMaterial({ map: iconTexture(e.stack.id, isGlinting(e.stack)), alphaTest: 0.3 });
       const s = new THREE.Sprite(mat);
