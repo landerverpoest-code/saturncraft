@@ -72,6 +72,11 @@ export const MOBS = {
     health: 8, tamedHealth: 20, speed: 0.3, width: 0.6, height: 0.85, attack: 2, tamedAttack: 4, sound: 'howl',
     drops: [], food: [I.RAW_PORK, I.COOKED_PORK, I.RAW_BEEF, I.STEAK, I.RAW_CHICKEN, I.COOKED_CHICKEN, I.RAW_MUTTON, I.COOKED_MUTTON, I.ROTTEN_FLESH],
   },
+  squawklet: {
+    name: 'Squawklet', role: 'parrot', category: CATEGORY.CREATURE, flying: true, parrot: true, tameable: true, noFallDamage: true, sound: 'squawk',
+    health: 6, tamedHealth: 6, speed: 0.3, width: 0.5, height: 0.9, attack: 0, tamedAttack: 0, drops: [{ id: I.FEATHER, min: 1, max: 2 }],
+    food: [I.WHEAT_SEEDS, I.BEETROOT_SEEDS, I.MELON_SEEDS, I.PUMPKIN_SEEDS], tameFood: [I.WHEAT_SEEDS, I.BEETROOT_SEEDS, I.MELON_SEEDS, I.PUMPKIN_SEEDS],
+  },
   shellback: {
     name: 'Shellback', role: 'turtle', category: CATEGORY.CREATURE, turtle: true, swimmer: true, sound: 'grunt', noDespawn: true,
     health: 30, speed: 0.12, width: 1.2, height: 0.4, panicSpeed: 1.5,

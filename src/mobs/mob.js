@@ -34,6 +34,9 @@ const HORN_BREAKERS = new Set([B.STONE, B.COBBLESTONE, B.OAK_LOG, B.BIRCH_LOG, B
 const HIVES = new Set([B.BEE_NEST, B.BEEHIVE]);
 const BEE_FLOWERS = new Set([B.SUNPETAL, B.REDBLOOM, B.SKYBELL, B.ROSETTE]);
 
+/** Squawklet plumage: [body and head, wings and tail, crest] (red, blue, green, cyan, grey). */
+const PARROT_COLORS = [['#d8282a', '#2a5ad8', '#f0c020'], ['#2a4ad8', '#1a2a8a', '#f0d040'], ['#4ab82a', '#2a7a1a', '#d83a2a'], ['#3ac8d8', '#f0d040', '#2a6ad8'], ['#b8b8b8', '#7a7a7a', '#e8e8e8']];
+
 export class Mob {
   constructor(type, x, y, z) {
     this.id = nextMobId++;
@@ -63,7 +66,7 @@ export class Mob {
     // breeding: age < 0 is a baby growing up, age > 0 a breeding cooldown
     this.age = 0; this.loveTicks = 0; this.breedTime = 0;
     this.sheared = false; this.eatTimer = 0;
-    this.woolColor = type === 'fleecer' ? randomSheepColor() : type === 'purrling' ? Math.floor(Math.random() * CAT_COATS.length) : 0; // (Purrlings keep their coat here)
+    this.woolColor = type === 'fleecer' ? randomSheepColor() : type === 'purrling' ? Math.floor(Math.random() * CAT_COATS.length) : type === 'squawklet' ? Math.floor(Math.random() * PARROT_COLORS.length) : 0; // (Purrlings keep their coat here)
     // settlers: profession, trade offers and the house they live in
     this.profession = null; this.trades = []; this.home = null; this.lastRestock = 0;
     // Howlers: tamed by the player (owner), sitting, current enemy
@@ -278,6 +281,8 @@ export class Mob {
       if (g) for (let k = 0; k < 20; k++) g.particles.emit(this.x, this.y + 0.4, this.z, (Math.random() - 0.5) * 0.3, (Math.random() - 0.5) * 0.3, (Math.random() - 0.5) * 0.3, 0.05, 0.05, 0.08, 40, 0);
       this.panicTicks = 40;
       if (attacker) { const dx = this.x - attacker.x, dz = this.z - attacker.z, d = Math.hypot(dx, dz) || 1; this.swimDir = [dx / d, 0.2, dz / d]; }
+    } else if (this.def.parrot) {
+      this.sitting = false; this.perched = 0; this.panicTicks = 60;
     } else if (this.def.bee) {
       // one stung bee calls the others nearby
       const foe = attacker && attacker.isPlayer ? 'player' : attacker;
@@ -513,6 +518,7 @@ export class Mob {
   // ---------------------------------------------------------------------------
   ai(g, p, pdist) {
     if (this.def.villager) return this.settlerAI(g, p, pdist);
+    if (this.def.parrot) return this.parrotAI(g, p, pdist);
     if (this.def.feline) return this.catAI(g, p, pdist);
     if (this.def.goat) return this.goatAI(g, p, pdist);
     if (this.def.turtle) return this.turtleAI(g, p, pdist);
@@ -823,6 +829,46 @@ export class Mob {
     if (this.panicTicks > 0 || this.loveTicks > 0 || this.tempted(g)) return this.passiveAI(g);
     if (this.age < 0) { if (++this.age === 0) this.setBaby(false); } else if (this.age > 0) this.age--;
     this.wanderAI(g, swim);
+  }
+
+  /**
+   * Squawklets flutter about the jungle and now and then settle on the ground
+   * for a while. Tamed with seeds (1 in 3), they follow their owner or sit on
+   * command. Every so often one mimics a monster that is nearby.
+   */
+  parrotAI(g, p, pdist) {
+    const b = this.body;
+    const fly = (tx, ty, tz, sp = 0.1) => {
+      const dx = tx - this.x, dy = ty - this.y, dz = tz - this.z, d = Math.hypot(dx, dy, dz) || 1;
+      b.vx += ((dx / d) * sp - b.vx) * 0.15; b.vy += ((dy / d) * sp - b.vy) * 0.15; b.vz += ((dz / d) * sp - b.vz) * 0.15;
+      if (Math.hypot(dx, dz) > 0.2) this.yaw = Math.atan2(-dx, -dz);
+      return d;
+    };
+    const land = () => { b.vx *= 0.5; b.vz *= 0.5; b.vy = Math.max(-0.3, b.vy - 0.04); };
+    // mimicry: a squawk in the voice of a monster within 20 blocks
+    if (g.ticks % 200 === this.id % 200 && Math.random() < 0.3) {
+      for (const e of g.entities.list) {
+        if (e.kind === 'mob' && e.def.category === CATEGORY.MONSTER && e.deathTime === 0 && (e.x - this.x) ** 2 + (e.z - this.z) ** 2 < 400 && e.def.sound) { g.audio.play(e.def.sound, [this.x, this.y + 0.5, this.z], 0.6); break; }
+      }
+    }
+    if (this.panicTicks > 0) { this.panicTicks--; fly(this.x + (Math.random() - 0.5) * 8, this.y + 2, this.z + (Math.random() - 0.5) * 8, 0.2); return; }
+    if (this.tamed) {
+      if (this.sitting) { land(); return; }
+      if (!p.dead) {
+        if (pdist > 14) { if (this.teleportTo(g, p.x + (Math.random() - 0.5) * 2, p.z + (Math.random() - 0.5) * 2, p.y + 2)) return; }
+        if (pdist > 3) { fly(p.x, p.y + 1.8, p.z, 0.16); return; }
+        land();
+        return;
+      }
+    }
+    if (this.perched > 0) { this.perched--; land(); if (this.tempted(g)) this.yaw = Math.atan2(-(p.x - this.x), -(p.z - this.z)); return; }
+    if (b.onGround && Math.random() < 0.004) { this.perched = 100 + Math.floor(Math.random() * 300); return; }
+    if (!this.target3 || Math.random() < 0.015 || Math.hypot(this.target3[0] - this.x, this.target3[2] - this.z) < 1) {
+      const gy = g.world.heightAt(Math.floor(this.x), Math.floor(this.z));
+      this.target3 = [this.x + (Math.random() - 0.5) * 16, gy + 1 + Math.random() * 6, this.z + (Math.random() - 0.5) * 16];
+    }
+    fly(...this.target3, 0.08);
+    if (Math.random() < 1 / 400) g.audio.play('squawk', [this.x, this.y + 0.5, this.z], 0.5);
   }
 
   /** Bees of a nest (or near a spot) turn on whoever disturbed it. */
@@ -1305,6 +1351,14 @@ export class Mob {
       }
       parts.saddle.visible = !!this.saddled;
       parts.tail.rotation.x = 0.5 + Math.sin(sec * 3 + this.id) * 0.1;
+    }
+    if (parts && this.type === 'squawklet' && m.userData.coat !== this.woolColor) {
+      m.userData.coat = this.woolColor;
+      const [main, wing, crest] = PARROT_COLORS[this.woolColor % PARROT_COLORS.length];
+      const tint = (k, col) => { const mm = parts[k].children[0].material; for (const x of Array.isArray(mm) ? [mm[0], mm[5]] : [mm]) x.userData.base.set(col); };
+      for (const k of ['body', 'head']) tint(k, main);
+      for (const k of ['wingL', 'wingR', 'tail']) tint(k, wing);
+      tint('crest', crest);
     }
     if (parts && this.type === 'cragbuck') {
       for (const k of ['beard', 'hornL', 'hornR', 'earL', 'earR']) parts[k].rotation.x = parts.head.rotation.x;
