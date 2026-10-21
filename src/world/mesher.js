@@ -45,6 +45,9 @@ const FOLIAGE_FIXED = { [B.BIRCH_LEAVES]: [128, 167, 85], [B.SPRUCE_LEAVES]: [97
 const FOLIAGE_BIOME = new Uint8Array(256);
 for (const d of BLOCKS) if (d && d.tint === 'foliage') FOLIAGE_BIOME[d.id] = 1;
 const FURNACE_FRONT_DIR = [5, 0, 4, 1];
+// double chests: does the partner on the + side of the chest's axis sit at the viewer's right (front faces -z, +x, +z, -x)?
+const CHEST_SEAM_RIGHT = [false, false, true, true];
+const CHEST_FRONT_L = texId('chest_front_l'), CHEST_FRONT_R = texId('chest_front_r');
 // crop textures per growth stage 0..7 (carrots have 4 visual stages)
 const CROP_TILES = { [B.WHEAT]: [0, 1, 2, 3, 4, 5, 6, 7].map((i) => texId('wheat_' + i)), [B.CARROTS]: [0, 0, 1, 1, 2, 2, 2, 3].map((i) => texId('carrots_' + i)),
   [B.MELON_STEM]: [0, 1, 2, 3, 4, 5, 6, 7].map((i) => texId('stem_' + i)), [B.PUMPKIN_STEM]: [0, 1, 2, 3, 4, 5, 6, 7].map((i) => texId('stem_' + i)),
@@ -147,7 +150,10 @@ export function meshSection(sec) {
         if (id === B.FURNACE || id === B.FURNACE_LIT) {
           if (d === FURNACE_FRONT_DIR[meta[i] & 3]) tile = texId(id === B.FURNACE ? 'furnace_front' : 'furnace_front_lit');
           else if (d !== 2 && d !== 3) tile = texId('furnace_side');
-        } else if (FRONT_TILE[id] >= 0 && d === FURNACE_FRONT_DIR[meta[i] & 3]) tile = FRONT_TILE[id];
+        } else if (FRONT_TILE[id] >= 0 && d === FURNACE_FRONT_DIR[meta[i] & 3]) {
+          tile = FRONT_TILE[id];
+          if (id === B.CHEST && (meta[i] & 4)) tile = CHEST_SEAM_RIGHT[meta[i] & 3] === !!(meta[i] & 128) ? CHEST_FRONT_R : CHEST_FRONT_L;
+        }
         else if (id === B.FARMLAND && d === 2 && meta[i] > 0) tile = FARMLAND_MOIST;
         let r = 255, g = 255, b2 = 255;
         if ((id === B.GRASS && d === 2)) { r = colors[ci]; g = colors[ci + 1]; b2 = colors[ci + 2]; }

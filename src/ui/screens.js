@@ -1,4 +1,5 @@
 // Menus and container screens (inventory, workbench, furnace).
+import { doubleChestHalves, doubleChestView } from '../world/chests.js';
 import { iconURL, stackHTML, stackIconURL, tooltipHTML, effectIconURL } from './icons.js';
 import { EFFECTS, effectLabel, formatTicks } from '../player/effects.js';
 import { isIngredient, isVial, VIAL_SLOTS, INGREDIENT_SLOT, FUEL_SLOT, BREW_TICKS, BREWS_PER_POWDER } from '../world/brewing.js';
@@ -467,7 +468,9 @@ export class UI {
 
   openChest(x, y, z) {
     this.game.input.unlock();
-    const c = this.game.getChest(x, y, z);
+    const halves = doubleChestHalves(this.game.world, x, y, z);
+    const c = halves ? doubleChestView(...halves.map((h) => this.game.getChest(h.x, h.y, h.z))) : this.game.getChest(x, y, z);
+    const n = halves ? 54 : 27;
     const inv = this.game.player.inventory;
     /** Move a stack into a range of slots (merging first); returns what is left. */
     const insert = (slots, from, to, st) => {
@@ -479,9 +482,9 @@ export class UI {
       for (let k = from; k < to && left; k++) if (!slots[k]) { slots[k] = { ...st, count: left }; left = 0; }
       return left;
     };
-    this.showContainer('chest', 'Chest', (panel) => {
+    this.showContainer('chest', halves ? 'Large Chest' : 'Chest', (panel) => {
       const grid = el('<div class="grid" style="grid-template-columns:repeat(9,var(--slot));margin-bottom:12px"></div>');
-      for (let i = 0; i < 27; i++) {
+      for (let i = 0; i < n; i++) {
         grid.appendChild(this.makeSlot(() => c.slots[i], (v) => { c.slots[i] = v; }, {
           quickMove: () => {
             const st = c.slots[i];
@@ -493,7 +496,7 @@ export class UI {
       panel.appendChild(grid);
       panel.appendChild(this.inventoryGrid({
         accept: (st) => {
-          const left = insert(c.slots, 0, 27, st);
+          const left = insert(c.slots, 0, n, st);
           if (left === st.count) return false;
           if (left) { st.count = left; return 'partial'; }
           return true;
@@ -501,7 +504,7 @@ export class UI {
       }));
     });
     this.chest = c;
-    if (this.game.net && this.game.net.isClient) this.game.net.openContainer('chest', x, y, z, c); // the host's chest
+    if (this.game.net && this.game.net.isClient) this.game.net.openContainer(halves ? 'chest2' : 'chest', c.x, c.y, c.z, c); // the host's chest
   }
 
   /** A single-item work slot (enchanting table / anvil) whose stack lives in this.work[i]. */

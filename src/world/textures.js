@@ -31,6 +31,7 @@ for (let i = 0; i < 4; i++) { addTex('potatoes_' + i); addTex('beetroots_' + i);
 for (let i = 0; i < 8; i++) addTex('stem_' + i);
 addTex('water_flow');
 addTex('rail_corner');
+addTex('chest_front_l'); addTex('chest_front_r'); // the halves of a double chest
 for (const n of Object.keys(CIRCUIT_TEX)) addTex(n); // circuit parts (world/circuitTextures.js)
 ARTS.forEach(([, w, h], art) => { for (let p = 0; p < w * h; p++) addTex(`painting_${art}_${p}`); });
 for (let i = 0; i < 8; i++) addTex('fire_' + i);
@@ -667,6 +668,19 @@ const GEN = {
     const m = hex('#c9c9c9'), md = hex('#6d6d6d');
     for (let y = 3; y < 9; y++) for (let x = 6; x < 10; x++) c.set(x, y, (x === 6 || y === 8) ? md : m);
     c.set(7, 6, md); c.set(8, 6, md);
+  },
+  // double chest halves: half a latch at the seam (on the left or right edge as seen from the front)
+  chest_front_l: (c) => {
+    GEN.chest_side(c);
+    const m = hex('#c9c9c9'), md = hex('#6d6d6d');
+    for (let y = 3; y < 9; y++) for (let x = 0; x < 2; x++) c.set(x, y, y === 8 ? md : m);
+    c.set(0, 6, md);
+  },
+  chest_front_r: (c) => {
+    GEN.chest_side(c);
+    const m = hex('#c9c9c9'), md = hex('#6d6d6d');
+    for (let y = 3; y < 9; y++) for (let x = 14; x < 16; x++) c.set(x, y, (x === 14 || y === 8) ? md : m);
+    c.set(15, 6, md);
   },
   door_lower: (c) => {
     planks(c, '#9c7444');

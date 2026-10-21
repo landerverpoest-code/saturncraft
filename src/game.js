@@ -1,4 +1,5 @@
 // Game orchestrator: fixed 20 TPS simulation with interpolated rendering.
+import { KEEP_BITS, unpairAfterBreak } from './world/chests.js';
 import * as THREE from 'three';
 import { World } from './world/world.js';
 import { B, BLOCKS } from './world/blocks.js';
@@ -480,7 +481,7 @@ export class Game {
       const meta = metaHint ?? this.world.getMeta(x, y, z);
       if (meta & 8) {
         c.slots = dungeonLoot(Math.random, (meta >> 4) & 15);
-        if (this.world.getBlock(x, y, z) === B.CHEST) this.world.setBlockUrgent(x, y, z, B.CHEST, meta & 3, false);
+        if (this.world.getBlock(x, y, z) === B.CHEST) this.world.setBlockUrgent(x, y, z, B.CHEST, meta & KEEP_BITS, false);
       }
     }
     return c;
@@ -494,10 +495,16 @@ export class Game {
       if (st && this.net && this.net.isClient) this.setFrameItem(x, y, z, null, true); // the host drops it when it sees the edit
       else if (st) { this.setFrameItem(x, y, z, null); if (!this.player.creative) this.entities.spawnItem(x + 0.5, y + 0.5, z + 0.5, st); }
     }
+    if (id === B.CHEST) {
+      // the other half of a double chest becomes a single chest again
+      const u = unpairAfterBreak(this.world, x, y, z, meta);
+      if (u) this.world.setBlockUrgent(u.x, u.y, u.z, B.CHEST, u.meta);
+    }
+    const showing = (c) => c && this.ui.chest && (this.ui.chest === c || (this.ui.chest.halves && this.ui.chest.halves.includes(c)));
     if (this.net && this.net.isClient) {
       // the host spills the contents of its own chest / furnace
       const k = `${x},${y},${z}`;
-      if (this.ui.chest && this.ui.chest === this.chests.get(k)) this.ui.close();
+      if (showing(this.chests.get(k))) this.ui.close();
       if (this.ui.furnace && this.ui.furnace === this.furnaces.get(k)) this.ui.close();
       if (this.ui.brewing && this.ui.brewing === this.brewingStands.get(k)) this.ui.close();
       this.chests.delete(k); this.furnaces.delete(k); this.brewingStands.delete(k);
@@ -509,7 +516,7 @@ export class Game {
       if (c) {
         for (const st of c.slots) if (st) this.entities.spawnItem(x + 0.5, y + 0.5, z + 0.5, st);
         this.chests.delete(k);
-        if (this.ui.chest === c) this.ui.close();
+        if (showing(c)) this.ui.close();
       }
     }
     if (id === B.BREWING_STAND) this.spillBrewing(x, y, z);

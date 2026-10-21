@@ -17,6 +17,7 @@
 //   openContainer / closeContainer / uiBefore / uiAfter, requestTrade(...),
 //   sendCommand(text), requestTravel(dim, arrival), requestExplosion(...),
 //   onSwitchDimension(dim, pos), onArrived(x, y, z), respawnNearHost()
+import { doubleChestHalves, doubleChestView } from '../world/chests.js';
 import { igniteTNT, PrimedTNT } from '../entities/tnt.js';
 import {
   PROTOCOL_VERSION, MAX_PLAYERS, encodeMessage, Reassembler, makeRoomCode, cleanName,
@@ -531,6 +532,10 @@ export class HostSession extends Session {
   container(kind, x, y, z) {
     const g = this.game, id = g.world.getBlock(x, y, z);
     if (kind === 'chest') return id === B.CHEST ? g.getChest(x, y, z) : null;
+    if (kind === 'chest2') {
+      const h = id === B.CHEST ? doubleChestHalves(g.world, x, y, z) : null;
+      return h && h[0].x === x && h[0].z === z ? doubleChestView(g.getChest(h[0].x, y, h[0].z), g.getChest(h[1].x, y, h[1].z)) : null;
+    }
     if (kind === 'furnace') return id === B.FURNACE || id === B.FURNACE_LIT ? g.getFurnace(x, y, z) : null;
     if (kind === 'brewing') return id === B.BREWING_STAND ? g.getBrewingStand(x, y, z) : null;
     return null;
@@ -839,7 +844,7 @@ export class ClientSession extends Session {
       case 'traded': this.onTraded(m); break;
       case 'cont': this.onContainerState(m, false); break;
       case 'cack': case 'cnak': this.onContainerReply(m); break;
-      case 'cclose': if (this.cont && this.cont.kind === m.k && this.cont.x === m.x && this.cont.y === m.y && this.cont.z === m.z && g.ui.open === m.k) g.ui.close(); break;
+      case 'cclose': if (this.cont && this.cont.kind === m.k && this.cont.x === m.x && this.cont.y === m.y && this.cont.z === m.z && g.ui.open === (m.k === 'chest2' ? 'chest' : m.k)) g.ui.close(); break;
       case 'bolt': this._applyingOther = true; this.edits.applying = true; try { g.strikeLightning(m.x, m.y, m.z); } finally { this._applyingOther = false; this.edits.applying = false; } break;
       case 'wake': if (p.sleeping) { g.wakeUp(false); g.milestones.event('sleep'); } break;
       case 'dim': this.followDimension(m); break;

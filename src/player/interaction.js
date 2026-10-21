@@ -1,5 +1,6 @@
 // Player interaction with the world: mining (with break progress), placing,
 // attacking with the attack cooldown, eating, buckets and containers.
+import { pairOnPlace } from '../world/chests.js';
 import { B, BLOCKS, SOLID, SHAPE, isFluid, CROPS } from '../world/blocks.js';
 import { ITEMS, I, toolOf, isBlockItem, WOOL_ITEMS, POTION_ITEM } from '../world/items.js';
 import { POTIONS } from '../world/potions.js';
@@ -582,6 +583,8 @@ export class Interaction {
       const dx = p.x - (px + 0.5), dz = p.z - (pz + 0.5);
       meta = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 1 : 3) : (dz > 0 ? 2 : 0);
     }
+    let chestPair = null;
+    if (placeId === B.CHEST) { const pr = pairOnPlace(w, px, py, pz, meta, p.sneaking); meta = pr.meta; chestPair = pr.neighbour; } // join a lone chest beside it
     if (placeId === B.WATER && w.dimension === 'cinderdeep') {
       // water boils away at once in the Cinderdeep
       g.audio.play('fizz', [px + 0.5, py + 0.5, pz + 0.5]);
@@ -592,6 +595,7 @@ export class Interaction {
       return true;
     }
     w.setBlockUrgent(px, py, pz, placeId, meta);
+    if (chestPair) w.setBlockUrgent(chestPair.x, chestPair.y, chestPair.z, B.CHEST, chestPair.meta);
     if (CROPS.has(placeId) && g.milestones) g.milestones.event('plant');
     if (isFluid(placeId)) w.scheduleTick(px, py, pz, 5);
     g.audio.play('place_' + BLOCKS[placeId].sound, [px + 0.5, py + 0.5, pz + 0.5]);
