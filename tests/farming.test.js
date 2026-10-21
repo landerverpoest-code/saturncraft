@@ -113,3 +113,16 @@ describe('potatoes and beetroots', () => {
     expect(craft(grid, 3)?.id).toBe(I.BEETROOT_SOUP);
   });
 });
+
+describe('melon and pumpkin stems', () => {
+  it('a ripe stem sets its fruit on free soil next to it, one at a time', () => {
+    const w = new FarmWorld();
+    for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) w.set(dx, 63, dz, B.FARMLAND, 7);
+    w.set(0, 64, 0, B.PUMPKIN_STEM, 7);
+    const r = rng(3);
+    for (let k = 0; k < 400; k++) randomTickBlock(w, 0, 64, 0, B.PUMPKIN_STEM, r);
+    const fruits = [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([dx, dz]) => w.getBlock(dx, 64, dz) === B.PUMPKIN);
+    expect(fruits.length).toBe(1);
+    expect(w.getBlock(0, 64, 0)).toBe(B.PUMPKIN_STEM);
+  });
+});

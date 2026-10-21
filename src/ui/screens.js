@@ -595,7 +595,7 @@ export class UI {
   openCreative() {
     this.game.input.unlock();
     const g = this.game, inv = g.player.inventory;
-    const hidden = new Set([B.AIR, B.WATER, B.LAVA, B.FURNACE_LIT, B.WHEAT, B.CARROTS, B.POTATOES, B.BEETROOTS, B.DOOR, B.BED, B.FIRE, B.PAINTING, B.PAINTING_B, B.OAK_WALL_SIGN, B.COCOA]);
+    const hidden = new Set([B.AIR, B.WATER, B.LAVA, B.FURNACE_LIT, B.WHEAT, B.CARROTS, B.POTATOES, B.BEETROOTS, B.MELON_STEM, B.PUMPKIN_STEM, B.DOOR, B.BED, B.FIRE, B.PAINTING, B.PAINTING_B, B.OAK_WALL_SIGN, B.COCOA]);
     const all = ITEMS.filter((d) => d && d.id && !hidden.has(d.id));
     this.showContainer('creative', 'Creative Inventory', (panel) => {
       const search = el('<input class="creative-search" placeholder="Search items...">');

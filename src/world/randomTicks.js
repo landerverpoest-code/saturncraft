@@ -2,7 +2,7 @@
 // section near the player get a chance to change, as in the reference game
 // (randomTickSpeed = 3). Handles grass spreading, farmland moisture and crop
 // growth.
-import { B, OPAQUE, SOLID, CROPS } from './blocks.js';
+import { B, OPAQUE, SOLID, CROPS, STEM_FRUIT } from './blocks.js';
 import { BIOMES } from './biomes.js';
 import { MIN_Y, SECTION_COUNT, cidx } from './constants.js';
 import { lavaIgnite, FIRE_DELAY } from './fire.js';
@@ -91,7 +91,17 @@ export function randomTickBlock(world, x, y, z, id, rng = Math.random) {
     world.scheduleTick(x, y, z, FIRE_DELAY); // keeps fires burning after a reload
   } else if (CROPS.has(id)) {
     const stage = world.getMeta(x, y, z);
-    if (stage >= 7 || rawLight(world, x, y + 1, z) < 9) return;
+    if (rawLight(world, x, y + 1, z) < 9) return;
+    if (stage >= 7 && STEM_FRUIT[id]) {
+      // a ripe stem sets a melon / pumpkin on a free neighbouring spot of soil
+      if (rng() >= cropGrowthChance(growthSpeed(world, x, y, z, id))) return;
+      if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => world.getBlock(x + dx, y, z + dz) === STEM_FRUIT[id])) return;
+      const [dx, dz] = [[1, 0], [-1, 0], [0, 1], [0, -1]][Math.floor(rng() * 4)];
+      const below = world.getBlock(x + dx, y - 1, z + dz);
+      if (!world.getBlock(x + dx, y, z + dz) && (below === B.DIRT || below === B.GRASS || below === B.FARMLAND)) world.setBlock(x + dx, y, z + dz, STEM_FRUIT[id], Math.floor(rng() * 4));
+      return;
+    }
+    if (stage >= 7) return;
     if (rng() < cropGrowthChance(growthSpeed(world, x, y, z, id))) world.setBlock(x, y, z, id, stage + 1);
   }
 }

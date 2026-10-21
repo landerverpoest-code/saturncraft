@@ -42,7 +42,7 @@ export const B = {
   BROWN_MUSHROOM_BLOCK: 121, RED_MUSHROOM_BLOCK: 122, MUSHROOM_STEM: 123, MYCELIUM: 124,
   SKYBELL: 125, ROSETTE: 126,
   // Other dimensions (ids from 160 up, see world/dimensions/): the Cinderdeep and the Hollow
-  SNOW_LAYER: 130, COBBLESTONE_WALL: 131, MOSSY_COBBLESTONE_WALL: 132, OAK_TRAPDOOR: 133, RAIL: 140, COBWEB: 141, TNT: 142, CAMPFIRE: 150, LANTERN: 151, PAINTING: 152, PAINTING_B: 153, OAK_SIGN: 154, OAK_WALL_SIGN: 155, ITEM_FRAME: 156, COCOA: 157,
+  SNOW_LAYER: 130, COBBLESTONE_WALL: 131, MOSSY_COBBLESTONE_WALL: 132, OAK_TRAPDOOR: 133, RAIL: 140, COBWEB: 141, TNT: 142, CAMPFIRE: 150, LANTERN: 151, PAINTING: 152, PAINTING_B: 153, OAK_SIGN: 154, OAK_WALL_SIGN: 155, ITEM_FRAME: 156, COCOA: 157, MELON_STEM: 158, PUMPKIN_STEM: 159,
   SNOW_LAYER: 130, COBBLESTONE_WALL: 131, MOSSY_COBBLESTONE_WALL: 132, OAK_TRAPDOOR: 133,
   ENCHANTING_TABLE: 134, ANVIL: 135,
   CINDERSTONE: 160, GLOWSHARD: 161, MOURNSAND: 162, EMBERQUARTZ_ORE: 163, SCORCHED_BRICKS: 164, RIFT: 165,
@@ -169,7 +169,10 @@ def(B.WHEAT, 'Wheat Crops', { ...plant, shape: SHAPE.CROP, drops: 'wheat', tex: 
 def(B.CARROTS, 'Carrots', { ...plant, shape: SHAPE.CROP, drops: 'carrots', tex: { all: 'carrots_3' } });
 def(B.POTATOES, 'Potatoes', { ...plant, shape: SHAPE.CROP, drops: 'potatoes', tex: { all: 'potatoes_3' } });
 def(B.BEETROOTS, 'Beetroots', { ...plant, shape: SHAPE.CROP, drops: 'beetroots', tex: { all: 'beetroots_3' } });
-export const CROPS = new Set([B.WHEAT, B.CARROTS, B.POTATOES, B.BEETROOTS]);
+def(B.MELON_STEM, 'Melon Stem', { ...plant, shape: SHAPE.CROP, drops: 'melon_stem', tex: { all: 'stem_7' } });
+def(B.PUMPKIN_STEM, 'Pumpkin Stem', { ...plant, shape: SHAPE.CROP, drops: 'pumpkin_stem', tex: { all: 'stem_7' } });
+export const CROPS = new Set([B.WHEAT, B.CARROTS, B.POTATOES, B.BEETROOTS, B.MELON_STEM, B.PUMPKIN_STEM]);
+export const STEM_FRUIT = { [B.MELON_STEM]: B.MELON, [B.PUMPKIN_STEM]: B.PUMPKIN };
 
 // Door: two blocks, meta bits in shapes.js. Ladder: meta = side of its wall.
 def(B.DOOR, 'Oak Door', { hardness: 3, resistance: 3, tool: TOOL.AXE, sound: 'wood', flammable: true, opaque: false, shape: SHAPE.DOOR, layer: LAYER.CUTOUT, drops: 'door', needsSupport: true, tex: { all: 'door_lower' } });

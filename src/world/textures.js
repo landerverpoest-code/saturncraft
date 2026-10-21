@@ -27,6 +27,7 @@ for (let r = 0; r < 4; r++) { addTex('bed_head_top_' + r); addTex('bed_foot_top_
 for (let i = 0; i < 8; i++) addTex('wheat_' + i);
 for (let i = 0; i < 4; i++) addTex('carrots_' + i);
 for (let i = 0; i < 4; i++) { addTex('potatoes_' + i); addTex('beetroots_' + i); }
+for (let i = 0; i < 8; i++) addTex('stem_' + i);
 addTex('water_flow');
 addTex('rail_corner');
 ARTS.forEach(([, w, h], art) => { for (let p = 0; p < w * h; p++) addTex(`painting_${art}_${p}`); });
@@ -854,6 +855,13 @@ function paint(c, name) {
   else if (name.startsWith('fire_')) fire(c, +name.slice(5));
   else if (name.startsWith('wheat_')) wheat(c, +name.slice(6));
   else if (name.startsWith('carrots_')) carrots(c, +name.slice(8));
+  else if (name.startsWith('stem_')) {
+    // a stalk that grows taller and turns from green to brown-orange when it can bear fruit
+    const st = +name.slice(5), h = 2 + st * 1.7;
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
+    const col = st === 7 ? hex('#a8782a') : mix(hex('#4a9a2a'), hex('#8aa02a'), st / 7);
+    for (let k = 0; k < h; k++) { const x = 7 + Math.round(Math.sin(k * 0.7) * 1.2); c.set(x, 15 - k, shade(col, 0.85 + c.h(x, k) * 0.3)); if (k > 3 && k % 3 === 0) { c.set(x + 1, 15 - k, col); c.set(x - 1, 14 - k, col); } }
+  }
   else if (name.startsWith('potatoes_')) rootCrop(c, +name.slice(9), '#4a9a34', '#2f7424', '#c8a25a', 3);
   else if (name.startsWith('beetroots_')) rootCrop(c, +name.slice(10), '#3f8a2a', '#9a2a3a', '#8a1e2e', 2);
   else if (name.startsWith('bed_head_top_') || name.startsWith('bed_foot_top_')) bedTop(c, name.startsWith('bed_head'), +name.slice(-1));
