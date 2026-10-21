@@ -71,7 +71,7 @@ THREE.ShaderChunk.fog_vertex = `#ifdef USE_FOG
 
 const CAVE_FOG = new THREE.Color(0.012, 0.012, 0.018);
 export const DIFFICULTIES = ['peaceful', 'easy', 'normal', 'hard'];
-export const DEFAULT_SETTINGS = { renderDistance: 8, fov: 75, sensitivity: 100, volume: 0.5, music: 0.5, shadows: true, shadowMapSize: 1024, pixelRatioCap: 1.25, daylightCycle: true, hostileMobs: true, difficulty: 'normal' };
+export const DEFAULT_SETTINGS = { renderDistance: 8, fov: 75, sensitivity: 100, volume: 0.5, music: 0.5, shadows: true, shadowMapSize: 1024, pixelRatioCap: 1.25, daylightCycle: true, hostileMobs: true, difficulty: 'normal', showCoords: false };
 
 export class Game {
   constructor(canvas, seed, settings, hooks = {}, saveData = null) {

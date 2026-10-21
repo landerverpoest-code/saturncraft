@@ -39,6 +39,7 @@ export class HUD {
       <div id="skyinfo"><canvas width="192" height="96"></canvas><div><div id="phase-label">Day</div><div id="time-label" style="opacity:.7;font-size:11px"></div></div></div>
       <div id="effects"></div>
       <div id="debug" class="hidden"></div>
+      <div id="coords" class="hidden"></div>
       <div id="toast"></div>
       <div id="item-name"></div>
       <div id="bottom">
@@ -64,6 +65,7 @@ export class HUD {
     this.xpLevel = this.root.querySelector('#xplevel');
     this.makeIcons(this.healthEl, 10); this.makeIcons(this.foodEl, 10); this.makeIcons(this.airEl, 10);
     this.debugEl = this.root.querySelector('#debug');
+    this.coordsEl = this.root.querySelector('#coords');
     this.skyCanvas = this.root.querySelector('#skyinfo canvas');
     this.phaseLabel = this.root.querySelector('#phase-label');
     this.timeLabel = this.root.querySelector('#time-label');
@@ -190,6 +192,14 @@ export class HUD {
     if (this.frame % 5 === 0) this.drawEffects();
     if (this.frame++ % 10 === 0) this.drawSky();
     if (this.showDebug && this.frame % 6 === 0) this.debugEl.textContent = g.debugText();
+    // coordinates (pause menu setting); the F3 screen already shows them
+    const coords = !!g.settings.showCoords && !this.showDebug;
+    this.coordsEl.classList.toggle('hidden', !coords);
+    if (coords && this.frame % 3 === 0) {
+      const yaw = ((p.yaw % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+      const facing = ['North', 'West', 'South', 'East'][Math.round(yaw / (Math.PI / 2)) % 4];
+      this.coordsEl.textContent = `XYZ: ${Math.floor(p.x)} / ${Math.floor(p.y)} / ${Math.floor(p.z)}  ·  ${facing}`;
+    }
   }
 
   /** Active effects, top right under the sky widget: badge, level and time left (blinking near the end). */

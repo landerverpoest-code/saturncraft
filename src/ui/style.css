@@ -50,6 +50,7 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 
 #skyinfo { position: absolute; right: 10px; top: 10px; display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: rgba(8, 10, 20, .45); border-radius: 8px; font-size: 13px; }
 #skyinfo canvas { width: 96px; height: 48px; }
+#coords { position: absolute; left: 6px; top: 6px; font: 13px/1.35 monospace; color: #fff; background: rgba(0,0,0,.45); padding: 4px 8px; border-radius: 4px; }
 #debug { position: absolute; left: 6px; top: 6px; font: 13px/1.35 monospace; white-space: pre; background: rgba(0,0,0,.45); padding: 6px 8px; border-radius: 4px; }
 #overlay-scope { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at center, transparent 0, transparent 33vmin, rgba(0,0,0,.55) 35vmin, #000 37vmin); }
 #overlay-vignette { position: absolute; inset: 0; pointer-events: none; transition: background .2s; }
