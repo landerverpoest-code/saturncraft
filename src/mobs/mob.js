@@ -722,6 +722,11 @@ export class Mob {
     };
     if (this.stung && --this.stung <= 0) { this.hurt(100, 'generic'); return; }
     if (this.hive && !HIVES.has(w.getBlock(this.hive.x, this.hive.y, this.hive.z))) this.hive = null;
+    if (!this.hive && g.ticks % 200 === this.id % 200) {
+      // a homeless bee moves into a nest or hive within 8 blocks
+      const bx = Math.floor(this.x), by = Math.floor(this.y), bz = Math.floor(this.z);
+      for (let y = by - 4; y <= by + 4 && !this.hive; y++) for (let z = bz - 8; z <= bz + 8 && !this.hive; z++) for (let x = bx - 8; x <= bx + 8; x++) if (HIVES.has(w.getBlock(x, y, z))) { this.hive = { x, y, z }; this.persistent = true; break; }
+    }
     // angry: chase and sting
     if (this.angryTicks > 0) {
       this.angryTicks--;
