@@ -96,6 +96,21 @@ export const MOBS = {
     health: 4, speed: 0.2, width: 0.7, height: 1.9, attack: 0, noFallDamage: true,
     drops: [{ id: I.SNOWBALL, min: 0, max: 15 }],
   },
+  hopper: {
+    name: 'Hopper', role: 'rabbit', category: CATEGORY.CREATURE, hops: true, sound: 'squeak',
+    health: 3, speed: 0.3, width: 0.4, height: 0.5, panicSpeed: 2.2, noFallDamage: true,
+    drops: [{ id: I.RAW_RABBIT, min: 0, max: 1, cooked: I.COOKED_RABBIT }, { id: I.RABBIT_HIDE, min: 0, max: 1 }], food: [I.CARROT, B.SUNPETAL],
+  },
+  frostbear: {
+    name: 'Frostbear', role: 'polar bear', category: CATEGORY.CREATURE, neutralBeast: true, sound: 'grunt',
+    health: 30, speed: 0.25, width: 1.4, height: 1.4, attack: 6,
+    drops: [{ id: I.RAW_SALMON_BEAR, min: 0, max: 2 }],
+  },
+  vixling: {
+    name: 'Vixling', role: 'fox', category: CATEGORY.CREATURE, fox: true, sound: 'squeak',
+    health: 10, speed: 0.3, width: 0.6, height: 0.7, attack: 2, panicSpeed: 1.8,
+    drops: [], food: [I.APPLE],
+  },
   settler: {
     name: 'Settler', role: 'villager', category: CATEGORY.CREATURE, villager: true,
     health: 20, speed: 0.3, width: 0.6, height: 1.95, panicSpeed: 1.6, sound: 'hmm',

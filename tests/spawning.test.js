@@ -31,7 +31,7 @@ describe('spawn tables', () => {
     expect(p.bristleback).toBeCloseTo(10 / 40, 9);
     expect(p.cluckling).toBeCloseTo(10 / 40, 9);
     expect(p.mooxen).toBeCloseTo(8 / 40, 9);
-    expect(spawnTable('creature', BIOME.DESERT)).toHaveLength(0);
+    expect(spawnTable('creature', BIOME.DESERT).map((e) => e.type)).toEqual(['hopper']);
   });
   it('weighted picks converge on the weights', () => {
     const r = rng(42);

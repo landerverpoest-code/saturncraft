@@ -246,6 +246,10 @@ export class Mob {
       // Ironguards shrug off knockback and go after whoever hit them (players they made, never)
       this.body.vx *= 0.2; this.body.vz *= 0.2;
       if (attacker && attacker !== this && !(attacker.isPlayer && this.playerMade)) this.enemy = attacker.isPlayer ? 'player' : attacker;
+    } else if (this.def.neutralBeast) {
+      // Frostbears fight back, and the others nearby join in
+      const foe = attacker && attacker.isPlayer ? 'player' : attacker;
+      if (foe && attacker !== this && g) for (const e of g.entities.list) if (e.type === this.type && !e.dead && Math.hypot(e.x - this.x, e.z - this.z) < 16) e.enemy = foe;
     } else if (this.def.aquatic) {
       // a squirt of ink and a dash away
       if (g) for (let k = 0; k < 20; k++) g.particles.emit(this.x, this.y + 0.4, this.z, (Math.random() - 0.5) * 0.3, (Math.random() - 0.5) * 0.3, (Math.random() - 0.5) * 0.3, 0.05, 0.05, 0.08, 40, 0);
@@ -380,7 +384,7 @@ export class Mob {
     else this.ai(g, p, pdist);
 
     const mv = this.move || { forward: 0, jump: false };
-    const jump = mv.jump || (b.inWater && b.y + this.height * 0.4 < Math.floor(b.y) + 1.2) || (b.inLava);
+    const jump = mv.jump || (this.def.hops && mv.forward && b.onGround) || (b.inWater && b.y + this.height * 0.4 < Math.floor(b.y) + 1.2) || (b.inLava);
     if (this.def.flying) this.flyMove(g);
     else b.travel(g.world, { forward: mv.forward, strafe: mv.strafe || 0, yaw: this.yaw, jump, speed: mv.forward ? this.speed() * (mv.mod || 1) : this.speed(), climbing: this.def.climbs && b.horizontalCollision && !!this.move });
     if (this.type === 'cluckling' && !b.onGround && b.vy < 0) { b.vy *= 0.6; b.fallDistance = 0; }
@@ -449,6 +453,8 @@ export class Mob {
   ai(g, p, pdist) {
     if (this.def.villager) return this.settlerAI(g, p, pdist);
     if (this.def.tameable) return this.howlerAI(g, p, pdist);
+    if (this.def.neutralBeast) return this.bearAI(g, p, pdist);
+    if (this.def.fox) return this.foxAI(g, p, pdist);
     if (this.def.aquatic) return this.inklingAI(g);
     if (this.type === 'flitter') return this.flitterAI(g, p, pdist);
     if (this.def.snowGolem) return this.frostlingAI(g, p, pdist);
@@ -671,6 +677,33 @@ export class Mob {
     this.yaw = Math.atan2(-b.vx, -b.vz);
     if (SOLID[above] && Math.random() < 0.01) { this.roosting = true; b.setPos(this.x, Math.floor(this.y + this.height + 0.1) - this.height, this.z); }
     if (Math.random() < 1 / 120) g.audio.play('squeak', [this.x, this.y, this.z], 0.5);
+  }
+
+  /** Frostbears amble about; once angry they charge and maul (6 damage). */
+  bearAI(g, p, pdist) {
+    if (this.age < 0) { if (++this.age === 0) this.setBaby(false); } else if (this.age > 0) this.age--;
+    const alive = (e) => e && (e === 'player' ? !p.dead && !p.creative && pdist < 24 : !e.dead && e.deathTime === 0);
+    if (this.enemy && !alive(this.enemy)) this.enemy = null;
+    if (this.enemy) { const t = this.enemy === 'player' ? p : this.enemy; this.chase(g, t, 1.4); this.howlerBite(g, t); return; }
+    this.wanderAI(g, 0.8);
+  }
+
+  /** Vixlings sleep through the day, hunt Clucklings and Hoppers at dusk and night, and keep away from players. */
+  foxAI(g, p, pdist) {
+    if (this.age < 0) { if (++this.age === 0) this.setBaby(false); } else if (this.age > 0) this.age--;
+    if (this.panicTicks > 0) { this.sleeping = false; return this.passiveAI(g); }
+    const day = g.sky.state.aboveCount >= 2;
+    if (pdist < 6 && !p.sneaking && !p.creative && !p.dead) { this.sleeping = false; this.steer(this.x + (this.x - p.x) * 3, this.z + (this.z - p.z) * 3, 1.6); return; }
+    if (this.enemy && (this.enemy.dead || this.enemy.deathTime > 0 || Math.hypot(this.enemy.x - this.x, this.enemy.z - this.z) > 16)) this.enemy = null;
+    if (this.enemy) { this.sleeping = false; this.chase(g, this.enemy, 1.3); this.howlerBite(g, this.enemy); return; }
+    if (day) { if (!this.sleeping && Math.random() < 0.01) this.sleeping = true; if (this.sleeping) { this.move = null; return; } }
+    else {
+      this.sleeping = false;
+      if (g.ticks % 40 === this.id % 40 && Math.random() < 0.1) for (const e of g.entities.list) {
+        if (e.kind === 'mob' && (e.type === 'cluckling' || e.type === 'hopper') && e.deathTime === 0 && Math.hypot(e.x - this.x, e.z - this.z) < 12) { this.enemy = e; break; }
+      }
+    }
+    this.wanderAI(g, 1);
   }
 
   /** Inklings drift through the water in pulses; out of water they flop and suffocate. Hurt, they squirt ink and dart away. */

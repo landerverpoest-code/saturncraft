@@ -44,7 +44,7 @@ export const SPAWN_TABLES = {
     mushroom_fields: [],
   },
   creature: {
-    plains: [...FARM_ANIMALS, { type: 'galloper', weight: 5, min: 2, max: 6 }], birch_forest: FARM_ANIMALS, flower_forest: FARM_ANIMALS, dark_forest: FARM_ANIMALS,
+    plains: [...FARM_ANIMALS, { type: 'galloper', weight: 5, min: 2, max: 6 }, { type: 'hopper', weight: 4, min: 2, max: 3 }], birch_forest: FARM_ANIMALS, flower_forest: FARM_ANIMALS, dark_forest: FARM_ANIMALS,
     // swamps and savannas: the same farm animals (reference swamps add slimes, savannas horses)
     swamp: FARM_ANIMALS, savanna: [...FARM_ANIMALS, { type: 'galloper', weight: 6, min: 2, max: 6 }],
     // jungles: mostly pigs and chickens
@@ -53,8 +53,10 @@ export const SPAWN_TABLES = {
     mushroom_fields: [{ type: 'mooxen', weight: 8, min: 4, max: 8 }],
     // packs of Howlers (wolves) in forests and taiga
     forest: [...FARM_ANIMALS, { type: 'howler', weight: 5, min: 4, max: 4 }],
-    taiga: [...FARM_ANIMALS, { type: 'howler', weight: 8, min: 4, max: 4 }],
-    snowy_taiga: [{ type: 'howler', weight: 8, min: 4, max: 4 }, { type: 'fleecer', weight: 6, min: 2, max: 4 }],
+    taiga: [...FARM_ANIMALS, { type: 'howler', weight: 8, min: 4, max: 4 }, { type: 'vixling', weight: 8, min: 2, max: 4 }, { type: 'hopper', weight: 4, min: 2, max: 3 }],
+    snowy_taiga: [{ type: 'howler', weight: 8, min: 4, max: 4 }, { type: 'fleecer', weight: 6, min: 2, max: 4 }, { type: 'vixling', weight: 8, min: 2, max: 4 }, { type: 'hopper', weight: 4, min: 2, max: 3 }],
+    snowy_plains: [{ type: 'hopper', weight: 10, min: 2, max: 3 }, { type: 'frostbear', weight: 2, min: 1, max: 2 }],
+    desert: [{ type: 'hopper', weight: 4, min: 2, max: 3 }],
     default: [],
   },
 };
