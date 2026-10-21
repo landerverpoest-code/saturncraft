@@ -77,6 +77,11 @@ export const MOBS = {
     health: 22, speed: 0.225, width: 1.4, height: 1.6, panicSpeed: 1.4,
     drops: [{ id: I.LEATHER, min: 0, max: 2 }], food: [I.WHEAT, I.APPLE],
   },
+  inkling: {
+    name: 'Inkling', role: 'squid', category: CATEGORY.CREATURE, aquatic: true, sound: 'squish',
+    health: 10, speed: 0.1, width: 0.8, height: 0.8, noFallDamage: true,
+    drops: [{ id: I.INK_SAC, min: 1, max: 3 }],
+  },
   settler: {
     name: 'Settler', role: 'villager', category: CATEGORY.CREATURE, villager: true,
     health: 20, speed: 0.3, width: 0.6, height: 1.95, panicSpeed: 1.6, sound: 'hmm',

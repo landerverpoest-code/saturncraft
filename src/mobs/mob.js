@@ -216,6 +216,11 @@ export class Mob {
       // Ironguards shrug off knockback and go after whoever hit them (players they made, never)
       this.body.vx *= 0.2; this.body.vz *= 0.2;
       if (attacker && attacker !== this && !(attacker.isPlayer && this.playerMade)) this.enemy = attacker.isPlayer ? 'player' : attacker;
+    } else if (this.def.aquatic) {
+      // a squirt of ink and a dash away
+      if (g) for (let k = 0; k < 20; k++) g.particles.emit(this.x, this.y + 0.4, this.z, (Math.random() - 0.5) * 0.3, (Math.random() - 0.5) * 0.3, (Math.random() - 0.5) * 0.3, 0.05, 0.05, 0.08, 40, 0);
+      this.panicTicks = 40;
+      if (attacker) { const dx = this.x - attacker.x, dz = this.z - attacker.z, d = Math.hypot(dx, dz) || 1; this.swimDir = [dx / d, 0.2, dz / d]; }
     } else if (this.def.tameable) {
       // a hurt Howler stands up and fights back; a wild one calls its pack
       this.sitting = false;
@@ -398,7 +403,7 @@ export class Mob {
       this.fireTicks--;
       if (Math.random() < 0.3) g.particles.flame(this.x + (Math.random() - 0.5) * this.width, this.y + Math.random() * this.height, this.z + (Math.random() - 0.5) * this.width);
     }
-    if (b.eyeInWater && this.type !== 'voidwalker') {
+    if (b.eyeInWater && this.type !== 'voidwalker' && !this.def.aquatic) {
       if (--this.air <= -20) { this.air = 0; this.hurt(2, 'drown'); }
     } else this.air = 300;
     if (this.type === 'voidwalker' && b.inWater) {
@@ -414,6 +419,7 @@ export class Mob {
   ai(g, p, pdist) {
     if (this.def.villager) return this.settlerAI(g, p, pdist);
     if (this.def.tameable) return this.howlerAI(g, p, pdist);
+    if (this.def.aquatic) return this.inklingAI(g);
     if (this.def.guard) return this.guardAI(g, p, pdist);
     if (this.def.category === CATEGORY.CREATURE) return this.passiveAI(g);
     if (this.def.customAI) return this.def.customAI(this, g, p, pdist); // Cinderdeep / Hollow mobs (dimensionMobs.js)
@@ -582,6 +588,24 @@ export class Mob {
     const h = this.home;
     if (Math.hypot(h.x - this.x, h.z - this.z) > 20) { if (!this.path || g.ticks % 40 === 0) this.pathTo(g, h.x, h.y, h.z); if (!this.followPath(g, 0.6)) this.steer(h.x, h.z, 0.6); return; }
     this.wanderAI(g, 0.5);
+  }
+
+  /** Inklings drift through the water in pulses; out of water they flop and suffocate. Hurt, they squirt ink and dart away. */
+  inklingAI(g) {
+    const b = this.body;
+    this.pulse = (this.pulse || 0) + 1;
+    if (!b.inWater) { this.move = null; if (g.ticks % 20 === 0) this.hurt(1, 'drown'); return; }
+    if (!this.swimDir || this.pulse % 60 === 0 || b.horizontalCollision) {
+      const a = Math.random() * Math.PI * 2;
+      this.swimDir = [Math.sin(a), (Math.random() - 0.5) * 0.6, Math.cos(a)];
+    }
+    const k = this.panicTicks > 0 ? 0.06 : (this.pulse % 30 < 8 ? 0.02 : 0); // a push at the start of each pulse
+    if (this.panicTicks > 0) this.panicTicks--;
+    // stay under the surface
+    if (g.world.getBlock(Math.floor(this.x), Math.floor(this.y + this.height + 0.3), Math.floor(this.z)) !== B.WATER) this.swimDir[1] = -Math.abs(this.swimDir[1]) - 0.2;
+    b.vx += this.swimDir[0] * k; b.vy += this.swimDir[1] * k + 0.005; b.vz += this.swimDir[2] * k;
+    this.yaw += wrap(Math.atan2(-this.swimDir[0], -this.swimDir[2]) - this.yaw) * 0.1;
+    this.move = null;
   }
 
   /** Wobblers hop: a jump every 10-30 ticks (three times as often when chasing), steering only in the air; big ones hurt on contact. */

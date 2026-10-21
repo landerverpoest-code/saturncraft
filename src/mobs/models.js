@@ -208,6 +208,17 @@ MODELS.galloper = {
   ],
 };
 
+// Inklings: a dark blue body with eight tentacles that sweep with each pulse.
+MODELS.inkling = {
+  parts: [
+    ['body', [10, 12, 10], [0, 12, 0], [0, 0, 0], '#2a3a6a', { face: 'inkling' }],
+    ...[0, 1, 2, 3, 4, 5, 6, 7].map((k) => {
+      const a = (k / 8) * Math.PI * 2;
+      return [`t${k}`, [2, 10, 2], [Math.sin(a) * 4, 6, Math.cos(a) * 4], [0, -5, 0], '#24325c', { anim: 'tentacle', idx: k }];
+    }),
+  ],
+};
+
 // Settlers: big-nosed villagers in a robe whose colour shows the profession.
 MODELS.settler = {
   parts: [
@@ -305,6 +316,7 @@ const FACES = {
   },
   ironguard: (c) => { px(c, '#7a7468', [[2, 4, 12, 2]]); px(c, '#8a1a10', [[4, 6, 2, 2], [10, 6, 2, 2]]); px(c, '#a8a298', [[3, 12, 10, 1]]); },
   galloper: (c) => { px(c, '#141210', [[1, 5, 2, 2], [13, 5, 2, 2]]); px(c, '#4a3020', [[5, 12, 2, 2], [9, 12, 2, 2]]); },
+  inkling: (c) => { px(c, '#e8e8f0', [[3, 7, 3, 3], [10, 7, 3, 3]]); px(c, '#101018', [[4, 8, 2, 2], [11, 8, 2, 2]]); },
   howler: (c) => { px(c, '#f0f0f0', [[2, 6, 3, 2], [11, 6, 3, 2]]); px(c, '#2a2418', [[3, 6, 2, 2], [11, 6, 2, 2]]); px(c, '#7a7a80', [[2, 4, 4, 1], [10, 4, 4, 1]]); },
   bristleback: (c) => { px(c, '#1a1010', [[3, 5, 2, 2], [11, 5, 2, 2]]); px(c, '#ffffff', [[3, 5], [11, 5]]); },
   mooxen: (c) => { px(c, '#101820', [[2, 6, 2, 2], [12, 6, 2, 2]]); px(c, '#c8b8a0', [[4, 10, 8, 6]]); px(c, '#3a2a2a', [[5, 12, 2, 2], [9, 12, 2, 2]]); },
@@ -399,6 +411,7 @@ export function animateModel(root, mob, alpha, L, sec) {
       case 'armAim': g.rotation.x = mob.target ? -Math.PI / 2 : Math.cos(swing + (g === parts.armL ? Math.PI : 0)) * amt; break;
       case 'armSwing': g.rotation.x = Math.cos(swing + Math.PI) * amt * 0.8 - (mob.angry ? 0.4 : 0); break;
       case 'armSwingB': g.rotation.x = Math.cos(swing) * amt * 0.8 - (mob.angry ? 0.4 : 0); break;
+      case 'tentacle': { const ph = Math.sin(sec * 3 + mob.id) * 0.5 + 0.6, a = (g.userData.idx / 8) * Math.PI * 2; g.rotation.set(Math.cos(a) * ph, 0, -Math.sin(a) * ph); break; }
       case 'wingL': g.rotation.z = mob.body.onGround ? 0 : Math.sin(sec * 30) * 0.8; break;
       case 'wingR': g.rotation.z = mob.body.onGround ? 0 : -Math.sin(sec * 30) * 0.8; break;
       case 'tendril': g.rotation.x = Math.sin(sec * 1.7 + g.userData.idx * 1.3) * 0.25; g.rotation.z = Math.cos(sec * 1.3 + g.userData.idx) * 0.15; break;
