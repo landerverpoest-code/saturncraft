@@ -6,6 +6,8 @@ import { cleanEffects } from '../player/effects.js';
 
 const DB_NAME = 'saturncraft';
 const STORE = 'worlds';
+export const MAX_WORLDS = 3;
+const slotKey = (slot) => `slot${slot}`;
 
 export function rleEncode(arr) {
   const out = [];
@@ -72,7 +74,7 @@ export function playerSaveData(p) {
   };
 }
 
-/** Serialise the current game into the 'current' slot. */
+/** Serialise the current game into its world slot (1..MAX_WORLDS). */
 export async function saveGame(game) {
   const w = game.world, p = game.player;
   const chunks = {};
@@ -85,6 +87,7 @@ export async function saveGame(game) {
     .map((e) => e.saveData());
   const data = {
     version: 1,
+    name: game.worldName || `World ${game.saveSlot || 1}`,
     seed: game.seed,
     time: game.time,
     gameRules: { doDaylightCycle: game.settings.daylightCycle !== false, doHostileSpawning: game.settings.hostileMobs !== false, difficulty: game.difficulty },
@@ -108,26 +111,63 @@ export async function saveGame(game) {
     netPlayers: game.netPlayers || {}, // multiplayer guests' state by name
   };
   const db = await openDB();
-  await txn(db, 'readwrite', (s) => s.put(data, 'current'));
+  await txn(db, 'readwrite', (s) => s.put(data, slotKey(game.saveSlot || 1)));
   db.close();
   return data;
 }
 
-export async function loadGame() {
+function getKey(s, key) {
+  return new Promise((res) => { const r = s.get(key); r.onsuccess = () => res(r.result || null); r.onerror = () => res(null); });
+}
+
+/** The world in a slot, or null. */
+export async function loadGame(slot = 1) {
   try {
     const db = await openDB();
-    const data = await txn(db, 'readonly', (s) => new Promise((res) => { const r = s.get('current'); r.onsuccess = () => res(r.result); r.onerror = () => res(null); }));
+    const data = await txn(db, 'readonly', (s) => getKey(s, slotKey(slot)));
     db.close();
-    return data || null;
+    return data;
   } catch { return null; }
 }
 
-export async function deleteSave() {
+/**
+ * Summaries of every slot (null where empty): { slot, name, seed, savedAt }.
+ * A save from before world slots ('current') moves into the first free slot.
+ */
+export async function listWorlds() {
+  const out = Array(MAX_WORLDS).fill(null);
   try {
     const db = await openDB();
-    await txn(db, 'readwrite', (s) => s.delete('current'));
+    await txn(db, 'readwrite', async (s) => {
+      const all = [];
+      for (let i = 1; i <= MAX_WORLDS; i++) all.push(await getKey(s, slotKey(i)));
+      const legacy = await getKey(s, 'current');
+      if (legacy) {
+        const free = all.indexOf(null);
+        if (free >= 0) { all[free] = legacy; s.put(legacy, slotKey(free + 1)); s.delete('current'); }
+      }
+      all.forEach((d, i) => { if (d) out[i] = { slot: i + 1, name: d.name || `World ${i + 1}`, seed: d.seed, savedAt: d.savedAt }; });
+    });
+    db.close();
+  } catch { /* storage unavailable: no worlds */ }
+  return out;
+}
+
+export async function deleteSave(slot) {
+  try {
+    const db = await openDB();
+    await txn(db, 'readwrite', (s) => s.delete(slotKey(slot)));
     db.close();
   } catch { /* nothing to delete */ }
+}
+
+/** Give a saved world a new name. */
+export async function renameWorld(slot, name) {
+  try {
+    const db = await openDB();
+    await txn(db, 'readwrite', async (s) => { const d = await getKey(s, slotKey(slot)); if (d) s.put({ ...d, name }, slotKey(slot)); });
+    db.close();
+  } catch { /* storage unavailable */ }
 }
 
 /** Apply loaded data to a freshly constructed (not yet started) game. */

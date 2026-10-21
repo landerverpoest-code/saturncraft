@@ -15,10 +15,11 @@
     <div class="title-wrap"><h1>SATURNCRAFT</h1><div id="splash"></div></div>
     <p class="sub">Three suns. One ringed giant. Survive.</p>
     <div class="field"><label for="pname">Your name</label><input type="text" id="pname" maxlength="16" /></div>
+    <div id="worlds" class="world-list"></div>
+    <div class="field"><label for="wname">World name</label><input type="text" id="wname" maxlength="24" placeholder="New World" /></div>
     <div class="field"><label for="seed">World seed</label><input type="text" id="seed" placeholder="random" /></div>
     <div class="field"><label>Render distance: <b id="t-rdv">8</b> chunks</label><input type="range" id="t-rd" min="2" max="16" value="8" /></div>
     <div class="field"><label><input type="checkbox" id="t-sh" checked /> Sun shadows</label></div>
-    <button class="btn hidden" id="continue">Continue World</button>
     <button class="btn" id="play">Create New World</button>
     <div class="join-row"><input type="text" id="join-code" placeholder="Room code" maxlength="64" /><button class="btn" id="join">Join a Friend</button></div>
     <p class="sub" id="join-msg"></p>
