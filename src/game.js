@@ -227,6 +227,7 @@ export class Game {
     if (k === 'music') this.music.setVolume(v);
     if (k === 'shadows') this.sky.setShadowsEnabled(v);
     if (k === 'hostileMobs' && !v) this.removeHostileMobs();
+    if (k === 'daylightCycle' && !v) this.freezeAtDay();
     if (this.hooks.saveSettings) this.hooks.saveSettings(this.settings);
   }
 
@@ -234,6 +235,25 @@ export class Game {
   get daylightCycle() { return this.settings.daylightCycle !== false; }
 
   /** Hostile mobs switched off: clear the monsters that are already around (like peaceful). */
+  /**
+   * Switching the day/night cycle off means "always day": if it is not
+   * broad daylight yet, skip ahead to the next noon and clear the night's
+   * monsters that stand under the open sky (cave monsters stay).
+   */
+  freezeAtDay() {
+    if (this.world.dimension && this.world.dimension !== 'overworld') return;
+    if (skyState(this.time).combined > 0.6) return;
+    let t = this.time;
+    while (skyState(t).combined < 0.95 && t < this.time + 400000) t += 20;
+    this.time = t;
+    if (this.net && this.net.isHost && this.net.broadcastTime) this.net.broadcastTime();
+    if (!this.entities) return;
+    for (const e of this.entities.list) {
+      if (e.kind !== 'mob' || e.dead || e.def.category !== CATEGORY.MONSTER) continue;
+      if (this.world.heightAt(Math.floor(e.x), Math.floor(e.z)) <= Math.floor(e.y) + 1) { e.removed = true; e.dead = true; }
+    }
+  }
+
   removeHostileMobs() {
     if (!this.entities) return;
     for (const e of this.entities.list) {
