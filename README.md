@@ -357,6 +357,7 @@ poison from eyes) follow the documented table.
 * Paintings (8 sticks + wool): eight original procedurally painted pictures from 1 × 1 to 4 × 3 (three suns, a ringed moon, dunes, a harbour, peaks, a forest, a shoreline, a city in the sky); right-click a wall to hang the largest that fits; breaking any part takes the whole picture down
 * Campfires (3 sticks, coal, 3 logs: light 15, animated flames, rising smoke, burn whoever stands on them, drop 2 coal) and lanterns (iron + torch: light 15, standing, or hanging when placed under a block); torches smoke and lava throws embers
 * Shields (6 planks + iron ingot, 336 uses): hold right-click to raise one (after a quarter second); it stops melee hits and arrows from in front, wears with the damage it takes, pushes attackers back and slows you to a fifth
+* Flitters (bats): up to 15 flutter about in dark caves near you (light ≤ 3), squeak, and hang upside down from ceilings until you come close
 * Inklings (squid) in deep ocean water: they drift in pulses with sweeping tentacles, squirt ink and dart away when hit, and drop 1–3 ink sacs (black dye)
 * Shipwrecks on the ocean floor (40 % of 160 × 160 regions): an oak or spruce hull with a broken deck, a snapped mast and two loot chests; `/locate shipwreck`
 * Jungle temples (mossy cobblestone, two storeys, vines, a ladder down to a hidden chest) and igloos in snowy biomes (a snow dome with bed, workbench, furnace and chest), in the same regions as desert temples

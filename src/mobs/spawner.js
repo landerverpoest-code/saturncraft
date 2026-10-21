@@ -123,14 +123,21 @@ export class MobSpawner {
     const pcx = Math.floor(p.x / 16), pcz = Math.floor(p.z / 16);
     const chunks = [];
     for (let dx = -R; dx <= R; dx++) for (let dz = -R; dz <= R; dz++) if (w.isChunkLoaded(pcx + dx, pcz + dz)) chunks.push([pcx + dx, pcz + dz]);
-    let monsters = 0, creatures = 0, surface = 0;
+    let monsters = 0, creatures = 0, surface = 0, ambient = 0;
     for (const e of g.entities.list) {
       if (e.kind !== 'mob' || e.dead) continue;
+      if (e.def.category === CATEGORY.AMBIENT) { ambient++; continue; }
       if (e.def.category !== CATEGORY.MONSTER) { creatures++; continue; }
       monsters++;
       if (e.y >= w.heightAt(Math.floor(e.x), Math.floor(e.z)) - 1) surface++;
     }
     const cap = scaledCap(CATEGORY.MONSTER, chunks.length);
+    // Flitters (bats) in dark caves near the player, at most 15 (reference ambient cap)
+    if (g.ticks % 20 === 0 && ambient < 15 && w.dimension !== 'cinderdeep' && w.dimension !== 'hollow') {
+      const x = Math.floor(p.x + (Math.random() - 0.5) * 48), z = Math.floor(p.z + (Math.random() - 0.5) * 48);
+      const y = Math.floor(Math.min(62, p.y + (Math.random() - 0.5) * 32));
+      if (w.isLoaded(x, z) && !w.getBlock(x, y, z) && !w.getBlock(x, y - 1, z) && Math.hypot(x - p.x, z - p.z) > 12 && Math.max(w.skyLight(x, y, z), w.blockLight(x, y, z)) <= 3) this.spawnMob('flitter', x + 0.5, y - 0.5, z + 0.5);
+    }
     if (this.hostileEnabled()) {
       if (monsters < cap) {
         for (const [cx, cz] of chunks) monsters += this.attempt(cx, cz, CATEGORY.MONSTER);

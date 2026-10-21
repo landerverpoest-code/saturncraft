@@ -3,7 +3,7 @@
 import { I } from '../world/items.js';
 import { B } from '../world/blocks.js';
 
-export const CATEGORY = { CREATURE: 'creature', MONSTER: 'monster' };
+export const CATEGORY = { CREATURE: 'creature', MONSTER: 'monster', AMBIENT: 'ambient' };
 
 export const MOBS = {
   bristleback: {
@@ -81,6 +81,10 @@ export const MOBS = {
     name: 'Inkling', role: 'squid', category: CATEGORY.CREATURE, aquatic: true, sound: 'squish',
     health: 10, speed: 0.1, width: 0.8, height: 0.8, noFallDamage: true,
     drops: [{ id: I.INK_SAC, min: 1, max: 3 }],
+  },
+  flitter: {
+    name: 'Flitter', role: 'bat', category: CATEGORY.AMBIENT, flying: true, noFallDamage: true, sound: 'squeak',
+    health: 6, speed: 0.3, width: 0.5, height: 0.9, drops: [],
   },
   settler: {
     name: 'Settler', role: 'villager', category: CATEGORY.CREATURE, villager: true,

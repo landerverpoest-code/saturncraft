@@ -420,6 +420,7 @@ export class Mob {
     if (this.def.villager) return this.settlerAI(g, p, pdist);
     if (this.def.tameable) return this.howlerAI(g, p, pdist);
     if (this.def.aquatic) return this.inklingAI(g);
+    if (this.type === 'flitter') return this.flitterAI(g, p, pdist);
     if (this.def.guard) return this.guardAI(g, p, pdist);
     if (this.def.category === CATEGORY.CREATURE) return this.passiveAI(g);
     if (this.def.customAI) return this.def.customAI(this, g, p, pdist); // Cinderdeep / Hollow mobs (dimensionMobs.js)
@@ -588,6 +589,28 @@ export class Mob {
     const h = this.home;
     if (Math.hypot(h.x - this.x, h.z - this.z) > 20) { if (!this.path || g.ticks % 40 === 0) this.pathTo(g, h.x, h.y, h.z); if (!this.followPath(g, 0.6)) this.steer(h.x, h.z, 0.6); return; }
     this.wanderAI(g, 0.5);
+  }
+
+  /** Flitters flutter about at random; now and then one hangs from a ceiling until a player comes close. */
+  flitterAI(g, p, pdist) {
+    const b = this.body, w = g.world;
+    const above = w.getBlock(Math.floor(this.x), Math.floor(this.y + this.height + 0.1), Math.floor(this.z));
+    if (this.roosting) {
+      b.vx = b.vy = b.vz = 0;
+      if (!SOLID[above] || (pdist < 4 && !p.creative) || Math.random() < 1 / 2000) this.roosting = false;
+      return;
+    }
+    if (!this.target3 || Math.random() < 0.02 || Math.hypot(this.target3[0] - this.x, this.target3[1] - this.y, this.target3[2] - this.z) < 1) {
+      this.target3 = [this.x + (Math.random() - 0.5) * 14, this.y + (Math.random() - 0.4) * 6, this.z + (Math.random() - 0.5) * 14];
+    }
+    const [tx, ty, tz] = this.target3;
+    b.vx += (Math.sign(tx - this.x) * 0.5 - b.vx) * 0.1;
+    b.vy += (Math.sign(ty - this.y) * 0.7 - b.vy) * 0.1;
+    b.vz += (Math.sign(tz - this.z) * 0.5 - b.vz) * 0.1;
+    b.vx *= 0.3; b.vy *= 0.3; b.vz *= 0.3; // short, fluttery steps
+    this.yaw = Math.atan2(-b.vx, -b.vz);
+    if (SOLID[above] && Math.random() < 0.01) { this.roosting = true; b.setPos(this.x, Math.floor(this.y + this.height + 0.1) - this.height, this.z); }
+    if (Math.random() < 1 / 120) g.audio.play('squeak', [this.x, this.y, this.z], 0.5);
   }
 
   /** Inklings drift through the water in pulses; out of water they flop and suffocate. Hurt, they squirt ink and dart away. */
@@ -885,6 +908,7 @@ export class Mob {
     m.rotation.set(0, yaw, 0);
     if (this.deathTime > 0) m.rotation.z = Math.min(1, (this.deathTime + alpha) / 10) * Math.PI / 2;
     animateModel(m, this, alpha, L, sec);
+    if (this.roosting) { m.rotation.z = Math.PI; m.position.y += this.height; } // hanging upside down
     if (parts && parts.armL && this.def.guard && this.swingTime > 0) parts.armL.rotation.x = parts.armR.rotation.x = -2 * Math.sin((this.swingTime - alpha) / 10 * Math.PI);
     if (this.def.customRender) this.def.customRender(this, m, alpha, sec);
     if (parts && parts.saddle) {

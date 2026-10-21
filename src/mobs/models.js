@@ -208,6 +208,18 @@ MODELS.galloper = {
   ],
 };
 
+// Flitters: a small furry body with two wide wings.
+MODELS.flitter = {
+  parts: [
+    ['body', [4, 6, 4], [0, 8, 0], [0, 0, 0], '#4a3a2e'],
+    ['head', [5, 5, 4], [0, 11, 0], [0, 2.5, 0], '#4a3a2e', { face: 'flitter' }],
+    ['earL', [1, 2, 1], [0, 11, 0], [1.5, 6, 0], '#3a2a20'],
+    ['earR', [1, 2, 1], [0, 11, 0], [-1.5, 6, 0], '#3a2a20'],
+    ['wingL', [8, 6, 1], [2, 10, 0], [4, -2, 0], '#2a1e18', { anim: 'batL' }],
+    ['wingR', [8, 6, 1], [-2, 10, 0], [-4, -2, 0], '#2a1e18', { anim: 'batR' }],
+  ],
+};
+
 // Inklings: a dark blue body with eight tentacles that sweep with each pulse.
 MODELS.inkling = {
   parts: [
@@ -316,6 +328,7 @@ const FACES = {
   },
   ironguard: (c) => { px(c, '#7a7468', [[2, 4, 12, 2]]); px(c, '#8a1a10', [[4, 6, 2, 2], [10, 6, 2, 2]]); px(c, '#a8a298', [[3, 12, 10, 1]]); },
   galloper: (c) => { px(c, '#141210', [[1, 5, 2, 2], [13, 5, 2, 2]]); px(c, '#4a3020', [[5, 12, 2, 2], [9, 12, 2, 2]]); },
+  flitter: (c) => { px(c, '#1a1010', [[3, 6, 2, 2], [11, 6, 2, 2]]); px(c, '#e8d8c8', [[6, 11, 1, 2], [9, 11, 1, 2]]); },
   inkling: (c) => { px(c, '#e8e8f0', [[3, 7, 3, 3], [10, 7, 3, 3]]); px(c, '#101018', [[4, 8, 2, 2], [11, 8, 2, 2]]); },
   howler: (c) => { px(c, '#f0f0f0', [[2, 6, 3, 2], [11, 6, 3, 2]]); px(c, '#2a2418', [[3, 6, 2, 2], [11, 6, 2, 2]]); px(c, '#7a7a80', [[2, 4, 4, 1], [10, 4, 4, 1]]); },
   bristleback: (c) => { px(c, '#1a1010', [[3, 5, 2, 2], [11, 5, 2, 2]]); px(c, '#ffffff', [[3, 5], [11, 5]]); },
@@ -411,6 +424,8 @@ export function animateModel(root, mob, alpha, L, sec) {
       case 'armAim': g.rotation.x = mob.target ? -Math.PI / 2 : Math.cos(swing + (g === parts.armL ? Math.PI : 0)) * amt; break;
       case 'armSwing': g.rotation.x = Math.cos(swing + Math.PI) * amt * 0.8 - (mob.angry ? 0.4 : 0); break;
       case 'armSwingB': g.rotation.x = Math.cos(swing) * amt * 0.8 - (mob.angry ? 0.4 : 0); break;
+      case 'batL': g.rotation.y = mob.roosting ? -1.2 : Math.sin(sec * 25 + mob.id) * 0.9; break;
+      case 'batR': g.rotation.y = mob.roosting ? 1.2 : -Math.sin(sec * 25 + mob.id) * 0.9; break;
       case 'tentacle': { const ph = Math.sin(sec * 3 + mob.id) * 0.5 + 0.6, a = (g.userData.idx / 8) * Math.PI * 2; g.rotation.set(Math.cos(a) * ph, 0, -Math.sin(a) * ph); break; }
       case 'wingL': g.rotation.z = mob.body.onGround ? 0 : Math.sin(sec * 30) * 0.8; break;
       case 'wingR': g.rotation.z = mob.body.onGround ? 0 : -Math.sin(sec * 30) * 0.8; break;
