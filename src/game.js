@@ -501,6 +501,24 @@ export class Game {
     }
   }
 
+  /** Ambient block effects near the player: smoke from campfires and torches, embers over lava. */
+  displayTick() {
+    const p = this.player, w = this.world;
+    for (let k = 0; k < 120; k++) {
+      const x = Math.floor(p.x + (Math.random() - 0.5) * 24), y = Math.floor(p.y + (Math.random() - 0.5) * 16), z = Math.floor(p.z + (Math.random() - 0.5) * 24);
+      const id = w.getBlock(x, y, z);
+      if (id === B.CAMPFIRE) {
+        for (let n = 0; n < 3; n++) this.particles.emit(x + 0.3 + Math.random() * 0.4, y + 0.6, z + 0.3 + Math.random() * 0.4, (Math.random() - 0.5) * 0.01, 0.05 + Math.random() * 0.03, (Math.random() - 0.5) * 0.01, 0.55, 0.55, 0.58, 60 + Math.random() * 40, -0.0005);
+        if (Math.random() < 0.3) this.audio.play('fire', [x + 0.5, y + 0.5, z + 0.5], 0.4);
+      } else if (id === B.TORCH && Math.random() < 0.5) {
+        const m = w.getMeta(x, y, z), off = m ? 0.27 : 0, s = m ? [[0, -1], [1, 0], [0, 1], [-1, 0]][(m - 1) & 3] : [0, 0];
+        this.particles.emit(x + 0.5 + s[0] * off, y + (m ? 0.92 : 0.72), z + 0.5 + s[1] * off, 0, 0.01, 0, 0.45, 0.45, 0.45, 20, -0.001);
+      } else if (id === B.LAVA && !w.getBlock(x, y + 1, z) && Math.random() < 0.05) {
+        this.particles.emit(x + Math.random(), y + 1, z + Math.random(), (Math.random() - 0.5) * 0.1, 0.15, (Math.random() - 0.5) * 0.1, 1, 0.55, 0.15, 30, 0.02);
+      }
+    }
+  }
+
   /** Thunderstorms: every ~20 s a bolt hits a random rainy spot within 64 blocks. */
   tickThunder() {
     if (this.weather.storm < 0.9 || Math.random() >= 1 / 400) return;
@@ -561,6 +579,7 @@ export class Game {
     const overworld = this.world.dimension === 'overworld';
     if (overworld) this.tickRain();
     this.lightning.tick();
+    this.displayTick();
     if (overworld && (!this.net || this.net.isHost)) this.tickThunder(); // clients see the host's lightning
     if (!this.net || this.net.localRandomTicks) runRandomTicks(this.world, Math.floor(this.player.x / 16), Math.floor(this.player.z / 16), Math.min(this.chunks.renderDistance, 6));
     // Hold the player in place until the terrain under them has loaded (spawn, respawn, teleports)

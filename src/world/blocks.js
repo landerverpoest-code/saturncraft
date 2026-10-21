@@ -42,7 +42,7 @@ export const B = {
   BROWN_MUSHROOM_BLOCK: 121, RED_MUSHROOM_BLOCK: 122, MUSHROOM_STEM: 123, MYCELIUM: 124,
   SKYBELL: 125, ROSETTE: 126,
   // Other dimensions (ids from 160 up, see world/dimensions/): the Cinderdeep and the Hollow
-  SNOW_LAYER: 130, COBBLESTONE_WALL: 131, MOSSY_COBBLESTONE_WALL: 132, OAK_TRAPDOOR: 133, RAIL: 140, COBWEB: 141, TNT: 142,
+  SNOW_LAYER: 130, COBBLESTONE_WALL: 131, MOSSY_COBBLESTONE_WALL: 132, OAK_TRAPDOOR: 133, RAIL: 140, COBWEB: 141, TNT: 142, CAMPFIRE: 150, LANTERN: 151,
   SNOW_LAYER: 130, COBBLESTONE_WALL: 131, MOSSY_COBBLESTONE_WALL: 132, OAK_TRAPDOOR: 133,
   ENCHANTING_TABLE: 134, ANVIL: 135,
   CINDERSTONE: 160, GLOWSHARD: 161, MOURNSAND: 162, EMBERQUARTZ_ORE: 163, SCORCHED_BRICKS: 164, RIFT: 165,
@@ -115,6 +115,9 @@ def(B.COBBLESTONE_WALL, 'Cobblestone Wall', { hardness: 2, resistance: 6, tool: 
 def(B.MOSSY_COBBLESTONE_WALL, 'Mossy Cobblestone Wall', { hardness: 2, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD, opaque: false, shape: SHAPE.WALL, tex: { all: 'mossy_cobblestone' } });
 def(B.OAK_TRAPDOOR, 'Oak Trapdoor', { hardness: 3, resistance: 3, tool: TOOL.AXE, sound: 'wood', flammable: true, opaque: false, shape: SHAPE.TRAPDOOR, layer: LAYER.CUTOUT, tex: { all: 'oak_trapdoor' } });
 def(B.TNT, 'TNT', { hardness: 0, resistance: 0, sound: 'grass', flammable: true, tex: { top: 'tnt_top', bottom: 'tnt_bottom', side: 'tnt_side' } });
+// Campfires: logs with a fire on top (light 15, smoke, burns what stands in it); lanterns: light 15, standing or hanging (meta 1).
+def(B.CAMPFIRE, 'Campfire', { hardness: 2, resistance: 2, tool: TOOL.AXE, sound: 'wood', opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, emit: 15, drops: 'campfire', tex: { top: 'oak_log_top', bottom: 'oak_log_top', side: 'oak_log' } });
+def(B.LANTERN, 'Lantern', { hardness: 3.5, resistance: 3.5, tool: TOOL.PICKAXE, sound: 'metal', opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, emit: 15, tex: { top: 'lantern_top', bottom: 'lantern_top', side: 'lantern' } });
 // Cobwebs slow anything inside them to a crawl; swords and shears cut them for string.
 def(B.COBWEB, 'Cobweb', { hardness: 4, resistance: 4, tool: TOOL.SWORD, solid: false, opaque: false, shape: SHAPE.CROSS, layer: LAYER.CUTOUT, drops: 'cobweb', sound: 'wool' });
 // Rails: meta = shape (see world/rails.js); minecarts ride on them.

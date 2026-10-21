@@ -576,6 +576,13 @@ const GEN = {
     for (let k = 0; k < 16; k++) { c.set(k, k, col); c.set(15 - k, k, col); c.set(7, k, col); c.set(k, 8, col); }
     for (const r of [3, 6]) for (let a = 0; a < 32; a++) { const t = a / 32 * Math.PI * 2; c.set(Math.round(7.5 + Math.cos(t) * r), Math.round(7.5 + Math.sin(t) * r), col, 200); }
   },
+  lantern: (c) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const frame = x < 2 || x > 13 || y < 2 || y > 13;
+      c.set(x, y, frame ? shade(hex('#3a3a42'), 0.9 + c.h(x, y) * 0.2) : mix(hex('#ffd060'), hex('#ff9a20'), Math.abs(x - 7.5) / 8 + c.h(x, y) * 0.2));
+    }
+  },
+  lantern_top: (c) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, shade(hex('#3a3a42'), 0.85 + c.h(x, y) * 0.25)); },
   rail: (c) => railTex(c, false),
   rail_corner: (c) => railTex(c, true),
   oak_trapdoor: (c) => {

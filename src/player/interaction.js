@@ -419,6 +419,7 @@ export class Interaction {
       const s = Math.abs(ldx) > Math.abs(ldz) ? (ldx > 0 ? 1 : 3) : (ldz > 0 ? 2 : 0);
       meta = s | (upper && pshape === SHAPE.STAIRS ? STAIRS_UPSIDE : 0);
     }
+    if (placeId === B.LANTERN) meta = t.face[1] === -1 ? 1 : 0; // hangs when placed under a block
     if (pshape === SHAPE.TRAPDOOR) {
       // hinged on the clicked wall, or on the far side from the player on floors and ceilings; upper half when placed high
       const s = t.face[1] === 0 ? sideOf(-t.face[0], -t.face[2]) : (Math.abs(ldx) > Math.abs(ldz) ? (ldx > 0 ? 1 : 3) : (ldz > 0 ? 2 : 0));

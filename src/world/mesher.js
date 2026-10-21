@@ -281,6 +281,21 @@ export function meshSection(sec) {
       for (let d = 0; d < 6; d++) { const l = light[i + FACE_N[d]]; sk = Math.max(sk, l >> 4); bk = Math.max(bk, l & 15); }
       const tiles = [0, 1, 2, 3, 4, 5].map((d) => FACE_TILE[id * 6 + d]);
       for (const b of blockBoxes(id, meta[i])) emitBox(buf, x, y, z, b[0], b[1], b[2], b[3], b[4], b[5], tiles, sk * 17, bk * 17, 'box');
+      if (id === B.CAMPFIRE) {
+        // the flames: two crossed planes of animated fire, full bright
+        const tile = FACE_TILE[B.FIRE * 6 + 2], sky = sk * 17, h = 0.9, y0 = y + 0.1;
+        buf.ensure(16);
+        for (const [x1, z1, x2, z2] of [[x + 0.15, z + 0.15, x + 0.85, z + 0.85], [x + 0.15, z + 0.85, x + 0.85, z + 0.15]]) {
+          for (let side = 0; side < 2; side++) {
+            buf.vert(x1, y0, z1, 0, 1, 0, 0, 1, 255, 255, 255, sky, 255, 0, tile);
+            buf.vert(x2, y0, z2, 0, 1, 0, 1, 1, 255, 255, 255, sky, 255, 0, tile);
+            buf.vert(x2, y0 + h, z2, 0, 1, 0, 1, 0, 255, 255, 255, sky, 255, 0, tile);
+            buf.vert(x1, y0 + h, z1, 0, 1, 0, 0, 0, 255, 255, 255, sky, 255, 0, tile);
+            buf.quad(false);
+            if (side === 0) { const n = buf.n; for (let k = 0; k < 2; k++) swapVert(buf, n - 4 + k, n - 1 - k); }
+          }
+        }
+      }
     } else if (shape === SHAPE.SLAB || shape === SHAPE.STAIRS) {
       // light-blocking partial blocks: shade with the brightest neighbouring light
       let sk = 0, bk = 0;

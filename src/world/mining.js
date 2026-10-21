@@ -85,6 +85,7 @@ function baseDrops(blockId, b, rng, meta) {
     case 'clay': return [{ id: I.CLAY_BALL, count: 4 }];
     case 'gravel': return rng() < 0.1 ? [{ id: I.FLINT, count: 1 }] : [{ id: B.GRAVEL, count: 1 }];
     case 'cobweb': return tool && (tool.type === 'sword' || tool.shears) ? [{ id: I.STRING, count: 1 }] : [];
+    case 'campfire': return [{ id: I.COAL, count: 2 }];
     case 'snowballs': return [{ id: I.SNOWBALL, count: 4 }];
     case 'snow_layer': return [{ id: I.SNOWBALL, count: (meta & 7) + 1 }];
     case 'slab': return [{ id: blockId, count: meta === 2 ? 2 : 1 }];

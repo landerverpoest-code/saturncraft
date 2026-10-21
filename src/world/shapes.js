@@ -208,9 +208,16 @@ const TABLE_BOXES = [[0, 0, 0, 1, 12 / 16, 1]];
 const ANVIL_X = [[2 / 16, 0, 2 / 16, 14 / 16, 4 / 16, 14 / 16], [3 / 16, 4 / 16, 4 / 16, 13 / 16, 5 / 16, 12 / 16],
   [4 / 16, 5 / 16, 6 / 16, 12 / 16, 10 / 16, 10 / 16], [0, 10 / 16, 3 / 16, 1, 1, 13 / 16]];
 const ANVIL_Z = ANVIL_X.map(([x0, y0, z0, x1, y1, z1]) => [z0, y0, x0, z1, y1, x1]);
+// campfire: two logs along x, two across on top, a bed of embers between
+const CAMPFIRE_BOXES = [[0, 0, 1 / 16, 1, 4 / 16, 5 / 16], [0, 0, 11 / 16, 1, 4 / 16, 15 / 16],
+  [1 / 16, 3 / 16, 0, 5 / 16, 7 / 16, 1], [11 / 16, 3 / 16, 0, 15 / 16, 7 / 16, 1], [5 / 16, 0, 5 / 16, 11 / 16, 1 / 16, 11 / 16]];
+const LANTERN_STANDING = [[5 / 16, 0, 5 / 16, 11 / 16, 7 / 16, 11 / 16], [6 / 16, 7 / 16, 6 / 16, 10 / 16, 9 / 16, 10 / 16]];
+const LANTERN_HANGING = [[5 / 16, 1 / 16, 5 / 16, 11 / 16, 8 / 16, 11 / 16], [6 / 16, 8 / 16, 6 / 16, 10 / 16, 10 / 16, 10 / 16], [7.5 / 16, 10 / 16, 7.5 / 16, 8.5 / 16, 1, 8.5 / 16]];
 /** Render / collision boxes of a SHAPE.BOXES block. */
 export function blockBoxes(id, meta) {
   if (id === B.ANVIL) return meta & 1 ? ANVIL_Z : ANVIL_X;
+  if (id === B.CAMPFIRE) return CAMPFIRE_BOXES;
+  if (id === B.LANTERN) return meta & 1 ? LANTERN_HANGING : LANTERN_STANDING;
   return TABLE_BOXES;
 }
 /** One box enclosing all of a SHAPE.BOXES block (selection outline). */
@@ -226,7 +233,7 @@ SHAPED_COLLISION[B.DOOR] = 1;
 SHAPED_COLLISION[B.BED] = 1;
 SHAPED_COLLISION[B.GLASS_PANE] = 1;
 SHAPED_COLLISION[B.SNOW_LAYER] = 1;
-for (const id of [B.COBBLESTONE_WALL, B.MOSSY_COBBLESTONE_WALL, B.OAK_TRAPDOOR, B.ENCHANTING_TABLE, B.ANVIL]) SHAPED_COLLISION[id] = 1;
+for (const id of [B.COBBLESTONE_WALL, B.MOSSY_COBBLESTONE_WALL, B.OAK_TRAPDOOR, B.ENCHANTING_TABLE, B.ANVIL, B.CAMPFIRE, B.LANTERN]) SHAPED_COLLISION[id] = 1;
 /** Snow layer box (n = meta + 1 layers); collision is one layer lower, so a single layer has none. */
 export const snowBox = (meta, collide = false) => [0, 0, 0, 1, ((meta & 7) + (collide ? 0 : 1)) * 2 / 16, 1];
 for (const id of [B.OAK_FENCE, B.SPRUCE_FENCE, B.BIRCH_FENCE, B.OAK_FENCE_GATE]) SHAPED_COLLISION[id] = 1;

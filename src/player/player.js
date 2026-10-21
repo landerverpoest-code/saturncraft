@@ -205,6 +205,8 @@ export class Player {
       this.hurt(1, 'fire');
     }
     if (b.inWater) this.fireTicks = 0;
+    // standing on a lit campfire burns (1 per second)
+    if (!this.creative && world.getBlock(Math.floor(b.x), Math.floor(b.y - 0.01), Math.floor(b.z)) === B.CAMPFIRE && this.attackTicks % 20 === 0) this.hurt(1, 'fire');
     if (this.fireTicks > 0) {
       if (this.fireTicks % 20 === 0) this.hurt(1, 'fire');
       this.fireTicks--;
