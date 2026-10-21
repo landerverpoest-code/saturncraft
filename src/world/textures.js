@@ -586,6 +586,7 @@ const GEN = {
   },
   lantern_top: (c) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, shade(hex('#3a3a42'), 0.85 + c.h(x, y) * 0.25)); },
   painting_back: (c) => planks(c, '#8a6a42'),
+  item_frame: (c) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const edge = x < 2 || y < 2 || x > 13 || y > 13; c.set(x, y, edge ? shade(hex('#8a6034'), 0.85 + c.h(x, y) * 0.3) : shade(hex('#9a7a5a'), 0.9 + c.h(x, y) * 0.15)); } },
   rail: (c) => railTex(c, false),
   rail_corner: (c) => railTex(c, true),
   oak_trapdoor: (c) => {

@@ -161,6 +161,15 @@ export class Interaction {
   mine() {
     const g = this.game, p = g.player, t = this.target;
     if (this.breakDelay > 0) return;
+    if (t.id === B.ITEM_FRAME && g.frames.get(`${t.x},${t.y},${t.z}`)) {
+      // the first hit knocks the item out of the frame
+      const st = g.frames.get(`${t.x},${t.y},${t.z}`);
+      g.setFrameItem(t.x, t.y, t.z, null);
+      if (!p.creative) g.entities.spawnItem(t.x + 0.5, t.y + 0.5, t.z + 0.5, st);
+      g.audio.play('hit_wood', [t.x + 0.5, t.y + 0.5, t.z + 0.5]);
+      this.swing = SWING_TICKS; this.breakDelay = BREAK_DELAY;
+      return;
+    }
     if (p.creative) {
       // creative: blocks break at once (bedrock too), 5 ticks apart, without drops
       this.swing = SWING_TICKS;
@@ -298,6 +307,18 @@ export class Interaction {
       }
       return false;
     }
+    if (d && d.itemFrame) {
+      // hang a frame on the clicked wall
+      if (!this.target || this.target.face[1] !== 0) return false;
+      const t = this.target, x = t.x + t.face[0], y = t.y, z = t.z + t.face[2], side = sideOf(-t.face[0], -t.face[2]);
+      if (w.getBlock(x, y, z) && !BLOCKS[w.getBlock(x, y, z)].replaceable) return false;
+      if (!w.hasSupport(x, y, z, B.ITEM_FRAME, side)) return false;
+      w.setBlockUrgent(x, y, z, B.ITEM_FRAME, side);
+      g.audio.play('place_wood', [x + 0.5, y + 0.5, z + 0.5]);
+      if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
+      this.swing = SWING_TICKS;
+      return true;
+    }
     if (d && d.sign) {
       // a standing sign on top of a block, or a wall sign on its side; then write on it
       if (!this.target || this.target.face[1] === -1) return false;
@@ -356,6 +377,16 @@ export class Interaction {
     if (!p.sneaking || !st) {
       if (t.id === B.WORKBENCH) { g.ui.openWorkbench(); return true; }
       if (t.id === B.OAK_SIGN || t.id === B.OAK_WALL_SIGN) { g.ui.openSignEditor(t.x, t.y, t.z); return true; }
+      if (t.id === B.ITEM_FRAME) {
+        // put the held item in, or turn the item that is there
+        const k = `${t.x},${t.y},${t.z}`, m = w.getMeta(t.x, t.y, t.z);
+        if (g.frames.get(k)) w.setBlockUrgent(t.x, t.y, t.z, B.ITEM_FRAME, (m & 3) | ((((m >> 2) + 1) & 7) << 2));
+        else if (st) { g.setFrameItem(t.x, t.y, t.z, { ...st, count: 1 }); if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1); }
+        else return false;
+        g.audio.play('click', [t.x + 0.5, t.y + 0.5, t.z + 0.5]);
+        this.swing = SWING_TICKS;
+        return true;
+      }
       if (t.id === B.FURNACE || t.id === B.FURNACE_LIT) { g.ui.openFurnace(t.x, t.y, t.z); return true; }
       if (t.id === B.BED) { g.trySleep(t.x, t.y, t.z); return true; }
       if (t.id === B.ENCHANTING_TABLE) { g.ui.openEnchanting(t.x, t.y, t.z); return true; }

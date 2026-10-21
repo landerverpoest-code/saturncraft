@@ -42,7 +42,7 @@ export const B = {
   BROWN_MUSHROOM_BLOCK: 121, RED_MUSHROOM_BLOCK: 122, MUSHROOM_STEM: 123, MYCELIUM: 124,
   SKYBELL: 125, ROSETTE: 126,
   // Other dimensions (ids from 160 up, see world/dimensions/): the Cinderdeep and the Hollow
-  SNOW_LAYER: 130, COBBLESTONE_WALL: 131, MOSSY_COBBLESTONE_WALL: 132, OAK_TRAPDOOR: 133, RAIL: 140, COBWEB: 141, TNT: 142, CAMPFIRE: 150, LANTERN: 151, PAINTING: 152, PAINTING_B: 153, OAK_SIGN: 154, OAK_WALL_SIGN: 155,
+  SNOW_LAYER: 130, COBBLESTONE_WALL: 131, MOSSY_COBBLESTONE_WALL: 132, OAK_TRAPDOOR: 133, RAIL: 140, COBWEB: 141, TNT: 142, CAMPFIRE: 150, LANTERN: 151, PAINTING: 152, PAINTING_B: 153, OAK_SIGN: 154, OAK_WALL_SIGN: 155, ITEM_FRAME: 156,
   SNOW_LAYER: 130, COBBLESTONE_WALL: 131, MOSSY_COBBLESTONE_WALL: 132, OAK_TRAPDOOR: 133,
   ENCHANTING_TABLE: 134, ANVIL: 135,
   CINDERSTONE: 160, GLOWSHARD: 161, MOURNSAND: 162, EMBERQUARTZ_ORE: 163, SCORCHED_BRICKS: 164, RIFT: 165,
@@ -121,6 +121,8 @@ def(B.LANTERN, 'Lantern', { hardness: 3.5, resistance: 3.5, tool: TOOL.PICKAXE, 
 // Signs: standing (meta = side it faces) or on a wall (meta = side of the wall); text in game.signs
 def(B.OAK_SIGN, 'Oak Sign', { hardness: 1, resistance: 1, tool: TOOL.AXE, sound: 'wood', flammable: true, solid: false, opaque: false, shape: SHAPE.BOXES, needsSupport: true, drops: 'sign', tex: { all: 'oak_planks' } });
 def(B.OAK_WALL_SIGN, 'Oak Sign', { hardness: 1, resistance: 1, tool: TOOL.AXE, sound: 'wood', flammable: true, solid: false, opaque: false, shape: SHAPE.BOXES, needsSupport: true, drops: 'sign', tex: { all: 'oak_planks' } });
+// Item frames: meta bits 0-1 the wall side, 2-4 the item's rotation; the item is in game.frames
+def(B.ITEM_FRAME, 'Item Frame', { hardness: 0, resistance: 0, sound: 'wood', solid: false, opaque: false, shape: SHAPE.BOXES, needsSupport: true, drops: 'item_frame', tex: { all: 'item_frame' } });
 // Paintings: parts of a picture hung on a wall (see world/paintings.js)
 def(B.PAINTING, 'Painting', { hardness: 0, resistance: 0, solid: false, opaque: false, shape: SHAPE.PAINTING, sound: 'wood', needsSupport: true, drops: 'painting', tex: { all: 'painting_back' } });
 def(B.PAINTING_B, 'Painting', { hardness: 0, resistance: 0, solid: false, opaque: false, shape: SHAPE.PAINTING, sound: 'wood', needsSupport: true, drops: 'painting', tex: { all: 'painting_back' } });

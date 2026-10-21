@@ -90,6 +90,7 @@ export async function saveGame(game) {
     furnaces: [...game.furnaces.values()],
     chests: [...game.chests.values()],
     signs: [...game.signs],
+    frames: [...game.frames],
     worldSpawn: game.worldSpawn,
     weather: game.weather.save(),
     milestones: game.milestones.save(),
@@ -140,6 +141,7 @@ export function applySave(game, data) {
   for (const f of data.furnaces) game.furnaces.set(`${f.x},${f.y},${f.z}`, f);
   for (const c of data.chests || []) game.chests.set(`${c.x},${c.y},${c.z}`, c);
   for (const [k, l] of data.signs || []) game.signs.set(k, l);
+  for (const [k, st] of data.frames || []) game.frames.set(k, st);
   for (const k of data.generated) game.spawner.generated.add(k);
   for (const [k, v] of Object.entries(data.savedMobs)) game.spawner.savedMobs.set(+k, v);
   // live mobs go back into their chunk's saved list so they reappear when it loads

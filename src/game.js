@@ -16,6 +16,7 @@ import { Sky } from './sky/sky.js';
 import { Clouds } from './sky/clouds.js';
 import { Weather, WeatherRenderer } from './sky/weather.js';
 import { SignRenderer } from './render/signs.js';
+import { FrameRenderer } from './render/frames.js';
 import { Lightning } from './sky/lightning.js';
 import { snowfall } from './world/randomTicks.js';
 import { igniteTNT } from './entities/tnt.js';
@@ -73,6 +74,7 @@ export class Game {
     this.furnaces = new Map();
     this.chests = new Map();      // "x,y,z" -> { x, y, z, slots: 27 stacks }
     this.signs = new Map();       // "x,y,z" -> four lines of text
+    this.frames = new Map();      // "x,y,z" -> the item stack in an item frame
     this.fps = 0; this.frameCount = 0; this.fpsTime = 0;
     this.net = null;              // multiplayer session (src/net/session.js), null in single-player
   }
@@ -107,6 +109,7 @@ export class Game {
     this.lightning = new Lightning(this.scene);
     this.particles = new Particles(this.scene);
     this.signRenderer = new SignRenderer(this);
+    this.frameRenderer = new FrameRenderer(this);
     this.playerModel = new PlayerModel(this.scene);
     this.perspective = 0; // 0 first person, 1 behind, 2 in front (F5)
     this.player = new Player();
@@ -447,6 +450,12 @@ export class Game {
 
   onBlockBroken(x, y, z, id, meta = 0) {
     if (id === B.SPAWNER) this.milestones.event('spawner');
+    if (id === B.ITEM_FRAME) {
+      // a broken frame drops what it held
+      const st = this.frames.get(`${x},${y},${z}`);
+      if (st && this.net && this.net.isClient) this.setFrameItem(x, y, z, null, true); // the host drops it when it sees the edit
+      else if (st) { this.setFrameItem(x, y, z, null); if (!this.player.creative) this.entities.spawnItem(x + 0.5, y + 0.5, z + 0.5, st); }
+    }
     if (this.net && this.net.isClient) {
       // the host spills the contents of its own chest / furnace
       const k = `${x},${y},${z}`;
@@ -502,6 +511,13 @@ export class Game {
       }
       if (lit && Math.random() < 0.1) this.particles.flame(f.x + 0.5, f.y + 0.4, f.z + 0.5);
     }
+  }
+
+  /** Put an item in a frame, or take it out (null); shared in multiplayer. */
+  setFrameItem(x, y, z, st, fromNet = false) {
+    const k = `${x},${y},${z}`;
+    if (st) this.frames.set(k, { id: st.id, count: 1, damage: st.damage | 0, ...(st.ench ? { ench: st.ench } : {}) }); else this.frames.delete(k);
+    if (!fromNet && this.net && this.net.sendFrame) this.net.sendFrame(x, y, z, st ? this.frames.get(k) : null);
   }
 
   /** Write on a sign (shared with everyone in multiplayer). */
@@ -736,6 +752,7 @@ export class Game {
     const R = this.chunks.renderDistance * 16;
     this.clouds.update(this.camera, smoothTime, this.sky, Math.max(192, R * 1.8));
     if (this.signRenderer) this.signRenderer.update();
+    if (this.frameRenderer) this.frameRenderer.update();
     const fogCol = this.sky.horizon;
     this.scene.fog.color.copy(fogCol);
     if (b.eyeInWater) { this.scene.fog.color.setRGB(0.03, 0.1, 0.3); this.scene.fog.near = 1; this.scene.fog.far = 18; }

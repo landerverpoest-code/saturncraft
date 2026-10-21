@@ -353,6 +353,7 @@ poison from eyes) follow the documented table.
 * Sprint-swimming: sprint with your head under water to swim flat (0.6 high) in the direction you look at about 5.6 blocks/s, shown on the player model
 * Compass (4 iron + cinnabar: its needle points at the world spawn, and spins in other dimensions) and clock (4 gold + cinnabar: shows the sky brightness and how many suns are up), both live in your hand
 * Signs (6 planks + stick → 3): standing on a block or hung on a wall, four lines of up to 15 characters typed in a sign editor (right-click to edit again); saved with the world and shared in multiplayer
+* Item frames (8 sticks + leather): hang on a wall, right-click to put the held item in and again to turn it in 45° steps, hit to take it out; saved and shared in multiplayer
 * Paintings (8 sticks + wool): eight original procedurally painted pictures from 1 × 1 to 4 × 3 (three suns, a ringed moon, dunes, a harbour, peaks, a forest, a shoreline, a city in the sky); right-click a wall to hang the largest that fits; breaking any part takes the whole picture down
 * Campfires (3 sticks, coal, 3 logs: light 15, animated flames, rising smoke, burn whoever stands on them, drop 2 coal) and lanterns (iron + torch: light 15, standing, or hanging when placed under a block); torches smoke and lava throws embers
 * Shields (6 planks + iron ingot, 336 uses): hold right-click to raise one (after a quarter second); it stops melee hits and arrows from in front, wears with the damage it takes, pushes attackers back and slows you to a fifth
