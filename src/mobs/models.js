@@ -341,6 +341,36 @@ MODELS.inkling = {
   ],
 };
 
+// Deepeyes (Tide Citadel guardians): a boxy fish with one great eye, spikes that
+// stand out while it holds still (scaled by oceanMobs.js) and a three-part tail.
+// The Elder Deepeye is the same body in pale colours, drawn larger.
+function deepeyeModel(body, panel, spike, tail) {
+  const spikes = [];
+  // two spikes on each face, pointing straight out (pivot on the surface, so they shrink back into it)
+  for (const [nx, ny, nz] of [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]) {
+    for (const s of [-1, 1]) {
+      const off = nx ? [0, s * 3, s * 3] : ny ? [s * 3, 0, -s * 3] : [s * 3, s * 3, 0];
+      if (nz < 0 && Math.abs(off[0]) < 4 && Math.abs(off[1]) < 4) { off[0] = s * 5; off[1] = 5; } // keep the eye clear
+      const size = nx ? [5, 1.6, 1.6] : ny ? [1.6, 5, 1.6] : [1.6, 1.6, 5];
+      spikes.push([`spike${spikes.length}`, size, [nx * 6 + off[0], 7 + ny * 6 + off[1], nz * 6 + off[2]], [nx * 2.5, ny * 2.5, nz * 2.5], spike]);
+    }
+  }
+  return {
+    parts: [
+      ['body', [12, 12, 12], [0, 7, 0], [0, 0, 0], body, { face: 'deepeye' }],
+      ['panelL', [0.6, 8, 8], [6.2, 7, 0], [0, 0, 0], panel],
+      ['panelR', [0.6, 8, 8], [-6.2, 7, 0], [0, 0, 0], panel],
+      ['panelT', [8, 0.6, 8], [0, 13.2, 0], [0, 0, 0], panel],
+      ...spikes,
+      ['tail0', [8, 8, 7], [0, 7, 8], [0, 0, 1.5], body, { anim: 'tailSeg', idx: 1 }],
+      ['tail1', [5, 5, 7], [0, 7, 14], [0, 0, 1.5], tail, { anim: 'tailSeg', idx: 2 }],
+      ['tail2', [2, 7, 6], [0, 7, 20], [0, 0, 1.5], tail, { anim: 'tailSeg', idx: 3 }],
+    ],
+  };
+}
+MODELS.deepeye = deepeyeModel('#3f7a74', '#2d5c58', '#e6d2a4', '#c8805a');
+MODELS.elder_deepeye = deepeyeModel('#c4c0cc', '#9a94a8', '#8a6aa0', '#7a6a8a');
+
 // Marauders: grey-skinned raiders in dark coats, crossbow raised when they aim.
 MODELS.marauder = {
   parts: [
@@ -461,6 +491,10 @@ const FACES = {
   cragbuck: (c) => { px(c, '#c8a020', [[3, 5, 3, 2], [10, 5, 3, 2]]); px(c, '#101010', [[4, 5, 1, 2], [11, 5, 1, 2]]); px(c, '#b8a8a0', [[6, 12, 4, 2]]); },
   purrling: (c) => { px(c, '#a0ffa0', [[3, 6, 3, 2], [10, 6, 3, 2]]); px(c, '#0a0a0a', [[4, 6, 1, 2], [11, 6, 1, 2]]); },
   vixling: (c) => { px(c, '#1a1010', [[2, 6, 3, 2], [11, 6, 3, 2]]); px(c, '#f4ece0', [[0, 9, 4, 4], [12, 9, 4, 4]]); },
+  deepeye: (c) => {
+    px(c, '#f4f0e0', [[3, 3, 10, 10]]); px(c, '#e8e0c8', [[2, 5, 1, 6], [13, 5, 1, 6], [5, 2, 6, 1], [5, 13, 6, 1]]);
+    px(c, '#7a3aa0', [[6, 6, 4, 4]]); px(c, '#1a0a24', [[7, 7, 2, 2]]); px(c, '#ffffff', [[6, 6]]);
+  },
   inkling: (c) => { px(c, '#e8e8f0', [[3, 7, 3, 3], [10, 7, 3, 3]]); px(c, '#101018', [[4, 8, 2, 2], [11, 8, 2, 2]]); },
   marauder: (c) => { px(c, '#2a2a2a', [[1, 4, 14, 2]]); px(c, '#f0f0f0', [[3, 6, 3, 2], [10, 6, 3, 2]]); px(c, '#3a5a3a', [[4, 6, 2, 2], [11, 6, 2, 2]]); px(c, '#5a5a5a', [[5, 12, 6, 1]]); },
   howler: (c) => { px(c, '#f0f0f0', [[2, 6, 3, 2], [11, 6, 3, 2]]); px(c, '#2a2418', [[3, 6, 2, 2], [11, 6, 2, 2]]); px(c, '#7a7a80', [[2, 4, 4, 1], [10, 4, 4, 1]]); },

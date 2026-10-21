@@ -54,6 +54,8 @@ export const B = {
   CINNABAR_WIRE: 175, LEVER: 176, STONE_BUTTON: 177, WOODEN_PRESSURE_PLATE: 178, CINNABAR_TORCH: 179, CINNABAR_TORCH_OFF: 180,
   CINNABAR_LAMP: 181, CINNABAR_LAMP_ON: 182, REPEATER: 183, PISTON: 184, STICKY_PISTON: 185, PISTON_HEAD: 186,
   CHIME_BLOCK: 187, CINNABAR_BLOCK: 188,
+  // Tide Citadels (ocean monuments, see world/monuments.js): ids 216-230
+  TIDESTONE: 216, TIDESTONE_BRICKS: 217, DARK_TIDESTONE: 218, TIDE_LANTERN: 219, SOAKMOSS: 220, WET_SOAKMOSS: 221,
 };
 
 const defaults = {
@@ -316,6 +318,16 @@ def(B.STICKY_PISTON, 'Sticky Piston', { ...piston, tex: { top: 'piston_top_stick
 def(B.PISTON_HEAD, 'Piston Head', { ...piston, hidden: true, drops: null, tex: { top: 'piston_top', bottom: 'piston_top', side: 'piston_side' } });
 def(B.CHIME_BLOCK, 'Chime Block', { hardness: 0.8, resistance: 0.8, tool: TOOL.AXE, sound: 'wood', flammable: true, tex: { top: 'chime_block_top', bottom: 'oak_planks', side: 'chime_block' } });
 def(B.CINNABAR_BLOCK, 'Cinnabar Block', { hardness: 5, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD, sound: 'metal' });
+
+// Tide Citadel blocks (reference: prismarine, prismarine bricks, dark prismarine, sea lantern, sponge, wet sponge).
+const tidestone = { hardness: 1.5, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD };
+def(B.TIDESTONE, 'Tidestone', tidestone);
+def(B.TIDESTONE_BRICKS, 'Tidestone Bricks', tidestone);
+def(B.DARK_TIDESTONE, 'Dark Tidestone', tidestone);
+def(B.TIDE_LANTERN, 'Tide Lantern', { hardness: 0.3, resistance: 0.3, emit: 15, sound: 'glass', drops: { item: 'TIDE_CRYSTAL', min: 2, max: 3 } });
+// Soakmoss drinks up the water around it (world/sponge.js) and turns wet; a furnace dries it again.
+def(B.SOAKMOSS, 'Soakmoss', { hardness: 0.6, resistance: 0.6, tool: TOOL.HOE, sound: 'grass' });
+def(B.WET_SOAKMOSS, 'Wet Soakmoss', { hardness: 0.6, resistance: 0.6, tool: TOOL.HOE, sound: 'grass' });
 
 export const NUM_BLOCKS = BLOCKS.length;
 

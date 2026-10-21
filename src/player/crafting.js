@@ -108,6 +108,11 @@ shaped(['PPP', 'PCP', 'PPP'], { P: I.PAPER, C: I.COMPASS }, I.EMPTY_MAP, 1);
 shaped(['SSS', 'S S'], { S: I.SCUTE }, I.TURTLE_SHELL, 1);
 shaped(['PPP', 'HHH', 'PPP'], { P: 'planks', H: I.HONEYCOMB }, B.BEEHIVE, 1);
 shapeless([I.HONEY_BOTTLE], I.SUGAR, 3);
+// Tide Citadel blocks (reference prismarine recipes)
+shaped(['SS', 'SS'], { S: I.TIDE_SHARD }, B.TIDESTONE, 1);
+shaped(['SSS', 'SSS', 'SSS'], { S: I.TIDE_SHARD }, B.TIDESTONE_BRICKS, 1);
+shaped(['SSS', 'SIS', 'SSS'], { S: I.TIDE_SHARD, I: I.INK_SAC }, B.DARK_TIDESTONE, 1);
+shaped(['SCS', 'CCC', 'SCS'], { S: I.TIDE_SHARD, C: I.TIDE_CRYSTAL }, B.TIDE_LANTERN, 1);
 shaped(['P  ', 'PP ', 'PPP'], { P: 'planks' }, B.OAK_STAIRS, 4);
 for (const [mat, slab, stairs] of [[B.COBBLESTONE, B.COBBLESTONE_SLAB, B.COBBLESTONE_STAIRS], [B.STONE_BRICKS, B.STONE_BRICK_SLAB, B.STONE_BRICK_STAIRS], [B.SANDSTONE, B.SANDSTONE_SLAB, B.SANDSTONE_STAIRS]]) {
   shaped(['XXX'], { X: mat }, slab, 6);
@@ -256,4 +261,5 @@ export const SMELTING = {
   [I.RAW_PORK]: I.COOKED_PORK, [I.POTATO]: I.BAKED_POTATO, [I.RAW_RABBIT]: I.COOKED_RABBIT, [I.RAW_SILVERFIN]: I.COOKED_SILVERFIN, [I.RAW_REDFIN]: I.COOKED_REDFIN, [I.RAW_BEEF]: I.STEAK, [I.RAW_CHICKEN]: I.COOKED_CHICKEN,
   [I.RAW_MUTTON]: I.COOKED_MUTTON, [B.OAK_LOG]: I.COAL, [B.SPRUCE_LOG]: I.COAL, [B.BIRCH_LOG]: I.COAL,
   [B.JUNGLE_LOG]: I.COAL, [B.ACACIA_LOG]: I.COAL, [B.DARK_OAK_LOG]: I.COAL, [B.RED_SAND]: B.GLASS,
+  [B.WET_SOAKMOSS]: B.SOAKMOSS,
 };

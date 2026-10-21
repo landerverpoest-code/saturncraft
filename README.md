@@ -145,10 +145,11 @@ src/
     enchantments.js        enchantments: table offers, anvil combining, effects
     textures.js            procedural pixel art for every block face
     save.js                IndexedDB persistence (RLE-compressed chunks)
+    monuments.js sponge.js Tide Citadels (ocean monuments) and Soakmoss (sponge); monumentTextures.js
   physics/                 constants.js (vanilla values), body.js (AABB, step-up, fluids)
   player/                  player.js, survival.js (hunger), inventory.js, crafting.js, interaction.js
   mobs/                    mobTypes.js, mob.js (AI), models.js, pathfinding.js,
-                           spawnRules.js, spawner.js, drops.js
+                           spawnRules.js, spawner.js, drops.js, oceanMobs.js (Deepeyes)
   entities/                items, falling blocks, arrows, explosions
   sky/                     suns.js (pure orbital model), sky.js (lights, shadows, colours),
                            skyShader.js (atmosphere, suns, planet), gasGiant.js (ring mesh + particles)
@@ -282,6 +283,8 @@ southern sky with a slow libration.
 | Fizzler | creeper | 20 | 0.25 | 0.6×1.7 | 30-tick fuse within 3 blocks, power-3 explosion |
 | Skitterer | spider | 16 | 0.30 | 1.4×0.9 | climbs walls, leaps, neutral in bright light |
 | Voidwalker | enderman | 40 | 0.30 (+0.15 angry) | 0.6×2.9 | angered by eye contact, teleports, hurt by water, dodges arrows |
+| Deepeye | guardian | 30 | swims | 0.85×0.85 | 2 s beam (6), thorns 2 while still, Tide Citadels only |
+| Elder Deepeye | elder guardian | 80 | swims | 1.99×1.99 | 1.5 s beam (8), Mining Fatigue III every minute, 3 per citadel |
 
 Mob movement uses the same physics with vanilla's mob acceleration (speed²),
 A* pathfinding over walkable cells, panic when hurt (passives), melee reach
@@ -370,6 +373,10 @@ poison from eyes) follow the documented table.
 * Flitters (bats): up to 15 flutter about in dark caves near you (light ≤ 3), squeak, and hang upside down from ceilings until you come close
 * Inklings (squid) in deep ocean water: they drift in pulses with sweeping tentacles, squirt ink and dart away when hit, and drop 1–3 ink sacs (black dye)
 * Shipwrecks on the ocean floor (40 % of 160 × 160 regions): an oak or spruce hull with a broken deck, a snapped mast and two loot chests
+* **Tide Citadels** (ocean monuments, `src/world/monuments.js`): at most one per 32 × 32-chunk region (the reference spacing: a chunk within the region's first 27 on each axis, the average of two rolls, so neighbours are at least 5 chunks apart), only where the ocean is deep (the centre and eight points round the footprint are ocean with the floor at y ≤ 43/48). A symmetric 58 × 58 temple from y 39 to 61, flooded with water and planned from the seed alone, stamped chunk by chunk: a lower hall of 7 × 7 rooms around a gallery that runs back from the entrance (doorways between rooms, lanterns in the ceilings and floor), one or two mirrored pairs of **sponge rooms** hung with Wet Soakmoss, two raised wings at the back, a terrace over the middle and the core on top, where a shell of Dark Tidestone holds **8 gold blocks**; a skirt and pillars reach down to the sea floor. `/locate monument` (or `citadel`)
+* Tide Citadel blocks (reference names in brackets): **Tidestone** (prismarine; 4 Tide Shards), **Tidestone Bricks** (9 shards), **Dark Tidestone** (8 shards + ink sac), **Tide Lantern** (sea lantern: 4 shards + 5 Tide Crystals, light 15, drops 2–3 crystals, itself with Gentle Hand), **Soakmoss** / **Wet Soakmoss** (sponge): placed, or when water flows next to it, Soakmoss drinks up the water breadth-first up to 7 blocks away (taxicab), at most 65 blocks, and turns wet; Wet Soakmoss dries in a furnace (and at once in the Cinderdeep)
+* **Deepeyes** (guardians: 30 HP, 0.85 blocks) swim the citadels — packs of 2–4 spawn in the citadel's water near you (up to 12 per citadel, within the monster cap, at any light). A Deepeye that sees a player or an Inkling 3–16 blocks away stops, turns to it and charges a beam (violet to white) for 2 s, then hurts it for 6; while it holds still its spikes stand out and melee attackers take 2 thorn damage. Out of water it flops about. Drops 0–2 Tide Shards plus raw Silverfin (40 %) or Tide Crystals (40 %), 10 XP. **Elder Deepeyes** (elder guardians: 80 HP, 2 blocks, three per citadel — one in each wing and one in the core, placed once and persistent) charge for 1.5 s and hit for 8, and every minute lay **Mining Fatigue III** for 5 minutes on every survival player within 50 blocks (renewed only if missing, weaker or under a minute left; a pale flicker and a cry); they drop a Wet Soakmoss on player kills. Beams are part of the host's mob snapshots (target point, charge and spikes), so guests see them; guests get the curse through an `eff` message
+* **Mining Fatigue** (`/effect give mining_fatigue`): mining speed × 0.3^level (30 %, 9 %, 0.27 %, from level IV on 0.081 %), as in the reference
 * Raider outposts (one 288 × 288 region in four, on plains, taiga, desert, savanna or snowy plains): a dark oak watchtower with a lookout and a loot chest, guarded by five Marauders (pillagers) — crossbow-like archers that strafe and shoot and do not burn in daylight; `/locate outpost`
 * Every structure has its own chest loot (dungeons, mineshafts with rails, desert and jungle temples with gold and beryl, igloos with food, shipwrecks with paper, crops and a compass); `/locate shipwreck`
 * Jungle temples (mossy cobblestone, two storeys, vines, a ladder down to a hidden chest) and igloos in snowy biomes (a snow dome with bed, workbench, furnace and chest), in the same regions as desert temples
@@ -417,9 +424,9 @@ poison from eyes) follow the documented table.
 
 **Not yet implemented**
 
-* Lingering elixirs and tipped arrows, Turtle Master / Decay / Luck elixirs, beacons (Haste only comes from `/effect`), Mining Fatigue, Absorption and Wither effects; effect particles of other players in multiplayer
+* Lingering elixirs and tipped arrows, Turtle Master / Decay / Luck elixirs, beacons (Haste only comes from `/effect`), Absorption and Wither effects; Mining Fatigue's slower attack speed and the Elder Deepeye's ghost face; prismarine-style slabs/stairs/walls and the animated tidestone texture; effect particles of other players in multiplayer
 * Taming of animals other than Howlers, Purrlings and Gallopers
-* Large structures beyond villages, temples, wrecks, outposts, dungeons, sanctums and bastions; job-site blocks; Hollow outer-island cities
+* Large structures beyond villages, temples, wrecks, Tide Citadels, outposts, dungeons, sanctums and bastions; job-site blocks; Hollow outer-island cities
 * Hoppers, dispensers and other item-moving containers
 * Witches (elixir-throwing monsters), drowned, husks/strays as separate variants, baby mobs, mob equipment
 * Difficulty levels (fixed at Normal), spectator/adventure modes, multiplayer
@@ -544,6 +551,10 @@ Code: `src/world/dimensions/` (registry and scaling, generators, portal logic, s
   cap), enchantability and weighted selection, exclusive enchantments, offers,
   Swiftdig/Keen/Hallowed/Steadfast/Bounty/Gentle Hand/Bulwark/Strongdraw/Plunder
   effects, stack merging and network round trips, anvil repair/book costs
+* **monuments** — Tide Citadel determinism, reference spacing/separation, deep-ocean
+  placement, symmetry, 8 gold blocks, seamless chunk stamping, coordinate
+  rotations, sponge absorption (reach 7, max 65), recipes, Mining Fatigue
+  factors, elder curse renewal, beam range and Deepeye drops
 
 ## Build history (vertical slices)
 

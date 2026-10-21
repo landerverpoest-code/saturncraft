@@ -417,7 +417,7 @@ export class Mob {
       if (this.deathTime >= 20) {
         this.removed = true; this.dead = true;
         // experience when killed by the player: monsters 5, animals 1-3
-        if (this.killedByPlayer) g.entities.spawnXp(this.x, this.y + 0.3, this.z, this.def.category === 'monster' ? 5 : 1 + Math.floor(Math.random() * 3));
+        if (this.killedByPlayer) g.entities.spawnXp(this.x, this.y + 0.3, this.z, this.def.xp || (this.def.category === 'monster' ? 5 : 1 + Math.floor(Math.random() * 3)));
         g.particles.smoke(this.x, this.y + this.height / 2, this.z, 14, this.width);
       }
       return;
@@ -498,7 +498,7 @@ export class Mob {
       this.fireTicks--;
       if (Math.random() < 0.3) g.particles.flame(this.x + (Math.random() - 0.5) * this.width, this.y + Math.random() * this.height, this.z + (Math.random() - 0.5) * this.width);
     }
-    if (b.eyeInWater && this.type !== 'voidwalker' && !this.def.aquatic) {
+    if (b.eyeInWater && this.type !== 'voidwalker' && !this.def.aquatic && !this.def.breathesWater) {
       if (--this.air <= -20) { this.air = 0; this.hurt(2, 'drown'); }
     } else this.air = 300;
     if (this.type === 'voidwalker' && b.inWater) {

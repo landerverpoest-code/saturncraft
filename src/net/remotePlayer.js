@@ -155,5 +155,9 @@ function makeTarget(rp) {
     hurt(amount, source = 'generic', attacker = null) {
       return rp.session ? rp.session.targetHurt(rp, amount, source, attacker) : false;
     },
+    // an effect laid on this player (an Elder Deepeye's Mining Fatigue): their own game applies it
+    addEffect(type, ticks, amp = 0) {
+      return rp.session && rp.session.effectRemote ? rp.session.effectRemote(rp, type, ticks, amp) : false;
+    },
   };
 }

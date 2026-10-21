@@ -15,6 +15,7 @@ import { chunkKey } from '../world/world.js';
 import { attemptDimensionSpawn } from './dimensionMobs.js';
 import { BIOMES } from '../world/biomes.js';
 import { outpostsNear } from '../world/temples.js';
+import { tickMonumentSpawns, spawnElders } from './oceanMobs.js';
 
 const NO_MONSTER_FLOOR = new Set([B.BEDROCK, B.GLASS, ...LEAVES, B.ICE, B.CACTUS]);
 const MAX_PER_CHUNK = 4;
@@ -143,6 +144,7 @@ export class MobSpawner {
       if (monsters < cap) {
         for (const [cx, cz] of chunks) monsters += this.attempt(cx, cz, CATEGORY.MONSTER);
       }
+      monsters += tickMonumentSpawns(this, monsters, cap); // Deepeyes in Tide Citadels
       // Monsters in caves fill the cap quickly in this deep world, which would leave the
       // surface empty at night. Half the cap is reserved for packs on the open surface;
       // in daylight the light test rejects these attempts.
@@ -183,6 +185,8 @@ export class MobSpawner {
         if (m) m.persistent = true;
       }
     }
+    // three Elder Deepeyes in every Tide Citadel
+    if (this.hostileEnabled()) spawnElders(this, cx, cz);
     // one Ironguard keeps watch by each village well
     for (const v of villagesNear(this.game.world.gen, cx * 16, cz * 16, cx * 16 + 15, cz * 16 + 15)) {
       if (Math.floor((v.cx + 3) / 16) !== cx || Math.floor(v.cz / 16) !== cz) continue;

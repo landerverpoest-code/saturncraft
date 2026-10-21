@@ -8,6 +8,7 @@ export const EFFECTS = {
   speed:           { name: 'Speed', color: '#7cafc6', good: true, glyph: 'speed' },
   slowness:        { name: 'Slowness', color: '#5a6c81', good: false, glyph: 'slow' },
   haste:           { name: 'Haste', color: '#d9c043', good: true, glyph: 'pick' },
+  mining_fatigue:  { name: 'Mining Fatigue', color: '#4a4217', good: false, glyph: 'pick' },
   strength:        { name: 'Strength', color: '#932423', good: true, glyph: 'sword' },
   weakness:        { name: 'Weakness', color: '#484d48', good: false, glyph: 'brokensword' },
   instant_health:  { name: 'Instant Health', color: '#f82423', good: true, instant: true, glyph: 'heart' },
@@ -100,8 +101,14 @@ export function meleeWithEffects(dmg, map) {
   return Math.max(0, dmg + 3 * effectLevel(map, 'strength') - 4 * effectLevel(map, 'weakness'));
 }
 
-/** Mining speed multiplier from Haste (+20 % per level). */
-export function miningFactor(map) { return 1 + 0.2 * effectLevel(map, 'haste'); }
+/** Mining Fatigue's mining speed multiplier: 0.3^level, from level IV on 0.3^4 (reference: 30 %, 9 %, 0.27 %, 0.081 %). */
+export function fatigueFactor(level) {
+  if (level <= 0) return 1;
+  return [0.3, 0.09, 0.0027, 0.00081][Math.min(level, 4) - 1];
+}
+
+/** Mining speed multiplier from Haste (+20 % per level) and Mining Fatigue. */
+export function miningFactor(map) { return (1 + 0.2 * effectLevel(map, 'haste')) * fatigueFactor(effectLevel(map, 'mining_fatigue')); }
 
 /** Ticks between poison / regeneration pulses at an amplifier (25 >> amp, 50 >> amp). */
 export function poisonInterval(amp) { return Math.max(1, 25 >> amp); }

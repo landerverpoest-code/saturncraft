@@ -2,6 +2,7 @@
 import { ITEMS, I, maxStack } from '../world/items.js';
 import { mineshaftsNear } from '../world/mineshafts.js';
 import { templesNear, wrecksNear, outpostsNear } from '../world/temples.js';
+import { nearestMonument } from '../world/monuments.js';
 import { BLOCKS } from '../world/blocks.js';
 import { MOBS, MOB_KEYS } from '../mobs/mobTypes.js';
 import { skyState } from '../sky/suns.js';
@@ -61,7 +62,7 @@ export const HELP = [
   '/enchant <name> [level]  (the held item; names: ' + ENCH_KEYS.join(', ') + ')',
   '/summon <mob> [x y z]',
   '/xp <amount> [levels]',
-  '/locate <village|temple|outpost|shipwreck|mineshaft|sanctum|bastion>',
+  '/locate <village|temple|outpost|shipwreck|monument|mineshaft|sanctum|bastion>',
   '/dimension <overworld|cinderdeep|hollow>',
   '/effect give <effect> [seconds] [level],  /effect clear  (effects: ' + EFFECT_KEYS.join(', ') + ')',
   '/kill,  /clear,  /spawnpoint,  /seed,  /heal',
@@ -239,7 +240,13 @@ export function runCommand(game, text) {
         const m = list.reduce((a, c) => (Math.hypot(c.cx - p.x, c.cz - p.z) < Math.hypot(a.cx - p.x, a.cz - p.z) ? c : a));
         return `The nearest mineshaft is at ${m.cx}, ${m.y}, ${m.cz} (${Math.round(Math.hypot(m.cx - p.x, m.cz - p.z))} blocks away)`;
       }
-      if (what !== 'village') return 'Usage: /locate <village|temple|outpost|shipwreck|mineshaft|sanctum|bastion>';
+      if (what === 'monument' || what === 'citadel') {
+        if (game.world.dimension !== 'overworld') return 'Tide Citadels are only found in the overworld';
+        const m = nearestMonument(game.world.gen, p.x, p.z);
+        if (!m) return 'No Tide Citadel found nearby';
+        return `The nearest Tide Citadel is at ${m.cx}, ${m.y}, ${m.cz} (${Math.round(Math.hypot(m.cx - p.x, m.cz - p.z))} blocks away)`;
+      }
+      if (what !== 'village') return 'Usage: /locate <village|temple|outpost|shipwreck|monument|mineshaft|sanctum|bastion>';
       const R = VILLAGE_REGION, prx = Math.floor(p.x / R), prz = Math.floor(p.z / R);
       let best = null;
       // search rings of regions outwards; one ring past the first find, since a neighbour can be closer

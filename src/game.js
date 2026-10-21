@@ -136,6 +136,7 @@ export class Game {
     this.perspective = 0; // 0 first person, 1 behind, 2 in front (F5)
     this.player = new Player();
     this.player.isPlayer = true;
+    this.localPlayer = this.player; // (mob AI swaps game.player for the nearest player in multiplayer)
     this.entities = new EntityManager(this);
     this.spawner = new MobSpawner(this);
     this.spawnerBlocks = new SpawnerBlocks(this);

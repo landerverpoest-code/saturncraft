@@ -5,6 +5,7 @@ import { ARTS, paintingPart } from './paintings.js';
 import { mulberry32, hash4 } from './noise.js';
 import { DIM_TEX } from './dimensions/dimTextures.js';
 import { CIRCUIT_TEX } from './circuitTextures.js';
+import { MONUMENT_TEX } from './monumentTextures.js';
 
 export const TEX_SIZE = 16;
 
@@ -992,6 +993,7 @@ function paint(c, name) {
   else if (name.startsWith('bed_head_top_') || name.startsWith('bed_foot_top_')) bedTop(c, name.startsWith('bed_head'), +name.slice(-1));
   else if (GEN[name]) GEN[name](c);
   else if (DIM_TEX[name]) DIM_TEX[name](c, { hex, mix, shade });
+  else if (MONUMENT_TEX[name]) MONUMENT_TEX[name](c, { hex, mix, shade });
   else if (CIRCUIT_TEX[name]) CIRCUIT_TEX[name](c, { hex, mix, shade, gen: GEN, planks });
   else c.noiseFill(P.stone);
 }

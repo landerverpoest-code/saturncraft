@@ -227,7 +227,7 @@ export class Interaction {
       this.breaking = { x: t.x, y: t.y, z: t.z, id: t.id, progress: 0 };
     }
     const tool = toolOf(p.inventory.selectedStack);
-    const per = breakProgressPerTick(t.id, tool, { onGround: p.body.onGround || p.body.inWater, inWater: p.body.eyeInWater, swiftdig: enchLevel(p.inventory.selectedStack, 'swiftdig'), haste: p.effectLevel ? p.effectLevel('haste') : 0 });
+    const per = breakProgressPerTick(t.id, tool, { onGround: p.body.onGround || p.body.inWater, inWater: p.body.eyeInWater, swiftdig: enchLevel(p.inventory.selectedStack, 'swiftdig'), haste: p.effectLevel ? p.effectLevel('haste') : 0, fatigue: p.effectLevel ? p.effectLevel('mining_fatigue') : 0 });
     this.breaking.progress += per;
     // holding the button chains full swings into a continuous chopping motion
     if (this.swing <= 0) this.swing = SWING_TICKS;

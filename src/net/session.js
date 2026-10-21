@@ -36,6 +36,7 @@ import { rayAABB } from '../entities/entities.js';
 import { runRandomTicks } from '../world/randomTicks.js';
 import { addXp } from '../player/experience.js';
 import { MAX_USES } from '../mobs/trades.js';
+import { EFFECTS } from '../player/effects.js';
 import { runCommand } from '../ui/commands.js';
 import { DIMENSIONS } from '../world/dimensions/dims.js';
 import { POTIONS } from '../world/potions.js';
@@ -397,6 +398,13 @@ export class HostSession extends Session {
     const src = attacker && attacker.isPlayer && source === 'player' ? 'player:' + (attacker.netName || 'Player') : source;
     c.ch.send({ t: 'hurt', a: amount, s: src, x: attacker ? attacker.x : null, z: attacker ? attacker.z : null });
     return true;
+  }
+
+  /** A lasting effect for a guest (an Elder Deepeye's Mining Fatigue). */
+  effectRemote(rp, type, ticks, amp) {
+    const c = this.clients.get(rp.id);
+    if (c) c.ch.send({ t: 'eff', e: type, n: ticks | 0, a: amp | 0 });
+    return !!c;
   }
 
   /** A splash elixir broke near a guest: their own game applies the effects (strength f). */
@@ -808,6 +816,7 @@ export class ClientSession extends Session {
         break;
       case 'ents': if (m.d === g.world.dimension && !g.dims.pending) this.ents.apply(m.m); break;
       case 'hurt': p.hurt(m.a, m.s, m.x != null ? { x: m.x, z: m.z } : null); break;
+      case 'eff': if (EFFECTS[m.e] && m.n > 0) p.addEffect(m.e, Math.min(m.n | 0, 72000), Math.max(0, Math.min(255, m.a | 0))); break;
       case 'fx': {
         // a splash elixir reached us on the host
         const d = ITEMS[m.p | 0], f = Math.max(0, Math.min(1, +m.f || 0));
