@@ -1,7 +1,7 @@
 // Face-culled section mesher with smooth lighting and ambient occlusion.
 // Input is a 18x18x18 padded copy of a 16^3 section (1 block border from
 // neighbours) so it can run inside a worker without access to the world.
-import { B, BLOCKS, OPAQUE, SHAPES, LAYERS, SHAPE, LAYER } from './blocks.js';
+import { B, BLOCKS, OPAQUE, SOLID, SHAPES, LAYERS, SHAPE, LAYER } from './blocks.js';
 import { LEAVES } from './trees.js';
 import { FACE_TILE, FRONT_TILE, texId } from './textures.js';
 import { WOOL_RGB } from './colors.js';
@@ -485,29 +485,67 @@ function emitBox(buf, x, y, z, x0, y0, z0, x1, y1, z1, tile, sky, blk, uvMode = 
   }
 }
 
+/**
+ * Height of a liquid surface corner (cx, cz in 0..1 of block i), as in the
+ * reference renderer: the average over the four columns that share the
+ * corner, sources weighted ten times; liquid above any of them fills the
+ * corner, open air pulls it down, solid blocks don't count.
+ */
+function cornerHeight(blocks, meta, i, id, cx, cz) {
+  let sum = 0, w = 0;
+  for (let dx = cx - 1; dx <= cx; dx++) for (let dz = cz - 1; dz <= cz; dz++) {
+    const j = i + off(dx, 0, dz);
+    if (blocks[j + UP] === id) return 1;
+    const b = blocks[j];
+    if (b === id) {
+      const m = meta[j], hh = liquidHeight(m), wt = (m & 7) === 0 && !(m & 8) ? 10 : 1;
+      sum += hh * wt; w += wt;
+    } else if (!SOLID[b]) w += 1;
+  }
+  return w ? sum / w : 1;
+}
+const UP = off(0, 1, 0);
+
 function meshLiquid(buf, blocks, light, meta, i, id, x, y, z) {
   const above = blocks[i + FACE_N[2]];
-  const h = above === id ? 1 : liquidHeight(meta[i]);
+  const full = above === id;
+  // surface heights at the corners (x, z): 00, 10, 11, 01
+  const ch = full ? [1, 1, 1, 1] : [cornerHeight(blocks, meta, i, id, 0, 0), cornerHeight(blocks, meta, i, id, 1, 0), cornerHeight(blocks, meta, i, id, 1, 1), cornerHeight(blocks, meta, i, id, 0, 1)];
+  const hAt = (vx, vz) => ch[vx ? (vz ? 2 : 1) : (vz ? 3 : 0)];
+  const hMax = Math.max(...ch);
   const still = texId(id === B.WATER ? 'water' : 'lava');
   const flow = texId(id === B.WATER ? 'water_flow' : 'lava_flow');
   const isWater = id === B.WATER;
+  // flow direction from the slope of the surface (downhill)
+  const fx = (ch[0] + ch[3]) - (ch[1] + ch[2]), fz = (ch[0] + ch[1]) - (ch[3] + ch[2]);
+  const flowing = !full && (Math.abs(fx) > 0.01 || Math.abs(fz) > 0.01);
+  const ang = flowing ? Math.atan2(fx, fz) : 0, ca = Math.cos(ang), sa = Math.sin(ang);
+  const topUV = (px, pz) => {
+    if (!flowing) return [px, 1 - pz];
+    const u = px - 0.5, v = pz - 0.5; // turn the flow texture so it runs downhill (at half scale like the reference)
+    return [0.5 + (u * ca - v * sa) * 0.5, 0.5 + (u * sa + v * ca) * 0.5];
+  };
   for (let d = 0; d < 6; d++) {
     const ni = i + FACE_N[d];
     const nb = blocks[ni];
     if (nb === id) continue;
     if (OPAQUE[nb] && d !== 2) continue;
-    if (d === 2 && OPAQUE[nb] && h >= 1) continue;
+    if (d === 2 && OPAQUE[nb] && hMax >= 1) continue;
     if (isWater && nb === B.ICE) continue;
-    const l = light[d === 2 && h < 1 ? i : ni] || light[i];
+    const l = light[d === 2 && hMax < 1 ? i : ni] || light[i];
     const sky = (l >> 4) * 17, blk = (l & 15) * 17;
     const f = FACES[d];
     buf.ensure(4);
     for (let k = 0; k < 4; k++) {
       const [s, t] = CORNERS[k];
-      let py = y + f.o[1] + s * f.u[1] + t * f.v[1];
-      if (py > y) py = y + h;
-      const tile = d === 2 || d === 3 ? still : flow;
-      buf.vert(x + f.o[0] + s * f.u[0] + t * f.v[0], py, z + f.o[2] + s * f.u[2] + t * f.v[2], f.n[0], f.n[1], f.n[2], s, 1 - t * (d === 2 || d === 3 ? 1 : h), 255, 255, 255, sky, blk, 0, tile);
+      const vx = f.o[0] + s * f.u[0] + t * f.v[0], vz = f.o[2] + s * f.u[2] + t * f.v[2];
+      let vy = f.o[1] + s * f.u[1] + t * f.v[1];
+      let u = s, v;
+      if (d === 2) { vy = hAt(vx, vz); [u, v] = topUV(vx, vz); }
+      else if (d === 3) v = 1 - t;
+      else { const top = hAt(vx, vz); if (vy > 0) vy = top; v = 1 - vy; } // sides follow the sloped edge
+      const tile = d === 2 ? (flowing ? flow : still) : d === 3 ? still : flow;
+      buf.vert(x + vx, y + vy, z + vz, f.n[0], f.n[1], f.n[2], u, v, 255, 255, 255, sky, blk, 0, tile);
     }
     buf.quad(false);
     // Inner side of the surface so it is visible from below the water
@@ -515,7 +553,9 @@ function meshLiquid(buf, blocks, light, meta, i, id, x, y, z) {
       buf.ensure(4);
       for (let k = 3; k >= 0; k--) {
         const [s, t] = CORNERS[k];
-        buf.vert(x + f.o[0] + s * f.u[0] + t * f.v[0], y + h, z + f.o[2] + s * f.u[2] + t * f.v[2], 0, -1, 0, s, 1 - t, 255, 255, 255, sky, blk, 0, still);
+        const vx = f.o[0] + s * f.u[0] + t * f.v[0], vz = f.o[2] + s * f.u[2] + t * f.v[2];
+        const [u, v] = topUV(vx, vz);
+        buf.vert(x + vx, y + hAt(vx, vz), z + vz, 0, -1, 0, u, v, 255, 255, 255, sky, blk, 0, flowing ? flow : still);
       }
       buf.quad(false);
     }

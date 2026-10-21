@@ -413,6 +413,8 @@ poison from eyes) follow the documented table.
 * Caves: winding worm tunnels that branch and open into rooms (the reference carver: clusters in about a third of the chunks, seamless across chunk borders), long tall ravines, plus the noise caves (big caverns that grow more common with depth, and spaghetti tunnels); deep tunnels may have a lava floor, a few higher ones a puddle of water, and everything below y −55 is lava. Deep underground the fog and the sky fade to black, so openings into unloaded land look like dark depths
 * Ores are easier to find on cave walls (less air-exposure discarding for gold, azurite and diamonds), coal is more common underground, and a little Beryl (emerald) generates everywhere between y −32 and 48, not only in the mountains
 * Ruined Rifts (ruined portals; one 192 × 192 region in three, `/locate ruin`): a broken obsidian frame, upright or toppled and sometimes half sunk, on a splash of Cinderstone and gravel with a little fire and lava, loose obsidian, sometimes a gold block, and a chest of gold gear, gilded food, flint and steel and obsidian
+* Flowing water and lava look like the reference: every surface corner takes the average height of the four columns around it (sources count ten times), so fluid slopes down steps and thins out at the spreading edge, sides follow the slope and flowing surfaces use the flowing texture turned downhill; currents push players, mobs and items along the flow (and down falling water)
+* A torch, lantern or any other light block held in the hand lights up the area around the player (terrain and mobs)
 * Creative mode: flight, instant breaking without drops, no damage (except the void) or hunger, unlimited blocks, item catalogue with search; hostile mobs ignore creative players
 * Chat with commands (see Controls)
 * Fire: flint and steel (iron ingot + flint, 64 uses) lights fires that animate, crackle and give light 15; fire ages, burns up flammable blocks (planks, logs, leaves, wool, bookshelves, plants with the reference encouragement/flammability odds), spreads through the air up to 4 blocks up, dies out without fuel and is put out by rain; lava sets fire to nearby flammable blocks; standing in fire sets you alight; punch it to put it out
@@ -502,8 +504,7 @@ Code: `src/world/dimensions/` (registry and scaling, generators, portal logic, s
 * **Mob AI** is a simplified goal system (no goal priority selectors; a
   bounded A* of 250 nodes; panicking animals steer directly). Mobs do not seek
   shade from the suns, and there are no doors, wolves or cats to react to.
-* **Water physics**: no flowing-water push currents; fluid surfaces are flat
-  per block (no sloped corner heights); no bubble columns.
+* **Water physics**: no bubble columns.
 * **Explosions** do not set fire and do not knock items back.
 * **The Hollow's late game**: there is a single Far Gate (the reference opens a new gateway per boss kill, up to 20) and it stands on the island's rim instead of floating at y 75; its far end is generated with the island rather than built on first use. Gloomshells spawn naturally inside a city's bounds (up to 6) instead of being placed with it, they sit on floors only, and Drift Sparks cannot be shot down. The ship's Voidwing lies in a chest rather than an item frame. Hollow Cities are a fixed house-tower-bridge-ship layout rather than the reference's random piece grammar.
 * **Torches** can only be placed on the top of blocks.

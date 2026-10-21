@@ -122,6 +122,7 @@ export class Body {
     const b = this.box();
     this.inWater = false; this.inLava = false; this.eyeInWater = false; this.eyeInLava = false; this.inFire = false; this.inWeb = false;
     const ey = this.y + eyeHeight;
+    const flow = [0, 0, 0];
     for (let x = Math.floor(b[0] + 0.001); x <= Math.floor(b[3] - 0.001); x++)
       for (let z = Math.floor(b[2] + 0.001); z <= Math.floor(b[5] - 0.001); z++)
         for (let y = Math.floor(b[1] + 0.001); y <= Math.floor(b[4] - 0.001); y++) {
@@ -132,11 +133,18 @@ export class Body {
           const top = y + (world.getBlock(x, y + 1, z) === id ? 1 : liquidHeight(world.getMeta(x, y, z)));
           if (b[1] < top) {
             if (id === B.WATER) this.inWater = true; else this.inLava = true;
+            fluidFlow(world, x, y, z, id, flow);
           }
           if (Math.floor(this.x) === x && Math.floor(this.z) === z && ey >= y && ey < top) {
             if (id === B.WATER) this.eyeInWater = true; else this.eyeInLava = true;
           }
         }
+    // currents: flowing water (and, slowly, lava) pushes whatever is in it, as in the reference
+    const fl = Math.hypot(flow[0], flow[1], flow[2]);
+    if (fl > 0 && !this.noCurrent) {
+      const k = (this.inWater ? 0.014 : 0.0023) / fl;
+      this.vx += flow[0] * k; this.vy += flow[1] * k; this.vz += flow[2] * k;
+    }
   }
 
   /** Slipperiness of the block under the feet. */
@@ -274,4 +282,26 @@ function clipZ(boxes, i, b, dz) {
   if (dz > 0 && b[5] <= boxes[i + 2] + EPS) { const d = boxes[i + 2] - b[5]; if (d < dz) dz = d; }
   else if (dz < 0 && b[2] >= boxes[i + 5] - EPS) { const d = boxes[i + 5] - b[2]; if (d > dz) dz = d; }
   return dz;
+}
+
+/** Fluid level 0 (source / falling) .. 7 (thinnest) of a fluid block's meta. */
+const flowLevel = (m) => ((m & 8) ? 0 : m & 7);
+const SIDES = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+/** Add the reference current direction of the fluid block at x,y,z to out (downhill towards thinner water and drops). */
+export function fluidFlow(world, x, y, z, id, out) {
+  const m = world.getMeta(x, y, z), here = flowLevel(m);
+  let fx = 0, fz = 0;
+  for (const [dx, dz] of SIDES) {
+    const nid = world.getBlock(x + dx, y, z + dz);
+    if (nid === id) { const d = flowLevel(world.getMeta(x + dx, y, z + dz)) - here; fx += dx * d; fz += dz * d; }
+    else if (!SOLID[nid]) {
+      // an open edge: if the fluid drops over it, it pulls hard
+      const below = world.getBlock(x + dx, y - 1, z + dz);
+      const d = below === id ? flowLevel(world.getMeta(x + dx, y - 1, z + dz)) + 8 - here : 0;
+      fx += dx * d; fz += dz * d;
+    }
+  }
+  const l = Math.hypot(fx, fz);
+  if (l > 0) { out[0] += fx / l; out[2] += fz / l; }
+  if (m & 8) out[1] -= 0.6; // falling water carries things down
 }
