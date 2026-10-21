@@ -55,12 +55,15 @@ export class Player {
     this.body.fallDistance = 0;
   }
 
-  get creative() { return this.gamemode === 'creative'; }
+  // spectators are as safe as creative players (mobs ignore them, no hunger, flight)
+  get creative() { return this.gamemode === 'creative' || this.gamemode === 'spectator'; }
 
   setGamemode(mode) {
     this.gamemode = mode;
     this.inventory.creative = mode === 'creative';
     if (mode !== 'creative') this.flying = false;
+    if (mode === 'spectator') this.flying = true;
+    this.body.noclip = mode === 'spectator'; // spectators fly through blocks
     this.fireTicks = 0;
   }
 
@@ -184,7 +187,8 @@ export class Player {
 
     // Sneaking changes the hitbox height (only if there is room to stand)
     if (this.flyGrace > 0) this.flyGrace--;
-    if (this.flying && ((b.onGround && !this.flyGrace) || !this.creative)) this.flying = false; // landing ends flight
+    if (this.gamemode === 'spectator') { this.flying = true; b.noclip = true; } // spectators always fly, through anything
+    else if (this.flying && ((b.onGround && !this.flyGrace) || !this.creative)) this.flying = false; // landing ends flight
     const wantSneak = !!input.sneak && !this.flying; // sneak descends while flying
     if (!wantSneak && this.sneaking) {
       if (!world.boxCollides(b.x - 0.3, b.y, b.z - 0.3, b.x + 0.3, b.y + PHYS.PLAYER_HEIGHT, b.z + 0.3)) this.sneaking = false;

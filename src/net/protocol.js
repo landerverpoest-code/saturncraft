@@ -125,7 +125,7 @@ export const PF = { SNEAK: 1, DEAD: 2, SLEEP: 4, CREATIVE: 8, HURT: 16, RIDING: 
 /** Compact state of a player: [x, y, z, yaw, pitch, heldItemId|-1, flags, swingSeq]. */
 export function packPlayerState(p, held, swingSeq, armor = null) {
   const f = (p.sneaking ? PF.SNEAK : 0) | (p.dead ? PF.DEAD : 0) | (p.sleeping ? PF.SLEEP : 0) |
-    (p.creative ? PF.CREATIVE : 0) | (p.hurtTime > 0 ? PF.HURT : 0) | (p.riding ? PF.RIDING : 0) | (p.effects && p.effects.invisibility ? PF.INVISIBLE : 0);
+    (p.creative ? PF.CREATIVE : 0) | (p.hurtTime > 0 ? PF.HURT : 0) | (p.riding ? PF.RIDING : 0) | ((p.effects && p.effects.invisibility) || p.gamemode === 'spectator' ? PF.INVISIBLE : 0);
   const ar = armor || (p.inventory && p.inventory.armor ? p.inventory.armor.map((s) => (s ? s.id : 0)) : [0, 0, 0, 0]);
   return [r2(p.x), r2(p.y), r2(p.z), r2(p.yaw), r2(p.pitch), held == null ? -1 : held, f, swingSeq | 0, ...ar];
 }

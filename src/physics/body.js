@@ -71,6 +71,7 @@ export class Body {
 
   /** Move with collisions and step-up. */
   move(world, dx, dy, dz, sneakEdge = false) {
+    if (this.noclip) { this.setPos(this.x + dx, this.y + dy, this.z + dz); this.onGround = false; this.horizontalCollision = false; return; }
     if (sneakEdge && this.onGround && dy <= 0) [dx, dz] = this.backOffFromEdge(world, dx, dz);
     const box = this.box();
     let [rx, ry, rz] = Body.collide(world, box, dx, dy, dz);

@@ -55,7 +55,7 @@ function nextTime(t0, pred) {
 export const GAME_RULES = { doDaylightCycle: 'daylightCycle', doHostileSpawning: 'hostileMobs' };
 
 export const HELP = [
-  '/gamemode <survival|creative>  (or /gm 0|1)',
+  '/gamemode <survival|creative|adventure|spectator>  (or /gm 0|1|2|3)',
   '/time set <day|night|noon|midnight|ticks>,  /time add <ticks>,  /time query',
   '/gamerule doDaylightCycle <true|false>,  /gamerule doHostileSpawning <true|false>',
   '/difficulty <peaceful|easy|normal|hard>',
@@ -78,8 +78,8 @@ export function runCommand(game, text) {
   switch (cmd) {
     case 'help': case '?': return HELP;
     case 'gamemode': case 'gm': {
-      const m = { survival: 'survival', s: 'survival', 0: 'survival', creative: 'creative', c: 'creative', 1: 'creative' }[(args[0] || '').toLowerCase()];
-      if (!m) return 'Usage: /gamemode <survival|creative>';
+      const m = { survival: 'survival', s: 'survival', 0: 'survival', creative: 'creative', c: 'creative', 1: 'creative', adventure: 'adventure', a: 'adventure', 2: 'adventure', spectator: 'spectator', sp: 'spectator', 3: 'spectator' }[(args[0] || '').toLowerCase()];
+      if (!m) return 'Usage: /gamemode <survival|creative|adventure|spectator>';
       p.setGamemode(m);
       return `Set own game mode to ${m[0].toUpperCase() + m.slice(1)} Mode`;
     }

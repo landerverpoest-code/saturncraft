@@ -86,6 +86,7 @@ export class Interaction {
   tick(input) {
     const g = this.game, p = g.player;
     if (p.dead) return;
+    if (p.gamemode === 'spectator') { this.target = null; this.mobTarget = null; this.boatTarget = null; this.eating = 0; return; } // spectators only watch
     this.updateTarget();
     if (this.breakDelay > 0) this.breakDelay--;
     if (this.useDelay > 0) this.useDelay--;
@@ -217,7 +218,7 @@ export class Interaction {
 
   mine() {
     const g = this.game, p = g.player, t = this.target;
-    if (this.breakDelay > 0) return;
+    if (this.breakDelay > 0 || p.gamemode === 'adventure') return; // adventurers can't break blocks
     if (t.id === B.ITEM_FRAME && g.frames.get(`${t.x},${t.y},${t.z}`)) {
       // the first hit knocks the item out of the frame
       const st = g.frames.get(`${t.x},${t.y},${t.z}`);
@@ -604,7 +605,7 @@ export class Interaction {
     if (d.door) return this.placeDoor(t);
     if (d.bed) return this.placeBed(t);
     let placeId = isBlockItem(st.id) ? st.id : d.places;
-    if (placeId === undefined) return false;
+    if (placeId === undefined || p.gamemode === 'adventure') return false; // nor place them
     // where on the clicked block the crosshair is (0 = bottom, 1 = top), for slabs and stairs
     const [ex, ey, ez] = p.eyePos(), [ldx, ldy, ldz] = p.lookDir();
     const hitY = ey + ldy * t.dist - t.y;
