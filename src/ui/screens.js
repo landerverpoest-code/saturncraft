@@ -808,6 +808,7 @@ export class UI {
       <div class="field"><label><input type="checkbox" id="sh" ${g.settings.shadows ? 'checked' : ''}> Sun shadows (3 shadow-casting lights)</label></div>
       <div class="btn-row"><button class="btn" id="dlc">Day/night cycle: ${g.settings.daylightCycle !== false ? 'On' : 'Off'}</button>
       <button class="btn" id="hm">Hostile mobs: ${g.settings.hostileMobs !== false ? 'On' : 'Off'}</button></div>
+      <button class="btn" id="diff">Difficulty: ${cap(g.difficulty)}</button>
       <button class="btn" data-a="ms">Milestones</button>
       <div class="net-box"></div>
       <button class="btn" data-a="title">${g.net && g.net.isClient ? 'Disconnect' : 'Save &amp; Quit to Title'}</button>
@@ -826,6 +827,9 @@ export class UI {
     };
     toggle('dlc', 'daylightCycle', 'Day/night cycle');
     toggle('hm', 'hostileMobs', 'Hostile mobs');
+    const db = s.querySelector('#diff');
+    if (g.net && g.net.isClient) db.disabled = true; // the host decides
+    db.onclick = () => { const order = ['peaceful', 'easy', 'normal', 'hard']; g.setSetting('difficulty', order[(order.indexOf(g.difficulty) + 1) % 4]); db.textContent = `Difficulty: ${cap(g.difficulty)}`; };
     s.querySelector('[data-a=resume]').onclick = () => { this.open = null; this.clear(); g.onUIClosed(); };
     s.querySelector('[data-a=title]').onclick = () => g.quitToTitle();
     s.querySelector('[data-a=ms]').onclick = () => this.showMilestones();
@@ -936,3 +940,5 @@ export class UI {
     this.layer.appendChild(s);
   }
 }
+
+function cap(w) { return w[0].toUpperCase() + w.slice(1); }

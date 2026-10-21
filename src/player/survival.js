@@ -23,6 +23,7 @@ export class HungerManager {
     this.saturation = 5;
     this.exhaustion = 0;
     this.timer = 0;
+    this.peaceTimer = 0;
   }
 
   addExhaustion(v) { this.exhaustion = Math.min(40, this.exhaustion + v); }
@@ -60,9 +61,15 @@ export class HungerManager {
       }
     } else if (this.food <= 0) {
       if (++this.timer >= 80) {
-        if (p.health > 1) p.hurt(1, 'starve'); // Normal difficulty: starves down to half a heart
+        // starving stops at 5 hearts on Easy and half a heart on Normal; on Hard it kills
+        const floor = p.difficulty === 'easy' ? 10 : p.difficulty === 'hard' ? 0 : 1;
+        if (p.health > floor) p.hurt(1, 'starve');
         this.timer = 0;
       }
     } else this.timer = 0;
+    if (p.difficulty === 'peaceful' && p.health > 0) {
+      // Peaceful: health and hunger come back by themselves
+      if (++this.peaceTimer >= 20) { this.peaceTimer = 0; if (p.health < MAX_HEALTH) p.heal(1); if (this.food < MAX_FOOD) this.food++; }
+    }
   }
 }

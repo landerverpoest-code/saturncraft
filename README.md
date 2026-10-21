@@ -401,6 +401,7 @@ poison from eyes) follow the documented table.
 * Weather: rain spells (12 000–24 000 ticks) after clear spells (12 000–180 000), fading in/out at 0.01 per tick; rain or snow by biome (none in deserts), stopped by roofs; overcast sky, weaker sun light, grey clouds, splashes and rain sound; rain puts out burning players and mobs and undead do not catch fire in it
 * Thunderstorms (their own 3 600–15 600-tick spells, only while it rains): darker sky and light, lightning bolts every ~20 s within 64 blocks that flash the sky, crack and rumble, set fire around the strike point and deal 5 damage + burning within 3 blocks; `/weather thunder`, `/summon lightning_bolt`
 * Day/night cycle and hostile mobs can be switched off in the pause menu or with `/gamerule doDaylightCycle|doHostileSpawning true|false` (saved per world); at night Shamblers, Skitterers and Rattlers spawn on the surface (half the monster cap is reserved for surface packs so caves can't use it all up)
+* Difficulty (pause menu or `/difficulty <peaceful|easy|normal|hard>`, saved per world, set by the host in multiplayer): Peaceful has no monsters and refills health and hunger by itself; monster damage is min(d/2 + 1, d) on Easy and ×1.5 on Hard; starving stops at 5 hearts on Easy and half a heart on Normal and kills on Hard
 * Creative mode: flight, instant breaking without drops, no damage (except the void) or hunger, unlimited blocks, item catalogue with search; hostile mobs ignore creative players
 * Chat with commands (see Controls)
 * Fire: flint and steel (iron ingot + flint, 64 uses) lights fires that animate, crackle and give light 15; fire ages, burns up flammable blocks (planks, logs, leaves, wool, bookshelves, plants with the reference encouragement/flammability odds), spreads through the air up to 4 blocks up, dies out without fuel and is put out by rain; lava sets fire to nearby flammable blocks; standing in fire sets you alight; punch it to put it out
@@ -423,7 +424,7 @@ poison from eyes) follow the documented table.
 * Large structures beyond villages, temples, wrecks, outposts, dungeons, sanctums and bastions; job-site blocks; Hollow outer-island cities
 * Hoppers, dispensers and other item-moving containers
 * Witches (elixir-throwing monsters), drowned, husks/strays as separate variants, baby mobs, mob equipment
-* Difficulty levels (fixed at Normal), spectator/adventure modes, multiplayer
+* Spectator/adventure modes
 * Crawling pose, elytra
 
 ## Other dimensions

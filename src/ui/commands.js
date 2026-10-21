@@ -55,6 +55,7 @@ export const HELP = [
   '/gamemode <survival|creative>  (or /gm 0|1)',
   '/time set <day|night|noon|midnight|ticks>,  /time add <ticks>,  /time query',
   '/gamerule doDaylightCycle <true|false>,  /gamerule doHostileSpawning <true|false>',
+  '/difficulty <peaceful|easy|normal|hard>',
   '/weather <clear|rain|thunder> [ticks]',
   '/tp <x> <y> <z>  (~ for relative)',
   '/give <item> [count]',
@@ -96,6 +97,14 @@ export function runCommand(game, text) {
         return `Set the time to ${t}`;
       }
       return 'Usage: /time <set|add|query> ...';
+    }
+    case 'difficulty': {
+      const v = (args[0] || '').toLowerCase();
+      if (!v) return `The difficulty is ${game.difficulty}`;
+      const d = ['peaceful', 'easy', 'normal', 'hard'].find((k) => k === v || k[0] === v);
+      if (!d) return 'Usage: /difficulty <peaceful|easy|normal|hard>';
+      game.setSetting('difficulty', d);
+      return `The difficulty has been set to ${d[0].toUpperCase() + d.slice(1)}`;
     }
     case 'gamerule': {
       const usage = `Usage: /gamerule <${Object.keys(GAME_RULES).join('|')}> [true|false]`;

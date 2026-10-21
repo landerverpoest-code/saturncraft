@@ -59,6 +59,23 @@ describe('hunger', () => {
     for (let i = 0; i < 80 * 10; i++) h.tick(p);
     expect(p.health).toBe(1);
   });
+  it('starvation stops at 5 hearts on Easy and kills on Hard', () => {
+    for (const [difficulty, start, end] of [['easy', 15, 10], ['hard', 5, 0]]) {
+      const h = new HungerManager();
+      h.food = 0; h.saturation = 0;
+      const p = fakePlayer(start); p.difficulty = difficulty;
+      for (let i = 0; i < 80 * 20; i++) h.tick(p);
+      expect(p.health).toBe(end);
+    }
+  });
+  it('Peaceful refills health and hunger', () => {
+    const h = new HungerManager();
+    h.food = 4; h.saturation = 0;
+    const p = fakePlayer(6); p.difficulty = 'peaceful';
+    for (let i = 0; i < 20 * 16; i++) h.tick(p);
+    expect(p.health).toBe(20);
+    expect(h.food).toBe(20);
+  });
   it('eating restores hunger and caps saturation at the food level', () => {
     const h = new HungerManager();
     h.food = 2; h.saturation = 0;

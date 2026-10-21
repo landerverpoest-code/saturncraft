@@ -65,7 +65,8 @@ THREE.ShaderChunk.fog_vertex = `#ifdef USE_FOG
     'directLight.color *= ( directLight.visible && receiveShadow && SUN_MASK && dot( directLight.color, vec3( 1.0 ) ) > 0.0 && dot( geometryNormal, directLight.direction ) > 0.0 ) ? getShadow(');
 }
 
-export const DEFAULT_SETTINGS = { renderDistance: 8, fov: 75, sensitivity: 100, volume: 0.5, music: 0.5, shadows: true, shadowMapSize: 1024, pixelRatioCap: 1.25, daylightCycle: true, hostileMobs: true };
+export const DIFFICULTIES = ['peaceful', 'easy', 'normal', 'hard'];
+export const DEFAULT_SETTINGS = { renderDistance: 8, fov: 75, sensitivity: 100, volume: 0.5, music: 0.5, shadows: true, shadowMapSize: 1024, pixelRatioCap: 1.25, daylightCycle: true, hostileMobs: true, difficulty: 'normal' };
 
 export class Game {
   constructor(canvas, seed, settings, hooks = {}, saveData = null) {
@@ -255,10 +256,14 @@ export class Game {
     if (k === 'volume') this.audio.setVolume(v);
     if (k === 'music') this.music.setVolume(v);
     if (k === 'shadows') this.sky.setShadowsEnabled(v);
-    if (k === 'hostileMobs' && !v) this.removeHostileMobs();
+    if ((k === 'hostileMobs' && !v) || (k === 'difficulty' && v === 'peaceful')) this.removeHostileMobs();
+    if (k === 'difficulty') this.player.difficulty = v;
     if (k === 'daylightCycle' && !v) this.freezeAtDay();
     if (this.hooks.saveSettings) this.hooks.saveSettings(this.settings);
   }
+
+  /** peaceful | easy | normal | hard (saved per world). */
+  get difficulty() { return DIFFICULTIES.includes(this.settings.difficulty) ? this.settings.difficulty : 'normal'; }
 
   /** Is the day/night cycle running (time advancing)? */
   get daylightCycle() { return this.settings.daylightCycle !== false; }
@@ -769,6 +774,7 @@ export class Game {
     this.boatInput = p.riding ? mv : null;
     const still = { forward: 0, strafe: 0, jump: false, sneak: false, sprint: false };
     this.dims.tick(); // portals, arrivals, the Hollow's boss
+    p.difficulty = this.difficulty;
     if (!this.dims.pending && this.chunks.isAreaReady(p.x, p.z, 0)) this.player.tick(this.world, p.sleeping || p.riding ? still : mv);
     else p.prev = { x: p.x, y: p.y, z: p.z };
     if (!blocking) {

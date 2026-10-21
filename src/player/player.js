@@ -71,6 +71,12 @@ export class Player {
   hurt(amount, source = 'generic', attacker = null) {
     if (this.dead || amount <= 0) return false;
     if (this.creative && source !== 'void' && source !== 'kill') return false; // creative players only die in the void
+    // difficulty scales what monsters (and their arrows and blasts) deal: Easy min(d/2 + 1, d), Hard d * 1.5
+    if (source.startsWith('mob:') || (attacker && attacker.kind === 'mob' && attacker.def && attacker.def.category === 'monster')) {
+      if (this.difficulty === 'peaceful') return false;
+      if (this.difficulty === 'easy') amount = Math.min(amount / 2 + 1, amount);
+      else if (this.difficulty === 'hard') amount *= 1.5;
+    }
     // a raised shield stops hits and arrows from in front (within 90 degrees of the view)
     if (this.blocking && attacker && attacker.x !== undefined && source !== 'fall' && source !== 'fire' && source !== 'drown' && source !== 'starve') {
       const dx = attacker.x - this.x, dz = attacker.z - this.z, d = Math.hypot(dx, dz) || 1;

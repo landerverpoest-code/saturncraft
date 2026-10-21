@@ -307,7 +307,7 @@ export class HostSession extends Session {
     c.ch.send({
       t: 'welcome', v: PROTOCOL_VERSION, id: c.id, name, hostName: this.name,
       seed: g.seed, time: g.time, weather: g.weather.save(), gamemode: p.gamemode, dim: g.world.dimension,
-      dl: g.daylightCycle, pvp: this.pvp, gc: this.guestCommands,
+      dl: g.daylightCycle, df: g.difficulty, pvp: this.pvp, gc: this.guestCommands,
       worldSpawn: g.worldSpawn, pos: { x: p.x, y: p.y, z: p.z, yaw: p.yaw },
       player: g.netPlayers[name] || null,
       signs: [...g.signs], frames: [...g.frames],
@@ -592,7 +592,7 @@ export class HostSession extends Session {
 
   setOptions(m) { super.setOptions(m); this.sendEnv(); }
 
-  sendEnv() { const g = this.game; this.broadcast({ t: 'env', time: g.time, w: g.weather.save(), dl: g.daylightCycle, pvp: this.pvp, gc: this.guestCommands }); }
+  sendEnv() { const g = this.game; this.broadcast({ t: 'env', time: g.time, w: g.weather.save(), dl: g.daylightCycle, df: g.difficulty, pvp: this.pvp, gc: this.guestCommands }); }
 
   /** Night is skipped once everybody has been asleep for a while (the host in bed for 5 s). */
   tickSleep() {
@@ -762,6 +762,7 @@ export class ClientSession extends Session {
     for (const [k, l] of w.signs || []) game.signs.set(k, l);
     for (const [k, st] of w.frames || []) game.frames.set(k, st);
     if (typeof w.dl === 'boolean') game.settings.daylightCycle = w.dl;
+    if (typeof w.df === 'string') game.settings.difficulty = w.df;
     game.spawner.enabled = false;
     game.worldSpawn = { ...w.worldSpawn };
     const p = game.player;
@@ -804,6 +805,7 @@ export class ClientSession extends Session {
         if (Math.abs(g.time - m.time) > 2) g.time = m.time;
         g.weather.load(m.w);
         if (typeof m.dl === 'boolean') g.settings.daylightCycle = m.dl;
+        if (typeof m.df === 'string') g.settings.difficulty = m.df;
         this.setOptions(m);
         break;
       case 'ents': if (m.d === g.world.dimension && !g.dims.pending) this.ents.apply(m.m); break;

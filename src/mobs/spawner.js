@@ -30,7 +30,7 @@ export class MobSpawner {
   /** Hostile mobs can be switched off in the settings (/gamerule doHostileSpawning). */
   hostileEnabled() {
     const s = this.game.settings;
-    return !s || s.hostileMobs !== false;
+    return !s || (s.hostileMobs !== false && s.difficulty !== 'peaceful');
   }
 
   counts() {
