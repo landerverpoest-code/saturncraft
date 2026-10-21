@@ -587,6 +587,8 @@ const GEN = {
   },
   lantern_top: (c) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, shade(hex('#3a3a42'), 0.85 + c.h(x, y) * 0.25)); },
   painting_back: (c) => planks(c, '#8a6a42'),
+  hay_side: (c) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const band = y === 3 || y === 12; c.set(x, y, band ? hex('#7a4a1e') : shade(hex(x % 3 ? '#d8b03a' : '#c89a2a'), 0.85 + c.h(x, y) * 0.3)); } },
+  hay_top: (c) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const r = Math.hypot(x - 7.5, y - 7.5); c.set(x, y, shade(hex(Math.floor(r) % 2 ? '#d8b03a' : '#b88a24'), 0.85 + c.h(x, y) * 0.3)); } },
   cocoa: (c) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, shade(hex(y % 4 === 0 ? '#8a5226' : '#a8682e'), 0.85 + c.h(x, y) * 0.3)); },
   cocoa_top: (c) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, shade(hex('#9a5e2a'), 0.85 + c.h(x, y) * 0.25)); },
   item_frame: (c) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const edge = x < 2 || y < 2 || x > 13 || y > 13; c.set(x, y, edge ? shade(hex('#8a6034'), 0.85 + c.h(x, y) * 0.3) : shade(hex('#9a7a5a'), 0.9 + c.h(x, y) * 0.15)); } },

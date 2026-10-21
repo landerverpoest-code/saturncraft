@@ -55,6 +55,8 @@ shapeless([I.INK_SAC], D('BLACK'), 1);
 shapeless([I.COCOA_BEANS], D('BROWN'), 1);
 shaped(['WCW'], { W: I.WHEAT, C: I.COCOA_BEANS }, I.COOKIE, 8);
 shapeless([B.PUMPKIN], I.PUMPKIN_SEEDS, 4);
+shaped(['WWW', 'WWW', 'WWW'], { W: I.WHEAT }, B.HAY_BALE, 1);
+shapeless([B.HAY_BALE], I.WHEAT, 9);
 shapeless([I.MELON_SLICE], I.MELON_SEEDS, 1);
 for (const [a, b, out, n] of [
   ['RED', 'YELLOW', 'ORANGE', 2], ['RED', 'WHITE', 'PINK', 2], ['BLUE', 'WHITE', 'LIGHT_BLUE', 2], ['RED', 'BLUE', 'PURPLE', 2],

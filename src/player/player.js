@@ -194,7 +194,8 @@ export class Player {
     if (b.inWater) b.fallDistance = 0;
     if (b.onGround) {
       if (b.fallDistance > 0) {
-        const dmg = fallDamage(b.fallDistance);
+        const onHay = world.getBlock(Math.floor(b.x), Math.floor(b.y - 0.01), Math.floor(b.z)) === B.HAY_BALE;
+        const dmg = Math.floor(fallDamage(b.fallDistance) * (onHay ? 0.2 : 1)); // hay softens a fall by 80 %
         if (dmg > 0) this.hurt(dmg, 'fall');
         this.landedFrom = b.fallDistance;
       }
