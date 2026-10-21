@@ -6,6 +6,7 @@ import { fallDamage } from '../physics/constants.js';
 import { B, SOLID } from '../world/blocks.js';
 import { I } from '../world/items.js';
 import { MOBS, CATEGORY } from './mobTypes.js';
+import { BIOMES } from '../world/biomes.js';
 import { rollDrops } from './drops.js';
 import { findPath } from './pathfinding.js';
 import { shouldDespawn, shouldBurnInSun } from './spawnRules.js';
@@ -450,6 +451,7 @@ export class Mob {
     if (this.def.tameable) return this.howlerAI(g, p, pdist);
     if (this.def.aquatic) return this.inklingAI(g);
     if (this.type === 'flitter') return this.flitterAI(g, p, pdist);
+    if (this.def.snowGolem) return this.frostlingAI(g, p, pdist);
     if (this.def.guard) return this.guardAI(g, p, pdist);
     if (this.def.category === CATEGORY.CREATURE) return this.passiveAI(g);
     if (this.def.customAI) return this.def.customAI(this, g, p, pdist); // Cinderdeep / Hollow mobs (dimensionMobs.js)
@@ -582,6 +584,35 @@ export class Mob {
       }
     }
     this.wanderAI(g, 1);
+  }
+
+  /** Frostlings throw snowballs at monsters within 10 blocks, leave a trail of snow and melt in warm places and rain. */
+  frostlingAI(g, p, pdist) {
+    if (typeof this.enemy === 'string') this.enemy = null; // Frostlings never turn on players
+    const w = g.world, bx = Math.floor(this.x), by = Math.floor(this.y), bz = Math.floor(this.z);
+    const biome = BIOMES[w.biomeAt(bx, bz)];
+    if ((biome && biome.temp > 1) || (g.weather && g.weather.rainingAt(w, this.x, this.y + 1, this.z))) { if (g.ticks % 20 === 0) this.hurt(1, 'melt'); }
+    else if (biome && biome.temp < 0.8 && !w.getBlock(bx, by, bz) && SOLID[w.getBlock(bx, by - 1, bz)] && g.ticks % 4 === 0) w.setBlock(bx, by, bz, B.SNOW_LAYER, 0);
+    if (!this.enemy || this.enemy.dead || this.enemy.deathTime > 0 || Math.hypot(this.enemy.x - this.x, this.enemy.z - this.z) > 12) {
+      this.enemy = null;
+      if (g.ticks % 10 === this.id % 10) for (const e of g.entities.list) {
+        if (e.kind === 'mob' && e.deathTime === 0 && e.def.category === CATEGORY.MONSTER && Math.hypot(e.x - this.x, e.z - this.z) < 10 && this.canSee(g, e.x, e.eyeY, e.z)) { this.enemy = e; break; }
+      }
+    }
+    if (this.enemy) {
+      const t = this.enemy, dx = t.x - this.x, dz = t.z - this.z, d = Math.hypot(dx, dz) || 1;
+      this.yaw = Math.atan2(-dx, -dz);
+      if (this.attackCooldown <= 0) {
+        this.attackCooldown = 20;
+        const sy = this.y + 1.6, dy = t.y + t.height * 0.6 - sy + d * 0.08;
+        const l = Math.hypot(dx, dy, dz);
+        g.entities.spawnArrow(this.x + dx / d * 0.5, sy, this.z + dz / d * 0.5, dx / l * 1.4, dy / l * 1.4, dz / l * 1.4, this, false, 'snowball');
+        g.audio.play('bow', [this.x, sy, this.z], 0.4);
+      }
+      if (d > 6) this.steer(t.x, t.z, 1);
+      return;
+    }
+    this.wanderAI(g, 0.6);
   }
 
   /** Ironguards patrol near where they were made and smash hostile mobs (not Fizzlers) within 16 blocks. */

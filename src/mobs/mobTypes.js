@@ -91,6 +91,11 @@ export const MOBS = {
     name: 'Flitter', role: 'bat', category: CATEGORY.AMBIENT, flying: true, noFallDamage: true, sound: 'squeak',
     health: 6, speed: 0.3, width: 0.5, height: 0.9, drops: [],
   },
+  frostling: {
+    name: 'Frostling', role: 'snow golem', category: CATEGORY.CREATURE, guard: true, snowGolem: true, sound: 'squish',
+    health: 4, speed: 0.2, width: 0.7, height: 1.9, attack: 0, noFallDamage: true,
+    drops: [{ id: I.SNOWBALL, min: 0, max: 15 }],
+  },
   settler: {
     name: 'Settler', role: 'villager', category: CATEGORY.CREATURE, villager: true,
     health: 20, speed: 0.3, width: 0.6, height: 1.95, panicSpeed: 1.6, sound: 'hmm',

@@ -658,7 +658,7 @@ export class Interaction {
     if (p.intersectsBlock(x, y, z) && meta === SLAB_DOUBLE) return false;
     if (LEAVES.has(id)) meta = 1; // placed leaves never decay
     g.world.setBlockUrgent(x, y, z, id, meta);
-    if (id === B.PUMPKIN || id === B.JACK_O_LANTERN) this.tryBuildIronguard(x, y, z);
+    if (id === B.PUMPKIN || id === B.JACK_O_LANTERN) { if (!this.tryBuildIronguard(x, y, z)) this.tryBuildFrostling(x, y, z); }
     if (id === B.RAIL) updateRails(g.world, x, y, z);
     g.audio.play('place_' + BLOCKS[id].sound, [x + 0.5, y + 0.5, z + 0.5]);
     p.inventory.removeFromSlot(p.inventory.selected, 1);
@@ -670,6 +670,16 @@ export class Interaction {
   holdingRod() {
     const st = this.game.player.inventory.selectedStack;
     return !!(st && ITEMS[st.id] && ITEMS[st.id].rod);
+  }
+
+  /** A pumpkin on two snow blocks comes alive as a Frostling. */
+  tryBuildFrostling(x, y, z) {
+    const g = this.game, w = g.world;
+    if (w.getBlock(x, y - 1, z) !== B.SNOW_BLOCK || w.getBlock(x, y - 2, z) !== B.SNOW_BLOCK) return false;
+    for (const yy of [y, y - 1, y - 2]) { w.setBlockUrgent(x, yy, z, B.AIR); g.particles.smoke(x + 0.5, yy + 0.5, z + 0.5, 6, 1); }
+    g.spawner.spawnMob('frostling', x + 0.5, y - 2, z + 0.5);
+    g.audio.play('squish', [x + 0.5, y, z + 0.5]);
+    return true;
   }
 
   /** A pumpkin on top of a T of four iron blocks comes alive as an Ironguard. */
