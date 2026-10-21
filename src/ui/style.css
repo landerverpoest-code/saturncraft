@@ -190,3 +190,7 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 .anvil-cost { min-height: 18px; margin-bottom: 10px; font: bold 14px monospace; color: #5a554b; }
 .anvil-cost.ok { color: #3a9a10; }
 .anvil-cost.bad { color: #c03030; }
+
+.sign-edit { display: flex; flex-direction: column; gap: 2px; padding: 14px 18px; background: linear-gradient(#c8a068, #a7834e); border: 3px solid #6a4a28; border-radius: 4px; }
+.sign-edit input { width: 260px; text-align: center; font: bold 20px monospace; color: #1a120a; background: transparent; border: none; outline: none; }
+.sign-edit input:focus { background: rgba(255,255,255,0.15); }

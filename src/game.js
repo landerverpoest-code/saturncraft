@@ -15,6 +15,7 @@ import { PlayerModel } from './render/playerModel.js';
 import { Sky } from './sky/sky.js';
 import { Clouds } from './sky/clouds.js';
 import { Weather, WeatherRenderer } from './sky/weather.js';
+import { SignRenderer } from './render/signs.js';
 import { Lightning } from './sky/lightning.js';
 import { snowfall } from './world/randomTicks.js';
 import { igniteTNT } from './entities/tnt.js';
@@ -71,6 +72,7 @@ export class Game {
     this.paused = false;
     this.furnaces = new Map();
     this.chests = new Map();      // "x,y,z" -> { x, y, z, slots: 27 stacks }
+    this.signs = new Map();       // "x,y,z" -> four lines of text
     this.fps = 0; this.frameCount = 0; this.fpsTime = 0;
     this.net = null;              // multiplayer session (src/net/session.js), null in single-player
   }
@@ -104,6 +106,7 @@ export class Game {
     this.weatherFx = new WeatherRenderer(this.scene);
     this.lightning = new Lightning(this.scene);
     this.particles = new Particles(this.scene);
+    this.signRenderer = new SignRenderer(this);
     this.playerModel = new PlayerModel(this.scene);
     this.perspective = 0; // 0 first person, 1 behind, 2 in front (F5)
     this.player = new Player();
@@ -501,6 +504,13 @@ export class Game {
     }
   }
 
+  /** Write on a sign (shared with everyone in multiplayer). */
+  setSignText(x, y, z, lines, fromNet = false) {
+    const clean = [0, 1, 2, 3].map((i) => String((lines && lines[i]) || '').slice(0, 15));
+    this.signs.set(`${x},${y},${z}`, clean);
+    if (!fromNet && this.net) this.net.sendSign ? this.net.sendSign(x, y, z, clean) : null;
+  }
+
   /** Ambient block effects near the player: smoke from campfires and torches, embers over lava. */
   displayTick() {
     const p = this.player, w = this.world;
@@ -725,6 +735,7 @@ export class Game {
     terrainUniforms.uTime.value = sec;
     const R = this.chunks.renderDistance * 16;
     this.clouds.update(this.camera, smoothTime, this.sky, Math.max(192, R * 1.8));
+    if (this.signRenderer) this.signRenderer.update();
     const fogCol = this.sky.horizon;
     this.scene.fog.color.copy(fogCol);
     if (b.eyeInWater) { this.scene.fog.color.setRGB(0.03, 0.1, 0.3); this.scene.fog.near = 1; this.scene.fog.far = 18; }

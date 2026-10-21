@@ -248,6 +248,8 @@ export class World {
       return !!SOLID[below] && below !== B.DOOR && this.getBlock(x, y + 1, z) === B.DOOR;
     }
     if (id === B.RAIL) return railSupported(this, x, y, z);
+    if (id === B.OAK_WALL_SIGN) { const [dx, , dz] = SIDE_DIRS[(metaIn ?? this.getMeta(x, y, z)) & 3]; return !!SOLID[this.getBlock(x + dx, y, z + dz)]; }
+    if (id === B.OAK_SIGN) return !!SOLID[below];
     if (id === B.PAINTING || id === B.PAINTING_B) return paintingIntact(this, x, y, z, id, metaIn ?? this.getMeta(x, y, z));
     if (id === B.SNOW_LAYER) return (!!SOLID[below] && !!OPAQUE[below]) || LEAVES_SET.has(below) || (below === B.SNOW_LAYER && (this.getMeta(x, y - 1, z) & 7) === 7);
     if (id === B.DEAD_BUSH) return below === B.SAND || below === B.RED_SAND || below === B.DIRT || below === B.GRASS || (below >= B.TERRACOTTA && below <= B.LIGHT_GRAY_TERRACOTTA);

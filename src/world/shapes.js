@@ -208,6 +208,10 @@ const TABLE_BOXES = [[0, 0, 0, 1, 12 / 16, 1]];
 const ANVIL_X = [[2 / 16, 0, 2 / 16, 14 / 16, 4 / 16, 14 / 16], [3 / 16, 4 / 16, 4 / 16, 13 / 16, 5 / 16, 12 / 16],
   [4 / 16, 5 / 16, 6 / 16, 12 / 16, 10 / 16, 10 / 16], [0, 10 / 16, 3 / 16, 1, 1, 13 / 16]];
 const ANVIL_Z = ANVIL_X.map(([x0, y0, z0, x1, y1, z1]) => [z0, y0, x0, z1, y1, x1]);
+// signs: a board on a post, or a board against a wall
+const SIGN_Z = [[0, 8 / 16, 7 / 16, 1, 1, 9 / 16], [7 / 16, 0, 7 / 16, 9 / 16, 8 / 16, 9 / 16]];
+const SIGN_X = SIGN_Z.map(([x0, y0, z0, x1, y1, z1]) => [z0, y0, x0, z1, y1, x1]);
+const WALL_SIGN = [[0, 4.5 / 16, 0, 1, 12.5 / 16, 2 / 16], [14 / 16, 4.5 / 16, 0, 1, 12.5 / 16, 1], [0, 4.5 / 16, 14 / 16, 1, 12.5 / 16, 1], [0, 4.5 / 16, 0, 2 / 16, 12.5 / 16, 1]].map((b) => [b]);
 // campfire: two logs along x, two across on top, a bed of embers between
 const CAMPFIRE_BOXES = [[0, 0, 1 / 16, 1, 4 / 16, 5 / 16], [0, 0, 11 / 16, 1, 4 / 16, 15 / 16],
   [1 / 16, 3 / 16, 0, 5 / 16, 7 / 16, 1], [11 / 16, 3 / 16, 0, 15 / 16, 7 / 16, 1], [5 / 16, 0, 5 / 16, 11 / 16, 1 / 16, 11 / 16]];
@@ -217,6 +221,8 @@ const LANTERN_HANGING = [[5 / 16, 1 / 16, 5 / 16, 11 / 16, 8 / 16, 11 / 16], [6 
 export function blockBoxes(id, meta) {
   if (id === B.ANVIL) return meta & 1 ? ANVIL_Z : ANVIL_X;
   if (id === B.CAMPFIRE) return CAMPFIRE_BOXES;
+  if (id === B.OAK_SIGN) return (meta & 1) ? SIGN_X : SIGN_Z;
+  if (id === B.OAK_WALL_SIGN) return WALL_SIGN[meta & 3];
   if (id === B.LANTERN) return meta & 1 ? LANTERN_HANGING : LANTERN_STANDING;
   return TABLE_BOXES;
 }

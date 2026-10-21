@@ -298,6 +298,22 @@ export class Interaction {
       }
       return false;
     }
+    if (d && d.sign) {
+      // a standing sign on top of a block, or a wall sign on its side; then write on it
+      if (!this.target || this.target.face[1] === -1) return false;
+      const t = this.target, x = t.x + t.face[0], y = t.y + t.face[1], z = t.z + t.face[2];
+      if (w.getBlock(x, y, z) && !BLOCKS[w.getBlock(x, y, z)].replaceable) return false;
+      let id, meta;
+      if (t.face[1] === 1) { id = B.OAK_SIGN; const dx = p.x - (x + 0.5), dz = p.z - (z + 0.5); meta = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 1 : 3) : (dz > 0 ? 2 : 0); }
+      else { id = B.OAK_WALL_SIGN; meta = sideOf(-t.face[0], -t.face[2]); }
+      if (!w.hasSupport(x, y, z, id, meta)) return false;
+      w.setBlockUrgent(x, y, z, id, meta);
+      g.audio.play('place_wood', [x + 0.5, y + 0.5, z + 0.5]);
+      if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
+      this.swing = SWING_TICKS;
+      g.ui.openSignEditor(x, y, z);
+      return true;
+    }
     if (d && d.painting) {
       // hang the largest picture that fits on the clicked wall
       if (!this.target || this.target.face[1] !== 0) return false;
@@ -339,6 +355,7 @@ export class Interaction {
     // Interactive blocks
     if (!p.sneaking || !st) {
       if (t.id === B.WORKBENCH) { g.ui.openWorkbench(); return true; }
+      if (t.id === B.OAK_SIGN || t.id === B.OAK_WALL_SIGN) { g.ui.openSignEditor(t.x, t.y, t.z); return true; }
       if (t.id === B.FURNACE || t.id === B.FURNACE_LIT) { g.ui.openFurnace(t.x, t.y, t.z); return true; }
       if (t.id === B.BED) { g.trySleep(t.x, t.y, t.z); return true; }
       if (t.id === B.ENCHANTING_TABLE) { g.ui.openEnchanting(t.x, t.y, t.z); return true; }

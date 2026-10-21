@@ -781,6 +781,29 @@ export class UI {
     box.append(players);
   }
 
+  /** Write on a sign: four lines of up to 15 characters, saved as you type. */
+  openSignEditor(x, y, z) {
+    this.clear();
+    this.open = 'sign';
+    const g = this.game, k = `${x},${y},${z}`;
+    g.input.unlock();
+    const lines = (g.signs.get(k) || ['', '', '', '']).slice();
+    const s = el('<div class="screen"><h2>Edit Sign</h2><div class="sign-edit"></div><button class="btn">Done</button></div>');
+    const box = s.querySelector('.sign-edit');
+    const inputs = lines.map((l, i) => {
+      const inp = el('<input maxlength="15" spellcheck="false">');
+      inp.value = l;
+      inp.oninput = () => { lines[i] = inp.value; g.setSignText(x, y, z, lines); };
+      inp.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') { if (i < 3) inputs[i + 1].focus(); else done(); } if (e.key === 'Escape') done(); };
+      box.appendChild(inp);
+      return inp;
+    });
+    const done = () => { g.setSignText(x, y, z, lines); this.open = null; this.clear(); g.onUIClosed(); };
+    s.querySelector('button').onclick = done;
+    this.layer.appendChild(s);
+    setTimeout(() => inputs[0].focus(), 0);
+  }
+
   showMilestones() {
     this.clear();
     this.open = 'pause';

@@ -67,6 +67,7 @@ shaped(['I I', 'III'], { I: I.IRON_INGOT }, I.MINECART, 1);
 shaped([' S ', 'SCS', 'LLL'], { S: I.STICK, C: I.COAL, L: 'log' }, B.CAMPFIRE, 1);
 shaped(['III', 'ITI', 'III'], { I: I.IRON_INGOT, T: B.TORCH }, B.LANTERN, 1);
 shaped(['SSS', 'SWS', 'SSS'], { S: I.STICK, W: B.WOOL }, I.PAINTING, 1);
+shaped(['PPP', 'PPP', ' S '], { P: 'planks', S: I.STICK }, I.SIGN, 3);
 shaped(['LLL', 'LIL'], { L: I.LEATHER, I: I.IRON_INGOT }, I.SADDLE, 1);
 shaped(['PIP', 'PPP', ' P '], { P: 'planks', I: I.IRON_INGOT }, I.SHIELD, 1);
 shaped(['  S', ' SW', 'S W'], { S: I.STICK, W: I.STRING }, I.FISHING_ROD, 1);

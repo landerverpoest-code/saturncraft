@@ -231,6 +231,12 @@ export class HostSession extends Session {
         break;
       }
       case 'ed': if (m.d === g.world.dimension) this.applyGuestEdits(c, m.e); break;
+      case 'sign': {
+        if (!finite(m.x, m.y, m.z) || !this.near(c, m.x, m.y, m.z, 12) || !Array.isArray(m.l)) break;
+        g.setSignText(m.x | 0, m.y | 0, m.z | 0, m.l, true);
+        this.broadcast({ t: 'sign', x: m.x | 0, y: m.y | 0, z: m.z | 0, l: g.signs.get(`${m.x | 0},${m.y | 0},${m.z | 0}`) }, c);
+        break;
+      }
       case 'chat': {
         const text = String(m.m || '').slice(0, 256);
         if (!text) break;
@@ -295,6 +301,7 @@ export class HostSession extends Session {
       dl: g.daylightCycle, pvp: this.pvp, gc: this.guestCommands,
       worldSpawn: g.worldSpawn, pos: { x: p.x, y: p.y, z: p.z, yaw: p.yaw },
       player: g.netPlayers[name] || null,
+      signs: [...g.signs],
       players: [{ id: 0, name: this.name }, ...this.joined().map((o) => ({ id: o.id, name: o.name }))],
       chunks: chunks.length,
     });
@@ -617,6 +624,7 @@ export class HostSession extends Session {
   onArrived(x, y, z) { this.broadcast({ t: 'arrived', x, y, z, d: this.game.world.dimension }); }
 
   sendChat(text) { this.broadcast({ t: 'chat', from: this.name, m: text }); }
+  sendSign(x, y, z, l) { this.broadcast({ t: 'sign', x, y, z, l }); }
 
   tick() {
     if (this.closed) return;
@@ -728,6 +736,7 @@ export class ClientSession extends Session {
     this.chunks = null;
     game.time = w.time;
     game.weather.load(w.weather);
+    for (const [k, l] of w.signs || []) game.signs.set(k, l);
     if (typeof w.dl === 'boolean') game.settings.daylightCycle = w.dl;
     game.spawner.enabled = false;
     game.worldSpawn = { ...w.worldSpawn };
@@ -764,6 +773,7 @@ export class ClientSession extends Session {
       case 'join': this.addRemote(m.id, m.name); g.chat.add(`${m.name} joined the game`); break;
       case 'leave': { const rp = this.remotes.get(m.id); if (rp) { rp.dispose(); this.remotes.delete(m.id); } g.chat.add(`${m.name} left the game`); break; }
       case 'chat': g.chat.add(`<${m.from}> ${m.m}`); break;
+      case 'sign': if (Array.isArray(m.l)) g.setSignText(m.x | 0, m.y | 0, m.z | 0, m.l, true); break;
       case 'cmdout': for (const l of m.lines || []) g.chat.add(String(l)); break;
       case 'env':
         if (Math.abs(g.time - m.time) > 2) g.time = m.time;
@@ -937,6 +947,7 @@ export class ClientSession extends Session {
   sendCommand(text) { this.send({ t: 'cmd', text }); }
 
   sendChat(text) { this.send({ t: 'chat', m: text }); }
+  sendSign(x, y, z, l) { this.send({ t: 'sign', x, y, z, l }); }
 
   /** We stepped through a portal: the host takes the whole group there. */
   requestTravel(dim, arrival) {

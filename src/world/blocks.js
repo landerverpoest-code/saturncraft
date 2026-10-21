@@ -42,7 +42,7 @@ export const B = {
   BROWN_MUSHROOM_BLOCK: 121, RED_MUSHROOM_BLOCK: 122, MUSHROOM_STEM: 123, MYCELIUM: 124,
   SKYBELL: 125, ROSETTE: 126,
   // Other dimensions (ids from 160 up, see world/dimensions/): the Cinderdeep and the Hollow
-  SNOW_LAYER: 130, COBBLESTONE_WALL: 131, MOSSY_COBBLESTONE_WALL: 132, OAK_TRAPDOOR: 133, RAIL: 140, COBWEB: 141, TNT: 142, CAMPFIRE: 150, LANTERN: 151, PAINTING: 152, PAINTING_B: 153,
+  SNOW_LAYER: 130, COBBLESTONE_WALL: 131, MOSSY_COBBLESTONE_WALL: 132, OAK_TRAPDOOR: 133, RAIL: 140, COBWEB: 141, TNT: 142, CAMPFIRE: 150, LANTERN: 151, PAINTING: 152, PAINTING_B: 153, OAK_SIGN: 154, OAK_WALL_SIGN: 155,
   SNOW_LAYER: 130, COBBLESTONE_WALL: 131, MOSSY_COBBLESTONE_WALL: 132, OAK_TRAPDOOR: 133,
   ENCHANTING_TABLE: 134, ANVIL: 135,
   CINDERSTONE: 160, GLOWSHARD: 161, MOURNSAND: 162, EMBERQUARTZ_ORE: 163, SCORCHED_BRICKS: 164, RIFT: 165,
@@ -118,6 +118,9 @@ def(B.TNT, 'TNT', { hardness: 0, resistance: 0, sound: 'grass', flammable: true,
 // Campfires: logs with a fire on top (light 15, smoke, burns what stands in it); lanterns: light 15, standing or hanging (meta 1).
 def(B.CAMPFIRE, 'Campfire', { hardness: 2, resistance: 2, tool: TOOL.AXE, sound: 'wood', opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, emit: 15, drops: 'campfire', tex: { top: 'oak_log_top', bottom: 'oak_log_top', side: 'oak_log' } });
 def(B.LANTERN, 'Lantern', { hardness: 3.5, resistance: 3.5, tool: TOOL.PICKAXE, sound: 'metal', opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, emit: 15, tex: { top: 'lantern_top', bottom: 'lantern_top', side: 'lantern' } });
+// Signs: standing (meta = side it faces) or on a wall (meta = side of the wall); text in game.signs
+def(B.OAK_SIGN, 'Oak Sign', { hardness: 1, resistance: 1, tool: TOOL.AXE, sound: 'wood', flammable: true, solid: false, opaque: false, shape: SHAPE.BOXES, needsSupport: true, drops: 'sign', tex: { all: 'oak_planks' } });
+def(B.OAK_WALL_SIGN, 'Oak Sign', { hardness: 1, resistance: 1, tool: TOOL.AXE, sound: 'wood', flammable: true, solid: false, opaque: false, shape: SHAPE.BOXES, needsSupport: true, drops: 'sign', tex: { all: 'oak_planks' } });
 // Paintings: parts of a picture hung on a wall (see world/paintings.js)
 def(B.PAINTING, 'Painting', { hardness: 0, resistance: 0, solid: false, opaque: false, shape: SHAPE.PAINTING, sound: 'wood', needsSupport: true, drops: 'painting', tex: { all: 'painting_back' } });
 def(B.PAINTING_B, 'Painting', { hardness: 0, resistance: 0, solid: false, opaque: false, shape: SHAPE.PAINTING, sound: 'wood', needsSupport: true, drops: 'painting', tex: { all: 'painting_back' } });

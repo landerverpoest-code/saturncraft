@@ -97,6 +97,7 @@ item('bowl', 'Bowl');
 item('beetroot_soup', 'Beetroot Soup', { stack: 1, food: { hunger: 6, saturation: 7.2, leaves: 'bowl' } });
 item('shears', 'Shears', { stack: 1, durability: 238, shears: true });
 item('flint_and_steel', 'Flint and Steel', { stack: 1, durability: 64, igniter: true });
+item('sign', 'Oak Sign', { stack: 16, sign: true, iconStyle: ['sign', { h: '#a7834e', H: '#c8a068', s: '#6a4a28' }] });
 item('painting', 'Painting', { painting: true, iconStyle: ['frame', { h: '#6ab0e8', H: '#3a7a3a', s: '#5a3a1e', w: '#ffe08a' }] });
 item('saddle', 'Saddle', { stack: 1, saddle: true, iconStyle: ['saddle', { h: '#7a4a2a', H: '#9a6238', s: '#c8c8cc' }] });
 item('shield', 'Shield', { stack: 1, durability: 336, shield: true, iconStyle: ['shield', { h: '#8a6034', H: '#a87a48', s: '#9a9aa0', w: '#5a3d1e' }] });
