@@ -190,3 +190,34 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 .anvil-cost { min-height: 18px; margin-bottom: 10px; font: bold 14px monospace; color: #5a554b; }
 .anvil-cost.ok { color: #3a9a10; }
 .anvil-cost.bad { color: #c03030; }
+
+/* status effects: HUD list (top right) and the inventory panel */
+#effects { position: absolute; right: 10px; top: 76px; display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+#effects .fx { display: flex; align-items: center; gap: 6px; padding: 3px 8px 3px 4px; background: rgba(8, 10, 20, .5); border-radius: 6px; border-left: 3px solid #6ab0ff; font-size: 12px; min-width: 128px; }
+#effects .fx.bad { border-left-color: #ff5a5a; }
+#effects .fx img { width: 22px; height: 22px; }
+#effects .fx .fx-name { font-weight: bold; text-shadow: 1px 1px 0 #000; }
+#effects .fx .fx-time { opacity: .8; font-family: monospace; }
+#effects .fx.ending img { opacity: .35; }
+.tooltip .tt-good { color: #7ab8ff; font-size: 13px; }
+.tooltip .tt-bad { font-size: 13px; }
+.effect-panel { min-width: 170px; max-height: 70vh; overflow-y: auto; }
+.effect-panel .fx-row { display: flex; align-items: center; gap: 8px; padding: 5px 6px; margin-bottom: 4px; background: #8b8577; border: 2px solid; border-color: #5a554b #d8d2c4 #d8d2c4 #5a554b; color: #fff; text-shadow: 1px 1px 0 #333; font-size: 13px; }
+.effect-panel .fx-row img { width: 26px; height: 26px; }
+.effect-panel .fx-row .fx-time { font-family: monospace; opacity: .85; }
+.effect-panel .fx-row.bad .fx-name { color: #ffd0d0; }
+.brew-top { display: flex; align-items: flex-start; justify-content: center; gap: 22px; margin-bottom: 12px; }
+.brew-fuel { display: flex; flex-direction: column; align-items: center; gap: 6px; padding-top: 4px; }
+.brew-fuelbar { width: 36px; height: 8px; background: #5a554b; border-radius: 2px; overflow: hidden; }
+.brew-fuelbar > div { height: 100%; background: linear-gradient(90deg, #ff9a20, #ffd060); }
+.brew-main { display: grid; grid-template-columns: repeat(3, var(--slot)); grid-template-rows: var(--slot) 40px var(--slot) 10px; column-gap: 10px; justify-items: center; align-items: center; position: relative; }
+.brew-main .ing { grid-column: 2; grid-row: 1; }
+.brew-main .v0 { grid-column: 1; grid-row: 3; }
+.brew-main .v1 { grid-column: 2; grid-row: 3; transform: translateY(10px); }
+.brew-main .v2 { grid-column: 3; grid-row: 3; }
+.brew-bubbles { grid-column: 1; grid-row: 1 / 3; width: 14px; height: 60px; justify-self: end; background: #5a554b; border-radius: 7px; position: relative; overflow: hidden; }
+.brew-bubbles > div { position: absolute; left: 0; right: 0; bottom: 0; background: repeating-radial-gradient(circle at 50% 50%, #e8f0ff 0 2px, #9ab8e8 2px 4px); opacity: .9; }
+.brew-arrow { grid-column: 3; grid-row: 1 / 3; width: 12px; height: 64px; justify-self: start; background: #5a554b; border-radius: 3px; position: relative; overflow: hidden; }
+.brew-arrow > div { position: absolute; left: 0; right: 0; top: 0; background: linear-gradient(180deg, #f2f2f2, #b8e070); }
+.brew-tubes { grid-column: 1 / 4; grid-row: 2; width: 70%; height: 24px; border: 3px solid #5a554b; border-bottom: none; border-radius: 8px 8px 0 0; align-self: end; }
+.brew-hint { font-size: 12px; color: #4a453b; text-align: center; margin: 4px 0 8px; }

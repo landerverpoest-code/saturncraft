@@ -45,6 +45,7 @@ export const B = {
   SNOW_LAYER: 130, COBBLESTONE_WALL: 131, MOSSY_COBBLESTONE_WALL: 132, OAK_TRAPDOOR: 133, RAIL: 140, COBWEB: 141, TNT: 142,
   SNOW_LAYER: 130, COBBLESTONE_WALL: 131, MOSSY_COBBLESTONE_WALL: 132, OAK_TRAPDOOR: 133,
   ENCHANTING_TABLE: 134, ANVIL: 135,
+  BREWING_STAND: 143, CINDERROOT: 144,
   CINDERSTONE: 160, GLOWSHARD: 161, MOURNSAND: 162, EMBERQUARTZ_ORE: 163, SCORCHED_BRICKS: 164, RIFT: 165,
   HOLLOWSTONE: 166, HOLLOW_FRAME: 167, HOLLOW_FRAME_EYE: 168, HOLLOW_GATE: 169, WYRM_EGG: 170,
 };
@@ -242,6 +243,12 @@ def(B.GLASS_PANE, 'Glass Pane', { hardness: 0.3, resistance: 0.3, opaque: false,
 // meta bit 0 = long axis along z, bits 1-2 = wear 0..2). Both are drawn from shapes.js BLOCK_BOXES.
 def(B.ENCHANTING_TABLE, 'Enchanting Table', { hardness: 5, resistance: 1200, tool: TOOL.PICKAXE, tier: TIER.WOOD, opaque: false, shape: SHAPE.BOXES, emit: 7, tex: { top: 'enchanting_table_top', bottom: 'obsidian', side: 'enchanting_table_side' } });
 def(B.ANVIL, 'Anvil', { hardness: 5, resistance: 1200, tool: TOOL.PICKAXE, tier: TIER.WOOD, opaque: false, shape: SHAPE.BOXES, gravity: true, sound: 'metal', tex: { top: 'anvil_top', bottom: 'anvil_side', side: 'anvil_side' } });
+
+// Brewing Alembic (reference: brewing stand): a cobblestone base with an ember rod; drawn from shapes.js BLOCK_BOXES.
+def(B.BREWING_STAND, 'Brewing Alembic', { hardness: 0.5, resistance: 0.5, tool: TOOL.PICKAXE, tier: TIER.ANY, opaque: false, shape: SHAPE.BOXES, emit: 1, sound: 'metal', container: true, tex: { top: 'brewing_stand_top', bottom: 'brewing_stand_base', side: 'brewing_stand_side' },
+  iconStyle: ['alembic', { r: '#ffb030', R: '#ffe080', i: '#3a3236', v: '#dbe8f5', w: '#eef4fa', h: '#c8304a', c: '#7b7b7e', C: '#a0a0a3' }] });
+// Cinderroot (reference: nether wart): grows on Mournsand in the Cinderdeep, meta = age 0..3.
+def(B.CINDERROOT, 'Cinderroot', { ...plant, shape: SHAPE.CROP, drops: 'cinderroot', tex: { all: 'cinderroot_3' } });
 
 // The Cinderdeep (fiery underworld) and the Hollow (void dimension); see world/dimensions/.
 def(B.CINDERSTONE, 'Cinderstone', { hardness: 0.4, resistance: 0.4, tool: TOOL.PICKAXE, tier: TIER.WOOD });

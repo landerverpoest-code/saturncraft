@@ -250,6 +250,7 @@ export class World {
     if (id === B.SNOW_LAYER) return (!!SOLID[below] && !!OPAQUE[below]) || LEAVES_SET.has(below) || (below === B.SNOW_LAYER && (this.getMeta(x, y - 1, z) & 7) === 7);
     if (id === B.DEAD_BUSH) return below === B.SAND || below === B.RED_SAND || below === B.DIRT || below === B.GRASS || (below >= B.TERRACOTTA && below <= B.LIGHT_GRAY_TERRACOTTA);
     if (CROPS.has(id)) return below === B.FARMLAND;
+    if (id === B.CINDERROOT) return below === B.MOURNSAND;
     if (id === B.SUGAR_CANE) {
       if (below === B.SUGAR_CANE) return true;
       if (below !== B.GRASS && below !== B.DIRT && below !== B.SAND && below !== B.RED_SAND) return false;

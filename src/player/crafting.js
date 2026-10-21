@@ -112,6 +112,17 @@ for (const [mat, ing] of Object.entries(ARMOR_MATS)) {
   shaped(['X X', 'X X'], { X: ing }, I[`${mat}_boots`.toUpperCase()]);
 }
 
+// Brewing: vials, nuggets and the potion ingredients that are crafted
+shapeless([B.SUGAR_CANE], I.SUGAR, 1);
+shapeless([I.GOLD_INGOT], I.GOLD_NUGGET, 9);
+shaped(['NNN', 'NNN', 'NNN'], { N: I.GOLD_NUGGET }, I.GOLD_INGOT, 1);
+shaped(['G G', ' G '], { G: B.GLASS }, I.GLASS_VIAL, 3);
+shaped(['NNN', 'NMN', 'NNN'], { N: I.GOLD_NUGGET, M: I.MELON_SLICE }, I.GILDED_MELON_SLICE, 1);
+shaped(['NNN', 'NCN', 'NNN'], { N: I.GOLD_NUGGET, C: I.CARROT }, I.GILDED_CARROT, 1);
+shapeless([I.SLIMEBALL, I.EMBER_POWDER], I.EMBER_CREAM, 1);
+shapeless([I.SPIDER_EYE, B.BROWN_MUSHROOM, I.SUGAR], I.FERMENTED_SPIDER_EYE, 1);
+shaped([' R ', 'CCC'], { R: I.EMBER_ROD, C: 'stone_mat' }, B.BREWING_STAND, 1);
+
 /**
  * Find the crafting result for a grid.
  * @param {Array<{id:number}|null>} grid row-major

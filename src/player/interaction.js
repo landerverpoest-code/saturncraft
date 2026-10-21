@@ -1,11 +1,13 @@
 // Player interaction with the world: mining (with break progress), placing,
 // attacking with the attack cooldown, eating, buckets and containers.
 import { B, BLOCKS, SOLID, SHAPE, isFluid, CROPS } from '../world/blocks.js';
-import { ITEMS, I, toolOf, isBlockItem, WOOL_ITEMS } from '../world/items.js';
+import { ITEMS, I, toolOf, isBlockItem, WOOL_ITEMS, POTION_ITEM } from '../world/items.js';
+import { POTIONS } from '../world/potions.js';
 import { breakProgressPerTick, blockDrops, canHarvest } from '../world/mining.js';
 import { enchLevel, meleeBonus, silkDropsSelf } from '../world/enchantments.js';
 import { PHYS } from '../physics/constants.js';
 import { EXHAUSTION } from './survival.js';
+import { meleeWithEffects } from './effects.js';
 import { lightAt } from '../entities/entities.js';
 import { canLight, FIRE_DELAY } from '../world/fire.js';
 import { Bobber } from '../entities/bobber.js';
@@ -29,6 +31,8 @@ const ORE_XP = {
   [B.CINNABAR_ORE]: [1, 5], [B.DEEP_CINNABAR_ORE]: [1, 5], [B.SPAWNER]: [15, 43],
 };
 const BREAK_DELAY = 5;
+/** Blocks that right-click opens / toggles instead of using the held item. */
+const USABLE_BLOCKS = new Set([B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.CHEST, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL, B.BREWING_STAND]);
 const USE_DELAY = 4;
 
 export class Interaction {
@@ -109,6 +113,14 @@ export class Interaction {
     const d = st && ITEMS[st.id];
     // right-clicking an animal feeds, breeds or shears it
     if (input.rightPressed && this.mobTarget && this.interactMob(this.mobTarget.mob)) { this.useDelay = USE_DELAY; return; }
+    // elixirs and milk are drunk like food is eaten (32 ticks), unless aiming at a block to use
+    const drinkable = d && (d.drink || d.milk) && !(this.target && USABLE_BLOCKS.has(this.target.id) && !p.sneaking);
+    if (input.right && drinkable) {
+      this.eating++;
+      if (this.eating % 4 === 0) g.audio.play('drink');
+      if (this.eating >= EAT_TICKS) { this.drink(st); this.eating = 0; }
+      return;
+    }
     // food that is also a seed (carrots) is planted when aimed at the top of farmland
     const plants = d && d.places && this.target && this.target.id === B.FARMLAND && this.target.face[1] === 1;
     if (input.right && d && d.food && !plants) {
@@ -135,6 +147,17 @@ export class Interaction {
         this.bobber = g.entities.add(new Bobber(ex + dx * 0.5, ey + dy * 0.5, ez + dz * 0.5, dx * 0.7, dy * 0.7 + 0.15, dz * 0.7, p));
         g.audio.play('bow', [ex, ey, ez], 0.4);
       }
+      this.swing = SWING_TICKS;
+      return;
+    }
+    if (d && d.throwable === 'potion' && input.rightPressed) {
+      // splash elixirs: thrown at 0.5 blocks/tick, aimed 20 degrees above the view
+      const [ex, ey, ez] = p.eyePos();
+      const pitch = p.pitch + 20 * Math.PI / 180, cp = Math.cos(pitch);
+      const dx = -Math.sin(p.yaw) * cp, dy = Math.sin(pitch), dz = -Math.cos(p.yaw) * cp;
+      g.entities.spawnArrow(ex + dx * 0.4, ey - 0.1 + dy * 0.4, ez + dz * 0.4, dx * 0.5 + p.body.vx, dy * 0.5, dz * 0.5 + p.body.vz, p, false, 'potion', 0, st.id);
+      if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
+      g.audio.play('bow', [ex, ey, ez], 0.4);
       this.swing = SWING_TICKS;
       return;
     }
@@ -168,7 +191,7 @@ export class Interaction {
       this.breaking = { x: t.x, y: t.y, z: t.z, id: t.id, progress: 0 };
     }
     const tool = toolOf(p.inventory.selectedStack);
-    const per = breakProgressPerTick(t.id, tool, { onGround: p.body.onGround || p.body.inWater, inWater: p.body.eyeInWater, swiftdig: enchLevel(p.inventory.selectedStack, 'swiftdig') });
+    const per = breakProgressPerTick(t.id, tool, { onGround: p.body.onGround || p.body.inWater, inWater: p.body.eyeInWater, swiftdig: enchLevel(p.inventory.selectedStack, 'swiftdig'), haste: p.effectLevel ? p.effectLevel('haste') : 0 });
     this.breaking.progress += per;
     // holding the button chains full swings into a continuous chopping motion
     if (this.swing <= 0) this.swing = SWING_TICKS;
@@ -213,7 +236,7 @@ export class Interaction {
     const held = p.inventory.selectedStack;
     const tool = toolOf(held);
     const cd = this.attackCooldownProgress();
-    let dmg = tool.damage * (0.2 + cd * cd * 0.8);
+    let dmg = meleeWithEffects(tool.damage, p.effects) * (0.2 + cd * cd * 0.8); // Strength / Weakness change the base damage
     const crit = cd > 0.9 && p.body.fallDistance > 0 && !p.body.onGround && !p.body.inWater && !p.sprinting;
     if (crit) dmg *= 1.5;
     dmg += meleeBonus(held, mob) * cd; // Keen / Hallowed, scaled by the cooldown like the reference
@@ -242,6 +265,21 @@ export class Interaction {
     g.audio.play('burp');
   }
 
+  /** Finish drinking: an elixir's effects (glass vial back) or milk (clears all effects, bucket back). */
+  drink(st) {
+    const g = this.game, p = g.player, d = ITEMS[st.id];
+    if (d.milk) p.clearEffects();
+    else if (d.potion) for (const [type, ticks, amp] of POTIONS[d.potion.kind].effects) p.applyEffect(type, ticks, amp);
+    if (!p.creative) {
+      const back = { id: d.milk ? I.BUCKET : I.GLASS_VIAL, count: 1, damage: 0 };
+      p.inventory.removeFromSlot(p.inventory.selected, 1);
+      if (!p.inventory.selectedStack) p.inventory.slots[p.inventory.selected] = back;
+      else if (p.inventory.add(back)) g.entities.spawnItem(p.x, p.y + 1, p.z, back);
+      p.inventory.changed();
+    }
+    g.audio.play('burp');
+  }
+
   releaseBow() {
     const g = this.game, p = g.player;
     const slot = p.inventory.slots.findIndex((s) => s && s.id === I.ARROW);
@@ -267,7 +305,7 @@ export class Interaction {
     const st = p.inventory.selectedStack;
     const d = st && ITEMS[st.id];
     // Armour: right-click puts it on (swapping with what is worn), unless aiming at something usable
-    const usable = this.target && ([B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.CHEST, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL].includes(this.target.id) || BLOCKS[this.target.id].shape === SHAPE.GATE);
+    const usable = this.target && (USABLE_BLOCKS.has(this.target.id) || BLOCKS[this.target.id].shape === SHAPE.GATE);
     if (d && d.armor && !usable) {
       const inv = p.inventory, worn = inv.armor[d.armor.slot];
       inv.armor[d.armor.slot] = st;
@@ -275,6 +313,22 @@ export class Interaction {
       inv.changed();
       g.audio.play('equip');
       return true;
+    }
+    // Glass vials fill at a water source (which stays)
+    if (st && st.id === I.GLASS_VIAL && !(usable && !p.sneaking)) {
+      const [ex, ey, ez] = p.eyePos();
+      const [dx, dy, dz] = p.lookDir();
+      const hit = w.raycast(ex, ey, ez, dx, dy, dz, PHYS.REACH, true);
+      if (hit && hit.id === B.WATER) {
+        const full = { id: POTION_ITEM.water, count: 1, damage: 0 };
+        p.inventory.removeFromSlot(p.inventory.selected, 1);
+        if (!p.inventory.selectedStack) p.inventory.slots[p.inventory.selected] = full;
+        else if (p.inventory.add(full)) g.entities.spawnItem(p.x, p.y + 1, p.z, full);
+        p.inventory.changed();
+        g.audio.play('bucket_fill');
+        this.swing = SWING_TICKS;
+        return true;
+      }
     }
     // Buckets
     if (st && (st.id === I.BUCKET)) {
@@ -326,6 +380,7 @@ export class Interaction {
       if (t.id === B.BED) { g.trySleep(t.x, t.y, t.z); return true; }
       if (t.id === B.ENCHANTING_TABLE) { g.ui.openEnchanting(t.x, t.y, t.z); return true; }
       if (t.id === B.ANVIL) { g.ui.openAnvil(t.x, t.y, t.z); return true; }
+      if (t.id === B.BREWING_STAND) { g.ui.openBrewing(t.x, t.y, t.z); return true; }
       if (t.id === B.OAK_TRAPDOOR) {
         const m = w.getMeta(t.x, t.y, t.z);
         w.setBlockUrgent(t.x, t.y, t.z, t.id, m ^ TRAPDOOR_OPEN);
@@ -539,6 +594,17 @@ export class Interaction {
   interactMob(mob) {
     const g = this.game, p = g.player, st = p.inventory.selectedStack, d = st && ITEMS[st.id];
     if (mob.isRemotePlayer) return false;
+    // milking a grown Mooxen with an empty bucket (no change to the mob, so guests do it themselves)
+    if (st && st.id === I.BUCKET && mob.type === 'mooxen' && mob.deathTime === 0 && !mob.baby) {
+      const milk = { id: I.MILK_BUCKET, count: 1, damage: 0 };
+      p.inventory.removeFromSlot(p.inventory.selected, 1);
+      if (!p.inventory.selectedStack) p.inventory.slots[p.inventory.selected] = milk;
+      else if (p.inventory.add(milk)) g.entities.spawnItem(p.x, p.y + 1, p.z, milk);
+      p.inventory.changed();
+      g.audio.play('bucket_fill', [mob.x, mob.y + 1, mob.z]);
+      this.swing = SWING_TICKS;
+      return true;
+    }
     if (mob.netProxy) return g.net.interactMob(mob); // multiplayer guest: the host feeds, shears, tames or trades
     if (mob.def.villager && mob.deathTime === 0 && mob.trades.length && !(d && d.food && mob.def.food)) { g.ui.openTrade(mob); g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); return true; }
     if (mob.def.tameable && mob.deathTime === 0 && this.interactHowler(mob, st, d)) return true;
@@ -652,7 +718,7 @@ export class Interaction {
 
   pickBlock(id) {
     const inv = this.game.player.inventory;
-    const asItem = { [B.DOOR]: I.OAK_DOOR, [B.BED]: I.BED, [B.WHEAT]: I.WHEAT_SEEDS, [B.CARROTS]: I.CARROT, [B.POTATOES]: I.POTATO, [B.BEETROOTS]: I.BEETROOT_SEEDS, [B.FURNACE_LIT]: B.FURNACE, [B.FARMLAND]: B.DIRT };
+    const asItem = { [B.DOOR]: I.OAK_DOOR, [B.BED]: I.BED, [B.WHEAT]: I.WHEAT_SEEDS, [B.CARROTS]: I.CARROT, [B.POTATOES]: I.POTATO, [B.BEETROOTS]: I.BEETROOT_SEEDS, [B.FURNACE_LIT]: B.FURNACE, [B.FARMLAND]: B.DIRT, [B.CINDERROOT]: I.CINDERROOT };
     const want = asItem[id] ?? id;
     for (let i = 0; i < 9; i++) if (inv.slots[i] && inv.slots[i].id === want) { inv.selected = i; return; }
     if (this.game.player.creative && ITEMS[want]) {

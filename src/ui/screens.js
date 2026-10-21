@@ -1,5 +1,7 @@
 // Menus and container screens (inventory, workbench, furnace).
-import { iconURL, stackHTML, stackIconURL, tooltipHTML } from './icons.js';
+import { iconURL, stackHTML, stackIconURL, tooltipHTML, effectIconURL } from './icons.js';
+import { EFFECTS, effectLabel, formatTicks } from '../player/effects.js';
+import { isIngredient, isVial, VIAL_SLOTS, INGREDIENT_SLOT, FUEL_SLOT, BREW_TICKS, BREWS_PER_POWDER } from '../world/brewing.js';
 import { ITEMS, I, maxStack } from '../world/items.js';
 import { canStack, hasEnch, isEnchantable, countBookshelves, tableOffers, rollOffer, applyOffer, enchName, anvilCombine, ANVIL_MAX_COST } from '../world/enchantments.js';
 import { spendLevels } from '../player/experience.js';
@@ -72,9 +74,11 @@ export class UI {
     give(this.cursor); this.cursor = null;
     this.renderCursor();
     this.open = null;
-    if ((this.chest || this.furnace) && g.net && g.net.isClient) g.net.closeContainer();
+    if ((this.chest || this.furnace || this.brewing) && g.net && g.net.isClient) g.net.closeContainer();
     if (this.chest) this.game.audio.play('chest_close', [this.chest.x + 0.5, this.chest.y + 0.5, this.chest.z + 0.5]);
     this.furnace = null;
+    this.brewing = null;
+    this.fxRefresh = null;
     this.chest = null;
     this.enchTick = null;
     this.refreshers = [];
@@ -281,11 +285,13 @@ export class UI {
     this.open = kind;
     const panel = el(`<div class="panel"><h3>${title}</h3></div>`);
     const screen = el('<div class="screen" style="background:rgba(0,0,0,.35)"></div>');
-    this.side = null;
+    this.side = null; this.sideRight = null;
     inner(panel);
-    if (this.side) {
+    if (this.side || this.sideRight) {
       const row = el('<div style="display:flex;gap:10px;align-items:stretch"></div>');
-      row.append(this.side, panel);
+      if (this.side) row.append(this.side);
+      row.append(panel);
+      if (this.sideRight) row.append(this.sideRight);
       screen.appendChild(row);
     } else screen.appendChild(panel);
     screen.addEventListener('mousedown', (e) => {
@@ -325,6 +331,97 @@ export class UI {
       panel.appendChild(top);
       panel.appendChild(this.inventoryGrid());
       panel.appendChild(el('<div class="recipes-hint">Tip: logs → planks → sticks / workbench. Shift-click moves stacks, right-click splits.</div>'));
+      this.sideRight = this.effectPanel();
+    });
+  }
+
+  /** The player's active effects beside the inventory (null when there are none). */
+  effectPanel() {
+    const fx = this.game.player.effects;
+    if (!Object.keys(fx).length) return null;
+    const box = el('<div class="panel effect-panel"><h3>Effects</h3></div>');
+    const rows = new Map();
+    const render = () => {
+      for (const [n, e] of Object.entries(fx)) {
+        let r = rows.get(n);
+        if (!r) {
+          r = el(`<div class="fx-row ${EFFECTS[n].good ? 'good' : 'bad'}"><img src="${effectIconURL(n)}"><div><div class="fx-name"></div><div class="fx-time"></div></div></div>`);
+          rows.set(n, r); box.appendChild(r);
+        }
+        r.querySelector('.fx-name').textContent = effectLabel(n, e.amp);
+        r.querySelector('.fx-time').textContent = formatTicks(e.ticks);
+      }
+      for (const [n, r] of rows) if (!fx[n]) { r.remove(); rows.delete(n); }
+    };
+    render();
+    this.fxRefresh = render;
+    return box;
+  }
+
+  /** Brewing Alembic: three vial slots, an ingredient, Ember Powder fuel; brews on the host in multiplayer. */
+  openBrewing(x, y, z) {
+    this.game.input.unlock();
+    const s = this.game.getBrewingStand(x, y, z);
+    this.brewing = s;
+    if (this.game.net && this.game.net.isClient) this.game.net.openContainer('brewing', x, y, z, s); // the host's alembic
+    const slot = (i, cls, filter) => {
+      const e = this.makeSlot(() => s.slots[i], (v) => { s.slots[i] = v; }, {
+        filter,
+        quickMove: () => { const st = s.slots[i]; if (!st) return; const left = this.game.player.inventory.add(st); s.slots[i] = left ? { ...st, count: left } : null; },
+      });
+      e.classList.add(cls);
+      return e;
+    };
+    this.showContainer('brewing', 'Brewing Alembic', (panel) => {
+      const top = el('<div class="brew-top"></div>');
+      const fuel = el('<div class="brew-fuel"></div>');
+      const fuelSlot = slot(FUEL_SLOT, 'fuel', (st) => st.id === I.EMBER_POWDER);
+      fuelSlot.title = 'Ember Powder (20 brews each)';
+      const fuelBar = el('<div class="brew-fuelbar"><div></div></div>');
+      fuel.append(fuelSlot, fuelBar);
+      const main = el('<div class="brew-main"></div>');
+      const bubbles = el('<div class="brew-bubbles"><div></div></div>');
+      const arrow = el('<div class="brew-arrow"><div></div></div>');
+      main.append(bubbles, slot(INGREDIENT_SLOT, 'ing', (st) => isIngredient(st.id)), arrow, el('<div class="brew-tubes"></div>'));
+      for (const i of VIAL_SLOTS) main.appendChild(slot(i, 'v' + i, (st) => isVial(st.id) && st.count === 1));
+      top.append(fuel, main);
+      panel.appendChild(top);
+      panel.appendChild(el('<div class="brew-hint">Water Vials + Cinderroot make a Murky Elixir, the base for effects.</div>'));
+      panel.appendChild(this.inventoryGrid({
+        accept: (st) => {
+          if (st.id === I.EMBER_POWDER && (!s.slots[FUEL_SLOT] || s.slots[FUEL_SLOT].id === st.id)) {
+            const cur = s.slots[FUEL_SLOT];
+            const n = Math.min(st.count, 64 - (cur ? cur.count : 0));
+            if (!n) return false;
+            s.slots[FUEL_SLOT] = { ...st, count: (cur ? cur.count : 0) + n };
+            if (n === st.count) return true;
+            st.count -= n; return 'partial';
+          }
+          if (isVial(st.id)) {
+            const i = VIAL_SLOTS.find((k) => !s.slots[k]);
+            if (i === undefined) return false;
+            s.slots[i] = { ...st, count: 1 };
+            if (st.count === 1) return true;
+            st.count -= 1; return 'partial';
+          }
+          if (isIngredient(st.id)) {
+            const cur = s.slots[INGREDIENT_SLOT];
+            if (cur && cur.id !== st.id) return false;
+            const n = Math.min(st.count, 64 - (cur ? cur.count : 0));
+            if (!n) return false;
+            s.slots[INGREDIENT_SLOT] = { ...st, count: (cur ? cur.count : 0) + n };
+            if (n === st.count) return true;
+            st.count -= n; return 'partial';
+          }
+          return false;
+        },
+      }));
+      this.refreshers.push(() => {
+        fuelBar.firstChild.style.width = `${(s.fuel / BREWS_PER_POWDER) * 100}%`;
+        const f = s.brewTime > 0 ? 1 - s.brewTime / BREW_TICKS : 0;
+        arrow.firstChild.style.height = `${f * 100}%`;
+        bubbles.firstChild.style.height = s.brewTime > 0 ? `${((BREW_TICKS - s.brewTime) % 60) / 60 * 100}%` : '0%';
+      });
     });
   }
 
@@ -595,7 +692,7 @@ export class UI {
   openCreative() {
     this.game.input.unlock();
     const g = this.game, inv = g.player.inventory;
-    const hidden = new Set([B.AIR, B.WATER, B.LAVA, B.FURNACE_LIT, B.WHEAT, B.CARROTS, B.POTATOES, B.BEETROOTS, B.DOOR, B.BED, B.FIRE]);
+    const hidden = new Set([B.AIR, B.WATER, B.LAVA, B.FURNACE_LIT, B.WHEAT, B.CARROTS, B.POTATOES, B.BEETROOTS, B.DOOR, B.BED, B.FIRE, B.CINDERROOT]);
     const all = ITEMS.filter((d) => d && d.id && !hidden.has(d.id));
     this.showContainer('creative', 'Creative Inventory', (panel) => {
       const search = el('<input class="creative-search" placeholder="Search items...">');
@@ -684,7 +781,8 @@ export class UI {
 
   /** Called each frame while a furnace screen is open */
   tickOpen() {
-    if (this.open === 'furnace') for (const r of this.refreshers) r();
+    if (this.open === 'furnace' || this.open === 'brewing') for (const r of this.refreshers) r();
+    if (this.open === 'inventory' && this.fxRefresh && this.game.ticks !== this.fxTick) { this.fxTick = this.game.ticks; this.fxRefresh(); }
     if (this.open === 'enchanting' && this.enchTick) this.enchTick();
     if (this.open === 'sleep' && this.sleepEl) {
       const s = this.game.player.sleeping;
@@ -804,7 +902,7 @@ export class UI {
     const msgs = {
       fall: 'hit the ground too hard', lava: 'tried to swim in lava', fire: 'burned to death', drown: 'drowned',
       starve: 'starved to death', cactus: 'was pricked to death', void: 'fell out of the world', explosion: 'was blown up',
-      arrow: 'was shot by a Rattler', poison: 'succumbed to poison',
+      arrow: 'was shot by a Rattler', poison: 'succumbed to poison', magic: 'was killed by magic',
     };
     const text = msgs[cause] || (cause && cause.startsWith('mob:') ? `was slain by a ${cause.slice(4)}` : cause && cause.startsWith('player:') ? `was slain by ${cause.slice(7)}` : 'died');
     const s = el(`<div class="screen" id="death-screen"><h2>You Died!</h2><p class="sub">Player ${text}</p><button class="btn">Respawn</button></div>`);

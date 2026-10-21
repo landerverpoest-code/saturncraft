@@ -149,6 +149,10 @@ export class Audio {
       case 'hmm': this.tone(t, 0.12, 180, 210, 0.2 * gain, out, 'sawtooth'); this.tone(t + 0.13, 0.22, 210, 150, 0.2 * gain, out, 'sawtooth'); break;
       case 'chest_open': this.tone(t, 0.25, 180, 240, 0.18 * gain, out, 'sawtooth'); this.noise(t, 0.2, 700, 2, 0.15 * gain, out); break;
       case 'chest_close': this.noise(t, 0.08, 500, 1.5, 0.35 * gain, out, 'lowpass'); this.tone(t, 0.1, 140, 90, 0.2 * gain, out, 'triangle'); break;
+      case 'drink': this.tone(t, 0.07, 260 + Math.random() * 60, 180, 0.18 * gain, out, 'sine'); this.noise(t, 0.06, 700, 2, 0.12 * gain, out, 'lowpass'); break;
+      case 'glass_break': for (let k = 0; k < 4; k++) this.tone(t + k * 0.025, 0.12, 2600 + Math.random() * 1800, 1800, 0.09 * gain, out, 'triangle'); this.noise(t, 0.2, 5000, 1.5, 0.35 * gain, out, 'highpass'); break;
+      case 'brew': this.tone(t, 0.18, 500, 760, 0.1 * gain, out, 'sine'); this.tone(t + 0.15, 0.25, 760, 1000, 0.08 * gain, out, 'sine'); this.noise(t, 0.35, 1200, 1, 0.08 * gain, out); break;
+      case 'bubble': this.tone(t, 0.05, 400 + Math.random() * 300, 900, 0.06 * gain, out, 'sine'); break;
       case 'land': this.noise(t, 0.12, 500, 1, 0.4 * gain, out, 'lowpass'); break;
       default: this.tone(t, 0.1, 440, 440, 0.1 * gain, out);
     }

@@ -2,6 +2,7 @@
 // items, experience orbs, arrows, boats, falling blocks) and sends snapshots;
 // here they become non-simulated proxies of the same classes that glide to the
 // latest snapshot. Hitting, picking up and riding them are requests to the host.
+import { splashParticles } from '../entities/splash.js';
 import { Mob } from '../mobs/mob.js';
 import { MOBS } from '../mobs/mobTypes.js';
 import { ItemEntity, XPOrb, Arrow, Boat, Minecart, FallingBlock } from '../entities/entities.js';
@@ -43,6 +44,7 @@ export class EntityMirror {
     for (const [id, e] of this.proxies) {
       if (seen.has(id)) continue;
       if (e.kind === 'mob' && e.deathTime > 0) g.particles.smoke(e.x, e.y + e.height / 2, e.z, 14, e.width);
+      if (e.kind === 'arrow' && e.thrown === 'potion') splashParticles(g, e.x, e.y, e.z, e.potion); // the host's elixir broke
       e.removed = true; e.dead = true;
       this.proxies.delete(id);
     }
@@ -61,7 +63,7 @@ export class EntityMirror {
         break;
       case 'item': e = new ItemEntity(s.x, s.y, s.z, s.stack); break;
       case 'xp': e = new XPOrb(s.x, s.y, s.z, s.value); break;
-      case 'arrow': e = new Arrow(s.x, s.y, s.z, s.vx, s.vy, s.vz, null, false, s.thrown); break;
+      case 'arrow': e = new Arrow(s.x, s.y, s.z, s.vx, s.vy, s.vz, null, false, s.thrown, s.potion); break;
       case 'boat': e = s.cart ? new Minecart(s.x, s.y, s.z, s.yaw) : new Boat(s.x, s.y, s.z, s.yaw); break;
       case 'falling': e = new FallingBlock(0, 0, 0, s.blockId); break;
       default: return null;

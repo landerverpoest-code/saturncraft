@@ -8,6 +8,9 @@ import { MIN_Y } from '../world/constants.js';
 import { armorReduce, armorTotals, wearArmor, BYPASSES_ARMOR } from './armor.js';
 import { newXp } from './experience.js';
 import { protectionFactor, protectionReduce } from '../world/enchantments.js';
+import { EFFECTS, addEffect as stackEffect, tickEffects, effectLevel, speedFactor, jumpBonus, fallDamageWithEffects, periodicActions, instantAmount } from './effects.js';
+
+const FIRE_SOURCES = new Set(['fire', 'lava', 'fireball']);
 
 export class Player {
   constructor() {
@@ -21,7 +24,7 @@ export class Player {
     this.invulnerable = 0;      // vanilla: 20 ticks after a hit, damage below last hit ignored while > 10
     this.lastHurt = 0;
     this.hurtTime = 0;          // red flash
-    this.effects = {};          // name -> ticks
+    this.effects = {};          // name -> { amp, ticks, hidden } (see effects.js)
     this.inventory = new Inventory(36);
     this.sprinting = false;
     this.sneaking = false;
@@ -67,6 +70,7 @@ export class Player {
   hurt(amount, source = 'generic', attacker = null) {
     if (this.dead || amount <= 0) return false;
     if (this.creative && source !== 'void' && source !== 'kill') return false; // creative players only die in the void
+    if (FIRE_SOURCES.has(source) && this.effects.fire_resistance) return false;
     if (this.invulnerable > 10) {
       if (amount <= this.lastHurt) return false;
       const extra = amount - this.lastHurt;
@@ -122,7 +126,29 @@ export class Player {
     this.setPosition(this.spawn.x, this.spawn.y, this.spawn.z);
   }
 
-  addEffect(type, ticks) { this.effects[type] = Math.max(this.effects[type] || 0, ticks); }
+  /** Add a lasting effect (reference stacking: stronger replaces, equal extends). */
+  addEffect(type, ticks, amp = 0) {
+    if (!EFFECTS[type] || this.dead) return false;
+    const ok = stackEffect(this.effects, type, ticks, amp);
+    if (ok) for (const f of this.listeners.effect || []) f(type);
+    return ok;
+  }
+
+  /** Apply one effect of an elixir: instant ones act at once (scaled by a splash factor), others last ticks * factor. */
+  applyEffect(type, ticks, amp = 0, factor = 1) {
+    if (this.dead || !EFFECTS[type]) return;
+    if (EFFECTS[type].instant) {
+      const n = instantAmount(type, amp, factor);
+      if (type === 'instant_health') this.heal(n); else if (n > 0) { this.invulnerable = 0; this.hurt(n, 'magic'); }
+      return;
+    }
+    const t = Math.floor(ticks * factor + 0.5);
+    if (t > 20) this.addEffect(type, t, amp);
+  }
+
+  hasEffect(type) { return !!this.effects[type]; }
+  effectLevel(type) { return effectLevel(this.effects, type); }
+  clearEffects() { this.effects = {}; for (const f of this.listeners.effect || []) f(null); }
 
   /**
    * One 50 ms tick.
@@ -151,6 +177,7 @@ export class Player {
 
     // Sprint rules
     const canSprint = (this.creative || this.hunger.food >= SPRINT_MIN_FOOD) && !this.sneaking && input.forward > 0 && !this.effects.blindness;
+    const fx = this.effects;
     if (input.sprint && canSprint) this.sprinting = true;
     if (!canSprint || (b.horizontalCollision && !b.inWater)) this.sprinting = false;
 
@@ -161,7 +188,11 @@ export class Player {
       jump: input.jump && (this.jumpCooldown === 0 || b.inWater || b.inLava),
       sprint: this.sprinting, sneak: this.sneaking,
       flying: this.flying, descend: this.flying && !!input.sneak,
+      speed: PHYS.WALK_SPEED * speedFactor(fx),
+      jumpFactor: 1 + jumpBonus(fx) / PHYS.JUMP_VELOCITY,
+      slowFall: !!fx.slow_falling,
     });
+    if (fx.slow_falling) b.fallDistance = 0;
     if (this.jumpCooldown > 0) this.jumpCooldown--;
     if (b.jumped) this.jumpCooldown = 10;
     if (!input.jump) this.jumpCooldown = 0;
@@ -178,7 +209,7 @@ export class Player {
     if (b.inWater) b.fallDistance = 0;
     if (b.onGround) {
       if (b.fallDistance > 0) {
-        const dmg = fallDamage(b.fallDistance);
+        const dmg = fallDamageWithEffects(fallDamage(b.fallDistance), fx);
         if (dmg > 0) this.hurt(dmg, 'fall');
         this.landedFrom = b.fallDistance;
       }
@@ -199,7 +230,7 @@ export class Player {
       if (this.fireTicks % 20 === 0) this.hurt(1, 'fire');
       this.fireTicks--;
     }
-    if (b.eyeInWater) {
+    if (b.eyeInWater && !fx.water_breathing) {
       this.air--;
       if (this.air <= -20) { this.air = 0; this.hurt(2, 'drown'); }
     } else this.air = Math.min(MAX_AIR, this.air + 4);
@@ -209,9 +240,14 @@ export class Player {
     if (b.y < MIN_Y - 64) this.hurt(4, 'void');
 
     // Effects
-    if (this.effects.hunger) this.hunger.addExhaustion(EXHAUSTION.HUNGER_EFFECT_PER_TICK);
-    if (this.effects.poison && this.effects.poison % 25 === 0 && this.health > 1) this.hurt(1, 'poison');
-    for (const k of Object.keys(this.effects)) if (--this.effects[k] <= 0) delete this.effects[k];
+    if (this.effects.hunger) this.hunger.addExhaustion(EXHAUSTION.HUNGER_EFFECT_PER_TICK * effectLevel(this.effects, 'hunger'));
+    for (const a of periodicActions(this.effects, { health: this.health })) {
+      if (a.type === 'heal') this.heal(a.amount);
+      else { this.invulnerable = Math.min(this.invulnerable, 10); this.hurt(a.amount, a.source); }
+    }
+    const before = Object.keys(this.effects).length;
+    tickEffects(this.effects);
+    if (Object.keys(this.effects).length !== before) for (const f of this.listeners.effect || []) f(null);
 
     if (!this.creative) this.hunger.tick(this);
   }

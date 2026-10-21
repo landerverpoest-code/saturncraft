@@ -386,17 +386,16 @@ poison from eyes) follow the documented table.
 * Blocky cloud layer (12×12 cells, 4 thick, y=192, drifting 0.03 blocks/tick), coloured by the suns
 * Three dimensions (see "Other dimensions" below): the overworld, **the Cinderdeep** (fiery underworld, 1:8 scale, reached through obsidian Rift portals) and **the Hollow** (void islands with the Void Wyrm boss, reached through a Hollow Gate in an underground Hollow Sanctum); each has its own chunks, saves, containers and mobs, and the save remembers which dimension you are in
 
+* Brewing and status effects (Saturncraft names in brackets): the **Brewing Alembic** (brewing stand: 1 Ember Rod over 3 cobblestone) brews three vials at once in 400 ticks, fuelled by Ember Powder (20 brews each); **Glass Vials** (3 glass → 3) fill at any water. The reference tree: Water Vial + **Cinderroot** (nether wart; grows in four stages on Mournsand in the Cinderdeep, wild patches and bastion planters) = **Murky Elixir** (awkward; other ingredients give Bland, Glowshard Dust Thick); Murky + Sugar = Swiftness, + **Gilded Melon Slice** = Healing, + Skitterer Eye = Poison, + **Ember Cream** (slimeball + ember powder) = Fire Resistance, + **Gilded Carrot** = Night Vision, + Spinefish = Water Breathing, + Ember Powder = Strength, + **Wraith Tear** (Ashwraith drop) = Regeneration, + Slimeball = Leaping, + Feather = Slow Falling; **Fermented Skitterer Eye** corrupts (Swiftness/Leaping → Slowness, Healing/Poison → Harming, Night Vision → Invisibility, water → Weakness); Cinnabar Dust extends, Glowshard Dust strengthens (II, Slowness IV), Blast Powder makes splash elixirs. Durations and levels are the reference ones; tooltips list effect and time; vial icons are tinted with the effect colour. Drinking takes 32 ticks and gives the vial back; splash elixirs are thrown (0.5 blocks/tick, 20° up), break on impact with coloured droplets and affect everything within 4 blocks (1 − distance/4, direct hits full; instant ones scaled too; undead are hurt by Healing and healed by Harming). Gold nuggets (ingot ↔ 9), sugar (sugar cane), milk (bucket on a Mooxen; clears all effects)
+* Status effects with reference stacking (stronger replaces, weaker but longer resumes later): Speed/Slowness (±20 %/15 % per level), Haste (mining +20 %/level), Strength/Weakness (+3/−4 melee), Instant Health/Damage (4/6 × 2^amp, magic damage ignores armour), Regeneration (1 HP per 50 >> amp ticks), Poison (1 HP per 25 >> amp, never below 1), Jump Boost (+0.1 jump velocity and −1 fall damage per level), Fire Resistance, Water Breathing, Night Vision (brightens the terrain and mobs, flickers in the last 10 s), Invisibility (mobs only notice you at 7 % of their range, more with armour; hides you from other players), Slow Falling, Hunger; effects also work on mobs hit by splashes. Effect badges with time left under the sky widget, an Effects panel beside the inventory, colour swirls around the player (third person), saved with the player and the host-authoritative alembic in multiplayer (splashes reach guests too); `/effect give <effect> [seconds] [level]`, `/effect clear`
+
 **Not yet implemented**
 
-<<<<<<< HEAD
-* Enchanting, anvils, shields, potions and status-effect UI (only hunger/poison effects exist)
-=======
-* Shields, potions and status-effect UI (only hunger/poison effects exist); armour is not drawn on the third-person player model
->>>>>>> worktree-agent-a5bca350fd4490d08
+* Shields; lingering elixirs and tipped arrows, Turtle Master / Decay / Luck elixirs, beacons (Haste only comes from `/effect`), Mining Fatigue, Absorption and Wither effects; effect particles of other players in multiplayer
 * Taming of animals other than Howlers, cocoa and ink sacs
 * Large structures beyond villages, dungeons, sanctums and bastions; villager breeding and job sites; redstone-style circuitry; Hollow outer-island cities
 * Double chests and other storage containers
-* Witches, drowned, husks/strays as separate variants, baby mobs, mob equipment
+* Witches (elixir-throwing monsters), drowned, husks/strays as separate variants, baby mobs, mob equipment
 * Difficulty levels (fixed at Normal), spectator/adventure modes, multiplayer
 * Sprint-swimming/crawling poses, elytra
 

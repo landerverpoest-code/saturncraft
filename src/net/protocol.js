@@ -121,11 +121,11 @@ export function* iterEdits(flat) {
 
 // ---- player state ----------------------------------------------------------------
 const r2 = (v) => Math.round(v * 100) / 100;
-export const PF = { SNEAK: 1, DEAD: 2, SLEEP: 4, CREATIVE: 8, HURT: 16, RIDING: 32 };
+export const PF = { SNEAK: 1, DEAD: 2, SLEEP: 4, CREATIVE: 8, HURT: 16, RIDING: 32, INVISIBLE: 64 };
 /** Compact state of a player: [x, y, z, yaw, pitch, heldItemId|-1, flags, swingSeq]. */
 export function packPlayerState(p, held, swingSeq, armor = null) {
   const f = (p.sneaking ? PF.SNEAK : 0) | (p.dead ? PF.DEAD : 0) | (p.sleeping ? PF.SLEEP : 0) |
-    (p.creative ? PF.CREATIVE : 0) | (p.hurtTime > 0 ? PF.HURT : 0) | (p.riding ? PF.RIDING : 0);
+    (p.creative ? PF.CREATIVE : 0) | (p.hurtTime > 0 ? PF.HURT : 0) | (p.riding ? PF.RIDING : 0) | (p.effects && p.effects.invisibility ? PF.INVISIBLE : 0);
   const ar = armor || (p.inventory && p.inventory.armor ? p.inventory.armor.map((s) => (s ? s.id : 0)) : [0, 0, 0, 0]);
   return [r2(p.x), r2(p.y), r2(p.z), r2(p.yaw), r2(p.pitch), held == null ? -1 : held, f, swingSeq | 0, ...ar];
 }
@@ -135,7 +135,7 @@ export function unpackPlayerState(a) {
   return {
     x: a[0], y: a[1], z: a[2], yaw: a[3], pitch: a[4], held: a[5] < 0 ? null : a[5] | 0,
     sneaking: !!(f & PF.SNEAK), dead: !!(f & PF.DEAD), sleeping: !!(f & PF.SLEEP), creative: !!(f & PF.CREATIVE),
-    hurt: !!(f & PF.HURT), riding: !!(f & PF.RIDING), swing: a[7] | 0,
+    hurt: !!(f & PF.HURT), riding: !!(f & PF.RIDING), invisible: !!(f & PF.INVISIBLE), swing: a[7] | 0,
     armor: a.length >= 12 ? [a[8] | 0, a[9] | 0, a[10] | 0, a[11] | 0].map((i) => i || null) : [null, null, null, null],
   };
 }
@@ -181,7 +181,7 @@ export function packEntity(e, riderOf = () => -1) {
     case 'mob': return ['m', ...packMob(e)];
     case 'item': return ['i', e.id, r2(e.x), r2(e.y), r2(e.z), e.stack.id, e.stack.count, e.stack.damage | 0, e.pickupDelay > 0 ? 1 : 0, e.stack.ench ? cleanEnch(e.stack.ench) : 0];
     case 'xp': return ['x', e.id, r2(e.x), r2(e.y), r2(e.z), e.value];
-    case 'arrow': return ['a', e.id, r2(e.x), r2(e.y), r2(e.z), r2(e.vx), r2(e.vy), r2(e.vz), e.stuck ? 1 : 0, e.pickup ? 1 : 0, e.thrown === 'egg' ? 2 : e.thrown ? 1 : 0];
+    case 'arrow': return ['a', e.id, r2(e.x), r2(e.y), r2(e.z), r2(e.vx), r2(e.vy), r2(e.vz), e.stuck ? 1 : 0, e.pickup ? 1 : 0, e.thrown === 'potion' ? 3 : e.thrown === 'egg' ? 2 : e.thrown ? 1 : 0, e.potion | 0];
     case 'boat': return ['b', e.id, r2(e.x), r2(e.y), r2(e.z), r2(e.yaw), e.hitTime | 0, riderOf(e), e.cart ? 1 : 0, r2(e.pitch || 0)];
     case 'falling': return ['f', e.id, r2(e.x), r2(e.y), r2(e.z), e.blockId];
     default: return null;
@@ -196,7 +196,7 @@ export function unpackEntity(a) {
   const o = { kind: ENTITY_KINDS[k], id, x, y, z };
   if (k === 'i') Object.assign(o, { stack: withExtras({ id: a[5] | 0, count: a[6] | 0, damage: a[7] | 0 }, { ench: a[9] }), delayed: !!a[8] });
   else if (k === 'x') o.value = a[5] | 0;
-  else if (k === 'a') Object.assign(o, { vx: a[5], vy: a[6], vz: a[7], stuck: !!a[8], pickup: !!a[9], thrown: a[10] === 2 ? 'egg' : a[10] === 1 ? 'snowball' : null });
+  else if (k === 'a') Object.assign(o, { vx: a[5], vy: a[6], vz: a[7], stuck: !!a[8], pickup: !!a[9], thrown: a[10] === 3 ? 'potion' : a[10] === 2 ? 'egg' : a[10] === 1 ? 'snowball' : null, potion: a[11] | 0 });
   else if (k === 'b') Object.assign(o, { yaw: a[5], hitTime: a[6] | 0, rider: a[7], cart: !!a[8], pitch: +a[9] || 0 });
   else if (k === 'f') o.blockId = a[5] | 0;
   return o;
@@ -239,15 +239,16 @@ export function applySlotChanges(kind, c, changes) {
   return true;
 }
 export function containerState(kind, c) {
-  return kind === 'furnace'
-    ? { slots: containerSlots(kind, c).map(copyStack), burnTime: c.burnTime | 0, burnTotal: c.burnTotal | 0, cookTime: c.cookTime | 0 }
-    : { slots: c.slots.map(copyStack) };
+  if (kind === 'furnace') return { slots: containerSlots(kind, c).map(copyStack), burnTime: c.burnTime | 0, burnTotal: c.burnTotal | 0, cookTime: c.cookTime | 0 };
+  if (kind === 'brewing') return { slots: c.slots.map(copyStack), fuel: c.fuel | 0, brewTime: c.brewTime | 0 };
+  return { slots: c.slots.map(copyStack) };
 }
 /** Client side: copy a host container state into the local mirror object (keeping its identity). */
 export function loadContainerState(kind, c, s) {
   if (!s || !Array.isArray(s.slots)) return;
   s.slots.forEach((st, i) => setContainerSlot(kind, c, i, copyStack(st)));
   if (kind === 'furnace') { c.burnTime = s.burnTime | 0; c.burnTotal = s.burnTotal | 0; c.cookTime = s.cookTime | 0; }
+  if (kind === 'brewing') { c.fuel = s.fuel | 0; c.brewTime = s.brewTime | 0; }
 }
 
 /** How many of a stack fit into inventory slots. */
