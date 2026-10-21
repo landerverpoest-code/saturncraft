@@ -12,6 +12,7 @@ import { LEAVES as LEAVES_SET } from './trees.js';
 import { railSupported } from './rails.js';
 import { paintingIntact } from './paintings.js';
 import { Circuits, CIRCUIT_BLOCK, CIRCUIT_REACT, CIRCUIT_SETTLE, supported as circuitSupported } from './circuits.js';
+import { updateSpike, crystalSupported } from './caves.js';
 import { SIDE_DIRS, selectionBox, collisionBoxes, SHAPED_COLLISION, DOOR_UPPER, BED_HEAD } from './shapes.js';
 
 export function chunkKey(cx, cz) { return (cx + 32768) * 65536 + (cz + 32768); }
@@ -202,6 +203,7 @@ export class World {
     if (!id) return;
     const d = BLOCKS[id];
     if (d.fluid) this.scheduleTick(x, y, z, fluidDelay(id));
+    else if (id === B.SEEPSTONE_SPIKE) updateSpike(this, x, y, z); // hanging spikes fall (caves.js)
     else if (id === B.FIRE) {
       if (!fireCanStay(this, x, y, z)) this.setBlock(x, y, z, B.AIR);
     } else if (id === B.RIFT) {
@@ -221,6 +223,7 @@ export class World {
 
   hasSupport(x, y, z, id, metaIn) {
     const below = this.getBlock(x, y - 1, z);
+    if (BLOCKS[id].crystal) return crystalSupported(this, x, y, z, id, metaIn ?? this.getMeta(x, y, z));
     if (id === B.CACTUS) {
       if (below !== B.CACTUS && below !== B.SAND && below !== B.RED_SAND) return false;
       for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (SOLID[this.getBlock(x + dx, y, z + dz)]) return false;

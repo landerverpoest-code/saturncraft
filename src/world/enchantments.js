@@ -350,7 +350,8 @@ const NO_SILK = new Set([B.BED, B.DOOR, B.WHEAT, B.CARROTS, B.POTATOES, B.BEETRO
 /** Does Gentle Hand make this block drop itself? */
 export function silkDropsSelf(blockId) {
   const b = BLOCKS[blockId];
-  if (!b || b.hardness < 0 || NO_SILK.has(blockId) || b.fluid) return false;
+  if (!b || b.hardness < 0 || NO_SILK.has(blockId) || b.fluid || b.noSilk) return false;
+  if (b.silkSelf) return true;
   if (b.drops === 'self' || b.drops === 'slab' || b.drops === 'wool') return false; // already drops itself
   return b.shape === SHAPE.CUBE || b.shape === SHAPE.PANE || blockId === B.VINES;
 }

@@ -5,6 +5,7 @@
 // 0 = -z, 1 = +x, 2 = +z, 3 = -x.
 import { B, BLOCKS, SHAPE } from './blocks.js';
 import { circuitSelection, circuitCollision } from './circuitShapes.js';
+import { crystalBox, rodBoxes } from './caves.js';
 
 export const SIDE_DIRS = [[0, 0, -1], [1, 0, 0], [0, 0, 1], [-1, 0, 0]];
 
@@ -243,6 +244,7 @@ export function blockBoxes(id, meta) {
   if (id === B.LANTERN) return meta & 1 ? LANTERN_HANGING : LANTERN_STANDING;
   if (id === B.BREWING_STAND) return ALEMBIC_BOXES;
   if (id === B.TURTLE_EGG) return EGG_BOXES.slice(0, (meta & 3) + 1);
+  if (id === B.STORM_ROD) return rodBoxes(meta);
   return TABLE_BOXES;
 }
 /** One box enclosing all of a SHAPE.BOXES block (selection outline). */
@@ -258,6 +260,7 @@ SHAPED_COLLISION[B.DOOR] = 1;
 SHAPED_COLLISION[B.BED] = 1;
 SHAPED_COLLISION[B.GLASS_PANE] = 1;
 SHAPED_COLLISION[B.SNOW_LAYER] = 1;
+SHAPED_COLLISION[B.SEEPSTONE_SPIKE] = 1;
 for (const id of [B.COBBLESTONE_WALL, B.MOSSY_COBBLESTONE_WALL, B.OAK_TRAPDOOR, B.ENCHANTING_TABLE, B.ANVIL, B.CAMPFIRE, B.LANTERN, B.BREWING_STAND, B.TURTLE_EGG]) SHAPED_COLLISION[id] = 1;
 /** Snow layer box (n = meta + 1 layers); collision is one layer lower, so a single layer has none. */
 export const snowBox = (meta, collide = false) => [0, 0, 0, 1, ((meta & 7) + (collide ? 0 : 1)) * 2 / 16, 1];
@@ -284,6 +287,7 @@ export function collisionBoxes(id, meta, world, x, y, z) {
   if (sh === SHAPE.STAIRS) return world ? stairBoxes(meta, (dx, dz) => [world.getBlock(x + dx, y, z + dz), world.getMeta(x + dx, y, z + dz)], (n) => BLOCKS[n] && BLOCKS[n].shape === SHAPE.STAIRS) : stairBoxes(meta);
   if (sh === SHAPE.BOXES) return id === B.ANVIL ? [boundsOf(blockBoxes(id, meta))] : id === B.BREWING_STAND ? ALEMBIC_COLLISION : blockBoxes(id, meta);
   if (sh === SHAPE.CIRCUIT) return circuitCollision(id, meta);
+  if (sh === SHAPE.CRYSTAL) return [crystalBox(id, meta)];
   return null;
 }
 
@@ -308,6 +312,7 @@ export function selectionBox(id, meta) {
   if (id === B.TORCH || id === B.CINNABAR_TORCH || id === B.CINNABAR_TORCH_OFF) return torchBox(meta);
   if (BLOCKS[id].shape === SHAPE.WIRE || BLOCKS[id].shape === SHAPE.CIRCUIT) return circuitSelection(id, meta);
   if (id === B.FIRE) return FIRE_BOX;
+  if (BLOCKS[id].shape === SHAPE.CRYSTAL) return crystalBox(id, meta);
   if (BLOCKS[id].shape === SHAPE.BOXES) return boundsOf(blockBoxes(id, meta));
   return null;
 }

@@ -7,6 +7,7 @@ import { FACE_TILE, FRONT_TILE, texId } from './textures.js';
 import { WOOL_RGB } from './colors.js';
 import { railHeight } from './rails.js';
 import { ARTS, artOf, partOf } from './paintings.js';
+import { crystalTex, orientPoint } from './caves.js';
 import { circuitParts, partPoint, wireMask, wireColor } from './circuitShapes.js';
 import { doorBox, ladderBox, SIDE_DIRS, DOOR_UPPER, BED_HEAD, BED_BOX, slabBox, stairBoxes, fenceConnects, fenceRenderBoxes, gateRenderBoxes, paneConnects, paneBoxes, snowBox, wallConnects, wallBoxes, trapdoorBox, blockBoxes } from './shapes.js';
 
@@ -359,6 +360,22 @@ export function meshSection(sec) {
       const atWall = s === 1 || s === 2 ? 1 : 0, off = atWall ? -1 / 16 : 1 / 16;
       b[a] = atWall + off - 0.005; b[a + 3] = atWall + off + 0.005;
       emitBox(buf, x, y, z, b[0], b[1], b[2], b[3], b[4], b[5], FACE_TILE[id * 6], (l >> 4) * 17, (l & 15) * 17, 'box', FOLIAGE_BIOME[id] ? [colors[ci + 3], colors[ci + 4], colors[ci + 5]] : null);
+    } else if (shape === SHAPE.CRYSTAL) {
+      // Violite buds and Seepstone spikes: two crossed sprites standing on the face they grow from
+      const l = light[i], m = meta[i], facing = m & 7;
+      const tile = tileOf(crystalTex(id, m)), sky = (l >> 4) * 17, blk = (l & 15) * 17;
+      const a = 0.12, c = 0.88;
+      buf.ensure(16);
+      for (const [x1, z1, x2, z2] of [[a, a, c, c], [a, c, c, a]]) {
+        for (let side = 0; side < 2; side++) {
+          for (const [px, py, pz, u, v] of [[x1, 0, z1, 0, 1], [x2, 0, z2, 1, 1], [x2, 1, z2, 1, 0], [x1, 1, z1, 0, 0]]) {
+            const q = orientPoint(px, py, pz, facing);
+            buf.vert(x + q[0], y + q[1], z + q[2], 0, 1, 0, u, v, 255, 255, 255, sky, blk, 0, tile);
+          }
+          buf.quad(false);
+          if (side === 0) { const n = buf.n; for (let k = 0; k < 2; k++) swapVert(buf, n - 4 + k, n - 1 - k); }
+        }
+      }
     } else if (shape === SHAPE.WIRE) {
       meshWire(buf, blocks, light, meta, i, x, y, z);
     } else if (shape === SHAPE.CIRCUIT) {

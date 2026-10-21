@@ -210,6 +210,9 @@ item('scute', 'Shellback Scute', { iconStyle: ['lump', { h: '#4a9a3a', H: '#7ac8
 item('turtle_shell', 'Shellback Helmet', { stack: 1, durability: 275, armor: { slot: 0, piece: 'helmet', material: 'turtle', defense: 2, toughness: 0 } });
 item('crag_horn', 'Crag Horn', { stack: 1, horn: true, iconStyle: ['horn', { h: '#c8bca0', H: '#e8dcc0', s: '#8a7a5a' }] });
 item('filled_map', 'Map', { stack: 1, filledMap: true, iconStyle: ['map', { p: '#e8dcb8', e: '#a89868', g: '#5a9a3a', w: '#3a6ad8' }] });
+// Caves content (world/caves.js); appended so earlier ids stay stable
+item('violite_shard', 'Violite Shard', { iconStyle: ['gem', { h: '#9a6ae0', H: '#d4b8ff' }] });
+item('farglass', 'Farglass', { stack: 1, spyglass: true, iconStyle: ['horn', { h: '#d47a4c', H: '#f0a070', s: '#5a2e8a' }] });
 
 // Fuel for block items
 for (const id of [B.OAK_PLANKS, B.SPRUCE_PLANKS, B.BIRCH_PLANKS, B.JUNGLE_PLANKS, B.ACACIA_PLANKS, B.DARK_OAK_PLANKS, B.OAK_LOG, B.BIRCH_LOG, B.SPRUCE_LOG, B.JUNGLE_LOG, B.ACACIA_LOG, B.DARK_OAK_LOG, B.WORKBENCH]) ITEMS[id].fuel = 300;

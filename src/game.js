@@ -50,6 +50,7 @@ import { newStand, tickStand } from './world/brewing.js';
 import { effectsColor } from './player/effects.js';
 import { changeSound, CIRCUIT_BLOCK } from './world/circuits.js';
 import { FACING6 } from './world/circuitShapes.js';
+import { findStormRod, lightningCleanCopper } from './world/caves.js';
 
 // Spherical (radial distance) fog instead of view-depth fog, so chunk edges never show at screen corners
 THREE.ShaderChunk.fog_vertex = `#ifdef USE_FOG
@@ -158,6 +159,18 @@ export class Game {
     this.dims.applyLook();
 
     this.world.on('fallingBlock', (x, y, z, id) => this.entities.spawnFallingBlock(x, y, z, id));
+    // caves content (world/caves.js): Storm Rods are looked up per chunk; hanging spikes fall as one, the tip hurts
+    this.world.on('blockChanged', (x, y, z, old, id) => {
+      if (old !== B.STORM_ROD && id !== B.STORM_ROD) return;
+      const c = this.world.getChunk(x >> 4, z >> 4);
+      if (c) c.stormRods = null;
+    });
+    this.world.onStalactiteFall = (parts) => parts.forEach(([x, y, z, m], k) => {
+      const e = this.entities.spawnFallingBlock(x, y, z, B.SEEPSTONE_SPIKE);
+      if (!e) return;
+      e.meta = m; e.shatters = true;
+      if (k === parts.length - 1) e.hurtLength = parts.length;
+    });
     this.world.on('fireCrackle', (x, y, z) => this.audio.play('fire', [x + 0.5, y + 0.5, z + 0.5]));
     this.initCircuits();
     this.world.on('dropItems', (x, y, z, id, meta) => {
@@ -655,6 +668,8 @@ export class Game {
     const p = this.player;
     const x = Math.floor(p.x + (Math.random() - 0.5) * 128), z = Math.floor(p.z + (Math.random() - 0.5) * 128);
     if (!this.world.isLoaded(x, z) || Weather.precipitation(this.world.biomeAt(x, z)) !== 'rain') return;
+    const rod = findStormRod(this.world, x, z); // a Storm Rod within 128 blocks draws the bolt
+    if (rod) { this.strikeLightning(rod[0], rod[1] + 1, rod[2]); return; }
     this.strikeLightning(x, this.world.heightAt(x, z) + 1, z);
   }
 
@@ -666,6 +681,7 @@ export class Game {
     this.audio.play('thunder', null, Math.max(0.25, 1 - dist / 160));
     if (dist < 40) this.audio.play('lightning', [x + 0.5, y, z + 0.5]);
     const light = (fx, fy, fz) => { if (canLight(w, fx, fy, fz)) { w.setBlockUrgent(fx, fy, fz, B.FIRE); w.scheduleTick(fx, fy, fz, FIRE_DELAY); } };
+    lightningCleanCopper(w, x, y - 1, z); // struck copper (or the copper under a Storm Rod) is scraped clean
     light(x, y, z);
     for (let k = 0; k < 4; k++) light(x + Math.floor(Math.random() * 3) - 1, y + Math.floor(Math.random() * 3) - 1, z + Math.floor(Math.random() * 3) - 1);
     const near = (e) => Math.hypot(e.x - (x + 0.5), e.y - y, e.z - (z + 0.5)) < 3;
@@ -840,8 +856,9 @@ export class Game {
     if (inp.wasPressed('perspective')) { this.perspective = (this.perspective + 1) % 3; document.getElementById('crosshair').style.visibility = this.perspective === 2 ? 'hidden' : ''; }
     if (!this.ui.blocking) {
       const m = inp.consumeMouse();
-      p.yaw -= m.dx * inp.sensitivity;
-      p.pitch = Math.max(-Math.PI / 2 + 0.001, Math.min(Math.PI / 2 - 0.001, p.pitch - m.dy * inp.sensitivity));
+      const sens = inp.sensitivity * (p.zooming && this.perspective === 0 ? 0.15 : 1); // steadier aim through a Farglass
+      p.yaw -= m.dx * sens;
+      p.pitch = Math.max(-Math.PI / 2 + 0.001, Math.min(Math.PI / 2 - 0.001, p.pitch - m.dy * sens));
       if (m.wheel) p.inventory.selected = (p.inventory.selected + m.wheel + 9) % 9;
       for (let i = 1; i <= 9; i++) if (inp.codePressed('Digit' + i)) p.inventory.selected = i - 1;
       if (inp.wasPressed('drop') && p.inventory.selectedStack && !p.dead) {
@@ -895,8 +912,10 @@ export class Game {
       if (this.perspective === 2) this.camera.rotation.set(-p.pitch, p.yaw + Math.PI, 0, 'YXZ');
     }
     if (p.hurtTime > 0) this.camera.rotation.z = Math.sin(p.hurtTime * 0.6) * 0.04;
-    const targetFov = this.settings.fov * (p.sprinting ? 1.1 : 1);
-    this.camera.fov += (targetFov - this.camera.fov) * 0.2;
+    // looking through a Farglass narrows the view to a tenth (at once, like the reference); the arm and item are hidden
+    const zoom = p.zooming && this.perspective === 0 && !p.dead;
+    const targetFov = this.settings.fov * (zoom ? 0.1 : p.sprinting ? 1.1 : 1);
+    this.camera.fov = zoom || this.camera.fov < this.settings.fov * 0.5 ? targetFov : this.camera.fov + (targetFov - this.camera.fov) * 0.2;
     this.camera.updateProjectionMatrix();
 
     this.chunks.update(x, z, 6);
@@ -935,7 +954,8 @@ export class Game {
     this.overlay.update(this.interaction, p.dead);
     this.renderer.clear();
     this.renderer.render(this.scene, this.camera);
-    if (this.perspective === 0) this.held.render(this.renderer, alpha, sec);
+    if (this.perspective === 0 && !zoom) this.held.render(this.renderer, alpha, sec);
+    this.hud.setScope(zoom);
     this.hud.update();
     this.ui.tickOpen();
     this.lastSkyState = st;
