@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { BLOCKS, SHAPE } from '../world/blocks.js';
 import { ITEMS } from '../world/items.js';
 import { texturePixels } from '../world/textures.js';
-import { itemCanvas } from '../ui/icons.js';
+import { drawDial, itemCanvas } from '../ui/icons.js';
 import { blockFaceTexture, lightAt } from '../entities/entities.js';
 import { SWING_TICKS } from '../player/interaction.js';
 import { selectionBox } from '../world/shapes.js';
@@ -96,7 +96,9 @@ export class HeldItem {
       this.mesh.position.set(0.5, -0.45, -0.75);
       this.mesh.rotation.set(0.1, 0.8, 0);
     } else {
-      const tex = new THREE.CanvasTexture(itemCanvas(id, glint));
+      const cv = itemCanvas(id, glint);
+      const tex = new THREE.CanvasTexture(cv);
+      this.dial = d.dial ? { kind: d.dial, canvas: cv, tex, last: '' } : null;
       tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter; tex.colorSpace = THREE.SRGBColorSpace;
       const mat = new THREE.MeshLambertMaterial({ map: tex, transparent: true, alphaTest: 0.3, side: THREE.DoubleSide });
       if (glint) this.glintMat = mat;
@@ -114,7 +116,18 @@ export class HeldItem {
     const id = st ? st.id : null;
     const glint = !!(st && st.ench && Object.keys(st.ench).length);
     const key = id == null ? null : id + (glint ? ':g' : '');
-    if (key !== this.currentId) { this.currentId = key; this.build(id, glint); this.equipAnim = 1; }
+    if (key !== this.currentId) { this.currentId = key; this.dial = null; this.build(id, glint); this.equipAnim = 1; }
+    if (this.dial) {
+      // the compass points at the world spawn (and spins outside the overworld); the clock shows the sky
+      let a = 0, light = 1, suns = 0;
+      if (this.dial.kind === 'compass') {
+        const s = g.worldSpawn || { x: 0, z: 0 };
+        a = g.world.dimension === 'overworld' ? Math.atan2(-(s.x - p.x), -(s.z - p.z)) - p.yaw : sec * 7;
+        a = -a;
+      } else { const st = g.sky.state; light = Math.min(1, st.combined); suns = st.aboveCount; }
+      const sig = `${Math.round(a * 20)},${Math.round(light * 20)},${suns}`;
+      if (sig !== this.dial.last) { this.dial.last = sig; drawDial(this.dial.canvas, this.dial.kind, a, light, suns); this.dial.tex.needsUpdate = true; }
+    }
     // enchanted items shimmer: a slow purple pulse on the emissive colour
     if (this.glintMat) this.glintMat.emissive.setRGB(0.1 + 0.07 * Math.sin(sec * 3), 0.02, 0.16 + 0.1 * Math.sin(sec * 3));
     this.equipAnim = Math.max(0, this.equipAnim - 0.12);

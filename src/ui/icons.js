@@ -167,6 +167,7 @@ function gridCanvas(grid) {
 
 function itemIcon(d) {
   let tpl, colors;
+  if (d.dial) { const c = document.createElement('canvas'); c.width = c.height = 32; drawDial(c, d.dial, 0, 1, 2); return c; }
   if (d.tool) return gridCanvas(toolGrid(d.tool));
   if (GEAR[d.key]) return gridCanvas(paintTemplate(GEAR_TEMPLATES[GEAR[d.key][0]], GEAR[d.key][1]));
   if (d.woolColor) {
@@ -273,6 +274,39 @@ export function tooltipHTML(st, extra = '') {
 }
 
 /** Canvas (16x16 texture-like) for 3D item rendering of non-block items. */
+/**
+ * Compass / clock face (32x32 canvas). Compass: `a` is the needle angle
+ * (0 = up). Clock: `light` is the sky brightness (0..1) and `suns` how many
+ * of the three suns are up.
+ */
+export function drawDial(c, kind, a, light, suns) {
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, 32, 32);
+  ctx.imageSmoothingEnabled = false;
+  const rim = kind === 'clock' ? ['#c8a020', '#f2d24b'] : ['#6a6a72', '#b8b8c0'];
+  const P = (x, y, col) => { ctx.fillStyle = col; ctx.fillRect(x * 2, y * 2, 2, 2); };
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    const r = Math.hypot(x - 7.5, y - 7.5);
+    if (r > 7.5) continue;
+    if (r > 6.3) P(x, y, (x + y) % 3 ? rim[0] : rim[1]);
+    else if (kind === 'clock') {
+      const day = `rgb(${Math.round(70 + 150 * light)},${Math.round(110 + 120 * light)},${Math.round(200 + 40 * light)})`;
+      P(x, y, y > 9 ? '#3a2a1a' : day); // a horizon line: ground below, sky above
+    } else P(x, y, '#d8d4c8');
+  }
+  if (kind === 'clock') {
+    for (let k = 0; k < suns; k++) { const sx = 4 + k * 4, sy = 6 - (k % 2); P(sx, sy, '#fff2a0'); P(sx + 1, sy, '#ffd040'); P(sx, sy + 1, '#ffd040'); P(sx + 1, sy + 1, '#ffb020'); }
+    if (suns === 0) { P(6, 4, '#f0f0ff'); P(10, 6, '#f0f0ff'); P(4, 7, '#c8c8f0'); P(11, 3, '#c8c8f0'); }
+    return;
+  }
+  // compass needle: red half points at the spawn
+  for (let t = -5; t <= 5; t += 0.5) {
+    const x = 7.5 + Math.sin(a) * t, y = 7.5 - Math.cos(a) * t;
+    P(Math.round(x - 0.5), Math.round(y - 0.5), t > 0 ? '#d02a2a' : '#4a4a52');
+  }
+  P(7, 7, '#2a2a2a');
+}
+
 export function itemCanvas(id, glint = false) {
   const d = ITEMS[id];
   if (!d) return null;
