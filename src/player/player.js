@@ -8,6 +8,7 @@ import { MIN_Y } from '../world/constants.js';
 import { armorReduce, armorTotals, wearArmor, BYPASSES_ARMOR } from './armor.js';
 import { newXp } from './experience.js';
 import { protectionFactor, protectionReduce } from '../world/enchantments.js';
+import { gliderUsable, canStartGliding, glideStep, rocketBoost, wallDamage, wearsThisTick } from './glider.js';
 import { EFFECTS, addEffect as stackEffect, tickEffects, effectLevel, speedFactor, jumpBonus, fallDamageWithEffects, periodicActions, instantAmount } from './effects.js';
 
 const FIRE_SOURCES = new Set(['fire', 'lava', 'fireball']);
@@ -42,7 +43,7 @@ export class Player {
   }
 
   get x() { return this.body.x; } get y() { return this.body.y; } get z() { return this.body.z; }
-  get eyeHeight() { return this.swimming ? 0.4 : this.sneaking ? PHYS.PLAYER_SNEAK_EYE : PHYS.PLAYER_EYE; }
+  get eyeHeight() { return this.swimming || this.gliding ? 0.4 : this.sneaking ? PHYS.PLAYER_SNEAK_EYE : PHYS.PLAYER_EYE; }
   get food() { return this.hunger.food; }
 
   setPosition(x, y, z) {
@@ -198,7 +199,16 @@ export class Player {
 
     const wasOnGround = b.onGround;
     const x0 = b.x, z0 = b.z, y0 = b.y;
-    b.travel(world, {
+    // Voidwing gliding (player/glider.js): press jump in mid-air to spread the wings
+    const jumpPressed = !!input.jump && !this.prevJump;
+    this.prevJump = !!input.jump;
+    const chest = this.inventory.armor[1];
+    if (this.gliding && (b.onGround || b.inWater || b.inLava || this.flying || fx.levitation || !gliderUsable(chest))) { this.gliding = false; this.boostTicks = 0; }
+    if (!this.gliding && jumpPressed && canStartGliding({ onGround: b.onGround, inWater: b.inWater, inLava: b.inLava, flying: this.flying, levitating: !!fx.levitation, chest })) {
+      this.gliding = true; this.glideTicks = 0;
+    }
+    if (this.gliding) this.glide(world, chest);
+    else b.travel(world, {
       // raising a shield slows you to a fifth, like sneaking
       forward: input.forward * (this.blocking ? 0.2 : 1), strafe: input.strafe * (this.blocking ? 0.2 : 1), yaw: this.yaw,
       jump: input.jump && (this.jumpCooldown === 0 || b.inWater || b.inLava),
@@ -207,6 +217,7 @@ export class Player {
       speed: PHYS.WALK_SPEED * speedFactor(fx),
       jumpFactor: 1 + jumpBonus(fx) / PHYS.JUMP_VELOCITY,
       slowFall: !!fx.slow_falling,
+      levitation: effectLevel(fx, 'levitation'),
     });
     if (fx.slow_falling) b.fallDistance = 0;
     if (this.jumpCooldown > 0) this.jumpCooldown--;
@@ -269,6 +280,24 @@ export class Player {
     if (Object.keys(this.effects).length !== before) for (const f of this.listeners.effect || []) f(null);
 
     if (!this.creative) this.hunger.tick(this);
+  }
+
+  /** One tick of gliding flight: reference physics, rocket boosts, wall damage and wing wear. */
+  glide(world, chest) {
+    const b = this.body;
+    b.height = 0.6;
+    this.sprinting = false;
+    if (this.boostTicks > 0) { rocketBoost(b, this.yaw, this.pitch); this.boostTicks--; }
+    const before = Math.hypot(b.vx, b.vz);
+    if (b.vy > -0.5) b.fallDistance = 1; // a gentle glide does not build up fall damage
+    glideStep(b, this.yaw, this.pitch, this.effects.slow_falling && b.vy <= 0 ? 0.01 : 0.08);
+    b.move(world, b.vx, b.vy, b.vz);
+    b.jumped = false;
+    if (b.horizontalCollision) {
+      const dmg = wallDamage(before, Math.hypot(b.vx, b.vz));
+      if (dmg > 0) this.hurt(dmg, 'wall');
+    }
+    if (wearsThisTick(this.glideTicks++) && !this.creative && chest) { chest.damage = (chest.damage | 0) + 1; this.inventory.changed(); }
   }
 
   touches(world, bx, id) {

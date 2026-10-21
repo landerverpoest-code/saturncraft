@@ -123,12 +123,34 @@ export function cleanEnch(e) {
   return out;
 }
 
-/** Copy the extra stack data (enchantments, prior work) from `src` onto `dst`; returns dst. */
+/** Copy the extra stack data (enchantments, prior work, a Gloomshell Box's contents) from `src` onto `dst`; returns dst. */
 export function withExtras(dst, src) {
   const e = src && cleanEnch(src.ench);
   if (e) dst.ench = e;
   if (src && src.rw > 0) dst.rw = src.rw | 0;
+  const c = src && src.contents && cleanContents(src.contents);
+  if (c) dst.contents = c;
   return dst;
+}
+
+/**
+ * A cleaned copy of a Gloomshell Box's 27 stored slots (from untrusted data), or null
+ * when it holds nothing. Boxes never hold boxes with contents.
+ */
+export function cleanContents(list) {
+  if (!Array.isArray(list)) return null;
+  const out = new Array(27).fill(null);
+  let any = false;
+  for (let i = 0; i < Math.min(27, list.length); i++) {
+    const s = list[i];
+    if (!s || !ITEMS[s.id | 0] || !((s.count | 0) > 0)) continue;
+    const st = { id: s.id | 0, count: Math.min(64, s.count | 0), damage: s.damage | 0 };
+    const e = cleanEnch(s.ench);
+    if (e) st.ench = e;
+    if (s.rw > 0) st.rw = s.rw | 0;
+    out[i] = st; any = true;
+  }
+  return any ? out : null;
 }
 
 /** Tooltip lines (enchantment names) of a stack. */
@@ -249,6 +271,7 @@ export const ANVIL_MAX_COST = 40;
 export function repairMaterial(id) {
   const d = ITEMS[id];
   if (!d) return null;
+  if (d.repairWith) return I[d.repairWith]; // e.g. a Voidwing mends with Drift Membrane
   const mat = (d.tool && d.tool.material) || (d.armor && d.armor.material);
   return { wood: 'planks', stone: B.COBBLESTONE, iron: I.IRON_INGOT, gold: I.GOLD_INGOT, diamond: I.DIAMOND, leather: I.LEATHER }[mat] || null;
 }

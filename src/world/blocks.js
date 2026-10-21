@@ -54,6 +54,9 @@ export const B = {
   CINNABAR_WIRE: 175, LEVER: 176, STONE_BUTTON: 177, WOODEN_PRESSURE_PLATE: 178, CINNABAR_TORCH: 179, CINNABAR_TORCH_OFF: 180,
   CINNABAR_LAMP: 181, CINNABAR_LAMP_ON: 182, REPEATER: 183, PISTON: 184, STICKY_PISTON: 185, PISTON_HEAD: 186,
   CHIME_BLOCK: 187, CINNABAR_BLOCK: 188,
+  // The Hollow's outer islands (see world/dimensions/hollowCity.js, hushvine.js)
+  HOLLOWBRICK: 195, HOLLOWBRICK_PILLAR: 196, HOLLOWBRICK_STAIRS: 197, HOLLOWBRICK_SLAB: 198, HOLLOWSTONE_BRICKS: 199,
+  WISP_ROD: 200, FAR_GATE: 201, GLOOMSHELL_BOX: 202, WYRM_HEAD: 203, HUSHVINE: 204, HUSHVINE_FLOWER: 205,
 };
 
 const defaults = {
@@ -310,6 +313,26 @@ def(B.STICKY_PISTON, 'Sticky Piston', { ...piston, tex: { top: 'piston_top_stick
 def(B.PISTON_HEAD, 'Piston Head', { ...piston, hidden: true, drops: null, tex: { top: 'piston_top', bottom: 'piston_top', side: 'piston_side' } });
 def(B.CHIME_BLOCK, 'Chime Block', { hardness: 0.8, resistance: 0.8, tool: TOOL.AXE, sound: 'wood', flammable: true, tex: { top: 'chime_block_top', bottom: 'oak_planks', side: 'chime_block' } });
 def(B.CINNABAR_BLOCK, 'Cinnabar Block', { hardness: 5, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD, sound: 'metal' });
+
+// The Hollow's outer islands: the city blocks (reference: purpur and pale stone bricks), the
+// Wisp Rod (light rod), the Far Gate (void-island gateway), the Gloomshell Box (shulker box: keeps its
+// contents when broken), the Wyrm Head trophy and the Hushvine (chorus plant; meta of the
+// flower = age 0..5, 5 = dead).
+def(B.HOLLOWBRICK, 'Hollowbrick', { hardness: 1.5, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD });
+def(B.HOLLOWBRICK_PILLAR, 'Hollowbrick Pillar', { hardness: 1.5, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD, tex: { top: 'hollowbrick_pillar_top', bottom: 'hollowbrick_pillar_top', side: 'hollowbrick_pillar' } });
+{
+  const m = BLOCKS[B.HOLLOWBRICK];
+  const common = { hardness: m.hardness, resistance: m.resistance, tool: m.tool, tier: m.tier, sound: m.sound, opaque: false, opacity: 15, tex: { ...m.tex }, base: B.HOLLOWBRICK };
+  def(B.HOLLOWBRICK_SLAB, 'Hollowbrick Slab', { ...common, shape: SHAPE.SLAB, drops: 'slab' });
+  def(B.HOLLOWBRICK_STAIRS, 'Hollowbrick Stairs', { ...common, shape: SHAPE.STAIRS });
+}
+def(B.HOLLOWSTONE_BRICKS, 'Hollowstone Bricks', { hardness: 3, resistance: 9, tool: TOOL.PICKAXE, tier: TIER.WOOD });
+def(B.WISP_ROD, 'Wisp Rod', { hardness: 0, resistance: 0, solid: false, opaque: false, shape: SHAPE.TORCH, layer: LAYER.CUTOUT, emit: 14, sound: 'glass' });
+def(B.FAR_GATE, 'Far Gate', { hardness: -1, resistance: 3600000, solid: false, opaque: false, opacity: 0, emit: 15, drops: null, sound: 'glass' });
+def(B.GLOOMSHELL_BOX, 'Gloomshell Box', { hardness: 2, resistance: 2, tool: TOOL.PICKAXE, container: true, drops: null, tex: { top: 'gloomshell_box_top', bottom: 'gloomshell_box_top', side: 'gloomshell_box_side' } });
+def(B.WYRM_HEAD, 'Wyrm Head', { hardness: 1, resistance: 1, opaque: false, shape: SHAPE.BOXES, tex: { top: 'wyrm_head_top', bottom: 'wyrm_head_top', side: 'wyrm_head_side', front: 'wyrm_head_face' } });
+def(B.HUSHVINE, 'Hushvine', { hardness: 0.4, resistance: 0.4, tool: TOOL.AXE, opaque: false, layer: LAYER.CUTOUT, sound: 'wood', needsSupport: true, drops: { item: 'HUSHFRUIT', min: 0, max: 1 } });
+def(B.HUSHVINE_FLOWER, 'Hushvine Flower', { hardness: 0.4, resistance: 0.4, tool: TOOL.AXE, opaque: false, layer: LAYER.CUTOUT, emit: 3, sound: 'wood', needsSupport: true, tex: { all: 'hushvine_flower' } });
 
 export const NUM_BLOCKS = BLOCKS.length;
 

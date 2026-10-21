@@ -7,6 +7,7 @@ import { TerrainGenerator } from './generator.js';
 import { tickFluid, fluidDelay } from './fluids.js';
 import { tickFire, fireCanStay } from './fire.js';
 import { riftCanStay } from './dimensions/portal.js';
+import { hushvineSupported, hushFlowerSupported } from './dimensions/hushvine.js';
 import { createGenerator } from './dimensions/dims.js';
 import { LEAVES as LEAVES_SET } from './trees.js';
 import { railSupported } from './rails.js';
@@ -268,6 +269,8 @@ export class World {
     if (id === B.DEAD_BUSH) return below === B.SAND || below === B.RED_SAND || below === B.DIRT || below === B.GRASS || (below >= B.TERRACOTTA && below <= B.LIGHT_GRAY_TERRACOTTA);
     if (CROPS.has(id)) return below === B.FARMLAND;
     if (id === B.CINDERROOT) return below === B.MOURNSAND;
+    if (id === B.HUSHVINE) return hushvineSupported((a, b, c) => this.getBlock(a, b, c), x, y, z);
+    if (id === B.HUSHVINE_FLOWER) return hushFlowerSupported((a, b, c) => this.getBlock(a, b, c), x, y, z);
     if (id === B.SUGAR_CANE) {
       if (below === B.SUGAR_CANE) return true;
       if (below !== B.GRASS && below !== B.DIRT && below !== B.SAND && below !== B.RED_SAND) return false;

@@ -301,6 +301,7 @@ export function meshSection(sec) {
       let sk = 0, bk = 0;
       for (let d = 0; d < 6; d++) { const l = light[i + FACE_N[d]]; sk = Math.max(sk, l >> 4); bk = Math.max(bk, l & 15); }
       const tiles = [0, 1, 2, 3, 4, 5].map((d) => FACE_TILE[id * 6 + d]);
+      if (FRONT_TILE[id] >= 0) tiles[FURNACE_FRONT_DIR[meta[i] & 3]] = FRONT_TILE[id]; // the Wyrm Head's face
       for (const b of blockBoxes(id, meta[i])) emitBox(buf, x, y, z, b[0], b[1], b[2], b[3], b[4], b[5], tiles, sk * 17, bk * 17, 'box');
       if (id === B.CAMPFIRE) {
         // the flames: two crossed planes of animated fire, full bright

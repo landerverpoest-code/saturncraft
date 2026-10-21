@@ -21,6 +21,7 @@ export const EFFECTS = {
   invisibility:    { name: 'Invisibility', color: '#7f8392', good: true, glyph: 'ghost' },
   slow_falling:    { name: 'Slow Falling', color: '#f3cfb9', good: true, glyph: 'feather' },
   hunger:          { name: 'Hunger', color: '#587653', good: false, glyph: 'food' },
+  levitation:      { name: 'Levitation', color: '#ceffff', good: false, glyph: 'feather' },
 };
 export const EFFECT_KEYS = Object.keys(EFFECTS);
 
@@ -94,6 +95,13 @@ export function jumpBonus(map) { return 0.1 * effectLevel(map, 'jump_boost'); }
 
 /** Fall damage after Jump Boost (each level absorbs one more block). */
 export function fallDamageWithEffects(dmg, map) { return Math.max(0, dmg - effectLevel(map, 'jump_boost')); }
+
+/**
+ * Vertical velocity under Levitation (reference): instead of gravity the body eases
+ * towards rising 0.05 x level blocks/tick (then the usual 0.98 air drag), about
+ * 0.9 blocks/s at level I. Returns the new velocity before drag.
+ */
+export function levitationVelocity(vy, level) { return vy + (0.05 * level - vy) * 0.2; }
 
 /** Melee damage: Strength +3 per level, Weakness -4 per level (never below 0). */
 export function meleeWithEffects(dmg, map) {

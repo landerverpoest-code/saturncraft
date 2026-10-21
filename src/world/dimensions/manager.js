@@ -15,6 +15,7 @@ import { VoidEye } from '../../entities/voidEye.js';
 import { canLight, FIRE_DELAY } from '../fire.js';
 import { SIDE_DIRS, BED_HEAD } from '../shapes.js';
 import './register.js';
+import '../../mobs/gloomshell.js'; // the Hollow Cities' Gloomshells
 
 export const PORTAL_TICKS = 80; // 4 s standing in a Rift (instant in creative)
 const WYRM_MAX = 200;
@@ -27,7 +28,7 @@ export class DimensionManager {
     this.portalTicks = 0;
     this.portalCooldown = 0;
     this.links = [];       // Rift portal pairs: { a: {dim, x, y, z}, b: {...} }
-    this.hollow = { defeated: false, gateOpen: false, wyrmHealth: WYRM_MAX, crystals: new Array(10).fill(true) };
+    this.hollow = { defeated: false, gateOpen: false, farGateOpen: false, wyrmHealth: WYRM_MAX, crystals: new Array(10).fill(true) };
     this.sky = new DimensionSky(game.scene);
     this.baseMinLight = terrainUniforms.uMinLight.value;
     this.beam = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineBasicMaterial({ color: 0xff90f0 }));
@@ -266,7 +267,12 @@ export class DimensionManager {
     if (p.dead) { this.portalTicks = 0; return; }
     const box = p.body.box();
     const inRift = p.touches(w, box, B.RIFT), inGate = p.touches(w, box, B.HOLLOW_GATE);
-    if (inGate) {
+    const inFar = this.current === DIM.HOLLOW && p.touches(w, box, B.FAR_GATE);
+    if (this.current === DIM.HOLLOW && g.ticks % 40 === 0 && g.milestones && Math.hypot(p.x, p.z) > 600 && w.dimGenerator.cityAt(p.x, p.y, p.z)) g.milestones.event('hollow_city');
+    if (inFar) {
+      if (this.portalCooldown === 0) { this.useFarGate(); return; }
+      this.portalCooldown = 40;
+    } else if (inGate) {
       if (this.portalCooldown === 0) { this.useGate(); return; }
       this.portalCooldown = 40;
     } else if (inRift) {
@@ -302,6 +308,10 @@ export class DimensionManager {
       if (this.bossEl) this.bossEl.style.display = 'none';
       this.beam.visible = false;
       if (!h.gateOpen && w.isChunkLoaded(0, 0) && w.isChunkLoaded(-1, -1)) this.openExitGate();
+      if (!h.farGateOpen) {
+        const fg = gen.gatewayMain();
+        if (w.isChunkLoaded(fg.x >> 4, fg.z >> 4)) this.openFarGate();
+      }
       return;
     }
     let wyrm = null;
@@ -372,6 +382,37 @@ export class DimensionManager {
     w.setBlockUrgent(0, fy + 4, 0, B.WYRM_EGG, 0, false);
     g.entities.spawnXp(0.5, fy + 6, 0.5, 12000);
     this.hollow.gateOpen = true;
+  }
+
+  /** The Far Gate (reference: the void-island gateway) on the main island's rim, opened with the Wyrm's death. */
+  openFarGate() {
+    const w = this.game.world, { x, y, z } = w.dimGenerator.gatewayMain();
+    for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) for (let dy = 1; dy <= 4; dy++) w.setBlockUrgent(x + dx, y + dy, z + dz, B.AIR, 0, false);
+    w.setBlockUrgent(x, y, z, B.BEDROCK, 0, false);
+    w.setBlockUrgent(x, y + 1, z, B.FAR_GATE, 0, false);
+    w.setBlockUrgent(x, y + 2, z, B.FAR_GATE, 0, false);
+    w.setBlockUrgent(x, y + 3, z, B.BEDROCK, 0, false);
+    this.hollow.farGateOpen = true;
+    this.game.audio.play('teleport', [x + 0.5, y + 2, z + 0.5]);
+  }
+
+  /** Step into a Far Gate: from the main island out to the outer islands, or back. */
+  useFarGate() {
+    const g = this.game, p = g.player, gen = g.world.dimGenerator;
+    const out = Math.hypot(p.x, p.z) < 400;
+    const gate = out ? gen.gatewayExit() : gen.gatewayMain();
+    // land three blocks from the gate, on the island side (out: towards the island's middle, back: towards the centre)
+    const cx = out && gate.island ? gate.island.x : 0, cz = out && gate.island ? gate.island.z : 0;
+    const d = Math.hypot(cx - gate.x, cz - gate.z) || 1;
+    const tx = Math.floor(gate.x + (cx - gate.x) / d * 3), tz = Math.floor(gate.z + (cz - gate.z) / d * 3);
+    const ground = gen.groundAt(tx, tz);
+    g.particles.smoke(p.x, p.y + 1, p.z, 12, 0.8);
+    p.setPosition(tx + 0.5, (ground ?? gate.y) + 1, tz + 0.5);
+    p.gliding = false;
+    p.yaw = Math.atan2(-(cx - gate.x), -(cz - gate.z)); // facing away from the gate
+    this.portalCooldown = 60;
+    g.audio.play('teleport');
+    if (out && g.milestones) g.milestones.event('far_gate');
   }
 
   // ---- items and blocks ----------------------------------------------------------

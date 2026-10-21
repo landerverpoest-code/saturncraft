@@ -165,6 +165,8 @@ export class Audio {
       case 'brew': this.tone(t, 0.18, 500, 760, 0.1 * gain, out, 'sine'); this.tone(t + 0.15, 0.25, 760, 1000, 0.08 * gain, out, 'sine'); this.noise(t, 0.35, 1200, 1, 0.08 * gain, out); break;
       case 'bubble': this.tone(t, 0.05, 400 + Math.random() * 300, 900, 0.06 * gain, out, 'sine'); break;
       case 'land': this.noise(t, 0.12, 500, 1, 0.4 * gain, out, 'lowpass'); break;
+      case 'rocket': this.noise(t, 0.7, 2200, 0.6, 0.3 * gain, out, 'highpass'); this.tone(t, 0.5, 300, 900, 0.06 * gain, out, 'sine'); break;
+      case 'rocket_burst': this.noise(t, 0.4, 300, 0.5, 0.7 * gain, out, 'lowpass'); for (let k = 0; k < 6; k++) this.noise(t + 0.15 + Math.random() * 0.6, 0.03, 3500, 4, 0.15 * gain, out); break;
       default: this.tone(t, 0.1, 440, 440, 0.1 * gain, out);
     }
   }

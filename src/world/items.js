@@ -217,3 +217,22 @@ export function toolOf(stack) {
 }
 
 export const TOOL_TYPES = TOOL;
+
+// ---- The Hollow's outer islands (appended so earlier ids stay stable) ----------------
+// Templates for ui/icons.js (an iconStyle may carry its own 16x16 template)
+const ICON_GLIDER = ['................', '.hh..........hh.', '.hHh........hHh.', '.hHhh......hhHh.', '.hHhhh....hhhHh.', '.hhHhhhsshhhHhh.', '..hhHhhsshhHhh..', '..hhhHhsshHhhh..', '...hhhhsshhhh...', '...hhhh..hhhh...', '....hhh..hhh....', '....hh....hh....', '.....h....h.....', '................', '................', '................'];
+const ICON_ROCKET = ['................', '..........ww....', '.........whhw...', '.........hHhh...', '........hHhh....', '.......hHhh.....', '......hhhh......', '.....shhh.......', '....ss..........', '...ss...........', '..ss............', '.ss.............', '................', '................', '................', '................'];
+const ICON_SHELL = ['................', '................', '....hhhhhhhh....', '...hHHHHHHHHh...', '..hHhhhhhhhhhh..', '..hhhhhhhhhhhh..', '..ssssssssssss..', '..hhhhhhhhhhhh..', '..hhhhhhhhhhhh..', '...hhhhhhhhhh...', '....hhhhhhhh....', '................', '................', '................', '................', '................'];
+// Voidwing (reference: elytra): worn in the chest slot, glides; 432 uses, repaired with Drift Membrane
+ARMOR_MATERIALS.voidwing = { defense: [0, 0, 0, 0], durability: 27, toughness: 0, color: '#4a3a6a', name: 'Voidwing' };
+item('gloomshell_husk', 'Gloomshell Husk', { iconStyle: [ICON_SHELL, { h: '#9a64a8', H: '#c896d4', s: '#3e2448' }] });
+item('drift_membrane', 'Drift Membrane', { iconStyle: ['meat', { h: '#b8c8dc', w: '#8a9ab8' }] });
+item('voidwing', 'Voidwing', {
+  stack: 1, durability: 432, glider: true, repairWith: 'DRIFT_MEMBRANE',
+  armor: { slot: 1, piece: 'chestplate', material: 'voidwing', defense: 0, toughness: 0, glider: true },
+  iconStyle: [ICON_GLIDER, { h: '#5a4a86', H: '#9a8ad0', s: '#2a2040' }],
+});
+item('sky_rocket', 'Sky Rocket', { rocket: true, iconStyle: [ICON_ROCKET, { h: '#c8303a', H: '#f06a6a', w: '#f4f0e4', s: '#7a5a32' }] });
+item('hushfruit', 'Hushfruit', { food: { hunger: 4, saturation: 2.4, always: true, teleport: true }, iconStyle: ['apple', { h: '#8a5aa0', H: '#b68ac8', s: '#4a3058', l: '#c8a8d8' }] });
+item('popped_hushfruit', 'Popped Hushfruit', { iconStyle: ['potato', { h: '#c8a4d4', H: '#e4d0ec', s: '#8a6a98' }] });
+ITEMS[B.GLOOMSHELL_BOX].stack = 1; // a box keeps its contents in the item (stack.contents), so it never stacks

@@ -421,7 +421,7 @@ export class Mob {
     const mv = this.move || { forward: 0, jump: false };
     const jump = mv.jump || (this.def.hops && mv.forward && b.onGround) || (b.inWater && b.y + this.height * 0.4 < Math.floor(b.y) + 1.2) || (b.inLava);
     if (this.def.flying) this.flyMove(g);
-    else b.travel(g.world, { forward: mv.forward, strafe: mv.strafe || 0, yaw: this.yaw, jump, speed: mv.forward ? this.speed() * (mv.mod || 1) : this.speed(), climbing: this.def.climbs && b.horizontalCollision && !!this.move });
+    else b.travel(g.world, { forward: mv.forward, strafe: mv.strafe || 0, yaw: this.yaw, jump, speed: mv.forward ? this.speed() * (mv.mod || 1) : this.speed(), climbing: this.def.climbs && b.horizontalCollision && !!this.move, levitation: this.effects.levitation ? this.effects.levitation.amp + 1 : 0 });
     if (this.type === 'cluckling' && !b.onGround && b.vy < 0) { b.vy *= 0.6; b.fallDistance = 0; }
 
     // Limb animation

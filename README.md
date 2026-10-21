@@ -414,11 +414,11 @@ poison from eyes) follow the documented table.
 
 * Lingering elixirs and tipped arrows, Turtle Master / Decay / Luck elixirs, beacons (Haste only comes from `/effect`), Mining Fatigue, Absorption and Wither effects; effect particles of other players in multiplayer
 * Taming of animals other than Howlers and Gallopers
-* Large structures beyond villages, temples, wrecks, outposts, dungeons, sanctums and bastions; job-site blocks; Hollow outer-island cities
-* Double chests and other storage containers
+* Large structures beyond villages, temples, wrecks, outposts, dungeons, sanctums, bastions and Hollow Cities; job-site blocks
+* Double chests, barrels and hoppers feeding Gloomshell Boxes; dyed Gloomshell Boxes
 * Witches (elixir-throwing monsters), drowned, husks/strays as separate variants, baby mobs, mob equipment
 * Difficulty levels (fixed at Normal), spectator/adventure modes, multiplayer
-* Crawling pose, elytra
+* Crawling pose; firework stars (Sky Rockets always burst in one random colour and never hurt)
 
 ## Other dimensions
 
@@ -432,15 +432,26 @@ poison from eyes) follow the documented table.
 ### The Hollow (void dimension)
 
 * **Getting there:** craft an **Eye of the Void** (Void Pearl from Voidwalkers + Ember Powder; 1 Ember Rod = 2 powder). Right-click into the air to throw one: it flies ~12 blocks towards the nearest **Hollow Sanctum** (one per 640×640 region, 75 %; buried at y 10–31; `/locate sanctum`) and usually drops back (1 in 5 shatters). The sanctum is a stone-brick vault with a corridor, a Skitterer spawner, bookshelves, a loot chest and a ring of 12 **Hollow Frames** on a dais over lava (each frame has a 10 % chance to hold an eye already). Right-click every frame with an eye: the 3×3 centre turns into a starry **Hollow Gate**; fall in.
-* **World:** a central island of pale **Hollowstone** (~100 blocks radius) floating in a black-violet starry void, outer islands beyond 220 blocks, ten obsidian pillars around the centre each crowned with a **Mending Crystal**, and the bedrock exit fountain in the middle. You arrive on a 5×5 obsidian platform at x 100. Many Voidwalkers.
+* **World:** a central island of pale **Hollowstone** (~100 blocks radius) floating in a black-violet starry void, outer islands beyond 800 blocks, ten obsidian pillars around the centre each crowned with a **Mending Crystal**, and the bedrock exit fountain in the middle. You arrive on a 5×5 obsidian platform at x 100. Many Voidwalkers.
 * **The Void Wyrm:** a flying boss (200 HP, boss bar) that circles the pillars, swoops at the player (10 damage from its head, 5 from its body, plus a fling) and pulls up again; crystals within 48 blocks heal it (2 HP/s, shown as a beam) until they are shot or hit (they explode). Killing it opens the exit gate in the fountain, drops 12 000 XP and a **Wyrm Egg**, and unlocks the *Wyrmslayer* milestone. The exit gate takes you to your overworld spawn point (bed or world spawn).
-* Milestones: *Tear in the World*, *Into the Cinderdeep*, *Ember Hunter*, *Eye in the Dark*, *The Hollow*, *Wyrmslayer*.
+* **The Far Gate** (reference: the void-island gateway): once the Wyrm is dead a small gate of two starry **Far Gate** blocks between bedrock opens on the main island's rim (80 blocks out, in a direction fixed by the seed; `/locate gate`). Walk into it to be thrown ~1000 blocks out to an outer island, where a matching gate leads back. The void between the main island and the outer islands is empty out to 800 blocks.
+* **Outer islands** (one at most per 112×112 cell beyond 800 blocks, radius 8–27) carry **Hushvine** and, on the larger ones (60 % of islands of radius ≥ 15), **Hollow Cities** (`/locate city`).
+* **Hollow Cities** (reference: the void-island cities; `src/world/dimensions/hollowCity.js`), planned from the seed and the island alone so every chunk stamps its share: a house of **Hollowbrick** (violet bricks; also **Hollowbrick Pillar**, **Slab** and **Stairs**) on a **Hollowstone Bricks** footing, a 12–19 block tower out of its roof with a ladder inside, a wide top room with two loot chests and **Wisp Rods** (light 14; reference: the light rods) on the roof; often (70 %) a railed bridge to a second tower with its own chest; sometimes (50 %) a **ship** moored at roof height (walkway from the roof) with a purple sail, a **Wyrm Head** trophy on the bow and two chests in the hold, one always holding a **Voidwing**. City chests roll 2–6 stacks of the reference table: diamonds (2–7), iron (4–8), gold (2–7), beryl, beetroot seeds, saddles, Drift Membranes, Sky Rockets and diamond/iron gear enchanted at level 20–39.
+* **Gloomshells** (reference: shulkers; `src/mobs/gloomshell.js`) spawn inside cities (up to 6 per city). A violet box (30 HP) that peeks now and then and, closed, counts as 20 armour; with a player in sight within 16 blocks it opens and every 1–5.5 s fires a slow homing **Drift Spark** (4 damage + **Levitation** for 10 s). Below half health it may blink away. Drops a **Gloomshell Husk** (50 %).
+* **Levitation** (status effect): instead of gravity the vertical speed eases towards 0.05 × level blocks/tick (≈ 0.9 blocks/s at level I); falling after it ends hurts as usual. `/effect give levitation 10`.
+* **Gloomshell Box** (2 husks above and below a chest; reference: shulker box): a 27-slot container that keeps its contents when broken: the dropped box item carries them (`stack.contents`, kept in saves, on the network and when picked up), its tooltip lists what is inside, and placing it unpacks them. Boxes do not fit in boxes. Host-authoritative in multiplayer like chests (a guest placing a full box sends its contents to the host).
+* **Voidwing** (reference: elytra): worn in the chest slot (two membrane wings on the player model). Press jump in mid-air to glide with the reference flight step: gravity is cancelled in proportion to cos²(pitch), descending turns height into speed, pulling up turns speed into height, the path swings towards the view and drag is 0.99/0.98/0.99 — a level glide covers about 8 blocks per block of height. Flying into a wall hurts (10 × speed lost − 3). It wears 1 use per second of flight (432 uses) and stops working at 1 use left; mend it with **Drift Membrane** (a quarter per membrane) or another Voidwing at the anvil.
+* **Sky Rockets** (paper + blast powder → 3; reference: firework rockets): used while gliding they push you towards 1.5 blocks/tick along the view for 20–31 ticks; used on a block they shoot up and burst into a ball of coloured sparks.
+* **Hushvine** (reference: chorus plant; `src/world/dimensions/hushvine.js`): knotty stalks branching up to four levels from Hollowstone, with **Hushvine Flowers** at the tips; planted flowers grow, branch and wither on random ticks; breaking a stalk brings down what it holds. Stalks drop **Hushfruit** (0–1): always edible (4 hunger), it teleports you to a random standing spot within 8 blocks. Smelted it pops (**Popped Hushfruit**); 4 popped fruit → 4 Hollowbrick; an Ember Rod over a popped fruit → 4 Wisp Rods.
+* Milestones: *Tear in the World*, *Into the Cinderdeep*, *Ember Hunter*, *Eye in the Dark*, *The Hollow*, *Wyrmslayer*, *Beyond the Rim*, *The City at the Edge*, *Lighter than Air*, *Wings of the Void*.
 
 ### Testing
 
 `/dimension <overworld|cinderdeep|hollow>` travels at once (to a safe spot; into the Hollow on the arrival platform). Dying away from the overworld respawns you at home.
 
-Code: `src/world/dimensions/` (registry and scaling, generators, portal logic, sanctums, the game-side `DimensionManager`), `src/sky/dimensionSky.js`, `src/mobs/dimensionMobs.js`, `src/mobs/voidWyrm.js`, `src/entities/fireball.js`, `src/entities/voidEye.js`.
+`/locate city` and `/locate gate` find Hollow Cities and the Far Gate in the Hollow.
+
+Code: `src/world/dimensions/` (registry and scaling, generators, portal logic, sanctums, Hollow Cities, Hushvine, the outer islands' textures, the game-side `DimensionManager`), `src/sky/dimensionSky.js`, `src/mobs/dimensionMobs.js`, `src/mobs/voidWyrm.js`, `src/mobs/gloomshell.js`, `src/player/glider.js`, `src/entities/fireball.js`, `src/entities/voidEye.js`, `src/entities/skyRocket.js`. Tests: `tests/hollow_outer.test.js` (Far Gate, island layout, city plans and loot, Levitation, glider physics and a full glide, Gloomshell Boxes, Hushvine).
 
 ## Deliberate deviations
 
@@ -472,6 +483,7 @@ Code: `src/world/dimensions/` (registry and scaling, generators, portal logic, s
 * **Water physics**: no flowing-water push currents; fluid surfaces are flat
   per block (no sloped corner heights); no bubble columns.
 * **Explosions** do not set fire and do not knock items back.
+* **The Hollow's late game**: there is a single Far Gate (the reference opens a new gateway per boss kill, up to 20) and it stands on the island's rim instead of floating at y 75; its far end is generated with the island rather than built on first use. Gloomshells spawn naturally inside a city's bounds (up to 6) instead of being placed with it, they sit on floors only, and Drift Sparks cannot be shot down. The ship's Voidwing lies in a chest rather than an item frame. Hollow Cities are a fixed house-tower-bridge-ship layout rather than the reference's random piece grammar.
 * **Torches** can only be placed on the top of blocks.
 * **Furnace** state is stored by block position rather than as a block entity;
   breaking a furnace drops its contents.

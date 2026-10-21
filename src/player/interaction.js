@@ -17,6 +17,8 @@ import { placeMeta as circuitPlaceMeta, useMeta as circuitUseMeta } from '../wor
 import { choosePainting, placePainting } from '../world/paintings.js';
 import { tryLightRift, findHollowRing, fillHollowGate } from '../world/dimensions/portal.js';
 import { LEAVES, SAPLING_TREE, growTree } from '../world/trees.js';
+import { useSkyRocket } from '../entities/skyRocket.js';
+import { hushfruitTeleport } from '../world/dimensions/hushvine.js';
 import { sideOf, SIDE_DIRS, DOOR_OPEN, DOOR_UPPER, BED_HEAD, SLAB_TOP, SLAB_DOUBLE, STAIRS_UPSIDE, GATE_OPEN, TRAPDOOR_OPEN, TRAPDOOR_TOP } from '../world/shapes.js';
 
 /** Brightness for block particles: local light, dimmed with the combined sunlight (as the held item). */
@@ -34,7 +36,7 @@ const ORE_XP = {
 };
 const BREAK_DELAY = 5;
 /** Blocks that right-click opens / toggles instead of using the held item. */
-const USABLE_BLOCKS = new Set([B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.CHEST, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL, B.BREWING_STAND]);
+const USABLE_BLOCKS = new Set([B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.CHEST, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL, B.BREWING_STAND, B.GLOOMSHELL_BOX]);
 const CIRCUIT_USE = new Set([B.LEVER, B.STONE_BUTTON, B.REPEATER, B.CHIME_BLOCK]);
 const CIRCUIT_PLACE = new Set([B.LEVER, B.STONE_BUTTON, B.CINNABAR_WIRE, B.REPEATER, B.WOODEN_PRESSURE_PLATE, B.PISTON, B.STICKY_PISTON]);
 const USE_DELAY = 4;
@@ -128,7 +130,7 @@ export class Interaction {
     // food that is also a seed (carrots) is planted when aimed at the top of farmland
     const plants = d && d.places && this.target && this.target.id === B.FARMLAND && this.target.face[1] === 1;
     if (input.right && d && d.food && !plants) {
-      if (p.hunger.canEat()) {
+      if (p.hunger.canEat() || d.food.always) {
         this.eating++;
         if (this.eating % 4 === 0) g.audio.play('eat');
         if (this.eating >= EAT_TICKS) { this.eat(st); this.eating = 0; }
@@ -176,6 +178,11 @@ export class Interaction {
       if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
       g.audio.play('bow', [ex, ey, ez], 0.5);
       this.swing = SWING_TICKS;
+      return;
+    }
+    // Sky Rockets: a boost while gliding, or launched from the clicked block
+    if (d && d.rocket && input.rightPressed && !(this.target && USABLE_BLOCKS.has(this.target.id) && !p.sneaking)) {
+      if (useSkyRocket(g, this.target)) { if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1); this.swing = SWING_TICKS; }
       return;
     }
     if (input.right && this.useDelay === 0) {
@@ -280,6 +287,16 @@ export class Interaction {
     p.inventory.removeFromSlot(p.inventory.selected, 1);
     if (f.leaves) p.inventory.add({ id: I.BOWL, count: 1, damage: 0 }); // soup leaves its bowl
     g.audio.play('burp');
+    if (f.teleport) {
+      // Hushfruit: off to a random spot within 8 blocks
+      const to = hushfruitTeleport((x, y, z) => g.world.getBlock(x, y, z), p.x, p.y, p.z, Math.random, g.world.dimension === 'overworld' ? -64 : 0);
+      if (to) {
+        g.particles.smoke(p.x, p.y + 1, p.z, 10, 0.6);
+        p.setPosition(to.x, to.y, to.z);
+        p.gliding = false;
+        g.audio.play('teleport', [to.x, to.y + 1, to.z]);
+      }
+    }
   }
 
   /** Finish drinking: an elixir's effects (glass vial back) or milk (clears all effects, bucket back). */
@@ -490,7 +507,7 @@ export class Interaction {
         this.swing = SWING_TICKS;
         return true;
       }
-      if (t.id === B.CHEST) { g.ui.openChest(t.x, t.y, t.z); g.audio.play('chest_open', [t.x + 0.5, t.y + 0.5, t.z + 0.5]); return true; }
+      if (t.id === B.CHEST || t.id === B.GLOOMSHELL_BOX) { g.ui.openChest(t.x, t.y, t.z); g.audio.play('chest_open', [t.x + 0.5, t.y + 0.5, t.z + 0.5]); return true; }
     }
     if (!st) return false;
     // Bone meal: crops grow 2-5 stages; on grass it sprouts tall grass and flowers around
@@ -592,6 +609,7 @@ export class Interaction {
       return true;
     }
     w.setBlockUrgent(px, py, pz, placeId, meta);
+    if (placeId === B.GLOOMSHELL_BOX && g.onBoxPlaced) g.onBoxPlaced(px, py, pz, st); // the box unpacks what it carried
     if (CROPS.has(placeId) && g.milestones) g.milestones.event('plant');
     if (isFluid(placeId)) w.scheduleTick(px, py, pz, 5);
     g.audio.play('place_' + BLOCKS[placeId].sound, [px + 0.5, py + 0.5, pz + 0.5]);

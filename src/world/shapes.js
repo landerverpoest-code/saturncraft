@@ -230,6 +230,8 @@ const LANTERN_HANGING = [[5 / 16, 1 / 16, 5 / 16, 11 / 16, 8 / 16, 11 / 16], [6 
 // Brewing Alembic: base plate, ember rod and a cross-shaped arm near the top
 const ALEMBIC_BOXES = [[2 / 16, 0, 2 / 16, 14 / 16, 2 / 16, 14 / 16], [7 / 16, 2 / 16, 7 / 16, 9 / 16, 14 / 16, 9 / 16],
   [3 / 16, 11 / 16, 7.5 / 16, 13 / 16, 12 / 16, 8.5 / 16], [7.5 / 16, 11 / 16, 3 / 16, 8.5 / 16, 12 / 16, 13 / 16]];
+// Wyrm Head trophy: a skull with a snout on the side it faces (the front texture is drawn on it)
+const WYRM_HEAD_BOXES = [[3 / 16, 0, 3 / 16, 13 / 16, 10 / 16, 13 / 16]];
 const ALEMBIC_COLLISION = [ALEMBIC_BOXES[0], [7 / 16, 2 / 16, 7 / 16, 9 / 16, 14 / 16, 9 / 16]];
 export function blockBoxes(id, meta) {
   if (id === B.ANVIL) return meta & 1 ? ANVIL_Z : ANVIL_X;
@@ -240,6 +242,7 @@ export function blockBoxes(id, meta) {
   if (id === B.COCOA) return [cocoaBox(meta)];
   if (id === B.LANTERN) return meta & 1 ? LANTERN_HANGING : LANTERN_STANDING;
   if (id === B.BREWING_STAND) return ALEMBIC_BOXES;
+  if (id === B.WYRM_HEAD) return WYRM_HEAD_BOXES;
   return TABLE_BOXES;
 }
 /** One box enclosing all of a SHAPE.BOXES block (selection outline). */
@@ -261,6 +264,7 @@ export const snowBox = (meta, collide = false) => [0, 0, 0, 1, ((meta & 7) + (co
 for (const id of [B.OAK_FENCE, B.SPRUCE_FENCE, B.BIRCH_FENCE, B.OAK_FENCE_GATE]) SHAPED_COLLISION[id] = 1;
 for (const id of [B.PISTON, B.STICKY_PISTON, B.PISTON_HEAD]) SHAPED_COLLISION[id] = 1;
 for (const id of [B.OAK_SLAB, B.COBBLESTONE_SLAB, B.STONE_BRICK_SLAB, B.SANDSTONE_SLAB, B.OAK_STAIRS, B.COBBLESTONE_STAIRS, B.STONE_BRICK_STAIRS, B.SANDSTONE_STAIRS]) SHAPED_COLLISION[id] = 1;
+for (const id of [B.HOLLOWBRICK_SLAB, B.HOLLOWBRICK_STAIRS, B.WYRM_HEAD]) SHAPED_COLLISION[id] = 1;
 
 /**
  * Collision boxes of a solid non-cube block, or null for an ordinary full

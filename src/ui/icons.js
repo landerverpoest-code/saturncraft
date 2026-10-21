@@ -204,12 +204,12 @@ function itemIcon(d) {
   } else if (d.dye) {
     const [r, g, b] = COLORS[d.dye][2];
     tpl = T.dust; colors = { h: '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('') };
-  } else if (d.armor) {
+  } else if (d.armor && !d.iconStyle) {
     tpl = T[d.armor.piece];
     colors = { h: ARMOR_MATERIALS[d.armor.material].color };
   } else {
     const st = d.iconStyle || ITEM_STYLE[d.key] || ['lump', { h: '#ff00ff' }];
-    tpl = T[st[0]]; colors = st[1];
+    tpl = Array.isArray(st[0]) ? st[0] : T[st[0]]; colors = st[1]; // a style may bring its own template
   }
   const c = document.createElement('canvas'); c.width = c.height = 32;
   const ctx = c.getContext('2d');
@@ -311,6 +311,12 @@ export function tooltipHTML(st, extra = '') {
       h += `<div class="${good ? 'tt-good' : 'tt-bad'}">${esc(effectLabel(type, amp))}${EFFECTS[type].instant ? '' : ` (${formatTicks(ticks)})`}</div>`;
     }
     if (d.potion.splash) h += '<div class="tt-dura">Thrown: affects all within 4 blocks</div>';
+  }
+  if (Array.isArray(st.contents)) {
+    // a Gloomshell Box lists the first few things it carries (reference: shulker box tooltip)
+    const held = st.contents.filter(Boolean);
+    for (const s of held.slice(0, 5)) h += `<div class="tt-dura">${esc(ITEMS[s.id] ? ITEMS[s.id].name : '?')} x${s.count}</div>`;
+    if (held.length > 5) h += `<div class="tt-dura">and ${held.length - 5} more...</div>`;
   }
   return h;
 }

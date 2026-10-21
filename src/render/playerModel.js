@@ -56,6 +56,7 @@ export class PlayerModel {
     this.root.rotation.set(0, this.bodyYaw, 0);
     if (p.sleeping) this.root.rotation.set(-Math.PI / 2, p.yaw, 0, 'YXZ');
     if (p.swimming) { this.root.rotation.set(-Math.PI / 2 - p.pitch, p.yaw, 0, 'YXZ'); this.root.position.y += 0.3; } // flat, head first
+    if (p.gliding) { this.root.rotation.set(-Math.PI / 2 - p.pitch * 0.8, p.yaw, 0, 'YXZ'); this.root.position.y += 0.3; this.bodyYaw = p.yaw; } // Voidwing: stretched out along the flight
     this.anim.hurtTime = p.hurtTime;
     this.anim.headPitch = p.pitch;
     const L = lightAt(game, x, y + 1.6, z);

@@ -155,5 +155,7 @@ function makeTarget(rp) {
     hurt(amount, source = 'generic', attacker = null) {
       return rp.session ? rp.session.targetHurt(rp, amount, source, attacker) : false;
     },
+    // a lasting effect (e.g. a Gloomshell's Levitation): their own game applies it
+    addEffect(type, ticks, amp = 0) { return rp.session ? rp.session.effectRemote(rp, type, ticks, amp) : false; },
   };
 }

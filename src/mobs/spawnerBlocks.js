@@ -4,6 +4,7 @@
 // Also rolls the loot of dungeon chests.
 import { B, SOLID } from '../world/blocks.js';
 import { I } from '../world/items.js';
+import { hollowCityLoot, LOOT_CITY, LOOT_SHIP } from '../world/dimensions/hollowCity.js';
 
 export const SPAWNER_TYPES = ['shambler', 'rattler', 'skitterer'];
 export const SPAWNER_RANGE = 16, SPAWN_COUNT = 4, MAX_NEARBY = 6;
@@ -72,7 +73,7 @@ function pick(table, rng) {
 
 /** 27 chest slots filled with dungeon loot at random positions. */
 // Structure loot (chest meta bits 4-7): [table, rolls min, rolls max] per structure
-export const LOOT = { DUNGEON: 0, MINESHAFT: 1, DESERT: 2, JUNGLE: 3, IGLOO: 4, WRECK: 5, OUTPOST: 6 };
+export const LOOT = { DUNGEON: 0, MINESHAFT: 1, DESERT: 2, JUNGLE: 3, IGLOO: 4, WRECK: 5, OUTPOST: 6, HOLLOW_CITY: LOOT_CITY, HOLLOW_SHIP: LOOT_SHIP };
 const STRUCTURE_LOOT = {
   [LOOT.MINESHAFT]: [[[I.IRON_INGOT, 1, 5, 10], [I.GOLD_INGOT, 1, 3, 5], [I.CINNABAR, 4, 9, 5], [I.AZURITE, 4, 9, 5], [I.DIAMOND, 1, 2, 3], [I.COAL, 3, 8, 10], [I.BREAD, 1, 3, 15], [B.RAIL, 4, 8, 20], [I.MELON_SLICE, 2, 4, 10], [I.PUMPKIN_PIE, 1, 2, 5], [I.IRON_PICKAXE, 1, 1, 2]], 3, 6],
   [LOOT.DESERT]: [[[I.DIAMOND, 1, 3, 5], [I.IRON_INGOT, 1, 5, 15], [I.GOLD_INGOT, 2, 7, 15], [I.BERYL, 1, 3, 15], [I.BONE, 4, 6, 25], [I.SPIDER_EYE, 1, 3, 25], [I.ROTTEN_FLESH, 3, 7, 25], [I.SADDLE, 1, 1, 20], [I.GOLD_CHESTPLATE, 1, 1, 3]], 2, 5],
@@ -83,6 +84,7 @@ const STRUCTURE_LOOT = {
 };
 
 export function dungeonLoot(rng = Math.random, kind = LOOT.DUNGEON) {
+  if (kind === LOOT.HOLLOW_CITY || kind === LOOT.HOLLOW_SHIP) return hollowCityLoot(rng, kind === LOOT.HOLLOW_SHIP); // enchanted gear, Voidwing
   const items = [];
   const t = STRUCTURE_LOOT[kind];
   if (t) {
