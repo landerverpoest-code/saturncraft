@@ -667,12 +667,12 @@ export class Interaction {
   }
 
   /** Feed / breed / shear a passive mob. Returns true if something happened. */
-  /** Howlers: tame a wild one with bones (1 in 3), heal/breed a tame one with meat, otherwise sit/stand. */
+  /** Howlers (bones) and Purrlings (fish): tame a wild one (1 in 3), heal/breed a tame one with meat, otherwise sit/stand. */
   interactHowler(mob, st, d) {
     const g = this.game, p = g.player;
     const use = () => { if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1); this.swing = SWING_TICKS; };
     if (!mob.tamed) {
-      if (!st || st.id !== I.BONE || mob.target) return false;
+      if (!st || !(mob.def.tameFood || [I.BONE]).includes(st.id) || mob.target) return false;
       use();
       if (Math.random() < 1 / 3) {
         mob.tame(g);

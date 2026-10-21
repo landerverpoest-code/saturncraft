@@ -354,6 +354,7 @@ poison from eyes) follow the documented table.
 * Pumpkin patches (plains, taiga) and melons (forests): pumpkin + torch = pumpkin lantern (light 15), melons drop 3–7 slices, pumpkin pie
 * Howlers (wolves) in packs of 4 in forests and taiga: they hunt Fleecers and Clucklings and the whole pack turns on whoever hurts one; tame with bones (1 in 3), then they sit/stand on right-click, follow you (teleporting when over 12 blocks away), attack what hurts you or what you hit, heal and breed with meat (pups are tame), red collar
 * Gallopers (horses) in plains and savannas, in five coats with their own health and jump strength: climb on with an empty hand; a wild one bucks you off after a few seconds but may accept you (the chance grows each time and with wheat or apples); saddle a tame one (3 leather + iron) to ride it with WASD, sprint and Space to jump; they step up whole blocks
+* Purrlings (cats) in six coats roam every village: they shy away from players, creep closer to someone standing still with raw fish, and are tamed with fish (1 in 3); tame ones sit on command, follow and teleport to their owner, breed with fish, and Fizzlers within 6 blocks back off from them and their fuse goes out
 * Hoppers (rabbits) hop through plains, taiga, snow and desert and drop raw rabbit and hide (4 hides make leather); Frostbears roam the snowy plains, peaceful until one is hit, then the whole group fights back; Vixlings (foxes) doze in the daytime, run from players who do not sneak, and hunt Clucklings and Hoppers at night
 * Sprint-swimming: sprint with your head under water to swim flat (0.6 high) in the direction you look at about 5.6 blocks/s, shown on the player model
 * Compass (4 iron + cinnabar: its needle points at the world spawn, and spins in other dimensions) and clock (4 gold + cinnabar: shows the sky brightness and how many suns are up), both live in your hand
@@ -413,7 +414,7 @@ poison from eyes) follow the documented table.
 **Not yet implemented**
 
 * Lingering elixirs and tipped arrows, Turtle Master / Decay / Luck elixirs, beacons (Haste only comes from `/effect`), Mining Fatigue, Absorption and Wither effects; effect particles of other players in multiplayer
-* Taming of animals other than Howlers and Gallopers
+* Taming of animals other than Howlers, Purrlings and Gallopers
 * Large structures beyond villages, temples, wrecks, outposts, dungeons, sanctums and bastions; job-site blocks; Hollow outer-island cities
 * Hoppers, dispensers and other item-moving containers
 * Witches (elixir-throwing monsters), drowned, husks/strays as separate variants, baby mobs, mob equipment

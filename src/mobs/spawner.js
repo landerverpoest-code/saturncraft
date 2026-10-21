@@ -187,6 +187,11 @@ export class MobSpawner {
     for (const v of villagesNear(this.game.world.gen, cx * 16, cz * 16, cx * 16 + 15, cz * 16 + 15)) {
       if (Math.floor((v.cx + 3) / 16) !== cx || Math.floor(v.cz / 16) !== cz) continue;
       this.spawnMob('ironguard', v.cx + 3.5, this.game.world.heightAt(v.cx + 3, v.cz) + 1, v.cz + 0.5);
+      // and a few stray Purrlings roam the village
+      for (let k = 0; k < 2; k++) {
+        const x = v.cx + Math.floor(Math.random() * 13) - 6, z = v.cz + Math.floor(Math.random() * 13) - 6;
+        this.spawnMob('purrling', x + 0.5, this.game.world.heightAt(x, z) + 1, z + 0.5);
+      }
     }
     // Herds placed at chunk generation time
     const w = this.game.world;

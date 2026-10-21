@@ -25,6 +25,9 @@ function angleTo(dx, dz) { return Math.atan2(-dx, -dz); }
 function wrap(a) { while (a > Math.PI) a -= TAU; while (a < -Math.PI) a += TAU; return a; }
 function gaussian() { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(TAU * v); }
 
+/** Purrling coats: [fur, ears and tail] (ginger, tabby grey, black, white, calico-ish brown, siamese cream). */
+const CAT_COATS = [['#c8883a', '#a86a2a'], ['#8a8a86', '#5a5a56'], ['#2a2626', '#141212'], ['#ecebe6', '#c8c6c0'], ['#8a6040', '#3a2a1e'], ['#e8dcc0', '#5a4636']];
+
 export class Mob {
   constructor(type, x, y, z) {
     this.id = nextMobId++;
@@ -54,7 +57,7 @@ export class Mob {
     // breeding: age < 0 is a baby growing up, age > 0 a breeding cooldown
     this.age = 0; this.loveTicks = 0; this.breedTime = 0;
     this.sheared = false; this.eatTimer = 0;
-    this.woolColor = type === 'fleecer' ? randomSheepColor() : 0;
+    this.woolColor = type === 'fleecer' ? randomSheepColor() : type === 'purrling' ? Math.floor(Math.random() * CAT_COATS.length) : 0; // (Purrlings keep their coat here)
     // settlers: profession, trade offers and the house they live in
     this.profession = null; this.trades = []; this.home = null; this.lastRestock = 0;
     // Howlers: tamed by the player (owner), sitting, current enemy
@@ -258,6 +261,8 @@ export class Mob {
       if (g) for (let k = 0; k < 20; k++) g.particles.emit(this.x, this.y + 0.4, this.z, (Math.random() - 0.5) * 0.3, (Math.random() - 0.5) * 0.3, (Math.random() - 0.5) * 0.3, 0.05, 0.05, 0.08, 40, 0);
       this.panicTicks = 40;
       if (attacker) { const dx = this.x - attacker.x, dz = this.z - attacker.z, d = Math.hypot(dx, dz) || 1; this.swimDir = [dx / d, 0.2, dz / d]; }
+    } else if (this.def.feline) {
+      this.sitting = false; this.panicTicks = 60 + Math.floor(Math.random() * 40);
     } else if (this.def.tameable) {
       // a hurt Howler stands up and fights back; a wild one calls its pack
       this.sitting = false;
@@ -487,6 +492,7 @@ export class Mob {
   // ---------------------------------------------------------------------------
   ai(g, p, pdist) {
     if (this.def.villager) return this.settlerAI(g, p, pdist);
+    if (this.def.feline) return this.catAI(g, p, pdist);
     if (this.def.tameable) return this.howlerAI(g, p, pdist);
     if (this.def.neutralBeast) return this.bearAI(g, p, pdist);
     if (this.def.fox) return this.foxAI(g, p, pdist);
@@ -625,6 +631,41 @@ export class Mob {
       }
     }
     this.wanderAI(g, 1);
+  }
+
+  /** Purrlings: strays roam villages and shy away from players unless tempted with fish; tame ones sit or follow their owner. */
+  catAI(g, p, pdist) {
+    if (this.age < 0) { if (++this.age === 0) this.setBaby(false); } else if (this.age > 0) this.age--;
+    this.headPitch = 0;
+    if (this.panicTicks > 0) return this.passiveAI(g);
+    if (this.tamed && this.sitting) { this.move = null; this.headPitch = pdist < 6 ? -0.2 : 0; return; }
+    if (this.loveTicks > 0) {
+      this.loveTicks--;
+      if (g.ticks % 10 === 0) this.hearts(g, 1);
+      const mate = this.findMate(g);
+      if (mate) {
+        const d = Math.hypot(mate.x - this.x, mate.z - this.z);
+        if (d > 1.2) this.steer(mate.x, mate.z, 1);
+        if (d < 3 && ++this.breedTime >= 60 && this.id < mate.id) this.breed(g, mate);
+        return;
+      }
+    }
+    if (this.tamed && !p.dead) {
+      if (pdist > 12) { if (this.teleportTo(g, p.x + (Math.random() - 0.5) * 3, p.z + (Math.random() - 0.5) * 3, p.y + 2)) return; }
+      if (pdist > 5) { this.chase(g, p, 1.3); return; }
+      if (pdist < 2) { this.wander = null; this.path = null; return; }
+      this.wanderAI(g, 0.7);
+      return;
+    }
+    if (this.tempted(g)) {
+      // a stray creeps closer to a player holding fish, but only while they stand still
+      const still = Math.hypot(p.body.vx, p.body.vz) < 0.02;
+      if (still && pdist > 2) this.steer(p.x, p.z, 0.6); else this.move = null;
+      this.yaw = Math.atan2(-(p.x - this.x), -(p.z - this.z));
+      return;
+    }
+    if (!p.dead && !p.creative && pdist < 4 && !p.sneaking) { this.steer(this.x + (this.x - p.x) * 3, this.z + (this.z - p.z) * 3, 1.4); return; }
+    this.wanderAI(g, 0.8);
   }
 
   /** Frostlings throw snowballs at monsters within 10 blocks, leave a trail of snow and melt in warm places and rain. */
@@ -939,6 +980,16 @@ export class Mob {
   }
 
   fizzlerAI(g, p, pdist) {
+    // Fizzlers are afraid of Purrlings: they back off and their fuse goes out
+    if (this.fearOf === undefined || g.ticks % 10 === this.id % 10) {
+      this.fearOf = null;
+      for (const e of g.entities.list) if (e.type === 'purrling' && !e.dead && (e.x - this.x) ** 2 + (e.z - this.z) ** 2 < 36 && Math.abs(e.y - this.y) < 4) { this.fearOf = e; break; }
+    }
+    if (this.fearOf) {
+      this.fuse = Math.max(0, this.fuse - 1);
+      this.steer(this.x + (this.x - this.fearOf.x) * 4, this.z + (this.z - this.fearOf.z) * 4, 1.3);
+      return;
+    }
     const has = this.acquire(g, p, pdist, this.def.followRange);
     const d2 = (p.x - this.x) ** 2 + (p.y - this.y) ** 2 + (p.z - this.z) ** 2;
     let dir = -1;
@@ -1054,6 +1105,13 @@ export class Mob {
     }
     if (parts && parts.collar) {
       parts.collar.visible = this.tamed;
+      if (this.type === 'purrling' && m.userData.coat !== this.woolColor) {
+        m.userData.coat = this.woolColor;
+        const [fur, dark] = CAT_COATS[this.woolColor % CAT_COATS.length];
+        const tint = (k, col) => { const mm = parts[k].children[0].material; for (const x of Array.isArray(mm) ? [mm[0], mm[5]] : [mm]) x.userData.base.set(col); };
+        for (const k of ['body', 'mane', 'head', 'legFL', 'legFR', 'legBL', 'legBR']) tint(k, fur);
+        for (const k of ['earL', 'earR', 'tail']) tint(k, dark);
+      }
       for (const k of ['snout', 'nose', 'earL', 'earR']) parts[k].rotation.x = parts.head.rotation.x;
       // sitting: hindquarters down, chest up, tail on the ground
       const sit = this.sitting && this.deathTime === 0;

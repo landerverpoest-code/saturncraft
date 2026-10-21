@@ -72,6 +72,11 @@ export const MOBS = {
     health: 8, tamedHealth: 20, speed: 0.3, width: 0.6, height: 0.85, attack: 2, tamedAttack: 4, sound: 'howl',
     drops: [], food: [I.RAW_PORK, I.COOKED_PORK, I.RAW_BEEF, I.STEAK, I.RAW_CHICKEN, I.COOKED_CHICKEN, I.RAW_MUTTON, I.COOKED_MUTTON, I.ROTTEN_FLESH],
   },
+  purrling: {
+    name: 'Purrling', role: 'cat', category: CATEGORY.CREATURE, tameable: true, feline: true, noFallDamage: true,
+    health: 10, tamedHealth: 10, speed: 0.3, width: 0.6, height: 0.7, attack: 0, tamedAttack: 0, sound: 'mew', panicSpeed: 1.6,
+    drops: [{ id: I.STRING, min: 0, max: 2 }], food: [I.RAW_SILVERFIN, I.RAW_REDFIN], tameFood: [I.RAW_SILVERFIN, I.RAW_REDFIN],
+  },
   ironguard: {
     name: 'Ironguard', role: 'iron golem', category: CATEGORY.CREATURE, guard: true,
     health: 100, speed: 0.25, width: 1.4, height: 2.7, attack: 7, sound: 'clank', noFallDamage: true, knockbackResist: true,
