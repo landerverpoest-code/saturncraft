@@ -159,6 +159,11 @@ export class Interaction {
       this.swing = SWING_TICKS;
       return;
     }
+    if (d && d.horn && input.rightPressed) {
+      // a Crag Horn sounds far and wide (7 s cooldown)
+      if (g.ticks >= (this.hornReady || 0)) { this.hornReady = g.ticks + 140; g.audio.play('horn', [p.x, p.y + 1.5, p.z]); }
+      return;
+    }
     if (d && d.emptyMap && input.rightPressed) {
       // an empty map becomes a map of the 128-block square around the player
       const m = g.createMap(p.x, p.z);
@@ -705,7 +710,7 @@ export class Interaction {
     const g = this.game, p = g.player, st = p.inventory.selectedStack, d = st && ITEMS[st.id];
     if (mob.isRemotePlayer) return false;
     // milking a grown Mooxen with an empty bucket (no change to the mob, so guests do it themselves)
-    if (st && st.id === I.BUCKET && mob.type === 'mooxen' && mob.deathTime === 0 && !mob.baby) {
+    if (st && st.id === I.BUCKET && (mob.type === 'mooxen' || mob.type === 'cragbuck') && mob.deathTime === 0 && !mob.baby) {
       const milk = { id: I.MILK_BUCKET, count: 1, damage: 0 };
       p.inventory.removeFromSlot(p.inventory.selected, 1);
       if (!p.inventory.selectedStack) p.inventory.slots[p.inventory.selected] = milk;

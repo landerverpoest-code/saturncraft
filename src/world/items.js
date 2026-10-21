@@ -202,6 +202,7 @@ for (const kind of POTION_KEYS) {
 
 // maps: an empty map is filled in where it is first used (stack.map = id, mapX/mapZ = the 128-block square)
 item('empty_map', 'Empty Map', { emptyMap: true, iconStyle: ['map', { p: '#e8dcb8', e: '#a89868', g: '#e8dcb8', w: '#e8dcb8' }] });
+item('crag_horn', 'Crag Horn', { stack: 1, horn: true, iconStyle: ['horn', { h: '#c8bca0', H: '#e8dcc0', s: '#8a7a5a' }] });
 item('filled_map', 'Map', { stack: 1, filledMap: true, iconStyle: ['map', { p: '#e8dcb8', e: '#a89868', g: '#5a9a3a', w: '#3a6ad8' }] });
 
 // Fuel for block items

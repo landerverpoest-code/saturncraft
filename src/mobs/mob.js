@@ -28,6 +28,9 @@ function gaussian() { let u = 0, v = 0; while (!u) u = Math.random(); while (!v)
 /** Purrling coats: [fur, ears and tail] (ginger, tabby grey, black, white, calico-ish brown, siamese cream). */
 const CAT_COATS = [['#c8883a', '#a86a2a'], ['#8a8a86', '#5a5a56'], ['#2a2626', '#141212'], ['#ecebe6', '#c8c6c0'], ['#8a6040', '#3a2a1e'], ['#e8dcc0', '#5a4636']];
 
+/** Blocks that knock a horn off a charging Cragbuck. */
+const HORN_BREAKERS = new Set([B.STONE, B.COBBLESTONE, B.OAK_LOG, B.BIRCH_LOG, B.SPRUCE_LOG, B.JUNGLE_LOG, B.ACACIA_LOG, B.DARK_OAK_LOG, B.COAL_ORE, B.IRON_ORE, B.GOLD_ORE, B.DIAMOND_ORE, B.ICE, B.GRANITE].filter((id) => id !== undefined));
+
 export class Mob {
   constructor(type, x, y, z) {
     this.id = nextMobId++;
@@ -96,12 +99,13 @@ export class Mob {
   }
 
   /** State kept when the mob is saved with its chunk. */
-  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor, profession: this.profession, trades: this.trades, home: this.home, lastRestock: this.lastRestock, size: this.size, coat: this.coat, temper: this.temper, saddled: this.saddled, maxHp: this.maxHp, playerMade: this.playerMade, tamed: this.tamed, sitting: this.sitting, ownerName: this.ownerName }; }
+  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor, profession: this.profession, trades: this.trades, home: this.home, lastRestock: this.lastRestock, size: this.size, coat: this.coat, temper: this.temper, saddled: this.saddled, maxHp: this.maxHp, playerMade: this.playerMade, tamed: this.tamed, sitting: this.sitting, ownerName: this.ownerName, horns: this.horns }; }
   loadData(s) {
     this.health = s.health; this.yaw = s.yaw;
     if (s.age < 0) { this.setBaby(true); this.age = s.age; } else this.age = s.age || 0;
     this.sheared = !!s.sheared;
     if (s.woolColor !== undefined) this.woolColor = s.woolColor;
+    if (s.horns !== undefined) this.horns = s.horns;
     if (s.playerMade) this.playerMade = true;
     if (s.size) { this.setSize(s.size); this.health = s.health; }
     if (this.type === 'galloper') { if (s.coat !== undefined) this.coat = s.coat; this.temper = s.temper || 0; this.saddled = !!s.saddled; if (s.maxHp) this.maxHp = s.maxHp; }
@@ -493,6 +497,7 @@ export class Mob {
   ai(g, p, pdist) {
     if (this.def.villager) return this.settlerAI(g, p, pdist);
     if (this.def.feline) return this.catAI(g, p, pdist);
+    if (this.def.goat) return this.goatAI(g, p, pdist);
     if (this.def.tameable) return this.howlerAI(g, p, pdist);
     if (this.def.neutralBeast) return this.bearAI(g, p, pdist);
     if (this.def.fox) return this.foxAI(g, p, pdist);
@@ -632,6 +637,66 @@ export class Mob {
     }
     this.wanderAI(g, 1);
   }
+
+  /**
+   * Cragbucks leap about the peaks and now and then (every 30-300 s) ram a
+   * player or another animal within 16 blocks: they lower their head, charge
+   * and send the target flying. Ramming a log, stone or ore can knock off a
+   * horn (each goat has two).
+   */
+  goatAI(g, p, pdist) {
+    const b = this.body;
+    if (this.ramCooldown === undefined) { this.ramCooldown = 600 + Math.floor(Math.random() * 5400); this.horns = this.horns ?? 2; }
+    if (this.panicTicks > 0) { this.ram = null; return this.passiveAI(g); }
+    const r = this.ram;
+    if (r) {
+      const t = r.target === 'player' ? p : r.target;
+      if (!t || t.dead || (t.deathTime | 0) > 0 || r.ticks++ > 90 || (r.target === 'player' && (p.creative || p.dead))) { this.endRam(); return; }
+      this.yaw = Math.atan2(-(t.x - this.x), -(t.z - this.z));
+      if (r.ticks < 30) { this.move = null; this.headPitch = 0.5; return; } // head down, then go
+      this.headPitch = 0.6;
+      this.move = { forward: 1, mod: 2.6 };
+      const dx = t.x - this.x, dz = t.z - this.z, d = Math.hypot(dx, dz) || 1;
+      if (d < this.width / 2 + 0.8 && Math.abs(t.y - this.y) < 1.5) {
+        const k = this.age < 0 ? 1 : 2.2, dmg = this.age < 0 ? 1 : 2;
+        if (r.target === 'player') { p.hurt(dmg, 'mob:' + this.def.name, this); p.body.vx += (dx / d) * k * 0.6; p.body.vz += (dz / d) * k * 0.6; p.body.vy = Math.max(p.body.vy, 0.45); }
+        else { t.hurt(dmg, 'mob:' + this.def.name, this, k * 0.5); }
+        g.audio.play('ram', [this.x, this.y + 1, this.z]);
+        this.endRam();
+        return;
+      }
+      if (b.horizontalCollision && r.ticks > 36) {
+        // straight into a wall: hard blocks may knock off a horn
+        const fx = Math.floor(this.x - Math.sin(this.yaw) * (this.width / 2 + 0.3)), fz = Math.floor(this.z - Math.cos(this.yaw) * (this.width / 2 + 0.3));
+        const hit = g.world.getBlock(fx, Math.floor(this.y), fz);
+        if (this.horns > 0 && HORN_BREAKERS.has(hit)) {
+          this.horns--;
+          g.entities.spawnItem(this.x, this.y + 1, this.z, { id: I.CRAG_HORN, count: 1, damage: 0 });
+        }
+        g.audio.play('ram', [this.x, this.y + 1, this.z]);
+        this.endRam();
+      }
+      return;
+    }
+    this.headPitch = 0;
+    if (--this.ramCooldown <= 0 && b.onGround) {
+      this.ramCooldown = 200;
+      let target = null;
+      if (!p.dead && !p.creative && !p.sneaking && pdist < 16) target = 'player';
+      else for (const e of g.entities.list) {
+        if (e.kind === 'mob' && e !== this && e.type !== 'cragbuck' && e.deathTime === 0 && !e.def.flying && (e.x - this.x) ** 2 + (e.z - this.z) ** 2 < 256) { target = e; break; }
+      }
+      if (target) { this.ram = { target, ticks: 0 }; return; }
+    }
+    // a big leap now and then
+    if (b.onGround && this.wander && Math.random() < 0.006) {
+      b.vy = 0.62; const a = this.yaw; b.vx -= Math.sin(a) * 0.35; b.vz -= Math.cos(a) * 0.35;
+      if (Math.random() < 0.3) g.audio.play('bleat', [this.x, this.y + 1, this.z]);
+    }
+    this.passiveAI(g);
+  }
+
+  endRam() { this.ram = null; this.headPitch = 0; this.ramCooldown = 600 + Math.floor(Math.random() * 5400); }
 
   /** Purrlings: strays roam villages and shy away from players unless tempted with fish; tame ones sit or follow their owner. */
   catAI(g, p, pdist) {
@@ -1102,6 +1167,10 @@ export class Mob {
       }
       parts.saddle.visible = !!this.saddled;
       parts.tail.rotation.x = 0.5 + Math.sin(sec * 3 + this.id) * 0.1;
+    }
+    if (parts && this.type === 'cragbuck') {
+      for (const k of ['beard', 'hornL', 'hornR', 'earL', 'earR']) parts[k].rotation.x = parts.head.rotation.x;
+      parts.hornL.visible = (this.horns ?? 2) >= 1; parts.hornR.visible = (this.horns ?? 2) >= 2;
     }
     if (parts && parts.collar) {
       parts.collar.visible = this.tamed;

@@ -55,6 +55,8 @@ export const SPAWN_TABLES = {
     forest: [...FARM_ANIMALS, { type: 'howler', weight: 5, min: 4, max: 4 }],
     taiga: [...FARM_ANIMALS, { type: 'howler', weight: 8, min: 4, max: 4 }, { type: 'vixling', weight: 8, min: 2, max: 4 }, { type: 'hopper', weight: 4, min: 2, max: 3 }],
     snowy_taiga: [{ type: 'howler', weight: 8, min: 4, max: 4 }, { type: 'fleecer', weight: 6, min: 2, max: 4 }, { type: 'vixling', weight: 8, min: 2, max: 4 }, { type: 'hopper', weight: 4, min: 2, max: 3 }],
+    // Cragbucks (goats) on the high peaks
+    stony_peaks: [{ type: 'cragbuck', weight: 5, min: 1, max: 3 }], snowy_peaks: [{ type: 'cragbuck', weight: 5, min: 1, max: 3 }],
     snowy_plains: [{ type: 'hopper', weight: 10, min: 2, max: 3 }, { type: 'frostbear', weight: 2, min: 1, max: 2 }],
     desert: [{ type: 'hopper', weight: 4, min: 2, max: 3 }],
     default: [],
