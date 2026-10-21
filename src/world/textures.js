@@ -657,6 +657,13 @@ const GEN = {
     for (let y = 4; y < 12; y++) c.set(11, y, hex('#6b4a2a'));
     c.set(10, 4, hex('#9a9a9a')); c.set(12, 4, hex('#9a9a9a')); c.set(11, 3, hex('#9a9a9a'));
   },
+  hopper: (c) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const edge = x === 0 || y === 0 || x === 15 || y === 15;
+      c.set(x, y, shade(hex('#4a4a50'), edge ? 0.7 : 0.9 + ((x * 7 + y * 3) % 5) * 0.04));
+    }
+    for (let i = 3; i < 13; i++) { c.set(i, 3, hex('#2a2a2e')); c.set(i, 12, hex('#5e5e66')); }
+  },
   turtle_egg: (c) => {
     for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
       const spot = ((x * 7 + y * 11) % 13) < 2;

@@ -46,7 +46,7 @@ export const B = {
   BROWN_MUSHROOM_BLOCK: 121, RED_MUSHROOM_BLOCK: 122, MUSHROOM_STEM: 123, MYCELIUM: 124,
   SKYBELL: 125, ROSETTE: 126,
   // Other dimensions (ids from 160 up, see world/dimensions/): the Cinderdeep and the Hollow
-  SNOW_LAYER: 130, COBBLESTONE_WALL: 131, MOSSY_COBBLESTONE_WALL: 132, OAK_TRAPDOOR: 133, RAIL: 140, COBWEB: 141, TNT: 142, CAMPFIRE: 150, LANTERN: 151, PAINTING: 152, PAINTING_B: 153, OAK_SIGN: 154, OAK_WALL_SIGN: 155, ITEM_FRAME: 156, COCOA: 157, MELON_STEM: 158, PUMPKIN_STEM: 159, HAY_BALE: 171, BARREL: 127, BEE_NEST: 128, BEEHIVE: 129, TURTLE_EGG: 136,
+  SNOW_LAYER: 130, COBBLESTONE_WALL: 131, MOSSY_COBBLESTONE_WALL: 132, OAK_TRAPDOOR: 133, RAIL: 140, COBWEB: 141, TNT: 142, CAMPFIRE: 150, LANTERN: 151, PAINTING: 152, PAINTING_B: 153, OAK_SIGN: 154, OAK_WALL_SIGN: 155, ITEM_FRAME: 156, COCOA: 157, MELON_STEM: 158, PUMPKIN_STEM: 159, HAY_BALE: 171, BARREL: 127, BEE_NEST: 128, BEEHIVE: 129, TURTLE_EGG: 136, HOPPER: 137,
   SNOW_LAYER: 130, COBBLESTONE_WALL: 131, MOSSY_COBBLESTONE_WALL: 132, OAK_TRAPDOOR: 133,
   ENCHANTING_TABLE: 134, ANVIL: 135,
   BREWING_STAND: 143, CINDERROOT: 144,
@@ -147,6 +147,8 @@ def(B.BEE_NEST, 'Bee Nest', { hardness: 0.3, resistance: 0.3, tool: TOOL.AXE, so
 def(B.BEEHIVE, 'Beehive', { hardness: 0.6, resistance: 0.6, tool: TOOL.AXE, sound: 'wood', flammable: true, tex: { top: 'hive_top', bottom: 'hive_top', side: 'hive_side', front: 'hive_front' } });
 // Shellback eggs: meta bits 0-1 = eggs - 1, bits 2-3 = how cracked (they hatch after the third crack)
 def(B.TURTLE_EGG, 'Shellback Egg', { hardness: 0.5, resistance: 0.5, sound: 'stone', opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, drops: null, tex: { all: 'turtle_egg' } });
+// hopper: meta 0 = spout down, 1-4 = spout to SIDE_DIRS[meta - 1] (world/hoppers.js)
+def(B.HOPPER, 'Hopper', { hardness: 3, resistance: 4.8, tool: TOOL.PICKAXE, tier: TIER.WOOD, sound: 'metal', opaque: false, shape: SHAPE.BOXES, container: true, tex: { all: 'hopper' } });
 def(B.HAY_BALE, 'Hay Bale', { hardness: 0.5, resistance: 0.5, tool: TOOL.HOE, sound: 'grass', flammable: true, tex: { top: 'hay_top', bottom: 'hay_top', side: 'hay_side' } });
 // Cocoa pods: meta bits 0-1 the side of the jungle log they hang on, 2-3 the age (0-2)
 def(B.COCOA, 'Cocoa', { hardness: 0.2, resistance: 3, tool: TOOL.AXE, sound: 'wood', solid: false, opaque: false, shape: SHAPE.BOXES, needsSupport: true, drops: 'cocoa', tex: { top: 'cocoa_top', bottom: 'cocoa_top', side: 'cocoa' } });

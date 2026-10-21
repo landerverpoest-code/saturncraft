@@ -1,5 +1,7 @@
 // Game orchestrator: fixed 20 TPS simulation with interpolated rendering.
 import { Mob } from './mobs/mob.js';
+import { newHopper, hopperStep, HOPPER_COOLDOWN } from './world/hoppers.js';
+import { powerInto } from './world/circuits.js';
 import { newMap, updateMap, MAP_SIZE } from './world/maps.js';
 import { KEEP_BITS, unpairAfterBreak } from './world/chests.js';
 import * as THREE from 'three';
@@ -88,6 +90,7 @@ export class Game {
     this.frames = new Map();      // "x,y,z" -> the item stack in an item frame
     this.maps = new Map();        // map id -> filled map (world/maps.js)
     this.brewingStands = new Map(); // "x,y,z" -> Brewing Alembic state (see world/brewing.js)
+    this.hoppers = new Map();     // "x,y,z" -> hopper slots (see world/hoppers.js)
     this.fps = 0; this.frameCount = 0; this.fpsTime = 0;
     this.net = null;              // multiplayer session (src/net/session.js), null in single-player
   }
@@ -174,6 +177,7 @@ export class Game {
       e.meta = m; e.shatters = true;
       if (k === parts.length - 1) e.hurtLength = parts.length;
     });
+    this.world.on('blockChanged', (x, y, z, old, id) => { if (id === B.HOPPER) this.getHopper(x, y, z); }); // a new hopper starts working
     this.world.on('fireCrackle', (x, y, z) => this.audio.play('fire', [x + 0.5, y + 0.5, z + 0.5]));
     this.initCircuits();
     this.world.on('dropItems', (x, y, z, id, meta) => {
@@ -523,6 +527,25 @@ export class Game {
     if (m && m.dimension === this.world.dimension && this.ticks % 2 === 0) { updateMap(m, this.world, this.player.x, this.player.z, 600); m.dirty = true; }
   }
 
+  getHopper(x, y, z) {
+    const k = `${x},${y},${z}`;
+    let h = this.hoppers.get(k);
+    if (!h) { h = newHopper(x, y, z); this.hoppers.set(k, h); }
+    return h;
+  }
+
+  /** Hoppers pass items along (host / single player only). */
+  tickHoppers() {
+    if (!this.hoppers.size) return;
+    const items = this.entities.list.filter((e) => e.kind === 'item');
+    for (const [k, h] of this.hoppers) {
+      if (this.world.getBlock(h.x, h.y, h.z) !== B.HOPPER) { if (this.world.getChunk(h.x >> 4, h.z >> 4)) this.hoppers.delete(k); continue; }
+      if (h.cooldown > 0) { h.cooldown--; continue; }
+      const powered = this.world.circuits ? powerInto(this.world, h.x, h.y, h.z) > 0 : false;
+      if (hopperStep(this, h, powered, items)) h.cooldown = HOPPER_COOLDOWN;
+    }
+  }
+
   tickBrewing() {
     for (const s of this.brewingStands.values()) {
       if (!this.world.isLoaded(s.x, s.z)) continue;
@@ -571,10 +594,15 @@ export class Game {
       if (showing(this.chests.get(k))) this.ui.close();
       if (this.ui.furnace && this.ui.furnace === this.furnaces.get(k)) this.ui.close();
       if (this.ui.brewing && this.ui.brewing === this.brewingStands.get(k)) this.ui.close();
-      this.chests.delete(k); this.furnaces.delete(k); this.brewingStands.delete(k);
+      if (showing(this.hoppers.get(k))) this.ui.close();
+      this.chests.delete(k); this.furnaces.delete(k); this.brewingStands.delete(k); this.hoppers.delete(k);
       return;
     }
     if (id === B.GLOOMSHELL_BOX) this.dropBox(x, y, z);
+    if (id === B.HOPPER) {
+      const k = `${x},${y},${z}`, h = this.hoppers.get(k);
+      if (h) { for (const st of h.slots) if (st) this.entities.spawnItem(x + 0.5, y + 0.5, z + 0.5, st); this.hoppers.delete(k); if (showing(h)) this.ui.close(); }
+    }
     if (id === B.CHEST || id === B.BARREL) {
       const k = `${x},${y},${z}`;
       const c = (meta & 8) ? this.getChest(x, y, z, meta) : this.chests.get(k);
@@ -826,7 +854,7 @@ export class Game {
     this.spawner.tick();
     if (!this.net || this.net.isHost) this.spawnerBlocks.tick();
     this.tickMaps();
-    if (!this.net || this.net.isHost) { this.tickFurnaces(); this.tickBrewing(); } // guests see the host's furnaces and alembics
+    if (!this.net || this.net.isHost) { this.tickFurnaces(); this.tickBrewing(); this.tickHoppers(); } // guests see the host's furnaces and alembics
     this.effectParticles();
     this.particles.tick();
     if (this.net) this.net.tick();

@@ -2,6 +2,7 @@
 // attacking with the attack cooldown, eating, buckets and containers.
 import { Mob } from '../mobs/mob.js';
 import { pairOnPlace } from '../world/chests.js';
+import { hopperPlaceMeta } from '../world/hoppers.js';
 import { B, BLOCKS, SOLID, SHAPE, isFluid, CROPS } from '../world/blocks.js';
 import { ITEMS, I, toolOf, isBlockItem, WOOL_ITEMS, POTION_ITEM } from '../world/items.js';
 import { POTIONS } from '../world/potions.js';
@@ -39,7 +40,7 @@ const ORE_XP = {
 };
 const BREAK_DELAY = 5;
 /** Blocks that right-click opens / toggles instead of using the held item. */
-const USABLE_BLOCKS = new Set([B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.CHEST, B.BARREL, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL, B.BREWING_STAND, B.GLOOMSHELL_BOX]);
+const USABLE_BLOCKS = new Set([B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.CHEST, B.BARREL, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL, B.BREWING_STAND, B.GLOOMSHELL_BOX, B.HOPPER]);
 const CIRCUIT_USE = new Set([B.LEVER, B.STONE_BUTTON, B.REPEATER, B.CHIME_BLOCK]);
 const CIRCUIT_PLACE = new Set([B.LEVER, B.STONE_BUTTON, B.CINNABAR_WIRE, B.REPEATER, B.WOODEN_PRESSURE_PLATE, B.PISTON, B.STICKY_PISTON]);
 const USE_DELAY = 4;
@@ -563,7 +564,7 @@ export class Interaction {
         this.swing = SWING_TICKS;
         return true;
       }
-      if (t.id === B.CHEST || t.id === B.BARREL || t.id === B.GLOOMSHELL_BOX) { g.ui.openChest(t.x, t.y, t.z); g.audio.play('chest_open', [t.x + 0.5, t.y + 0.5, t.z + 0.5]); return true; }
+      if (t.id === B.CHEST || t.id === B.BARREL || t.id === B.GLOOMSHELL_BOX || t.id === B.HOPPER) { g.ui.openChest(t.x, t.y, t.z); g.audio.play('chest_open', [t.x + 0.5, t.y + 0.5, t.z + 0.5]); return true; }
     }
     if (!st) return false;
     // Bone meal: crops grow 2-5 stages; on grass it sprouts tall grass and flowers around
@@ -647,6 +648,7 @@ export class Interaction {
       meta = circuitPlaceMeta(placeId, t.face, [ldx, ldy, ldz]);
       if (meta < 0) return false;
     }
+    if (placeId === B.HOPPER) meta = hopperPlaceMeta(t.face);
     if (placeId === B.ANVIL) meta = Math.abs(ldx) > Math.abs(ldz) ? 1 : 0; // the long side faces across the player's view
     if (BLOCKS[placeId].crystal || placeId === B.STORM_ROD) {
       // buds point away from the clicked face, spikes up or down, rods stand or hang

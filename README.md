@@ -424,6 +424,7 @@ poison from eyes) follow the documented table.
 * A torch, lantern or any other light block held in the hand lights up the area around the player (terrain and mobs)
 * Caves content (`src/world/caves.js`, `caveGen.js`): **Copper** blocks weather on random ticks (fresh → dulled → tarnished → verdigris, held back by less weathered copper nearby, as in the reference); honeycomb seals them, an axe scrapes a stage or the seal off. **Storm Rods** attract lightning within reach and the strike cleans the copper it lands on. **Violite geodes** (amethyst): rare hollow spheres of Smooth Basalt, Chalkstone and Violite with Budding Violite that grows small → medium → large buds → clusters (shards drop from clusters); **Shaded Glass** lets no light through; the **Farglass** (spyglass, 2 copper + a shard) zooms in while right-click is held. **Seepstone** spikes hang from cave ceilings and rise from floors; landing on an upward spike hurts more, and hanging ones fall when the block above goes
 * Wind: grass, flowers and saplings sway at the top and leaves rustle in a breeze that rolls across the land (vertex shader), harder in rain and storms
+* Hoppers (5 iron + a chest; 5 slots): every 8 ticks one item goes out through the spout (down, or sideways towards the block you placed it against) into a chest, barrel, box, furnace (from above into the input, from the side into the fuel), Brewing Alembic or another hopper, and one item comes in from the container above (a furnace's output, an alembic's finished vials) or from items dropped into the bowl; a powered hopper stops; saved with the world and shared in multiplayer
 * Creative mode: flight, instant breaking without drops, no damage (except the void) or hunger, unlimited blocks, item catalogue with search; hostile mobs ignore creative players
 * Chat with commands (see Controls)
 * Fire: flint and steel (iron ingot + flint, 64 uses) lights fires that animate, crackle and give light 15; fire ages, burns up flammable blocks (planks, logs, leaves, wool, bookshelves, plants with the reference encouragement/flammability odds), spreads through the air up to 4 blocks up, dies out without fuel and is put out by rain; lava sets fire to nearby flammable blocks; standing in fire sets you alight; punch it to put it out
@@ -446,7 +447,7 @@ poison from eyes) follow the documented table.
 * Lingering elixirs and tipped arrows, Turtle Master / Decay / Luck elixirs, beacons (Haste only comes from `/effect`), Absorption and Wither effects; Mining Fatigue's slower attack speed and the Elder Deepeye's ghost face; prismarine-style slabs/stairs/walls and the animated tidestone texture; effect particles of other players in multiplayer
 * Taming of animals other than Howlers, Purrlings, Squawklets and Gallopers
 * Large structures beyond villages, temples, wrecks, Tide Citadels, outposts, ruined rifts, dungeons, sanctums, bastions and Hollow Cities; job-site blocks
-* Hoppers, dispensers and other item-moving containers; dyed Gloomshell Boxes
+* Dispensers, droppers and comparators; dyed Gloomshell Boxes
 * Mob equipment (held weapons and armour, the drowned's trident), baby mobs other than Shambler-kin and passive animals, Shambler jockeys, tipped-arrow drops, swamp hut cats
 * Spectator/adventure modes
 * Crawling pose; firework stars (Sky Rockets always burst in one random colour and never hurt)

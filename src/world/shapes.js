@@ -236,6 +236,16 @@ const WYRM_HEAD_BOXES = [[3 / 16, 0, 3 / 16, 13 / 16, 10 / 16, 13 / 16]];
 const ALEMBIC_COLLISION = [ALEMBIC_BOXES[0], [7 / 16, 2 / 16, 7 / 16, 9 / 16, 14 / 16, 9 / 16]];
 // up to four Shellback eggs
 const EGG_BOXES = [[3, 7, 4, 4], [9, 3, 3, 4], [9, 9, 4, 5], [4, 11, 3, 3]].map(([x, z, s, h]) => [x / 16, 0, z / 16, (x + s) / 16, h / 16, (z + s) / 16]);
+// hopper: a bowl (four walls and a floor), a narrower middle and a spout down or to one side
+const HOPPER_BOWL = [[0, 10 / 16, 0, 1, 1, 2 / 16], [0, 10 / 16, 14 / 16, 1, 1, 1], [0, 10 / 16, 2 / 16, 2 / 16, 1, 14 / 16], [14 / 16, 10 / 16, 2 / 16, 1, 1, 14 / 16],
+  [2 / 16, 10 / 16, 2 / 16, 14 / 16, 11 / 16, 14 / 16], [4 / 16, 4 / 16, 4 / 16, 12 / 16, 10 / 16, 12 / 16]];
+const HOPPER_BOXES = [
+  [...HOPPER_BOWL, [6 / 16, 0, 6 / 16, 10 / 16, 4 / 16, 10 / 16]],
+  [...HOPPER_BOWL, [6 / 16, 4 / 16, 0, 10 / 16, 8 / 16, 4 / 16]], // -z
+  [...HOPPER_BOWL, [12 / 16, 4 / 16, 6 / 16, 1, 8 / 16, 10 / 16]], // +x
+  [...HOPPER_BOWL, [6 / 16, 4 / 16, 12 / 16, 10 / 16, 8 / 16, 1]], // +z
+  [...HOPPER_BOWL, [0, 4 / 16, 6 / 16, 4 / 16, 8 / 16, 10 / 16]], // -x
+];
 export function blockBoxes(id, meta) {
   if (id === B.ANVIL) return meta & 1 ? ANVIL_Z : ANVIL_X;
   if (id === B.CAMPFIRE) return CAMPFIRE_BOXES;
@@ -246,6 +256,7 @@ export function blockBoxes(id, meta) {
   if (id === B.LANTERN) return meta & 1 ? LANTERN_HANGING : LANTERN_STANDING;
   if (id === B.BREWING_STAND) return ALEMBIC_BOXES;
   if (id === B.TURTLE_EGG) return EGG_BOXES.slice(0, (meta & 3) + 1);
+  if (id === B.HOPPER) return HOPPER_BOXES[meta & 7] || HOPPER_BOXES[0];
   if (id === B.WYRM_HEAD) return WYRM_HEAD_BOXES;
   if (id === B.STORM_ROD) return rodBoxes(meta);
   return TABLE_BOXES;
@@ -264,7 +275,7 @@ SHAPED_COLLISION[B.BED] = 1;
 SHAPED_COLLISION[B.GLASS_PANE] = 1;
 SHAPED_COLLISION[B.SNOW_LAYER] = 1;
 SHAPED_COLLISION[B.SEEPSTONE_SPIKE] = 1;
-for (const id of [B.COBBLESTONE_WALL, B.MOSSY_COBBLESTONE_WALL, B.OAK_TRAPDOOR, B.ENCHANTING_TABLE, B.ANVIL, B.CAMPFIRE, B.LANTERN, B.BREWING_STAND, B.TURTLE_EGG]) SHAPED_COLLISION[id] = 1;
+for (const id of [B.COBBLESTONE_WALL, B.MOSSY_COBBLESTONE_WALL, B.OAK_TRAPDOOR, B.ENCHANTING_TABLE, B.ANVIL, B.CAMPFIRE, B.LANTERN, B.BREWING_STAND, B.TURTLE_EGG, B.HOPPER]) SHAPED_COLLISION[id] = 1;
 /** Snow layer box (n = meta + 1 layers); collision is one layer lower, so a single layer has none. */
 export const snowBox = (meta, collide = false) => [0, 0, 0, 1, ((meta & 7) + (collide ? 0 : 1)) * 2 / 16, 1];
 for (const id of [B.OAK_FENCE, B.SPRUCE_FENCE, B.BIRCH_FENCE, B.OAK_FENCE_GATE]) SHAPED_COLLISION[id] = 1;
