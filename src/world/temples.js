@@ -151,3 +151,66 @@ function igloo(t, set) {
   set(cx - 2, y, cz - 1, B.TORCH, 0);
   set(cx + 1, y, cz + 2, B.CHEST, 0 | 8);
 }
+
+// ---- shipwrecks -------------------------------------------------------------------
+export const WRECK_REGION = 160;
+const wreckCache = new Map();
+
+/** A wreck on the floor of the ocean in 40 % of 160 x 160 regions (if the spot is ocean). */
+export function wreckInRegion(gen, rx, rz) {
+  const key = `${gen.seed}:${rx},${rz}`;
+  if (wreckCache.has(key)) return wreckCache.get(key);
+  const rng = mulberry32(hash4(gen.seed, rx, rz, 6262));
+  let wk = null;
+  if (rng() < 0.4) {
+    const R = WRECK_REGION, M = 20;
+    const cx = rx * R + M + Math.floor(rng() * (R - 2 * M)), cz = rz * R + M + Math.floor(rng() * (R - 2 * M));
+    const col = gen.column(cx, cz), top = gen.surfaceAt(cx, cz, col);
+    const biome = gen.biomeFor(col, top);
+    if ((biome === BIOME.OCEAN || biome === BIOME.FROZEN_OCEAN) && top < SEA_LEVEL - 5) {
+      wk = { cx, cz, y: top + 1, alongX: rng() < 0.5, wood: rng() < 0.5 ? B.OAK_PLANKS : B.SPRUCE_PLANKS, seed: Math.floor(rng() * 1e9) };
+    }
+  }
+  if (wreckCache.size > 64) wreckCache.clear();
+  wreckCache.set(key, wk);
+  return wk;
+}
+
+export function wrecksNear(gen, x0, z0, x1, z1) {
+  const out = [], R = WRECK_REGION;
+  for (let rx = Math.floor((x0 - 10) / R); rx <= Math.floor((x1 + 10) / R); rx++) for (let rz = Math.floor((z0 - 10) / R); rz <= Math.floor((z1 + 10) / R); rz++) {
+    const wk = wreckInRegion(gen, rx, rz);
+    if (wk && wk.cx + 10 >= x0 && wk.cx - 10 <= x1 && wk.cz + 10 >= z0 && wk.cz - 10 <= z1) out.push(wk);
+  }
+  return out;
+}
+
+/** A wooden hull 17 long and 5 wide with a broken deck, a mast and two chests. */
+export function stampWrecks(gen, blocks, meta, cx, cz) {
+  const X0 = cx * 16, Z0 = cz * 16;
+  for (const wk of wrecksNear(gen, X0, Z0, X0 + 15, Z0 + 15)) {
+    const rng = mulberry32(wk.seed);
+    const set = (a, y, b, id, m = 0) => {
+      const x = wk.alongX ? wk.cx + a : wk.cx + b, z = wk.alongX ? wk.cz + b : wk.cz + a;
+      if (x < X0 || x >= X0 + 16 || z < Z0 || z >= Z0 + 16 || y <= MIN_Y || y >= MIN_Y + WORLD_HEIGHT) return;
+      const i = cidx(x - X0, y, z - Z0); blocks[i] = id; meta[i] = m;
+    };
+    const y = wk.y;
+    for (let a = -8; a <= 8; a++) {
+      const taper = Math.abs(a) > 5 ? Math.abs(a) - 5 : 0; // pointed bow and stern
+      const half = 2 - Math.min(2, taper);
+      for (let b = -half; b <= half; b++) {
+        set(a, y, b, wk.wood);                                     // keel / bottom
+        const side = Math.abs(b) === half;
+        for (let h = 1; h <= 3; h++) {
+          if (side && rng() > 0.15) set(a, y + h, b, h === 3 ? B.OAK_SLAB : wk.wood);
+          else if (!side) set(a, y + h, b, B.WATER);
+        }
+        if (!side && Math.abs(a) < 7 && rng() > 0.35) set(a, y + 3, b, wk.wood); // broken deck
+      }
+    }
+    for (let h = 1; h <= 8; h++) if (h < 6 || rng() < 0.6) set(0, y + h, 0, h > 3 ? B.OAK_FENCE : B.OAK_LOG); // the mast, snapped
+    set(-5, y + 1, 0, B.CHEST, (wk.alongX ? 1 : 2) | 8);
+    set(5, y + 1, 0, B.CHEST, (wk.alongX ? 3 : 0) | 8);
+  }
+}
