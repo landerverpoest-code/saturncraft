@@ -299,6 +299,70 @@ MODELS.marauder = {
   ],
 };
 
+// Hexwife: a hunched brewer in a moss-green robe with a sash, a long warty nose
+// and a tall crooked hat; she lifts a vial to drink (hostileVariants.js shows it).
+MODELS.hexwife = {
+  parts: [
+    ['head', [8, 10, 8], [0, 24, 0], [0, 5, 0], '#8a9a78', { face: 'hexwife' }],
+    ['nose', [2, 5, 2], [0, 24, 0], [0, 2, -5], '#7a8a68'],
+    ['wart', [1, 1, 1], [0, 24, 0], [1, 1, -6.2], '#4a5a30'],
+    ['brim', [12, 1, 12], [0, 24, 0], [0, 10.5, 0], '#2a2236'],
+    ['hat1', [7, 4, 7], [0, 24, 0], [0, 13, 0.5], '#2a2236'],
+    ['band', [7.4, 1, 7.4], [0, 24, 0], [0, 11.5, 0.5], '#8a3a5a'],
+    ['hat2', [4, 4, 4], [0, 24, 0], [0, 17, 1.5], '#2a2236'],
+    ['hat3', [2, 3, 2], [0, 24, 0], [0, 20, 2.8], '#2a2236'],
+    ['robe', [8, 12, 6], [0, 18, 0], [0, 0, 0], '#3e5a3a'],
+    ['sash', [8.4, 2, 6.4], [0, 18, 0], [0, -2, 0], '#8a3a5a'],
+    ['hem', [9, 3, 7], [0, 12, 0], [0, -1, 0], '#34502f'],
+    ['armL', [4, 12, 4], [6, 22, 0], [0, -4, 0], '#3e5a3a', { anim: 'armSwingB' }],
+    ['armR', [4, 12, 4], [-6, 22, 0], [0, -4, 0], '#3e5a3a', { anim: 'armSwing' }],
+    ['vial', [2, 4, 2], [-6, 22, 0], [0, -11, -2], '#9ad0e8', { emissive: '#305a70' }],
+    ['legL', [4, 12, 4], [2, 12, 0], [0, -6, 0], '#2a2a22', { anim: 'legA' }],
+    ['legR', [4, 12, 4], [-2, 12, 0], [0, -6, 0], '#2a2a22', { anim: 'legB' }],
+  ],
+};
+// Dune Shambler: a sun-dried Shambler in sand-coloured wrappings.
+MODELS.dune_shambler = {
+  parts: [
+    ['head', [8, 8, 8], [0, 24, 0], [0, 4, 0], '#a8946a', { face: 'dune_shambler' }],
+    ['wrap', [8.6, 3, 8.6], [0, 24, 0], [0, 6.6, 0], '#d8c49a'],
+    ['body', [8, 12, 4], [0, 18, 0], [0, 0, 0], '#8a6a42'],
+    ['scarf', [9, 3, 5], [0, 18, 0], [0, 4.6, 0], '#d8c49a'],
+    ['armL', [4, 12, 4], [6, 22, 0], [0, -4, 0], '#a8946a', { anim: 'armForward' }],
+    ['armR', [4, 12, 4], [-6, 22, 0], [0, -4, 0], '#a8946a', { anim: 'armForward' }],
+    ['legL', [4, 12, 4], [2, 12, 0], [0, -6, 0], '#5a4630', { anim: 'legA' }],
+    ['legR', [4, 12, 4], [-2, 12, 0], [0, -6, 0], '#5a4630', { anim: 'legB' }],
+  ],
+};
+// Sodden Shambler: a waterlogged teal Shambler trailing strands of weed.
+MODELS.sodden_shambler = {
+  parts: [
+    ['head', [8, 8, 8], [0, 24, 0], [0, 4, 0], '#4a8a86', { face: 'sodden_shambler' }],
+    ['body', [8, 12, 4], [0, 18, 0], [0, 0, 0], '#2e5a50'],
+    ['weedA', [2, 8, 1], [0, 18, 0], [2, -7, -2.4], '#3a7a3a'],
+    ['weedB', [1, 6, 1], [0, 18, 0], [-3, -6, -2.4], '#2f6a34'],
+    ['weedC', [3, 1, 9], [0, 24, 0], [1, 8.5, 0], '#3a7a3a'],
+    ['armL', [4, 12, 4], [6, 22, 0], [0, -4, 0], '#4a8a86', { anim: 'armForward' }],
+    ['armR', [4, 12, 4], [-6, 22, 0], [0, -4, 0], '#4a8a86', { anim: 'armForward' }],
+    ['legL', [4, 12, 4], [2, 12, 0], [0, -6, 0], '#24463e', { anim: 'legA' }],
+    ['legR', [4, 12, 4], [-2, 12, 0], [0, -6, 0], '#24463e', { anim: 'legB' }],
+  ],
+};
+// Rime Rattler: a frost-blue Rattler in a ragged hood and cloak.
+MODELS.rime_rattler = {
+  parts: [
+    ['head', [8, 8, 8], [0, 24, 0], [0, 4, 0], '#c8d8e2', { face: 'rime_rattler' }],
+    ['hood', [9, 4, 9], [0, 24, 0], [0, 7, 0.4], '#5a6a7e'],
+    ['body', [8, 12, 4], [0, 18, 0], [0, 0, 0], '#a8bcc8'],
+    ['cloak', [9, 10, 2], [0, 18, 0], [0, -1, 2.6], '#5a6a7e'],
+    ['armL', [2, 12, 2], [5, 22, 0], [0, -5, 0], '#c8d8e2', { anim: 'armAim' }],
+    ['armR', [2, 12, 2], [-5, 22, 0], [0, -5, 0], '#c8d8e2', { anim: 'armAim' }],
+    ['bow', [1, 14, 1], [-5, 22, 0], [0, -1, -11], '#4a3a2a', { anim: 'armAim' }],
+    ['legL', [2, 12, 2], [2, 12, 0], [0, -6, 0], '#b8ccd8', { anim: 'legA' }],
+    ['legR', [2, 12, 2], [-2, 12, 0], [0, -6, 0], '#b8ccd8', { anim: 'legB' }],
+  ],
+};
+
 // Settlers: big-nosed villagers in a robe whose colour shows the profession.
 MODELS.settler = {
   parts: [
@@ -386,6 +450,19 @@ MODELS.void_wyrm = {
 };
 
 const FACES = {
+  hexwife: (c) => {
+    px(c, '#1a1a12', [[2, 3, 5, 1], [9, 3, 5, 1]]); px(c, '#e8e0a0', [[3, 5, 3, 2], [10, 5, 3, 2]]); px(c, '#6a2a5a', [[4, 5, 2, 2], [11, 5, 2, 2]]);
+    px(c, '#4a3a2a', [[5, 12, 6, 1], [4, 11], [11, 11]]);
+  },
+  dune_shambler: (c) => {
+    px(c, '#3a2a14', [[3, 6, 3, 2], [10, 6, 3, 2]]); px(c, '#f0d070', [[4, 6], [11, 6]]);
+    px(c, '#5a4428', [[4, 11, 8, 2]]); px(c, '#d8c49a', [[0, 0, 16, 3]]);
+  },
+  sodden_shambler: (c) => {
+    px(c, '#103a3a', [[3, 6, 3, 2], [10, 6, 3, 2]]); px(c, '#70fff0', [[4, 6], [11, 6]]);
+    px(c, '#1a3a34', [[4, 11, 8, 2]]); px(c, '#3a7a3a', [[0, 0, 5, 2], [9, 0, 7, 1]]);
+  },
+  rime_rattler: (c) => { px(c, '#18222e', [[3, 5, 3, 3], [10, 5, 3, 3], [7, 9, 2, 2], [4, 12, 8, 1]]); px(c, '#8ae0ff', [[4, 6], [11, 6]]); px(c, '#5a6a7e', [[0, 0, 16, 2]]); },
   settler: (c) => {
     px(c, '#3a2a1a', [[1, 3, 14, 1]]); px(c, '#ffffff', [[3, 5, 3, 2], [10, 5, 3, 2]]); px(c, '#2a6a3a', [[4, 5, 2, 2], [11, 5, 2, 2]]);
   },

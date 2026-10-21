@@ -38,6 +38,7 @@ import { MAX_USES } from '../mobs/trades.js';
 import { runCommand } from '../ui/commands.js';
 import { DIMENSIONS } from '../world/dimensions/dims.js';
 import { POTIONS } from '../world/potions.js';
+import { EFFECTS } from '../player/effects.js';
 
 const STATE_EVERY = 2;      // ticks between player / entity updates (10 Hz)
 const ENV_EVERY = 20;       // time + weather once a second (also the heartbeat)
@@ -402,6 +403,12 @@ export class HostSession extends Session {
   splashRemote(t, potionId, f) {
     const c = this.clients.get(t.remote ? t.remote.id : -1);
     if (c) c.ch.send({ t: 'fx', p: potionId, f: Math.round(f * 1000) / 1000 });
+  }
+
+  /** A mob gave a guest an effect (Dune Shambler hit, Rime Rattler arrow): their own game applies it. */
+  targetEffect(rp, type, ticks, amp, f = 1) {
+    const c = this.clients.get(rp.id);
+    if (c && !rp.target.dead && EFFECTS[type]) c.ch.send({ t: 'eff', e: type, d: ticks | 0, a: amp | 0, f: Math.round(f * 1000) / 1000 });
   }
 
   /** A guest dropped / threw / shot something: it becomes a shared entity here. */
@@ -812,6 +819,9 @@ export class ClientSession extends Session {
         }
         break;
       }
+      case 'eff': // a mob's hit or arrow gave us an effect on the host
+        if (EFFECTS[m.e]) p.applyEffect(m.e, Math.max(0, Math.min(1e6, m.d | 0)), Math.max(0, Math.min(255, m.a | 0)), Math.max(0, Math.min(1, +m.f || 0)));
+        break;
       case 'got': {
         const got = copyStack(m.st);
         if (!got || !ITEMS[got.id]) break;

@@ -2,22 +2,46 @@ import { describe, it, expect } from 'vitest';
 import { isSlimeChunk } from '../src/mobs/spawnRules.js';
 import {
   SPAWN_TABLES, spawnTable, weightedPick, pickProbabilities, scaledCap, isDarkEnoughToSpawn, darkSpawnProbability,
-  isBrightEnoughForAnimal, shouldDespawn, shouldBurnInSun, MOB_CAPS, SPAWN_MIN_DIST, DESPAWN_FAR, DESPAWN_NEAR,
+  isBrightEnoughForAnimal, shouldDespawn, shouldBurnInSun, MOB_CAPS, SPAWN_MIN_DIST, DESPAWN_FAR, DESPAWN_NEAR, HUT_MONSTERS,
 } from '../src/mobs/spawnRules.js';
 import { BIOME } from '../src/world/biomes.js';
 import { skyState, findNextPhase } from '../src/sky/suns.js';
 import { rng } from './helpers.js';
 
 describe('spawn tables', () => {
-  it('default monster weights match the documented table (witch absent)', () => {
+  it('default monster weights match the documented table (with the Hexwife)', () => {
     const p = pickProbabilities(SPAWN_TABLES.monster.default);
-    const total = 510;
+    const total = 515;
+    expect(p.hexwife).toBeCloseTo(5 / total, 9);
+    expect(SPAWN_TABLES.monster.default.find((e) => e.type === 'hexwife')).toMatchObject({ min: 1, max: 1 });
     expect(p.skitterer).toBeCloseTo(100 / total, 9);
     expect(p.shambler).toBeCloseTo(100 / total, 9);
     expect(p.rattler).toBeCloseTo(100 / total, 9);
     expect(p.fizzler).toBeCloseTo(100 / total, 9);
     expect(p.voidwalker).toBeCloseTo(10 / total, 9);
     expect(p.wobbler).toBeCloseTo(100 / total, 9);
+  });
+  it('deserts split zombie 19 (+1 zombie villager) / husk 80 into Shambler / Dune Shambler', () => {
+    const t = spawnTable('monster', BIOME.DESERT);
+    const w = Object.fromEntries(t.map((e) => [e.type, e.weight]));
+    expect(w.shambler).toBe(20);
+    expect(w.dune_shambler).toBe(80);
+    expect(t.find((e) => e.type === 'dune_shambler')).toMatchObject({ min: 4, max: 4 });
+    expect(w.skitterer).toBe(100);
+  });
+  it('snowy plains split skeleton 20 / stray 80 into Rattler / Rime Rattler; snowy taiga keeps the default', () => {
+    const w = Object.fromEntries(spawnTable('monster', BIOME.SNOWY_PLAINS).map((e) => [e.type, e.weight]));
+    expect(w.rattler).toBe(20);
+    expect(w.rime_rattler).toBe(80);
+    expect(spawnTable('monster', BIOME.SNOWY_TAIGA)).toBe(SPAWN_TABLES.monster.default);
+    expect(spawnTable('monster', BIOME.PLAINS).some((e) => e.type === 'rime_rattler' || e.type === 'dune_shambler')).toBe(false);
+  });
+  it('oceans add Sodden Shamblers (drowned 5, alone)', () => {
+    for (const b of [BIOME.OCEAN, BIOME.FROZEN_OCEAN]) {
+      const e = spawnTable('monster', b).find((x) => x.type === 'sodden_shambler');
+      expect(e).toMatchObject({ weight: 5, min: 1, max: 1 });
+    }
+    expect(HUT_MONSTERS).toEqual([{ type: 'hexwife', weight: 1, min: 1, max: 1 }]);
   });
   it('one chunk in ten is a slime chunk, fixed per seed', () => {
     let n = 0;
