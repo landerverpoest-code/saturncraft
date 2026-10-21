@@ -14,10 +14,25 @@ export function rollDrops(type, ctx = {}, rng = Math.random) {
   for (const d of def.drops) {
     if (d.playerOnly && !ctx.killedByPlayer) continue;
     if (d.notSheared && ctx.sheared) continue;
+    if (d.chance !== undefined && rng() >= d.chance + (d.plunderChance || 0) * (ctx.plunder | 0)) continue;
     let n = d.min + Math.floor(rng() * (d.max - d.min + 1));
     if (ctx.plunder > 0 && ctx.killedByPlayer && d.max > 0) n = Math.max(0, n) + Math.floor(rng() * (ctx.plunder + 1));
     if (n <= 0) continue;
     out.push({ id: ctx.onFire && d.cooked ? d.cooked : d.id, count: n });
+  }
+  if (def.loot) {
+    // a loot pool: rolls x one weighted entry, count uniform in [count] (+0..Plunder each)
+    const L = def.loot, total = L.entries.reduce((a, e) => a + e.weight, 0);
+    const rolls = L.rolls[0] + Math.floor(rng() * (L.rolls[1] - L.rolls[0] + 1));
+    for (let k = 0; k < rolls; k++) {
+      let r = rng() * total, e = L.entries[L.entries.length - 1];
+      for (const c of L.entries) { r -= c.weight; if (r < 0) { e = c; break; } }
+      let n = L.count[0] + Math.floor(rng() * (L.count[1] - L.count[0] + 1));
+      if (ctx.plunder > 0 && ctx.killedByPlayer) n += Math.floor(rng() * (ctx.plunder + 1));
+      if (n <= 0) continue;
+      const same = out.find((o) => o.id === e.id);
+      if (same) same.count += n; else out.push({ id: e.id, count: n });
+    }
   }
   if (def.rare && ctx.killedByPlayer && rng() < def.rare.chance + 0.01 * (ctx.plunder | 0)) {
     // vanilla's rare pool has 3 equally likely entries (a missing one drops nothing)

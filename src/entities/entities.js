@@ -356,6 +356,8 @@ export class Arrow {
       let dmg = arrowDamage(speed, this.power | 0);
       if (this.crit) dmg += Math.floor(Math.random() * (dmg / 2 + 2));
       const ok = target.hurt(dmg, 'arrow', this.shooter, 0.6, this);
+      // tipped arrows (Rime Rattlers shoot Slowness)
+      if (ok && this.effect && target.applyEffect) target.applyEffect(this.effect[0], this.effect[1], this.effect[2], 1, this.shooter);
       if (ok) { this.dead = true; return; }
       // deflected
       this.vx *= -0.1; this.vy *= -0.1; this.vz *= -0.1;
@@ -640,6 +642,7 @@ function makePlayerTarget(game) {
     get x() { return p.x; }, get y() { return p.y; }, get z() { return p.z; },
     get width() { return 0.6; }, get height() { return p.body.height; },
     hurt(dmg, src, attacker) { return p.hurt(dmg, src, attacker); },
+    applyEffect(type, ticks, amp, factor) { return p.applyEffect(type, ticks, amp, factor); }, // tipped arrows
   };
 }
 

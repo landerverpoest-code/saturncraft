@@ -23,7 +23,11 @@ const DEFAULT_MONSTERS = [
   { type: 'fizzler', weight: 100, min: 4, max: 4 },
   { type: 'voidwalker', weight: 10, min: 1, max: 4 },
   { type: 'wobbler', weight: 100, min: 4, max: 4 }, // only valid in swamps (y 51-69) or slime chunks below y 40
+  { type: 'hexwife', weight: 5, min: 1, max: 1 },
 ];
+const withWeights = (table, extra, weights) => [...table.map((e) => (weights[e.type] !== undefined ? { ...e, weight: weights[e.type] } : e)), ...extra];
+/** Inside a swamp hut only Hexwives spawn (the reference structure spawn list). */
+export const HUT_MONSTERS = [{ type: 'hexwife', weight: 1, min: 1, max: 1 }];
 const FARM_ANIMALS = [
   { type: 'fleecer', weight: 12, min: 4, max: 4 },
   { type: 'bristleback', weight: 10, min: 4, max: 4 },
@@ -34,12 +38,13 @@ const FARM_ANIMALS = [
 export const SPAWN_TABLES = {
   monster: {
     default: DEFAULT_MONSTERS,
-    // desert: zombie 19 + husk 80 + zombie villager 1 are all Shamblers here
-    desert: DEFAULT_MONSTERS.map((e) => (e.type === 'shambler' ? { ...e, weight: 100 } : e)),
-    // snowy plains: skeleton 20 + stray 80 are all Rattlers here
-    snowy_plains: DEFAULT_MONSTERS.map((e) => (e.type === 'rattler' ? { ...e, weight: 100 } : e)),
-    snowy_taiga: DEFAULT_MONSTERS.map((e) => (e.type === 'rattler' ? { ...e, weight: 100 } : e)),
-    badlands: DEFAULT_MONSTERS.map((e) => (e.type === 'shambler' ? { ...e, weight: 100 } : e)),
+    // desert: zombie 19 (+ zombie villager 1, merged into the Shambler) and husk 80
+    desert: withWeights(DEFAULT_MONSTERS, [{ type: 'dune_shambler', weight: 80, min: 4, max: 4 }], { shambler: 20 }),
+    // snowy plains: skeleton 20 and stray 80 (snowy taiga keeps the default table)
+    snowy_plains: withWeights(DEFAULT_MONSTERS, [{ type: 'rime_rattler', weight: 80, min: 4, max: 4 }], { rattler: 20 }),
+    // oceans: the default monsters plus drowned 5 (in deep water, 1 attempt in 40)
+    ocean: withWeights(DEFAULT_MONSTERS, [{ type: 'sodden_shambler', weight: 5, min: 1, max: 1 }], {}),
+    frozen_ocean: withWeights(DEFAULT_MONSTERS, [{ type: 'sodden_shambler', weight: 5, min: 1, max: 1 }], {}),
     // no monsters spawn naturally on the mushroom islands
     mushroom_fields: [],
   },

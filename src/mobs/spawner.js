@@ -15,6 +15,10 @@ import { chunkKey } from '../world/world.js';
 import { attemptDimensionSpawn } from './dimensionMobs.js';
 import { BIOMES } from '../world/biomes.js';
 import { outpostsNear } from '../world/temples.js';
+import { hutsNear, hutAt } from '../world/swampHuts.js';
+import { HUT_MONSTERS } from './spawnRules.js';
+import { soddenSpawnChance } from './hostileVariants.js';
+import { SEA_LEVEL } from '../world/constants.js';
 
 const NO_MONSTER_FLOOR = new Set([B.BEDROCK, B.GLASS, ...LEAVES, B.ICE, B.CACTUS]);
 const MAX_PER_CHUNK = 4;
@@ -42,6 +46,7 @@ export class MobSpawner {
   spawnMob(type, x, y, z) {
     const m = new Mob(type, x, y, z);
     m._game = this.game;
+    if (m.def.babyChance && Math.random() < m.def.babyChance) m.setBaby(true); // 5 % of Shamblers are babies (for good)
     this.game.entities.add(m);
     return m;
   }
@@ -62,12 +67,21 @@ export class MobSpawner {
 
   validSpawn(category, type, x, y, z) {
     const w = this.game.world;
+    if (MOBS[type].aquaticSpawn) {
+      // Sodden Shamblers spawn in the water itself (deep ocean water, 1 attempt in 40)
+      if (w.getBlock(x, y, z) !== B.WATER || w.getBlock(x, y + 1, z) !== B.WATER) return false;
+      const biome = BIOMES[w.biomeAt(x, z)];
+      if (!soddenSpawnChance(biome ? biome.key : '', y, SEA_LEVEL)) return false;
+      return isDarkEnoughToSpawn(w.skyLight(x, y, z), w.blockLight(x, y, z), this.game.sky.state.skyDarken);
+    }
     const below = w.getBlock(x, y - 1, z);
     if (!SOLID[below] || !OPAQUE[below] && below !== B.ICE) return false;
     if (!this.canFit(type, x, y, z)) return false;
     const raw = w.skyLight(x, y, z), blk = w.blockLight(x, y, z);
     if (category === CATEGORY.MONSTER) {
       if (NO_MONSTER_FLOOR.has(below)) return false;
+      // Dune Shamblers and Rime Rattlers need open sky above them
+      if (MOBS[type].needsSky && (raw < 15 || w.heightAt(x, z) >= y)) return false;
       if (type === 'wobbler') {
         // swamp surface at night, or anywhere below y 40 in one chunk out of ten (fixed per world)
         const swamp = BIOMES[w.biomeAt(x, z)] && BIOMES[w.biomeAt(x, z)].key === 'swamp' && y > 50 && y < 70;
@@ -88,7 +102,8 @@ export class MobSpawner {
     const y = surface ? top + 1 : MIN_Y + Math.floor(Math.random() * (top + 2 - MIN_Y));
     if (SOLID[w.getBlock(x0, y, z0)]) return 0;
     const biome = w.biomeAt(x0, z0);
-    const table = spawnTable(category, biome);
+    // inside a swamp hut only Hexwives spawn
+    const table = category === CATEGORY.MONSTER && w.gen && hutAt(w.gen, x0, y, z0) ? HUT_MONSTERS : spawnTable(category, biome);
     if (!table.length) return 0;
     let count = 0;
     for (let group = 0; group < 3; group++) {
@@ -182,6 +197,12 @@ export class MobSpawner {
         const m = this.spawnMob('marauder', o.cx + dx + 0.5, dy ? o.y + dy : this.game.world.heightAt(o.cx + dx, o.cz + dz) + 1, o.cz + dz + 0.5);
         if (m) m.persistent = true;
       }
+    }
+    // a Hexwife lives in each swamp hut
+    for (const h of hutsNear(this.game.world.gen, cx * 16, cz * 16, cx * 16 + 15, cz * 16 + 15)) {
+      if (Math.floor(h.cx / 16) !== cx || Math.floor(h.cz / 16) !== cz || !this.hostileEnabled()) continue;
+      const m = this.spawnMob('hexwife', h.cx + 0.5, h.y, h.cz + 2.5);
+      if (m) m.persistent = true;
     }
     // one Ironguard keeps watch by each village well
     for (const v of villagesNear(this.game.world.gen, cx * 16, cz * 16, cx * 16 + 15, cz * 16 + 15)) {

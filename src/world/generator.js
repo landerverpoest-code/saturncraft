@@ -3,6 +3,7 @@
 import { stampVillages } from './villages.js';
 import { stampMineshafts } from './mineshafts.js';
 import { stampTemples, stampWrecks, stampOutposts } from './temples.js';
+import { stampHuts } from './swampHuts.js';
 import { stampSanctums } from './dimensions/sanctum.js';
 import { treeShape, LEAVES, LOGS, PLANTS } from './trees.js';
 import { B, DEEP_VARIANT } from './blocks.js';
@@ -382,6 +383,7 @@ export class TerrainGenerator {
     // 9. Villages
     stampVillages(this, blocks, meta, cx, cz);
     stampTemples(this, blocks, meta, cx, cz);
+    stampHuts(this, blocks, meta, cx, cz);     // swamp huts (world/swampHuts.js)
     stampWrecks(this, blocks, meta, cx, cz);
     stampOutposts(this, blocks, meta, cx, cz);
     stampSanctums(this, blocks, meta, cx, cz); // Hollow Sanctums (world/dimensions/sanctum.js)

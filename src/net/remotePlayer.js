@@ -155,5 +155,9 @@ function makeTarget(rp) {
     hurt(amount, source = 'generic', attacker = null) {
       return rp.session ? rp.session.targetHurt(rp, amount, source, attacker) : false;
     },
+    // a mob's hit or tipped arrow gives this player an effect: their own game applies it too
+    applyEffect(type, ticks, amp = 0, factor = 1) {
+      if (rp.session && rp.session.targetEffect) rp.session.targetEffect(rp, type, ticks, amp, factor);
+    },
   };
 }

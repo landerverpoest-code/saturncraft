@@ -281,6 +281,10 @@ southern sky with a slow libration.
 | Rattler | skeleton | 20 | 0.25 | 0.6×1.99 | bow every 40 ticks, strafes, burns in sunlight |
 | Fizzler | creeper | 20 | 0.25 | 0.6×1.7 | 30-tick fuse within 3 blocks, power-3 explosion |
 | Skitterer | spider | 16 | 0.30 | 1.4×0.9 | climbs walls, leaps, neutral in bright light |
+| Hexwife | witch | 26 | 0.25 | 0.6×1.95 | throws splash elixirs every 60 ticks within 10 blocks, drinks her own, 15 % magic damage |
+| Dune Shambler | husk | 20 | 0.23 | 0.6×1.95 | melee 3 + Hunger, armour 2, no sun burn |
+| Sodden Shambler | drowned | 20 | 0.23 | 0.6×1.95 | swims after targets in the water, burns in sunlight |
+| Rime Rattler | stray | 20 | 0.25 | 0.6×1.99 | Rattler whose arrows cause 30 s of Slowness |
 | Voidwalker | enderman | 40 | 0.30 (+0.15 angry) | 0.6×2.9 | angered by eye contact, teleports, hurt by water, dodges arrows |
 
 Mob movement uses the same physics with vanilla's mob acceleration (speed²),
@@ -292,7 +296,10 @@ beef; Fleecer 1 wool + 1–2 mutton; Cluckling 0–2 feathers + 1 raw fowl (meat
 drops cooked if the mob was burning); Shambler 0–2 rotten flesh + 2.5 % rare
 drop on player kills; Rattler 0–2 arrows + 0–2 bones; Fizzler 0–2 blast powder;
 Skitterer 0–2 string + 1/3 chance of an eye on player kills; Voidwalker 0–1
-void pearl.
+void pearl; Hexwife 1–3 rolls of 0–2 glass vials, glowshard dust, blast powder,
+cinnabar dust, skitterer eyes, sugar or sticks (sticks twice as likely); Dune
+Shambler as the Shambler; Sodden Shambler 0–2 rotten flesh + 11 % copper ingot
+on player kills; Rime Rattler as the Rattler.
 
 **Spawning** follows the vanilla natural-spawn algorithm: each tick one attempt
 per chunk within 8 chunks at a random height below the heightmap; packs of up
@@ -300,7 +307,8 @@ to 3 groups × up to 4 tries with ±5 jitter; at least 24 blocks from the
 player; mob caps of 70 hostile / 10 passive scaled by chunk count / 289;
 passive attempts only every 400 ticks plus 10 % chance of a herd when a chunk is
 first generated; biome spawn weights (monsters: Skitterer 100, Shambler 100,
-Rattler 100, Fizzler 100, Voidwalker 10; animals in grassy biomes: Fleecer 12,
+Rattler 100, Fizzler 100, Voidwalker 10, Hexwife 5; deserts Shambler 20 / Dune
+Shambler 80, snowy plains Rattler 20 / Rime Rattler 80, oceans + Sodden Shambler 5; animals in grassy biomes: Fleecer 12,
 Bristleback 10, Cluckling 10, Mooxen 8). Monsters need block light 0, raw
 sky light ≤ rand(32) and combined light ≤ rand(0…7); animals need grass and
 light > 8. Hostiles despawn instantly beyond 128 blocks and with 1/800 chance
@@ -417,13 +425,15 @@ poison from eyes) follow the documented table.
 * Status effects with reference stacking (stronger replaces, weaker but longer resumes later): Speed/Slowness (±20 %/15 % per level), Haste (mining +20 %/level), Strength/Weakness (+3/−4 melee), Instant Health/Damage (4/6 × 2^amp, magic damage ignores armour), Regeneration (1 HP per 50 >> amp ticks), Poison (1 HP per 25 >> amp, never below 1), Jump Boost (+0.1 jump velocity and −1 fall damage per level), Fire Resistance, Water Breathing, Night Vision (brightens the terrain and mobs, flickers in the last 10 s), Invisibility (mobs only notice you at 7 % of their range, more with armour; hides you from other players), Slow Falling, Hunger; effects also work on mobs hit by splashes. Effect badges with time left under the sky widget, an Effects panel beside the inventory, colour swirls around the player (third person), saved with the player and the host-authoritative alembic in multiplayer (splashes reach guests too); `/effect give <effect> [seconds] [level]`, `/effect clear`
 * Cinnabar circuitry (`src/world/circuits.js`): power levels 0–15. **Cinnabar Dust** is laid as wire that loses one level per block, joins neighbouring wire (also one step up or down a block unless something sits on top) and is drawn as dots, lines, corners and crosses, from dark red (0) to bright red (15). Sources: **Lever** (stick + cobblestone; floor, wall or ceiling, toggles), **Stone Button** (stone; a 20-tick pulse), **Wooden Pressure Plate** (2 planks; players, mobs and items keep it down), **Cinnabar Block** (9 dust; always on). Components: **Cinnabar Torch** (dust + stick; an inverter that turns off 2 ticks after its block is powered, burns out when toggled 8 times within 3 s), **Repeater** (2 torches, dust, 3 stone; 1–4 delay steps of 2 ticks set by right-click, one-way, restores level 15 and stretches short pulses), **Cinnabar Lamp** (4 dust + Glowshard; light 15 while powered, off 4 ticks later), **Piston** (3 planks, 4 cobblestone, iron, dust; pushes up to 12 blocks, breaks plants/torches/wire in the way, cannot move obsidian, containers or extended pistons) and **Sticky Piston** (+ slimeball; pulls the block back). Pistons move blocks at once (no sliding animation) and shove entities. Power also opens doors, trapdoors and fence gates (only on changes, so hands still work), sets off TNT and rings the **Chime Block** (8 planks + dust; right-click picks one of 25 pitches). Strong/weak power follows the reference: a lever, button, plate, repeater or torch strongly powers one block, which then powers wire next to it; a block only powered by wire running into it powers components but not other wire. Wire networks are recomputed as a whole (breadth first from the strongest source) and the update queue is capped per tick, so long lines and clocks do not cause update storms. Only the single player world or the multiplayer host simulates; guests apply its block edits (their lever flips go to the host like any edit). Pending ticks are not saved, so circuit blocks re-evaluate when their chunk loads and on random ticks
 
+* Hostile variants and the **Hexwife** (`src/mobs/hostileVariants.js`): the Hexwife (witch) throws splash elixirs of Slowness (target 8+ blocks away), Poison (target at 8+ HP), Weakness (25 % up close) or Harming, and drinks Water Breathing (eyes underwater), Fire Resistance (burning), Healing (hurt) or Swiftness (target over 11 blocks away) — 32 ticks during which she stands still; she lives in **swamp huts** (spruce cabins on oak stilts, `/locate hut`), where only Hexwives spawn. **Dune Shamblers** (husk) roam deserts under open sky, never burn and cause Hunger; **Rime Rattlers** (stray) shoot Slowness arrows on snowy plains; a Shambler that keeps its head underwater for 30 s shakes for 15 s and becomes a **Sodden Shambler** (drowned; Dune Shamblers become Shamblers the same way), which also spawn in deep ocean water at night and swim after their prey. 5 % of all Shambler-kin are **babies**: half size, 50 % faster, never grow up, 12 XP. Undead mobs no longer drown. All synced to guests like other mobs
+
 **Not yet implemented**
 
 * Lingering elixirs and tipped arrows, Turtle Master / Decay / Luck elixirs, beacons (Haste only comes from `/effect`), Mining Fatigue, Absorption and Wither effects; effect particles of other players in multiplayer
 * Taming of animals other than Howlers, Purrlings, Squawklets and Gallopers
 * Large structures beyond villages, temples, wrecks, outposts, dungeons, sanctums and bastions; job-site blocks; Hollow outer-island cities
 * Hoppers, dispensers and other item-moving containers
-* Witches (elixir-throwing monsters), drowned, husks/strays as separate variants, baby mobs, mob equipment
+* Mob equipment (held weapons and armour, the drowned's trident), baby mobs other than Shambler-kin and passive animals, Shambler jockeys, tipped-arrow drops, swamp hut cats
 * Spectator/adventure modes
 * Crawling pose, elytra
 
@@ -453,9 +463,11 @@ Code: `src/world/dimensions/` (registry and scaling, generators, portal logic, s
 
 * **Original names and art** for every mob, item and block that is
   distinctive to the reference game (e.g. Deepstone, Cinnabar, Azurite, Beryl,
-  Workbench, Blast Powder, Void Pearl). Monster spawn weights of variants
-  that do not exist here are merged into their base mob (husk → Shambler,
-  stray → Rattler, zombie villager → Shambler); slime/witch weights are omitted.
+  Workbench, Blast Powder, Void Pearl). The zombie villager's spawn weight is
+  merged into the Shambler (default 95 + 5, desert 19 + 1). There are no
+  river biomes, so Sodden Shamblers only spawn in oceans (and from conversions);
+  swamp huts are tried at several spots of each 320-block region so they
+  appear more often than the reference's sparse grid would in this world's small swamps.
 * **Three suns instead of one sun + moon**: day/night is irregular. Sky
   darkening is derived from the combined light of the suns (see above) instead
   of the fixed 24 000-tick cycle; there are no moon phases (the gas giant

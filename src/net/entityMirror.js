@@ -87,7 +87,7 @@ export class EntityMirror {
       e.headPitch = s.headPitch;
       e.target = s.target ? 'player' : null;
       e.angry = s.angry; e.sheared = s.sheared; e.tamed = s.tamed; e.sitting = s.sitting; e.enemy = s.enemy ? 'player' : null;
-      e.woolColor = s.woolColor; e.fuse = s.fuse;
+      e.woolColor = s.woolColor; e.fuse = s.fuse; e.special = s.special;
       if (s.profession) e.profession = s.profession;
       if (s.baby !== e.age < 0) e.setBaby(s.baby);
       e.body.onGround = s.onGround;

@@ -15,6 +15,7 @@ import { randomSheepColor, WOOL_RGB } from '../world/colors.js';
 import { WOOL_ITEMS } from '../world/items.js';
 import { RESTOCK_TICKS, makeTrades } from './trades.js';
 import { villagesNear, PROFESSIONS } from '../world/villages.js';
+import { conversionStep, newConversion } from './hostileVariants.js'; // registers the Hexwife and the Shambler / Rattler variants
 import { EFFECTS, addEffect, tickEffects, speedFactor, periodicActions, instantAmount, effectsColor, visibilityFactor } from '../player/effects.js';
 
 let nextMobId = 1_000_000;
@@ -108,7 +109,7 @@ export class Mob {
   saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor, profession: this.profession, trades: this.trades, home: this.home, lastRestock: this.lastRestock, size: this.size, coat: this.coat, temper: this.temper, saddled: this.saddled, maxHp: this.maxHp, playerMade: this.playerMade, tamed: this.tamed, sitting: this.sitting, ownerName: this.ownerName, horns: this.horns, hive: this.hive, nectar: this.nectar, beach: this.beach, pregnant: this.pregnant }; }
   loadData(s) {
     this.health = s.health; this.yaw = s.yaw;
-    if (s.age < 0) { this.setBaby(true); this.age = s.age; } else this.age = s.age || 0;
+    if (s.age < 0) { this.setBaby(true); this.age = s.age; } else { if (this.age < 0) this.setBaby(false); this.age = s.age || 0; }
     this.sheared = !!s.sheared;
     if (s.woolColor !== undefined) this.woolColor = s.woolColor;
     if (s.horns !== undefined) this.horns = s.horns;
@@ -131,7 +132,7 @@ export class Mob {
     if (this.panicTicks > 0) return this.passiveAI(g);
     // flee from Shamblers within 8 blocks
     for (const e of g.entities.list) {
-      if (e.kind !== 'mob' || e.type !== 'shambler' || e.dead) continue;
+      if (e.kind !== 'mob' || !e.def.shamblerKin || e.dead) continue;
       const dx = this.x - e.x, dz = this.z - e.z;
       if (dx * dx + dz * dz < 64) { this.steer(this.x + dx * 4, this.z + dz * 4, this.def.panicSpeed); return; }
     }
@@ -254,6 +255,7 @@ export class Mob {
     } else { this.lastHurt = dmg; this.invulnerable = 20; this.hurtTime = 10; }
     this.health -= dmg;
     this.noActionTime = 0;
+    this.lastSource = source;
     if (attacker && (attacker.isPlayer || attacker.tamed)) this.lastHurtByPlayer = 100;
     if (attacker && knockback > 0) {
       const dx = this.x - attacker.x, dz = this.z - attacker.z;
@@ -324,7 +326,7 @@ export class Mob {
     if (killedByPlayer) g.player.stats.kills++;
     if (killedByPlayer && this.def.category === CATEGORY.MONSTER && g.milestones) g.milestones.event('kill');
     if (this.def.onDeath) this.def.onDeath(this, g, killedByPlayer);
-    if (this.age < 0) { this.killedByPlayer = false; return; } // babies drop nothing
+    if (this.age < 0 && this.def.category !== CATEGORY.MONSTER) { this.killedByPlayer = false; return; } // baby animals drop nothing
     const plunder = source === 'player' ? this.plunder | 0 : 0; // set by the player's melee hit
     for (const d of rollDrops(this.type, { killedByPlayer, onFire: this.fireTicks > 0, sheared: this.sheared, plunder })) {
       if (d.id === B.WOOL) d.id = WOOL_ITEMS[this.woolColor || 0];
@@ -356,6 +358,7 @@ export class Mob {
   speed() {
     let s = this.def.speed;
     if (this.type === 'voidwalker' && this.angry) s += 0.15;
+    if (this.age < 0 && this.def.babyChance) s *= 1.5; // baby Shamblers are half again as fast
     return s * speedFactor(this.effects);
   }
 
@@ -422,7 +425,7 @@ export class Mob {
       if (this.deathTime >= 20) {
         this.removed = true; this.dead = true;
         // experience when killed by the player: monsters 5, animals 1-3
-        if (this.killedByPlayer) g.entities.spawnXp(this.x, this.y + 0.3, this.z, this.def.category === 'monster' ? 5 : 1 + Math.floor(Math.random() * 3));
+        if (this.killedByPlayer) g.entities.spawnXp(this.x, this.y + 0.3, this.z, this.def.category === 'monster' ? (this.age < 0 ? 12 : 5) : 1 + Math.floor(Math.random() * 3));
         g.particles.smoke(this.x, this.y + this.height / 2, this.z, 14, this.width);
       }
       return;
@@ -450,7 +453,7 @@ export class Mob {
     else this.ai(g, p, pdist);
 
     const mv = this.move || { forward: 0, jump: false };
-    const jump = mv.jump || (this.def.hops && mv.forward && b.onGround) || (b.inWater && b.y + this.height * 0.4 < Math.floor(b.y) + 1.2) || (b.inLava);
+    const jump = mv.jump || (this.def.hops && mv.forward && b.onGround) || (b.inWater && !this.def.sinks && b.y + this.height * 0.4 < Math.floor(b.y) + 1.2) || (b.inLava);
     if (this.def.flying) this.flyMove(g);
     else b.travel(g.world, { forward: mv.forward, strafe: mv.strafe || 0, yaw: this.yaw, jump, speed: mv.forward ? this.speed() * (mv.mod || 1) : this.speed(), climbing: this.def.climbs && b.horizontalCollision && !!this.move });
     if (this.type === 'cluckling' && !b.onGround && b.vy < 0) { b.vy *= 0.6; b.fallDistance = 0; }
@@ -461,6 +464,25 @@ export class Mob {
     this.limbSwing += moved * 4;
 
     this.environment(g);
+    // Shamblers kept under water turn into Sodden Shamblers (Dune Shamblers into Shamblers)
+    if (this.def.convertsTo && this.deathTime === 0 && !this.removed) {
+      if (!this.conv) this.conv = newConversion();
+      if (conversionStep(this.conv, b.eyeInWater)) this.convert(g, this.def.convertsTo);
+      else this.special = this.conv.converting;
+    }
+  }
+
+  /** Replace this mob by a fresh one of `type` (full health), keeping its place, age and persistence. */
+  convert(g, type) {
+    const m = g.spawner.spawnMob(type, this.x, this.y, this.z);
+    if (!m) return null;
+    m.setBaby(this.age < 0);
+    m.yaw = m.prevYaw = this.yaw;
+    m.persistent = this.persistent;
+    m.target = this.target;
+    this.removed = true; this.dead = true;
+    g.audio.play('grunt', [this.x, this.y + 1, this.z]);
+    return m;
   }
 
   /** Flying mobs: no gravity, velocity set by their AI, air drag (noclip ones ignore blocks). */
@@ -503,7 +525,7 @@ export class Mob {
       this.fireTicks--;
       if (Math.random() < 0.3) g.particles.flame(this.x + (Math.random() - 0.5) * this.width, this.y + Math.random() * this.height, this.z + (Math.random() - 0.5) * this.width);
     }
-    if (b.eyeInWater && this.type !== 'voidwalker' && !this.def.aquatic) {
+    if (b.eyeInWater && this.type !== 'voidwalker' && !this.def.aquatic && !this.undead && !this.effects.water_breathing) {
       if (--this.air <= -20) { this.air = 0; this.hurt(2, 'drown'); }
     } else this.air = 300;
     if (this.type === 'voidwalker' && b.inWater) {
@@ -1150,7 +1172,9 @@ export class Mob {
     const d2 = dx * dx + dz * dz;
     if (d2 <= this.meleeReachSq(p) && Math.abs(dy) < this.height && this.attackCooldown <= 0) {
       this.attackCooldown = 20;
-      p.hurt(this.def.attack, 'mob:' + this.def.name, this);
+      const hit = p.hurt(this.def.attack, 'mob:' + this.def.name, this);
+      const fx = this.def.hitEffect; // Dune Shamblers: Hunger
+      if (hit && fx && p.applyEffect) p.applyEffect(fx[0], fx[1], fx[2]);
     }
   }
 
@@ -1161,8 +1185,8 @@ export class Mob {
       this.headPitch = 0;
       return;
     }
-    // Shamblers also hunt settlers within 16 blocks
-    if (this.type === 'shambler') {
+    // Shamblers (and their kin) also hunt settlers within 16 blocks
+    if (this.def.shamblerKin) {
       if (this.prey && (this.prey.dead || this.prey.deathTime > 0 || Math.hypot(this.prey.x - this.x, this.prey.z - this.z) > 24)) this.prey = null;
       if (!this.prey && g.ticks % 20 === this.id % 20) {
         for (const e of g.entities.list) {
@@ -1224,7 +1248,8 @@ export class Mob {
     const inacc = 6 * 0.0075; // 14 - difficulty*4 on Normal
     const vx = dx / l + gaussian() * inacc, vy = dy / l + gaussian() * inacc, vz = dz / l + gaussian() * inacc;
     const vl = Math.hypot(vx, vy, vz);
-    g.entities.spawnArrow(sx, sy, sz, vx / vl * 1.6, vy / vl * 1.6, vz / vl * 1.6, this, false);
+    const a = g.entities.spawnArrow(sx, sy, sz, vx / vl * 1.6, vy / vl * 1.6, vz / vl * 1.6, this, false);
+    if (a && this.def.arrowEffect) a.effect = this.def.arrowEffect; // Rime Rattlers: Slowness
     g.audio.play('bow', [sx, sy, sz]);
   }
 
@@ -1337,6 +1362,7 @@ export class Mob {
     const yaw = this.prevYaw + wrap(this.yaw - this.prevYaw) * alpha;
     m.rotation.set(0, yaw, 0);
     if (this.deathTime > 0) m.rotation.z = Math.min(1, (this.deathTime + alpha) / 10) * Math.PI / 2;
+    else if (this.special && this.def.convertsTo) m.rotation.y += Math.sin(sec * 40) * 0.12; // shaking: about to convert
     animateModel(m, this, alpha, L, sec);
     if (this.roosting) { m.rotation.z = Math.PI; m.position.y += this.height; } // hanging upside down
     if (parts && parts.armL && this.def.guard && this.swingTime > 0) parts.armL.rotation.x = parts.armR.rotation.x = -2 * Math.sin((this.swingTime - alpha) / 10 * Math.PI);
