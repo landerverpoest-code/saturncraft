@@ -103,6 +103,7 @@ shapeless([I.BOWL, I.BEETROOT, I.BEETROOT, I.BEETROOT, I.BEETROOT, I.BEETROOT, I
 for (const [planks, fence] of [[B.OAK_PLANKS, B.OAK_FENCE], [B.SPRUCE_PLANKS, B.SPRUCE_FENCE], [B.BIRCH_PLANKS, B.BIRCH_FENCE]]) shaped(['PSP', 'PSP'], { P: planks, S: I.STICK }, fence, 3);
 shaped(['SPS', 'SPS'], { P: 'planks', S: I.STICK }, B.OAK_FENCE_GATE, 1);
 shaped(['PPP'], { P: 'planks' }, B.OAK_SLAB, 6);
+shaped(['PSP', 'P P', 'PSP'], { P: 'planks', S: B.OAK_SLAB }, B.BARREL, 1);
 shaped(['P  ', 'PP ', 'PPP'], { P: 'planks' }, B.OAK_STAIRS, 4);
 for (const [mat, slab, stairs] of [[B.COBBLESTONE, B.COBBLESTONE_SLAB, B.COBBLESTONE_STAIRS], [B.STONE_BRICKS, B.STONE_BRICK_SLAB, B.STONE_BRICK_STAIRS], [B.SANDSTONE, B.SANDSTONE_SLAB, B.SANDSTONE_STAIRS]]) {
   shaped(['XXX'], { X: mat }, slab, 6);

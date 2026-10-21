@@ -482,7 +482,7 @@ export class UI {
       for (let k = from; k < to && left; k++) if (!slots[k]) { slots[k] = { ...st, count: left }; left = 0; }
       return left;
     };
-    this.showContainer('chest', halves ? 'Large Chest' : 'Chest', (panel) => {
+    this.showContainer('chest', halves ? 'Large Chest' : this.game.world.getBlock(x, y, z) === B.BARREL ? 'Barrel' : 'Chest', (panel) => {
       const grid = el('<div class="grid" style="grid-template-columns:repeat(9,var(--slot));margin-bottom:12px"></div>');
       for (let i = 0; i < n; i++) {
         grid.appendChild(this.makeSlot(() => c.slots[i], (v) => { c.slots[i] = v; }, {

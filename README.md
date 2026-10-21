@@ -387,7 +387,7 @@ poison from eyes) follow the documented table.
 * Stairs form inner and outer corners next to perpendicular stairs (reference shape rules, also for collision)
 * Slabs and stairs in oak, cobblestone, stone brick and sandstone: bottom/top/double slabs (merge by placing), stairs facing away from the player and upside down when placed high; walkable with the 0.6 step-up; they block light like full blocks
 * Oak doors (two blocks, 3/16-thick collision box, open/close with right-click), ladders (climb 0.2/tick, fall capped at 0.15, sneak to hold on), torches on walls
-* Chests (27 slots, shift-click transfer, contents drop when broken, saved with the world); furnaces and chests face the player when placed; two chests side by side facing the same way join into a 54-slot Large Chest (not while sneaking, never three in a row), also shared in multiplayer
+* Chests (27 slots, shift-click transfer, contents drop when broken, saved with the world); furnaces and chests face the player when placed; two chests side by side facing the same way join into a 54-slot Large Chest (not while sneaking, never three in a row), also shared in multiplayer; barrels (6 planks + 2 oak slabs) hold 27 stacks like a chest but never join
 * Bow and arrows (player and Rattler), arrow pick-up
 * Death screen, item drop on death, respawn; pause menu with settings
 * Procedural sound effects with stereo panning; world saving
@@ -415,7 +415,7 @@ poison from eyes) follow the documented table.
 * Lingering elixirs and tipped arrows, Turtle Master / Decay / Luck elixirs, beacons (Haste only comes from `/effect`), Mining Fatigue, Absorption and Wither effects; effect particles of other players in multiplayer
 * Taming of animals other than Howlers and Gallopers
 * Large structures beyond villages, temples, wrecks, outposts, dungeons, sanctums and bastions; job-site blocks; Hollow outer-island cities
-* Barrels, hoppers and other storage containers
+* Hoppers, dispensers and other item-moving containers
 * Witches (elixir-throwing monsters), drowned, husks/strays as separate variants, baby mobs, mob equipment
 * Difficulty levels (fixed at Normal), spectator/adventure modes, multiplayer
 * Crawling pose, elytra

@@ -510,7 +510,7 @@ export class Game {
       this.chests.delete(k); this.furnaces.delete(k); this.brewingStands.delete(k);
       return;
     }
-    if (id === B.CHEST) {
+    if (id === B.CHEST || id === B.BARREL) {
       const k = `${x},${y},${z}`;
       const c = (meta & 8) ? this.getChest(x, y, z, meta) : this.chests.get(k);
       if (c) {

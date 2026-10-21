@@ -653,6 +653,26 @@ const GEN = {
     for (let y = 4; y < 12; y++) c.set(11, y, hex('#6b4a2a'));
     c.set(10, 4, hex('#9a9a9a')); c.set(12, 4, hex('#9a9a9a')); c.set(11, 3, hex('#9a9a9a'));
   },
+  barrel_side: (c) => {
+    // vertical staves with two iron hoops
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const stave = x % 4, base = hex('#8a6236');
+      let col = shade(base, stave === 0 ? 0.72 : 1 + ((x * 7 + (y >> 2) * 3) % 5 - 2) * 0.03);
+      if (y === 2 || y === 3 || y === 12 || y === 13) col = y === 2 || y === 12 ? hex('#7a7a80') : hex('#55555a');
+      c.set(x, y, col);
+    }
+  },
+  barrel_top: (c) => {
+    planks(c, '#9a7040');
+    const d = hex('#55555a'), m = hex('#7a7a80');
+    for (let i = 0; i < 16; i++) { c.set(i, 0, d); c.set(i, 15, d); c.set(0, i, d); c.set(15, i, d); c.set(i, 1, m); c.set(1, i, m); c.set(i, 14, m); c.set(14, i, m); }
+    for (let y = 6; y < 10; y++) for (let x = 6; x < 10; x++) c.set(x, y, hex('#3a2a18')); // the bung hole
+  },
+  barrel_bottom: (c) => {
+    planks(c, '#9a7040');
+    const d = hex('#55555a');
+    for (let i = 0; i < 16; i++) { c.set(i, 0, d); c.set(i, 15, d); c.set(0, i, d); c.set(15, i, d); }
+  },
   chest_top: (c) => {
     planks(c, '#a2773f');
     const d = hex('#4e3416');
