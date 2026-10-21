@@ -935,6 +935,11 @@ export class Game {
     const nv = p.effects.night_vision;
     this.nightVision = !nv ? 0 : nv.ticks > 200 ? 1 : 0.7 + Math.sin((nv.ticks - alpha) * Math.PI * 0.2) * 0.3;
     terrainUniforms.uMinLight.value = Math.max(this.dims.baseLight(), this.nightVision * 0.75);
+    // a torch (or any light-giving block) in the hand lights up the area around the player
+    const held = p.dead ? null : p.inventory.selectedStack, hd = held && ITEMS[held.id];
+    const hb = hd ? BLOCKS[hd.block ?? hd.places] : null;
+    this.handLight = hb && hb.emit ? hb.emit : 0;
+    terrainUniforms.uHand.value = this.handLight;
     const R = this.chunks.renderDistance * 16;
     this.clouds.update(this.camera, smoothTime, this.sky, Math.max(192, R * 1.8));
     if (this.signRenderer) this.signRenderer.update();

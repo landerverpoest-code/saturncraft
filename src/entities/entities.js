@@ -44,7 +44,8 @@ export function lightAt(game, x, y, z) {
   const w = game.world;
   const l = w.getLight(Math.floor(x), Math.floor(y), Math.floor(z));
   const sky = Math.max(0, (l >> 4) - game.sky.state.skyDarken * 0) / 15;
-  const blk = (l & 15) / 15;
+  let blk = (l & 15) / 15;
+  if (game.handLight > 0 && game.player) { const p = game.player, d = Math.hypot(x - p.x, y - p.y - 1.5, z - p.z); blk = Math.max(blk, Math.max(0, game.handLight - d * 1.1) / 15); }
   const curve = (f) => { const b = f / (4 - 3 * f); return b * 0.45 + (1 - Math.pow(1 - b, 4)) * 0.55; };
   return Math.max(curve(sky), curve(blk) * 0.95, game.minEntityLight || 0.06, (game.nightVision || 0) * 0.8);
 }

@@ -7,6 +7,7 @@ export const terrainUniforms = {
   uAtlas: { value: null },
   uTorch: { value: new THREE.Color(1.0, 0.82, 0.6) },
   uMinLight: { value: 0.035 },
+  uHand: { value: 0 }, // light level of what the player holds (a torch lights the area around them)
   uTime: { value: 0 },
   uFire: { value: texId('fire') },
   uFireFrames: { value: texId('fire_0') },
@@ -51,6 +52,7 @@ precision highp sampler2DArray;
 uniform sampler2DArray uAtlas;
 uniform vec3 uTorch;
 uniform float uMinLight;
+uniform float uHand;
 uniform float uTime;
 uniform float uFire;
 uniform float uFireFrames;
@@ -75,7 +77,8 @@ diffuseColor *= texel;`)
       .replace(
         'vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;',
         `float skyB = lightCurve(vLit.x);
-float blkB = lightCurve(vLit.y);
+float handL = uHand > 0.0 ? clamp((uHand - length(vViewPosition) * 1.1) / 15.0, 0.0, 1.0) : 0.0;
+float blkB = lightCurve(max(vLit.y, handL));
 float aoF = 1.0 - vLit.z * 0.19;
 vec3 outgoingLight = reflectedLight.directDiffuse * skyB * mix(1.0, aoF, 0.5)
   + reflectedLight.indirectDiffuse * skyB * aoF * vShade
