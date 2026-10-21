@@ -12,7 +12,8 @@ import { shouldDespawn, shouldBurnInSun } from './spawnRules.js';
 import { buildModel, animateModel } from './models.js';
 import { randomSheepColor, WOOL_RGB } from '../world/colors.js';
 import { WOOL_ITEMS } from '../world/items.js';
-import { RESTOCK_TICKS } from './trades.js';
+import { RESTOCK_TICKS, makeTrades } from './trades.js';
+import { villagesNear, PROFESSIONS } from '../world/villages.js';
 
 let nextMobId = 1_000_000;
 const TAU = Math.PI * 2;
@@ -103,6 +104,10 @@ export class Mob {
 
   /** Settlers flee Shamblers, keep near their house (inside it at night), restock, and watch nearby players. */
   settlerAI(g, p, pdist) {
+    if (this.age < 0) { if (++this.age === 0) { this.setBaby(false); this.growUp(g); } }
+    else if (this.age > 0) this.age--;
+    // now and then two adults by day make a child, if the village has a free bed
+    if (this.age === 0 && this.home && g.ticks % 200 === this.id % 200 && Math.random() < 0.05 && g.sky.state.aboveCount > 0) this.trySettlerBreed(g);
     if (g.time - this.lastRestock > RESTOCK_TICKS) { this.lastRestock = g.time; for (const o of this.trades) o.uses = 0; }
     if (this.panicTicks > 0) return this.passiveAI(g);
     // flee from Shamblers within 8 blocks
@@ -129,6 +134,30 @@ export class Mob {
     }
     this.headPitch = 0;
     this.wanderAI(g, 0.8);
+  }
+
+  trySettlerBreed(g) {
+    const mate = g.entities.list.find((e) => e !== this && e.def && e.def.villager && !e.dead && e.age === 0 && Math.hypot(e.x - this.x, e.z - this.z) < 8);
+    if (!mate) return;
+    const vs = villagesNear(g.world.gen, this.x, this.z, this.x, this.z);
+    if (!vs.length) return;
+    const beds = vs[0].pieces.filter((pc) => pc.type === 'house').length;
+    const settlers = g.entities.list.filter((e) => e.def && e.def.villager && !e.dead && Math.hypot(e.x - vs[0].cx, e.z - vs[0].cz) < 64).length;
+    if (settlers >= beds) return;
+    const baby = g.spawner.spawnMob('settler', (this.x + mate.x) / 2, this.y, (this.z + mate.z) / 2);
+    if (!baby) return;
+    baby.setBaby(true);
+    baby.home = this.home;
+    this.age = mate.age = 6000;
+    this.hearts(g, 6);
+  }
+
+  /** A settler child takes up a trade when it grows up. */
+  growUp(g) {
+    if (!this.def.villager || this.profession) return;
+    this.profession = PROFESSIONS[Math.floor(Math.random() * PROFESSIONS.length)];
+    this.trades = makeTrades(this.profession);
+    this.lastRestock = g.time;
   }
 
   /** Fed its breeding food: babies grow 10 % faster, adults fall in love. */
