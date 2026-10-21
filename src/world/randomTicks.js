@@ -7,6 +7,7 @@ import { BIOMES } from './biomes.js';
 import { MIN_Y, SECTION_COUNT, cidx } from './constants.js';
 import { lavaIgnite, FIRE_DELAY } from './fire.js';
 import { LEAVES, SAPLING_TREE, growTree, leavesConnected } from './trees.js';
+import { CIRCUIT_SETTLE } from './circuits.js';
 
 export const RANDOM_TICK_SPEED = 3;
 
@@ -86,6 +87,8 @@ export function randomTickBlock(world, x, y, z, id, rng = Math.random) {
     lavaIgnite(world, x, y, z, rng);
   } else if (id === B.FIRE) {
     world.scheduleTick(x, y, z, FIRE_DELAY); // keeps fires burning after a reload
+  } else if (CIRCUIT_SETTLE[id]) {
+    if (world.circuits) world.circuits.enqueue(x, y, z); // circuits settle again after a reload
   } else if (CROPS.has(id)) {
     const stage = world.getMeta(x, y, z);
     if (stage >= 7 || rawLight(world, x, y + 1, z) < 9) return;
@@ -117,6 +120,7 @@ function rawBlockLight(world, x, y, z) { return world.getLight(x, y, z) & 15; }
 /** Ids that react to random ticks (fast pre-filter). */
 export const RANDOM_TICKS = new Uint8Array(256);
 for (const id of [B.GRASS, B.FARMLAND, B.SUGAR_CANE, B.LAVA, B.FIRE, B.SNOW_LAYER, B.ICE, ...CROPS, ...LEAVES, ...Object.keys(SAPLING_TREE).map(Number)]) RANDOM_TICKS[id] = 1;
+for (let id = 0; id < 256; id++) if (CIRCUIT_SETTLE[id]) RANDOM_TICKS[id] = 1;
 
 /** Run one tick's worth of random ticks in all chunks within `radius` chunks of (cx, cz). */
 export function runRandomTicks(world, cx, cz, radius, rng = Math.random) {

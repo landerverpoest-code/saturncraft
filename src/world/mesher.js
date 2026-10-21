@@ -7,6 +7,7 @@ import { FACE_TILE, FRONT_TILE, texId } from './textures.js';
 import { WOOL_RGB } from './colors.js';
 import { railHeight } from './rails.js';
 import { ARTS, artOf, partOf } from './paintings.js';
+import { circuitParts, partPoint, wireMask, wireColor } from './circuitShapes.js';
 import { doorBox, ladderBox, SIDE_DIRS, DOOR_UPPER, BED_HEAD, BED_BOX, slabBox, stairBoxes, fenceConnects, fenceRenderBoxes, gateRenderBoxes, paneConnects, paneBoxes, snowBox, wallConnects, wallBoxes, trapdoorBox, blockBoxes } from './shapes.js';
 
 export const PAD = 18;
@@ -53,6 +54,8 @@ const PAINT_TILES = ARTS.map(([, w, h], art) => Array.from({ length: w * h }, (_
 const DOOR_LOWER = texId('door_lower'), DOOR_UPPER_TILE = texId('door_upper');
 const BED_TOPS = [0, 1, 2, 3].map((r) => [texId('bed_foot_top_' + r), texId('bed_head_top_' + r)]);
 const BED_SIDE = texId('bed_side'), BED_BOTTOM = texId('oak_planks');
+const WIRE_DOT = texId('cinnabar_wire_dot'), WIRE_LINE = texId('cinnabar_wire_line'), WIRE_HALF = texId('cinnabar_wire_half');
+const tileOf = (name) => texId(name) ?? 0;
 
 class Buf {
   constructor(cap = 16384) { this.alloc(cap); this.n = 0; this.ni = 0; this.yBase = 0; }
@@ -346,6 +349,18 @@ export function meshSection(sec) {
       const atWall = s === 1 || s === 2 ? 1 : 0, off = atWall ? -1 / 16 : 1 / 16;
       b[a] = atWall + off - 0.005; b[a + 3] = atWall + off + 0.005;
       emitBox(buf, x, y, z, b[0], b[1], b[2], b[3], b[4], b[5], FACE_TILE[id * 6], (l >> 4) * 17, (l & 15) * 17, 'box', FOLIAGE_BIOME[id] ? [colors[ci + 3], colors[ci + 4], colors[ci + 5]] : null);
+    } else if (shape === SHAPE.WIRE) {
+      meshWire(buf, blocks, light, meta, i, x, y, z);
+    } else if (shape === SHAPE.CIRCUIT) {
+      // levers, buttons, plates, repeaters, pistons: boxes turned into place, lit by the brightest neighbour
+      let sk = 0, bk = 0;
+      for (let d = 0; d < 6; d++) { const l = light[i + FACE_N[d]]; sk = Math.max(sk, l >> 4); bk = Math.max(bk, l & 15); }
+      for (const p of circuitParts(id, meta[i])) {
+        const tile = typeof p.tile === 'string' ? tileOf(p.tile) : p.tile.map(tileOf);
+        const n0 = buf.n;
+        emitBox(buf, x, y, z, p.box[0], p.box[1], p.box[2], p.box[3], p.box[4], p.box[5], tile, sk * 17, (p.lit ? Math.max(bk, 9) : bk) * 17, p.uv);
+        transformVerts(buf, n0, x, y, z, p);
+      }
     } else if (shape === SHAPE.CACTUS) {
       const l = light[i];
       const sky = (l >> 4) * 17, blk = (l & 15) * 17;
@@ -368,6 +383,63 @@ export function meshSection(sec) {
     }
   }
   return { opaque: opaqueBuf.out(), cutout: cutoutBuf.out(), trans: transBuf.out() };
+}
+
+/** Move vertices n0.. of a part emitted at the block's origin to their place (circuitShapes.partPoint). */
+function transformVerts(buf, n0, x, y, z, part) {
+  if (!part.tilt && !part.off && !part.yaw && (part.facing ?? 1) === 1) return;
+  for (let v = n0; v < buf.n; v++) {
+    const px = buf.pos[v * 3] - x, py = buf.pos[v * 3 + 1] - buf.yBase - y, pz = buf.pos[v * 3 + 2] - z;
+    const q = partPoint(part, px, py, pz);
+    buf.pos[v * 3] = x + q[0]; buf.pos[v * 3 + 1] = y + q[1] + buf.yBase; buf.pos[v * 3 + 2] = z + q[2];
+    const n = partPoint(part, buf.nrm[v * 3] / 127, buf.nrm[v * 3 + 1] / 127, buf.nrm[v * 3 + 2] / 127, true);
+    buf.nrm[v * 3] = Math.round(n[0] * 127); buf.nrm[v * 3 + 1] = Math.round(n[1] * 127); buf.nrm[v * 3 + 2] = Math.round(n[2] * 127);
+  }
+}
+
+/**
+ * Cinnabar wire: flat quads on the floor (a dot, straight lines, or a dot with
+ * an arm per connection) plus a line up the side of a block where it climbs,
+ * tinted from dark to bright red by its power level.
+ */
+function meshWire(buf, blocks, light, meta, i, x, y, z) {
+  const lvl = meta[i] & 15;
+  const mask = wireMask((a, b, c) => blocks[pidx(a, b, c)], (a, b, c) => meta[pidx(a, b, c)], x, y, z);
+  const [r, g, b] = wireColor(lvl);
+  const l = light[i], sky = (l >> 4) * 17, blk = Math.max(l & 15, Math.round(lvl * 0.6)) * 17;
+  const conn = mask & 15;
+  // flat quad rotated by `rot` quarter turns (texture "up" = -z), raised a hair to avoid z-fighting
+  const flat = (tile, rot, lift) => {
+    const cx = [0, 1, 1, 0], cz = [0, 0, 1, 1], bu = [0, 1, 1, 0], bv = [0, 0, 1, 1], yy = y + 1 / 64 + lift;
+    buf.ensure(4);
+    for (let k = 3; k >= 0; k--) {
+      const j = (k - rot + 4) & 3;
+      buf.vert(x + cx[k], yy, z + cz[k], 0, 1, 0, bu[j], bv[j], r, g, b, sky, blk, 0, tile);
+    }
+    buf.quad(false);
+  };
+  if (conn === 5 || conn === 10 || conn === 1 || conn === 4 || conn === 2 || conn === 8) flat(WIRE_LINE, conn & 10 ? 1 : 0, 0);
+  else {
+    flat(WIRE_DOT, 0, 0);
+    // half lines: the texture runs from the centre to the top edge (-z); rot turns it to side s
+    for (let s = 0; s < 4; s++) if (conn & (1 << s)) flat(WIRE_HALF, s, (s + 1) / 512);
+  }
+  // climbing: a line up the face of the neighbouring block
+  for (let s = 0; s < 4; s++) {
+    if (!(mask & (16 << s))) continue;
+    const [dx, , dz] = SIDE_DIRS[s];
+    const e = 1 / 64, px = dx > 0 ? x + 1 - e : dx < 0 ? x + e : null, pz = dz > 0 ? z + 1 - e : dz < 0 ? z + e : null;
+    const pts = px !== null ? [[px, z], [px, z + 1]] : [[x, pz], [x + 1, pz]];
+    buf.ensure(8);
+    for (let side = 0; side < 2; side++) {
+      buf.vert(pts[0][0], y, pts[0][1], -dx, 0, -dz, 0, 1, r, g, b, sky, blk, 0, WIRE_LINE);
+      buf.vert(pts[1][0], y, pts[1][1], -dx, 0, -dz, 1, 1, r, g, b, sky, blk, 0, WIRE_LINE);
+      buf.vert(pts[1][0], y + 1, pts[1][1], -dx, 0, -dz, 1, 0, r, g, b, sky, blk, 0, WIRE_LINE);
+      buf.vert(pts[0][0], y + 1, pts[0][1], -dx, 0, -dz, 0, 0, r, g, b, sky, blk, 0, WIRE_LINE);
+      buf.quad(false);
+      if (side === 0) { const n = buf.n; for (let k = 0; k < 2; k++) swapVert(buf, n - 4 + k, n - 1 - k); }
+    }
+  }
 }
 
 function swapVert(buf, a, b) {

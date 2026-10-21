@@ -4,6 +4,7 @@
 // Side indices (used in meta) follow the furnace convention:
 // 0 = -z, 1 = +x, 2 = +z, 3 = -x.
 import { B, BLOCKS, SHAPE } from './blocks.js';
+import { circuitSelection, circuitCollision } from './circuitShapes.js';
 
 export const SIDE_DIRS = [[0, 0, -1], [1, 0, 0], [0, 0, 1], [-1, 0, 0]];
 
@@ -243,6 +244,7 @@ for (const id of [B.COBBLESTONE_WALL, B.MOSSY_COBBLESTONE_WALL, B.OAK_TRAPDOOR, 
 /** Snow layer box (n = meta + 1 layers); collision is one layer lower, so a single layer has none. */
 export const snowBox = (meta, collide = false) => [0, 0, 0, 1, ((meta & 7) + (collide ? 0 : 1)) * 2 / 16, 1];
 for (const id of [B.OAK_FENCE, B.SPRUCE_FENCE, B.BIRCH_FENCE, B.OAK_FENCE_GATE]) SHAPED_COLLISION[id] = 1;
+for (const id of [B.PISTON, B.STICKY_PISTON, B.PISTON_HEAD]) SHAPED_COLLISION[id] = 1;
 for (const id of [B.OAK_SLAB, B.COBBLESTONE_SLAB, B.STONE_BRICK_SLAB, B.SANDSTONE_SLAB, B.OAK_STAIRS, B.COBBLESTONE_STAIRS, B.STONE_BRICK_STAIRS, B.SANDSTONE_STAIRS]) SHAPED_COLLISION[id] = 1;
 
 /**
@@ -263,6 +265,7 @@ export function collisionBoxes(id, meta, world, x, y, z) {
   if (sh === SHAPE.WALL) return wallBoxes(world ? wallMask((a, b, c) => world.getBlock(a, b, c), x, y, z) : 0, 1.5);
   if (sh === SHAPE.STAIRS) return world ? stairBoxes(meta, (dx, dz) => [world.getBlock(x + dx, y, z + dz), world.getMeta(x + dx, y, z + dz)], (n) => BLOCKS[n] && BLOCKS[n].shape === SHAPE.STAIRS) : stairBoxes(meta);
   if (sh === SHAPE.BOXES) return id === B.ANVIL ? [boundsOf(blockBoxes(id, meta))] : blockBoxes(id, meta);
+  if (sh === SHAPE.CIRCUIT) return circuitCollision(id, meta);
   return null;
 }
 
@@ -284,7 +287,8 @@ export function selectionBox(id, meta) {
   if (BLOCKS[id].shape === SHAPE.SLAB) return slabBox(meta);
   if (id === B.LADDER || id === B.VINES) return ladderBox(meta);
   if (id === B.LILY_PAD) return [0, 0, 0, 1, 1 / 64, 1];
-  if (id === B.TORCH) return torchBox(meta);
+  if (id === B.TORCH || id === B.CINNABAR_TORCH || id === B.CINNABAR_TORCH_OFF) return torchBox(meta);
+  if (BLOCKS[id].shape === SHAPE.WIRE || BLOCKS[id].shape === SHAPE.CIRCUIT) return circuitSelection(id, meta);
   if (id === B.FIRE) return FIRE_BOX;
   if (BLOCKS[id].shape === SHAPE.BOXES) return boundsOf(blockBoxes(id, meta));
   return null;

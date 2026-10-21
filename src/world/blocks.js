@@ -8,7 +8,9 @@ export const TOOL = { NONE: null, PICKAXE: 'pickaxe', AXE: 'axe', SHOVEL: 'shove
 export const TIER = { ANY: -1, WOOD: 0, STONE: 1, IRON: 2, DIAMOND: 3 };
 
 // Render shapes understood by the mesher
-export const SHAPE = { NONE: 0, CUBE: 1, CROSS: 2, LIQUID: 3, TORCH: 4, CACTUS: 5, CROP: 6, DOOR: 7, LADDER: 8, BED: 9, SLAB: 10, STAIRS: 11, FENCE: 12, GATE: 13, PANE: 14, FIRE: 15, PAD: 16, SNOW: 17, WALL: 18, TRAPDOOR: 19, RAIL: 20, BOXES: 21, PAINTING: 22 };
+export const SHAPE = { NONE: 0, CUBE: 1, CROSS: 2, LIQUID: 3, TORCH: 4, CACTUS: 5, CROP: 6, DOOR: 7, LADDER: 8, BED: 9, SLAB: 10, STAIRS: 11, FENCE: 12, GATE: 13, PANE: 14, FIRE: 15, PAD: 16, SNOW: 17, WALL: 18, TRAPDOOR: 19, RAIL: 20, BOXES: 21, PAINTING: 22,
+  // Cinnabar circuitry (ids from 30 to stay clear of other shapes): flat wire, and parts drawn from boxes (world/circuitShapes.js)
+  WIRE: 30, CIRCUIT: 31 };
 
 // Render layers
 export const LAYER = { OPAQUE: 0, CUTOUT: 1, TRANSLUCENT: 2 };
@@ -47,6 +49,10 @@ export const B = {
   ENCHANTING_TABLE: 134, ANVIL: 135,
   CINDERSTONE: 160, GLOWSHARD: 161, MOURNSAND: 162, EMBERQUARTZ_ORE: 163, SCORCHED_BRICKS: 164, RIFT: 165,
   HOLLOWSTONE: 166, HOLLOW_FRAME: 167, HOLLOW_FRAME_EYE: 168, HOLLOW_GATE: 169, WYRM_EGG: 170,
+  // Cinnabar circuitry (see world/circuits.js)
+  CINNABAR_WIRE: 175, LEVER: 176, STONE_BUTTON: 177, WOODEN_PRESSURE_PLATE: 178, CINNABAR_TORCH: 179, CINNABAR_TORCH_OFF: 180,
+  CINNABAR_LAMP: 181, CINNABAR_LAMP_ON: 182, REPEATER: 183, PISTON: 184, STICKY_PISTON: 185, PISTON_HEAD: 186,
+  CHIME_BLOCK: 187, CINNABAR_BLOCK: 188,
 };
 
 const defaults = {
@@ -266,6 +272,29 @@ def(B.HOLLOW_FRAME_EYE, 'Hollow Frame with Eye', { hardness: -1, resistance: 360
 // Hollow Gate: the starry gateway to and from the Hollow (not solid; you fall in).
 def(B.HOLLOW_GATE, 'Hollow Gate', { hardness: -1, resistance: 3600000, solid: false, opaque: false, opacity: 0, emit: 15, drops: null, sound: 'glass' });
 def(B.WYRM_EGG, 'Wyrm Egg', { hardness: 3, resistance: 9, emit: 1, tex: { top: 'wyrm_egg_top', bottom: 'wyrm_egg_top', side: 'wyrm_egg' } });
+
+// Cinnabar circuitry (world/circuits.js). Power levels live in meta: wire = level 0..15;
+// lever / button: bits 0-2 attachment (0 floor, 1-4 wall side+1, 5 ceiling), bit 3 on, bit 4 turned
+// a quarter; plate: bit 0 pressed; torches: as torches; repeater: bits 0-1 output side, 2-3 delay-1,
+// bit 4 powered; pistons: bits 0-2 facing (0 down, 1 up, 2 -z, 3 +z, 4 -x, 5 +x), bit 3 extended
+// (head: bit 3 sticky); chime block: bits 0-4 pitch, bit 5 powered. `hidden` keeps a block out of
+// the creative catalogue.
+const part = { hardness: 0, resistance: 0, solid: false, opaque: false, layer: LAYER.CUTOUT, needsSupport: true, circuitPart: true, sound: 'wood' };
+def(B.CINNABAR_WIRE, 'Cinnabar Wire', { ...part, shape: SHAPE.WIRE, sound: 'stone', hidden: true, drops: { item: 'CINNABAR', min: 1, max: 1 }, tex: { all: 'cinnabar_wire' } });
+def(B.LEVER, 'Lever', { ...part, hardness: 0.5, resistance: 0.5, shape: SHAPE.CIRCUIT, sound: 'stone', tex: { all: 'lever' } });
+def(B.STONE_BUTTON, 'Stone Button', { ...part, hardness: 0.5, resistance: 0.5, shape: SHAPE.CIRCUIT, sound: 'stone', tex: { all: 'stone' } });
+def(B.WOODEN_PRESSURE_PLATE, 'Wooden Pressure Plate', { ...part, hardness: 0.5, resistance: 0.5, tool: TOOL.AXE, flammable: true, shape: SHAPE.CIRCUIT, tex: { all: 'oak_planks' } });
+def(B.CINNABAR_TORCH, 'Cinnabar Torch', { ...part, shape: SHAPE.TORCH, emit: 7, tex: { all: 'cinnabar_torch' } });
+def(B.CINNABAR_TORCH_OFF, 'Cinnabar Torch', { ...part, shape: SHAPE.TORCH, hidden: true, drops: B.CINNABAR_TORCH, tex: { all: 'cinnabar_torch_off' } });
+def(B.CINNABAR_LAMP, 'Cinnabar Lamp', { hardness: 0.3, resistance: 0.3, sound: 'glass' });
+def(B.CINNABAR_LAMP_ON, 'Cinnabar Lamp', { hardness: 0.3, resistance: 0.3, sound: 'glass', emit: 15, hidden: true, drops: B.CINNABAR_LAMP, tex: { all: 'cinnabar_lamp_on' } });
+def(B.REPEATER, 'Repeater', { ...part, shape: SHAPE.CIRCUIT, sound: 'stone', tex: { top: 'repeater', bottom: 'smooth_stone', side: 'smooth_stone' } });
+const piston = { hardness: 1.5, resistance: 1.5, tool: TOOL.PICKAXE, opaque: false, opacity: 15, shape: SHAPE.CIRCUIT, sound: 'stone' };
+def(B.PISTON, 'Piston', { ...piston, tex: { top: 'piston_top', bottom: 'piston_bottom', side: 'piston_side' } });
+def(B.STICKY_PISTON, 'Sticky Piston', { ...piston, tex: { top: 'piston_top_sticky', bottom: 'piston_bottom', side: 'piston_side' } });
+def(B.PISTON_HEAD, 'Piston Head', { ...piston, hidden: true, drops: null, tex: { top: 'piston_top', bottom: 'piston_top', side: 'piston_side' } });
+def(B.CHIME_BLOCK, 'Chime Block', { hardness: 0.8, resistance: 0.8, tool: TOOL.AXE, sound: 'wood', flammable: true, tex: { top: 'chime_block_top', bottom: 'oak_planks', side: 'chime_block' } });
+def(B.CINNABAR_BLOCK, 'Cinnabar Block', { hardness: 5, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD, sound: 'metal' });
 
 export const NUM_BLOCKS = BLOCKS.length;
 
