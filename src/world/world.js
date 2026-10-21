@@ -11,6 +11,7 @@ import { hushvineSupported, hushFlowerSupported } from './dimensions/hushvine.js
 import { createGenerator } from './dimensions/dims.js';
 import { LEAVES as LEAVES_SET } from './trees.js';
 import { railSupported } from './rails.js';
+import { spongeUpdate } from './sponge.js';
 import { paintingIntact } from './paintings.js';
 import { Circuits, CIRCUIT_BLOCK, CIRCUIT_REACT, CIRCUIT_SETTLE, supported as circuitSupported } from './circuits.js';
 import { SIDE_DIRS, selectionBox, collisionBoxes, SHAPED_COLLISION, DOOR_UPPER, BED_HEAD } from './shapes.js';
@@ -217,6 +218,8 @@ export class World {
     } else if (id === B.FARMLAND && SOLID[this.getBlock(x, y + 1, z)]) {
       this.setBlock(x, y, z, B.DIRT, 0);
     }
+    else if (id === B.SOAKMOSS) spongeUpdate(this, x, y, z); // drinks up the water around it
+    else if (id === B.WET_SOAKMOSS && this.dimension === 'cinderdeep') this.setBlock(x, y, z, B.SOAKMOSS); // dries at once in the heat
     if (CIRCUIT_REACT[this.getBlock(x, y, z)]) this.circuits.enqueue(x, y, z);
   }
 

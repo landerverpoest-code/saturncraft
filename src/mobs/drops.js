@@ -13,6 +13,12 @@ export function rollDrops(type, ctx = {}, rng = Math.random) {
   const out = [];
   for (const d of def.drops) {
     if (d.playerOnly && !ctx.killedByPlayer) continue;
+    if (d.oneOf) {
+      // one item (or none) from weighted chances: [[id, chance], ...]
+      let r = rng();
+      for (const [id, chance] of d.oneOf) { if (r < chance) { out.push({ id, count: 1 }); break; } r -= chance; }
+      continue;
+    }
     if (d.notSheared && ctx.sheared) continue;
     if (d.chance !== undefined && rng() >= d.chance + (d.plunderChance || 0) * (ctx.plunder | 0)) continue;
     let n = d.min + Math.floor(rng() * (d.max - d.min + 1));

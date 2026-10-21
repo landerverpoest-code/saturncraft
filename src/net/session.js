@@ -36,6 +36,7 @@ import { rayAABB } from '../entities/entities.js';
 import { runRandomTicks } from '../world/randomTicks.js';
 import { addXp } from '../player/experience.js';
 import { MAX_USES } from '../mobs/trades.js';
+import { EFFECTS } from '../player/effects.js';
 import { runCommand } from '../ui/commands.js';
 import { DIMENSIONS } from '../world/dimensions/dims.js';
 import { POTIONS } from '../world/potions.js';

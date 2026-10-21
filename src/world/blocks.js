@@ -57,6 +57,8 @@ export const B = {
   // The Hollow's outer islands (see world/dimensions/hollowCity.js, hushvine.js)
   HOLLOWBRICK: 195, HOLLOWBRICK_PILLAR: 196, HOLLOWBRICK_STAIRS: 197, HOLLOWBRICK_SLAB: 198, HOLLOWSTONE_BRICKS: 199,
   WISP_ROD: 200, FAR_GATE: 201, GLOOMSHELL_BOX: 202, WYRM_HEAD: 203, HUSHVINE: 204, HUSHVINE_FLOWER: 205,
+  // Tide Citadels (ocean monuments, see world/monuments.js): ids 216-230
+  TIDESTONE: 216, TIDESTONE_BRICKS: 217, DARK_TIDESTONE: 218, TIDE_LANTERN: 219, SOAKMOSS: 220, WET_SOAKMOSS: 221,
 };
 
 const defaults = {
@@ -339,6 +341,15 @@ def(B.GLOOMSHELL_BOX, 'Gloomshell Box', { hardness: 2, resistance: 2, tool: TOOL
 def(B.WYRM_HEAD, 'Wyrm Head', { hardness: 1, resistance: 1, opaque: false, shape: SHAPE.BOXES, tex: { top: 'wyrm_head_top', bottom: 'wyrm_head_top', side: 'wyrm_head_side', front: 'wyrm_head_face' } });
 def(B.HUSHVINE, 'Hushvine', { hardness: 0.4, resistance: 0.4, tool: TOOL.AXE, opaque: false, layer: LAYER.CUTOUT, sound: 'wood', needsSupport: true, drops: { item: 'HUSHFRUIT', min: 0, max: 1 } });
 def(B.HUSHVINE_FLOWER, 'Hushvine Flower', { hardness: 0.4, resistance: 0.4, tool: TOOL.AXE, opaque: false, layer: LAYER.CUTOUT, emit: 3, sound: 'wood', needsSupport: true, tex: { all: 'hushvine_flower' } });
+// Tide Citadel blocks (reference: prismarine, prismarine bricks, dark prismarine, sea lantern, sponge, wet sponge).
+const tidestone = { hardness: 1.5, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD };
+def(B.TIDESTONE, 'Tidestone', tidestone);
+def(B.TIDESTONE_BRICKS, 'Tidestone Bricks', tidestone);
+def(B.DARK_TIDESTONE, 'Dark Tidestone', tidestone);
+def(B.TIDE_LANTERN, 'Tide Lantern', { hardness: 0.3, resistance: 0.3, emit: 15, sound: 'glass', drops: { item: 'TIDE_CRYSTAL', min: 2, max: 3 } });
+// Soakmoss drinks up the water around it (world/sponge.js) and turns wet; a furnace dries it again.
+def(B.SOAKMOSS, 'Soakmoss', { hardness: 0.6, resistance: 0.6, tool: TOOL.HOE, sound: 'grass' });
+def(B.WET_SOAKMOSS, 'Wet Soakmoss', { hardness: 0.6, resistance: 0.6, tool: TOOL.HOE, sound: 'grass' });
 
 export const NUM_BLOCKS = BLOCKS.length;
 

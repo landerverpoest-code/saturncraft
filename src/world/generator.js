@@ -5,6 +5,7 @@ import { stampMineshafts } from './mineshafts.js';
 import { stampTemples, stampWrecks, stampOutposts } from './temples.js';
 import { stampHuts } from './swampHuts.js';
 import { stampSanctums } from './dimensions/sanctum.js';
+import { stampMonuments } from './monuments.js';
 import { treeShape, LEAVES, LOGS, PLANTS } from './trees.js';
 import { B, DEEP_VARIANT } from './blocks.js';
 import { Simplex, hash4, hashf, mulberry32 } from './noise.js';
@@ -391,6 +392,7 @@ export class TerrainGenerator {
     stampTemples(this, blocks, meta, cx, cz);
     stampHuts(this, blocks, meta, cx, cz);     // swamp huts (world/swampHuts.js)
     stampWrecks(this, blocks, meta, cx, cz);
+    stampMonuments(this, blocks, meta, cx, cz); // Tide Citadels (world/monuments.js)
     stampOutposts(this, blocks, meta, cx, cz);
     stampRuins(this, blocks, meta, cx, cz); // Ruined Rifts (world/ruinedPortals.js)
     stampSanctums(this, blocks, meta, cx, cz); // Hollow Sanctums (world/dimensions/sanctum.js)

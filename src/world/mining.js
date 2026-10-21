@@ -3,6 +3,7 @@ import { BLOCKS, B, TIER, TOOL } from './blocks.js';
 import { I, HAND, WOOL_ITEMS } from './items.js';
 import { LEAF_SAPLING } from './trees.js';
 import { swiftdigBonus, silkDropsSelf, bountyCount } from './enchantments.js';
+import { fatigueFactor } from '../player/effects.js';
 
 /** True if this tool type is the efficient one for the block. */
 export function isCorrectToolType(block, tool) {
@@ -23,7 +24,7 @@ export function canHarvest(blockId, tool = HAND) {
  * Fraction of the block destroyed per game tick.
  * @param {number} blockId
  * @param {object} tool  tool stats (HAND for bare hand)
- * @param {{onGround?: boolean, inWater?: boolean, swiftdig?: number, haste?: number}} ctx  swiftdig = the tool's Swiftdig level, haste = Haste effect level
+ * @param {{onGround?: boolean, inWater?: boolean, swiftdig?: number, haste?: number}} ctx  swiftdig = the tool's Swiftdig level, haste = Haste effect level, fatigue = Mining Fatigue level
  */
 export function breakProgressPerTick(blockId, tool = HAND, ctx = {}) {
   const b = BLOCKS[blockId];
@@ -33,6 +34,7 @@ export function breakProgressPerTick(blockId, tool = HAND, ctx = {}) {
   if (isCorrectToolType(b, tool)) speed = tool.type === 'sword' ? 1.5 : tool.speed;
   if (ctx.swiftdig && speed > 1) speed += swiftdigBonus(ctx.swiftdig);
   if (ctx.haste) speed *= 1 + 0.2 * ctx.haste;
+  if (ctx.fatigue) speed *= fatigueFactor(ctx.fatigue); // Mining Fatigue
   if (ctx.inWater) speed /= 5;
   if (ctx.onGround === false) speed /= 5;
   const divisor = canHarvest(blockId, tool) ? 30 : 100;
