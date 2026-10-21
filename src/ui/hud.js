@@ -1,6 +1,7 @@
 // Heads-up display: hotbar, health/hunger/air bars, crosshair, attack
 // cooldown, sky compass and the F3 debug overlay.
-import { iconURL, stackHTML } from './icons.js';
+import { iconURL, stackHTML, effectIconURL } from './icons.js';
+import { EFFECTS, effectLabel, formatTicks } from '../player/effects.js';
 import { hasEnch, enchLines } from '../world/enchantments.js';
 import { ITEMS } from '../world/items.js';
 import { armorTotals } from '../player/armor.js';
@@ -35,6 +36,7 @@ export class HUD {
       <div id="crosshair"></div>
       <div id="attack-indicator" class="hidden"><div></div></div>
       <div id="skyinfo"><canvas width="192" height="96"></canvas><div><div id="phase-label">Day</div><div id="time-label" style="opacity:.7;font-size:11px"></div></div></div>
+      <div id="effects"></div>
       <div id="debug" class="hidden"></div>
       <div id="toast"></div>
       <div id="item-name"></div>
@@ -65,6 +67,8 @@ export class HUD {
     this.phaseLabel = this.root.querySelector('#phase-label');
     this.timeLabel = this.root.querySelector('#time-label');
     this.toastEl = this.root.querySelector('#toast');
+    this.effectsEl = this.root.querySelector('#effects');
+    this.effectsKey = '';
     this.itemNameEl = this.root.querySelector('#item-name');
     this.attackEl = this.root.querySelector('#attack-indicator');
     this.ov = {
@@ -174,8 +178,36 @@ export class HUD {
     this.ov.fire.classList.toggle('hidden', !(p.fireTicks > 0 && !b.inWater));
     const vign = this.ov.vign;
     vign.style.background = p.hurtTime > 0 ? `radial-gradient(ellipse at center, transparent 50%, rgba(200,0,0,${p.hurtTime / 22}) 100%)` : (p.health <= 4 ? 'radial-gradient(ellipse at center, transparent 60%, rgba(120,0,0,.35) 100%)' : '');
+    if (this.frame % 5 === 0) this.drawEffects();
     if (this.frame++ % 10 === 0) this.drawSky();
     if (this.showDebug && this.frame % 6 === 0) this.debugEl.textContent = g.debugText();
+  }
+
+  /** Active effects, top right under the sky widget: badge, level and time left (blinking near the end). */
+  drawEffects() {
+    const fx = this.game.player.effects;
+    const names = Object.keys(fx).sort((a, b) => (EFFECTS[b].good - EFFECTS[a].good) || a.localeCompare(b));
+    const key = names.map((n) => n + fx[n].amp).join();
+    if (key !== this.effectsKey) {
+      this.effectsKey = key;
+      this.effectsEl.innerHTML = '';
+      for (const n of names) {
+        const row = document.createElement('div');
+        row.className = 'fx ' + (EFFECTS[n].good ? 'good' : 'bad');
+        row.innerHTML = `<img src="${effectIconURL(n)}"><div><div class="fx-name"></div><div class="fx-time"></div></div>`;
+        row.querySelector('.fx-name').textContent = effectLabel(n, fx[n].amp);
+        row.dataset.fx = n;
+        this.effectsEl.appendChild(row);
+      }
+    }
+    for (const row of this.effectsEl.children) {
+      const e = fx[row.dataset.fx];
+      if (!e) continue;
+      const t = formatTicks(e.ticks);
+      const tEl = row.lastChild.lastChild;
+      if (tEl.textContent !== t) tEl.textContent = t;
+      row.classList.toggle('ending', e.ticks < 200 && Math.floor(e.ticks / 10) % 2 === 0);
+    }
   }
 
   drawSky() {

@@ -47,7 +47,8 @@ const FURNACE_FRONT_DIR = [5, 0, 4, 1];
 // crop textures per growth stage 0..7 (carrots have 4 visual stages)
 const CROP_TILES = { [B.WHEAT]: [0, 1, 2, 3, 4, 5, 6, 7].map((i) => texId('wheat_' + i)), [B.CARROTS]: [0, 0, 1, 1, 2, 2, 2, 3].map((i) => texId('carrots_' + i)),
   [B.MELON_STEM]: [0, 1, 2, 3, 4, 5, 6, 7].map((i) => texId('stem_' + i)), [B.PUMPKIN_STEM]: [0, 1, 2, 3, 4, 5, 6, 7].map((i) => texId('stem_' + i)),
-  [B.POTATOES]: [0, 0, 1, 1, 2, 2, 2, 3].map((i) => texId('potatoes_' + i)), [B.BEETROOTS]: [0, 0, 1, 1, 2, 2, 2, 3].map((i) => texId('beetroots_' + i)) };
+  [B.POTATOES]: [0, 0, 1, 1, 2, 2, 2, 3].map((i) => texId('potatoes_' + i)), [B.BEETROOTS]: [0, 0, 1, 1, 2, 2, 2, 3].map((i) => texId('beetroots_' + i)),
+  [B.CINDERROOT]: [0, 1, 2, 3, 3, 3, 3, 3].map((i) => texId('cinderroot_' + i)) };
 const FARMLAND_MOIST = texId('farmland_moist');
 const RAIL_CORNER = texId('rail_corner');
 const PAINT_TILES = ARTS.map(([, w, h], art) => Array.from({ length: w * h }, (_, p) => texId(`painting_${art}_${p}`)));

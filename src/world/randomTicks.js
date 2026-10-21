@@ -89,6 +89,10 @@ export function randomTickBlock(world, x, y, z, id, rng = Math.random) {
     lavaIgnite(world, x, y, z, rng);
   } else if (id === B.FIRE) {
     world.scheduleTick(x, y, z, FIRE_DELAY); // keeps fires burning after a reload
+  } else if (id === B.CINDERROOT) {
+    // grows on Mournsand in any light: 10 % per random tick, four stages
+    const stage = world.getMeta(x, y, z);
+    if (stage < 3 && rng() < 0.1) world.setBlock(x, y, z, id, stage + 1);
   } else if (CROPS.has(id)) {
     const stage = world.getMeta(x, y, z);
     if (rawLight(world, x, y + 1, z) < 9) return;
@@ -129,7 +133,7 @@ function rawBlockLight(world, x, y, z) { return world.getLight(x, y, z) & 15; }
 
 /** Ids that react to random ticks (fast pre-filter). */
 export const RANDOM_TICKS = new Uint8Array(256);
-for (const id of [B.GRASS, B.FARMLAND, B.SUGAR_CANE, B.LAVA, B.FIRE, B.SNOW_LAYER, B.ICE, B.COCOA, ...CROPS, ...LEAVES, ...Object.keys(SAPLING_TREE).map(Number)]) RANDOM_TICKS[id] = 1;
+for (const id of [B.CINDERROOT, B.GRASS, B.FARMLAND, B.SUGAR_CANE, B.LAVA, B.FIRE, B.SNOW_LAYER, B.ICE, B.COCOA, ...CROPS, ...LEAVES, ...Object.keys(SAPLING_TREE).map(Number)]) RANDOM_TICKS[id] = 1;
 
 /** Run one tick's worth of random ticks in all chunks within `radius` chunks of (cx, cz). */
 export function runRandomTicks(world, cx, cz, radius, rng = Math.random) {

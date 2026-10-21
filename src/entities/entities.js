@@ -10,6 +10,7 @@ import { MIN_Y } from '../world/constants.js';
 import { addXp, splitOrbs } from '../player/experience.js';
 import { RAIL_EXITS, RAIL_UP, railHeight } from '../world/rails.js';
 import { withExtras, canStack, isGlinting, arrowDamage } from '../world/enchantments.js';
+import { splashPotion } from './splash.js';
 
 let nextEntityId = 1;
 export const ENTITY_RENDER_DIST = 64;
@@ -45,7 +46,7 @@ export function lightAt(game, x, y, z) {
   const sky = Math.max(0, (l >> 4) - game.sky.state.skyDarken * 0) / 15;
   const blk = (l & 15) / 15;
   const curve = (f) => { const b = f / (4 - 3 * f); return b * 0.45 + (1 - Math.pow(1 - b, 4)) * 0.55; };
-  return Math.max(curve(sky), curve(blk) * 0.95, game.minEntityLight || 0.06);
+  return Math.max(curve(sky), curve(blk) * 0.95, game.minEntityLight || 0.06, (game.nightVision || 0) * 0.8);
 }
 
 export class ItemEntity {
@@ -299,10 +300,11 @@ export class FallingBlock {
 }
 
 export class Arrow {
-  constructor(x, y, z, vx, vy, vz, shooter, crit = false, thrown = null) {
+  constructor(x, y, z, vx, vy, vz, shooter, crit = false, thrown = null, potion = 0) {
     this.id = nextEntityId++;
     this.kind = 'arrow';
-    this.thrown = thrown; // 'snowball' / 'egg': breaks on impact instead of sticking
+    this.thrown = thrown; // 'snowball' / 'egg' / 'potion': breaks on impact instead of sticking
+    this.potion = potion; // the splash elixir's item id when thrown === 'potion'
     this.x = x; this.y = y; this.z = z;
     this.vx = vx; this.vy = vy; this.vz = vz;
     this.shooter = shooter;
@@ -315,8 +317,9 @@ export class Arrow {
   }
 
   /** A snowball or egg hits something: puff, and an egg may hatch Clucklings (1/8, of which 1/32 four). */
-  shatter(game) {
+  shatter(game, direct = null) {
     this.dead = true;
+    if (this.thrown === 'potion') { splashPotion(game, this.x, this.y, this.z, this.potion, direct, this.shooter); return; }
     const col = this.thrown === 'egg' ? [0.95, 0.9, 0.78] : [0.95, 0.97, 1];
     for (let k = 0; k < 8; k++) game.particles.emit(this.x, this.y, this.z, (Math.random() - 0.5) * 0.12, Math.random() * 0.1, (Math.random() - 0.5) * 0.12, col[0], col[1], col[2], 14, -0.004);
     if (this.thrown === 'egg' && (!game.net || game.net.isHost) && Math.random() < 1 / 8) {
@@ -343,9 +346,10 @@ export class Arrow {
     // entity collision
     const target = game.entities.sweepHit(this, this.x, this.y, this.z, this.vx / speed, this.vy / speed, this.vz / speed, endT);
     if (target && this.thrown) {
-      // no damage, just a knock (snowballs and eggs)
-      target.hurt(0.0001, 'thrown', this.shooter, 0.35, this);
-      this.shatter(game);
+      // no damage, just a knock (snowballs and eggs); an elixir breaks on whoever it hits
+      if (this.thrown === 'potion') { const t = rayAABBDist(this, target); this.x += this.vx / speed * t; this.y += this.vy / speed * t; this.z += this.vz / speed * t; }
+      else target.hurt(0.0001, 'thrown', this.shooter, 0.35, this);
+      this.shatter(game, target);
       return;
     }
     if (target) {
@@ -368,7 +372,7 @@ export class Arrow {
     const inWater = w.getBlock(Math.floor(this.x), Math.floor(this.y), Math.floor(this.z)) === B.WATER;
     const drag = inWater ? 0.6 : 0.99;
     this.vx *= drag; this.vy *= drag; this.vz *= drag;
-    this.vy -= this.thrown ? 0.03 : 0.05;
+    this.vy -= this.thrown && this.thrown !== 'potion' ? 0.03 : 0.05;
     if (this.y < MIN_Y - 64 || this.age > 1200) this.dead = true;
   }
 }
@@ -404,9 +408,9 @@ export class EntityManager {
   }
   spawnBoat(x, y, z, yaw, cart = false) { return this.netSpawn('boat', { x, y, z, yaw, cart }) ? null : this.add(cart ? new Minecart(x, y, z, yaw) : new Boat(x, y, z, yaw)); }
   spawnFallingBlock(x, y, z, id) { return this.netSpawn('falling', {}) ? null : this.add(new FallingBlock(x, y, z, id)); }
-  spawnArrow(x, y, z, vx, vy, vz, shooter, crit, thrown = null, power = 0) {
-    if (this.netSpawn('arrow', { x, y, z, v: [vx, vy, vz], crit, thrown, power: power || undefined })) return null;
-    const a = this.add(new Arrow(x, y, z, vx, vy, vz, shooter, crit, thrown));
+  spawnArrow(x, y, z, vx, vy, vz, shooter, crit, thrown = null, power = 0, potion = 0) {
+    if (this.netSpawn('arrow', { x, y, z, v: [vx, vy, vz], crit, thrown, power: power || undefined, potion: potion || undefined })) return null;
+    const a = this.add(new Arrow(x, y, z, vx, vy, vz, shooter, crit, thrown, potion));
     a.power = power | 0; // Strongdraw level of the bow
     return a;
   }
@@ -610,6 +614,11 @@ export class EntityManager {
       m.castShadow = true;
       return m;
     }
+    if (e.kind === 'arrow' && e.thrown === 'potion') {
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: iconTexture(e.potion, false), alphaTest: 0.3 }));
+      s.scale.setScalar(0.32);
+      return s;
+    }
     if (e.kind === 'arrow' && e.thrown) {
       const m = new THREE.Mesh(this.cubeGeo, new THREE.MeshLambertMaterial({ color: e.thrown === 'egg' ? 0xefe3c8 : 0xf4f8ff }));
       m.scale.setScalar(0.22);
@@ -632,6 +641,13 @@ function makePlayerTarget(game) {
     get width() { return 0.6; }, get height() { return p.body.height; },
     hurt(dmg, src, attacker) { return p.hurt(dmg, src, attacker); },
   };
+}
+
+/** How far along its step a projectile meets an entity's (padded) box. */
+function rayAABBDist(proj, e) {
+  const sp = Math.hypot(proj.vx, proj.vy, proj.vz) || 1, hw = e.width / 2 + 0.3;
+  const t = rayAABB(proj.x, proj.y, proj.z, proj.vx / sp, proj.vy / sp, proj.vz / sp, e.x - hw, e.y - 0.3, e.z - hw, e.x + hw, e.y + e.height + 0.3, e.z + hw);
+  return t === null ? 0 : Math.min(t, sp);
 }
 
 export function rayAABB(ox, oy, oz, dx, dy, dz, x0, y0, z0, x1, y1, z1) {

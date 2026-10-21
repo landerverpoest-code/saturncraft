@@ -15,10 +15,12 @@ import { randomSheepColor, WOOL_RGB } from '../world/colors.js';
 import { WOOL_ITEMS } from '../world/items.js';
 import { RESTOCK_TICKS, makeTrades } from './trades.js';
 import { villagesNear, PROFESSIONS } from '../world/villages.js';
+import { EFFECTS, addEffect, tickEffects, speedFactor, periodicActions, instantAmount, effectsColor, visibilityFactor } from '../player/effects.js';
 
 let nextMobId = 1_000_000;
 const TAU = Math.PI * 2;
 
+function armorPieces(p) { const a = p.inventory && p.inventory.armor; return a ? a.filter(Boolean).length : 0; }
 function angleTo(dx, dz) { return Math.atan2(-dx, -dz); }
 function wrap(a) { while (a > Math.PI) a -= TAU; while (a < -Math.PI) a += TAU; return a; }
 function gaussian() { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(TAU * v); }
@@ -44,6 +46,7 @@ export class Mob {
     this.fuse = 0; this.prevFuse = 0; this.angry = false; this.stare = 0; this.seeTime = 0; this.bowCharge = 0;
     this.limbSwing = 0; this.limbAmount = 0;
     this.lastHurtByPlayer = 0;
+    this.effects = {};          // status effects from splash elixirs (see player/effects.js)
     this.persistent = this.def.category === CATEGORY.CREATURE;
     this.eggTime = 6000 + Math.floor(Math.random() * 6000);
     this.move = null;
@@ -211,7 +214,7 @@ export class Mob {
 
   hurt(dmg, source, attacker = null, knockback = 0.4, projectile = null) {
     if (this.deathTime > 0 || this.removed) return false;
-    if (this.def.fireImmune && (source === 'fire' || source === 'lava' || source === 'fireball')) return false;
+    if ((this.def.fireImmune || this.effects.fire_resistance) && (source === 'fire' || source === 'lava' || source === 'fireball')) return false;
     if (this.def.onHurt) { dmg = this.def.onHurt(this, dmg, source, attacker); if (dmg <= 0) return false; }
     if (this.type === 'voidwalker' && projectile) {
       // Voidwalkers dodge projectiles by teleporting
@@ -322,7 +325,37 @@ export class Mob {
   speed() {
     let s = this.def.speed;
     if (this.type === 'voidwalker' && this.angry) s += 0.15;
-    return s;
+    return s * speedFactor(this.effects);
+  }
+
+  /** Undead mobs are hurt by Instant Health, healed by Instant Damage and ignore poison / regeneration. */
+  get undead() { return !!(this.def.undead || this.def.burnsInSun); }
+
+  /** An elixir effect (from a splash) on this mob; factor scales it by the distance from the splash. */
+  applyEffect(type, ticks, amp = 0, factor = 1, attacker = null) {
+    if (this.deathTime > 0 || !EFFECTS[type]) return;
+    if (EFFECTS[type].instant) {
+      const n = instantAmount(type, amp, factor);
+      const heals = (type === 'instant_health') !== this.undead;
+      if (heals) this.health = Math.min(this.maxHealth, this.health + n);
+      else if (n > 0) { this.invulnerable = 0; this.hurt(n, 'magic', attacker, 0); }
+      return;
+    }
+    if (this.undead && (type === 'poison' || type === 'regeneration')) return;
+    const t = Math.floor(ticks * factor + 0.5);
+    if (t > 20) addEffect(this.effects, type, t, amp);
+  }
+
+  tickEffects(g) {
+    for (const a of periodicActions(this.effects, { health: this.health, undead: this.undead })) {
+      if (a.type === 'heal') this.health = Math.min(this.maxHealth, this.health + a.amount);
+      else { this.invulnerable = Math.min(this.invulnerable, 10); this.hurt(a.amount, a.source, null, 0); }
+    }
+    tickEffects(this.effects);
+    if (g.ticks % 3 === 0 && g.particles) {
+      const col = effectsColor(Object.entries(this.effects).map(([k, e]) => [k, e.amp]));
+      if (col) g.particles.emit(this.x + (Math.random() - 0.5) * this.width, this.y + Math.random() * this.height, this.z + (Math.random() - 0.5) * this.width, 0, 0.03, 0, col[0], col[1], col[2], 18, -0.001);
+    }
   }
 
   followPath(g, speedMod) {
@@ -369,6 +402,8 @@ export class Mob {
     if (this.attackCooldown > 0) this.attackCooldown--;
     if (this.swingTime > 0) this.swingTime--;
     this.noActionTime++;
+    for (const _ in this.effects) { this.tickEffects(g); break; }
+    if (this.deathTime > 0) return;
 
     const p = g.player;
     const pdx = p.x - this.x, pdy = p.y - this.y, pdz = p.z - this.z;
@@ -797,6 +832,8 @@ export class Mob {
   /** Acquire the player as target if in range and visible. */
   acquire(g, p, pdist, range) {
     if (p.dead || p.creative) { this.target = null; return false; }
+    // an invisible player is only noticed close up (more so the more armour shows)
+    if (p.effects ? p.effects.invisibility : p.invisible) range *= visibilityFactor({ invisibility: { amp: 0 } }, armorPieces(p));
     if (this.target === 'player') {
       if (pdist > range * 1.5 || p.dead) this.target = null;
       return !!this.target;

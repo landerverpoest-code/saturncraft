@@ -225,7 +225,8 @@ export class Body {
       if (sf && sf.speedFactor !== 1) { this.vx *= sf.speedFactor; this.vz *= sf.speedFactor; }
     }
     if (ladder && (this.horizontalCollision || input.jump)) this.vy = 0.2; // climb
-    if (!this.noGravity) this.vy -= PHYS.GRAVITY;
+    // Slow Falling: a tenth of the gravity while descending
+    if (!this.noGravity) this.vy -= input.slowFall && this.vy <= 0 ? 0.01 : PHYS.GRAVITY;
     this.vy *= PHYS.DRAG_Y;
     const fr = this.onGround ? slip * PHYS.GROUND_FRICTION_MUL : PHYS.AIR_FRICTION;
     this.vx *= fr; this.vz *= fr;

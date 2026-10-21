@@ -5,6 +5,8 @@ import { ITEMS, MATERIALS, ARMOR_MATERIALS } from '../world/items.js';
 import { texturePixels } from '../world/textures.js';
 import { COLORS, WOOL_RGB } from '../world/colors.js';
 import { hasEnch, enchLines } from '../world/enchantments.js';
+import { POTIONS } from '../world/potions.js';
+import { EFFECTS, effectLabel, formatTicks } from '../player/effects.js';
 import { TOOL_TEMPLATES, GEAR_TEMPLATES, paintTemplate, materialRamp, ramp, WOOD_HANDLE } from './toolArt.js';
 
 const cache = new Map();
@@ -94,6 +96,12 @@ const T = {
   potato: ['................', '................', '................', '................', '.....hhhhh......', '....hHHhhhh.....', '...hHhhhshhh....', '...hhhhhhhhhh...', '...hhshhhhhhh...', '....hhhhhhshh...', '....hhhhhhhhh...', '.....hhhhhhh....', '.......hhh......', '................', '................', '................'],
   beetroot: ['................', '.......s.s......', '......s.s.s.....', '.......sss......', '........s.......', '.....hhhhhh.....', '....hHHhhhhh....', '....hHhhhhhh....', '....hhhhhhhh....', '.....hhhhhh.....', '......hhhh......', '.......hh.......', '.......h........', '................', '................', '................'],
   bowl: ['................', '................', '................', '................', '................', '................', '..hwwwwwwwwwwh..', '..hHwwwwwwwwwh..', '..hHhhhhhhhhhh..', '...hHhhhhhhhh...', '....hhhhhhhh....', '.....hhhhhh.....', '................', '................', '................', '................'],
+  vial: ['................', '......ssss......', '......sSss......', '.......gg.......', '.......gg.......', '......gwwg......', '.....gwwwwg.....', '....ghhhhhhg....', '...ghHHhhhhhg...', '...ghHhhhhhhg...', '...ghhhhhhhhg...', '...ghhhhhhhhg...', '....ghhhhhhg....', '.....gggggg.....', '................', '................'],
+  splash: ['................', '........ss......', '.......ssS......', '.......gg.......', '......gwwg......', '.....gwwwwg.....', '....ghhhhhhg....', '...ghHHhhhhhg...', '...ghHhhhhhhgg..', '...ghhhhhhhhg.g.', '...ghhhhhhhhg.g.', '....ghhhhhhgg...', '.....gggggg.....', '................', '................', '................'],
+  nugget: ['................', '................', '................', '................', '................', '.....hh.........', '....hHhh........', '....hhhh..hh....', '.....hh..hHhh...', '.........hhhh...', '..........hh....', '................', '................', '................', '................', '................'],
+  root: ['................', '.........s......', '........s.s.....', '.......s...s....', '.......s........', '......hhh.......', '.....hHhhh......', '....hHhhhhh.....', '....hhhhhhhh....', '.....hhhhhhh....', '......hhhhh.....', '.......hhh.s....', '......s.h...s...', '.....s...s......', '................', '................'],
+  tear: ['................', '................', '.......h........', '.......h........', '......hhh.......', '......hHh.......', '.....hHhhh......', '.....hHhhh......', '....hhhhhhh.....', '....hhhhhhh.....', '....hhhhhhh.....', '.....hhhhh......', '......hhh.......', '................', '................', '................'],
+  alembic: ['................', '.......rr.......', '.......rR.......', '..iiiiiiiiiiii..', '..v....rr....v..', '.vwv...rr...vwv.', '.vhv...rr...vhv.', '.vhv...rr...vhv.', '..v....rr....v..', '.......rr.......', '.......rr.......', '....cccccccc....', '...cCccccccCcc..', '...cccccccccc...', '................', '................'],
   egg: ['................', '................', '......hhh.......', '.....hHhhh......', '....hHhhhhh.....', '....hhhhhhh.....', '...hhhhhhhhh....', '...hhhhhhhhh....', '...hhhhhhhhh....', '....hhhhhhh.....', '.....hhhhh......', '................', '................', '................', '................', '................'],
 };
 
@@ -188,8 +196,12 @@ function itemIcon(d) {
     const ch = tpl[y][x];
     if (ch === '.') continue;
     let col;
-    if (ch === 'H') col = lighten(colors.h, 1.35);
+    if (ch === 'H') col = colors.H || (colors.h ? lighten(colors.h, 1.35) : colors.w);
+    else if (ch === 'S') col = colors.S || (colors.s ? lighten(colors.s, 1.3) : null);
+    else if (ch === 'w') col = colors.w || '#e8f0f8';
+    else if (ch === 's' && !colors.s) col = '#9a6a3a'; // cork
     else col = colors[ch] || colors.h;
+    if (!col) continue;
     ctx.fillStyle = col;
     ctx.fillRect(x * 2, y * 2, 2, 2);
   }
@@ -270,6 +282,15 @@ export function tooltipHTML(st, extra = '') {
   for (const l of lines) h += `<div class="tt-ench">${esc(l)}</div>`;
   const dur = d.durability;
   if (dur && st.damage > 0) h += `<div class="tt-dura">Durability: ${dur - st.damage} / ${dur}</div>`;
+  if (d.potion) {
+    const fx = POTIONS[d.potion.kind].effects;
+    if (!fx.length) h += '<div class="tt-dura">No Effects</div>';
+    for (const [type, ticks, amp] of fx) {
+      const good = EFFECTS[type].good;
+      h += `<div class="${good ? 'tt-good' : 'tt-bad'}">${esc(effectLabel(type, amp))}${EFFECTS[type].instant ? '' : ` (${formatTicks(ticks)})`}</div>`;
+    }
+    if (d.potion.splash) h += '<div class="tt-dura">Thrown: affects all within 4 blocks</div>';
+  }
   return h;
 }
 
@@ -310,6 +331,35 @@ export function drawDial(c, kind, a, light, suns) {
 export function itemCanvas(id, glint = false) {
   const d = ITEMS[id];
   if (!d) return null;
-  const c = d.block !== undefined ? blockIcon(BLOCKS[d.block]) : itemIcon(d);
+  const c = d.block !== undefined ? (BLOCKS[d.block].iconStyle ? itemIcon({ iconStyle: BLOCKS[d.block].iconStyle }) : blockIcon(BLOCKS[d.block])) : itemIcon(d);
   return glint ? addGlint(c) : c;
+}
+
+// ---- status effect badges (HUD + inventory list) -------------------------------
+const GLYPHS = {
+  speed: '<path d="M4 5 L9 9 L4 13 M9 5 L14 9 L9 13" fill="none" stroke="#fff" stroke-width="2"/>',
+  slow: '<path d="M14 5 L9 9 L14 13 M9 5 L4 9 L9 13" fill="none" stroke="#fff" stroke-width="2"/>',
+  pick: '<path d="M3 6 Q9 1 15 6" fill="none" stroke="#fff" stroke-width="2"/><path d="M9 4 L9 15" stroke="#fff" stroke-width="2"/>',
+  sword: '<path d="M13 3 L15 3 L15 5 L7 13 L5 11 Z" fill="#fff"/><path d="M4 10 L8 14 M3 15 L5 13" stroke="#fff" stroke-width="2"/>',
+  brokensword: '<path d="M13 3 L15 3 L15 5 L12 8 L10 6 Z M9 9 L7 13 L5 11 Z" fill="#fff"/><path d="M4 10 L8 14 M3 15 L5 13" stroke="#fff" stroke-width="2"/>',
+  heart: '<path d="M9 15 L3 9 Q1 6 3.5 4 Q6 2.5 9 5.5 Q12 2.5 14.5 4 Q17 6 15 9 Z" fill="#fff"/>',
+  skull: '<path d="M4 9 Q4 3 9 3 Q14 3 14 9 L12 11 L12 14 L6 14 L6 11 Z" fill="#fff"/><rect x="6" y="7" width="2" height="2" fill="#000"/><rect x="10" y="7" width="2" height="2" fill="#000"/>',
+  jump: '<path d="M9 2 L14 8 L11 8 L11 12 L7 12 L7 8 L4 8 Z" fill="#fff"/><rect x="3" y="14" width="12" height="2" fill="#fff"/>',
+  drop: '<path d="M9 2 Q14 9 13 12 Q12 16 9 16 Q6 16 5 12 Q4 9 9 2 Z" fill="#fff"/>',
+  flame: '<path d="M9 2 Q15 8 13 13 Q11 16 9 16 Q5 16 5 12 Q5 9 8 7 Q8 10 10 10 Q11 6 9 2 Z" fill="#fff"/>',
+  bubble: '<circle cx="7" cy="10" r="3.5" fill="none" stroke="#fff" stroke-width="1.8"/><circle cx="12.5" cy="5.5" r="2.2" fill="none" stroke="#fff" stroke-width="1.5"/>',
+  eye: '<path d="M2 9 Q9 2 16 9 Q9 16 2 9 Z" fill="#fff"/><circle cx="9" cy="9" r="2.5" fill="#000"/>',
+  ghost: '<path d="M4 16 L4 8 Q4 3 9 3 Q14 3 14 8 L14 16 L12 14 L10.5 16 L9 14 L7.5 16 L6 14 Z" fill="#fff" fill-opacity=".8"/><rect x="6" y="7" width="2" height="2" fill="#000"/><rect x="10" y="7" width="2" height="2" fill="#000"/>',
+  feather: '<path d="M14 2 Q6 4 5 13 L4 16 M5 13 Q12 12 14 2" fill="#fff" stroke="#fff" stroke-width="1"/>',
+  food: '<rect x="4" y="7" width="10" height="8" rx="3" fill="#fff"/><rect x="6" y="3" width="6" height="4" fill="#fff"/>',
+};
+const effectIcons = new Map();
+/** A round badge in the effect's colour with a white glyph (data URL). */
+export function effectIconURL(name) {
+  if (effectIcons.has(name)) return effectIcons.get(name);
+  const d = EFFECTS[name] || { color: '#888', glyph: 'heart' };
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18"><circle cx="9" cy="9" r="8.4" fill="${d.color}" stroke="#000" stroke-width="1.2"/><circle cx="9" cy="9" r="7" fill="none" stroke="#fff" stroke-opacity=".25"/><g transform="translate(9 9) scale(.78) translate(-9 -9)">${GLYPHS[d.glyph] || ''}</g></svg>`;
+  const url = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+  effectIcons.set(name, url);
+  return url;
 }

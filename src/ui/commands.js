@@ -9,6 +9,7 @@ import { addXp } from '../player/experience.js';
 import { ENCHANTS, ENCH_KEYS, canApply, compatible, enchName } from '../world/enchantments.js';
 import { villageInRegion, VILLAGE_REGION } from '../world/villages.js';
 import { nearestSanctum } from '../world/dimensions/sanctum.js';
+import { EFFECTS, EFFECT_KEYS, effectLabel } from '../player/effects.js';
 
 /** item lookup by key ("diamond_sword", "oak_planks", "grass_block") and by display name */
 let ITEM_KEYS = null;
@@ -62,6 +63,7 @@ export const HELP = [
   '/xp <amount> [levels]',
   '/locate <village|temple|outpost|shipwreck|mineshaft|sanctum|bastion>',
   '/dimension <overworld|cinderdeep|hollow>',
+  '/effect give <effect> [seconds] [level],  /effect clear  (effects: ' + EFFECT_KEYS.join(', ') + ')',
   '/kill,  /clear,  /spawnpoint,  /seed,  /heal',
 ];
 
@@ -179,6 +181,17 @@ export function runCommand(game, text) {
       return `Gave ${Math.round(n)} experience points`;
     }
     case 'kill': p.hurt(Infinity, 'kill'); return 'Killed the player';
+    case 'effect': {
+      const sub = (args[0] || '').toLowerCase();
+      if (sub === 'clear') { p.clearEffects(); return 'Removed every effect'; }
+      if (sub !== 'give' || !args[1]) return 'Usage: /effect give <effect> [seconds] [level]  or  /effect clear';
+      const name = args[1].toLowerCase().replace(/^minecraft:/, '');
+      if (!EFFECTS[name]) return `Unknown effect: ${name}`;
+      const secs = args[2] !== undefined ? Number(args[2]) : 30, lvl = args[3] !== undefined ? Number(args[3]) : 1;
+      if (!(secs > 0) || !(lvl >= 1 && lvl <= 255)) return 'Usage: /effect give <effect> [seconds] [level]';
+      p.applyEffect(name, Math.round(secs * 20), Math.floor(lvl) - 1);
+      return `Applied ${effectLabel(name, Math.floor(lvl) - 1)}${EFFECTS[name].instant ? '' : ` for ${secs} s`}`;
+    }
     case 'heal': p.health = 20; p.hunger.food = 20; p.hunger.saturation = 5; return 'Healed';
     case 'clear': p.inventory.clear(); return 'Cleared the inventory';
     case 'spawnpoint': p.spawn = { x: p.x, y: p.y, z: p.z }; p.bed = null; return `Set spawn point to ${Math.floor(p.x)}, ${Math.floor(p.y)}, ${Math.floor(p.z)}`;

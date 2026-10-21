@@ -26,7 +26,7 @@ addTex('pumpkin_face');
 for (let r = 0; r < 4; r++) { addTex('bed_head_top_' + r); addTex('bed_foot_top_' + r); }
 for (let i = 0; i < 8; i++) addTex('wheat_' + i);
 for (let i = 0; i < 4; i++) addTex('carrots_' + i);
-for (let i = 0; i < 4; i++) { addTex('potatoes_' + i); addTex('beetroots_' + i); }
+for (let i = 0; i < 4; i++) { addTex('potatoes_' + i); addTex('beetroots_' + i); addTex('cinderroot_' + i); }
 for (let i = 0; i < 8; i++) addTex('stem_' + i);
 addTex('water_flow');
 addTex('rail_corner');
@@ -227,6 +227,28 @@ function carrots(c, stage) {
       if (k > 1 && k % 2 === 0) { c.set(sx - 1, y, leafD); c.set(sx + 1, y - 1, leaf); }
     }
     if (stage === 3) { c.set(sx, 15, orange); c.set(sx + 1, 15, shade(orange, 0.85)); c.set(sx, 14, shade(orange, 1.1)); }
+  }
+}
+
+// Cinderroot stage 0..3: knobbly crimson stalks that swell into bulbs.
+function cinderroot(c, stage) {
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
+  const stem = hex('#7a1820'), dark = hex('#4a0c12'), bulb = hex('#c0283a'), glow = hex('#ff7040');
+  const h = 3 + stage * 3;
+  for (const [sx, lean] of [[3, 1], [7, 0], [11, -1], [13, 0]]) {
+    let x = sx;
+    for (let k = 0; k < h; k++) {
+      const y = 15 - k;
+      if (k > 2 && k % 3 === 0) x += lean;
+      c.set(x, y, shade(stem, 0.8 + c.h(x, y) * 0.4));
+      if (k % 2 === 1) c.set(x + (k % 4 === 1 ? 1 : -1), y, dark);
+    }
+    const top = 15 - h;
+    if (stage >= 2) {
+      const r = stage === 3 ? 1 : 0;
+      for (let dy = -r; dy <= r + 1; dy++) for (let dx = -r; dx <= r; dx++) c.set(x + dx, top + dy, shade(bulb, 0.85 + c.h(dx, dy, 3) * 0.3));
+      if (stage === 3) c.set(x, top, glow);
+    }
   }
 }
 
@@ -764,6 +786,25 @@ const GEN = {
     // diamond corner studs
     for (const x of [1, 14]) for (const y of [10, 13]) c.set(x, y, hex('#5fe6dc'));
   },
+  // Brewing Alembic: cobblestone base, a glowing ember rod and a dark iron cross-arm
+  brewing_stand_base: (c) => GEN.cobblestone(c),
+  brewing_stand_top: (c) => {
+    GEN.cobblestone(c);
+    const iron = hex('#3a3236'), rod = hex('#ffb030');
+    for (let i = 3; i < 13; i++) { c.set(i, 7, iron); c.set(i, 8, shade(iron, 0.8)); c.set(7, i, iron); c.set(8, i, shade(iron, 0.8)); }
+    for (const [x, y] of [[7, 7], [8, 7], [7, 8], [8, 8]]) c.set(x, y, rod);
+  },
+  brewing_stand_side: (c) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
+    const cob = new Canvas16('cobblestone'); GEN.cobblestone(cob);
+    for (let y = 14; y < 16; y++) for (let x = 0; x < 16; x++) { const i = (y * 16 + x) * 4; c.set(x, y, [cob.data[i], cob.data[i + 1], cob.data[i + 2]]); }
+    const iron = hex('#3a3236');
+    for (let x = 3; x < 13; x++) { c.set(x, 4, shade(iron, 1.2)); c.set(x, 5, iron); }
+    for (let y = 2; y < 14; y++) {
+      const t = (y - 2) / 12;
+      c.set(7, y, mix(hex('#ffe080'), hex('#d8601a'), t)); c.set(8, y, mix(hex('#ffc040'), hex('#a8400e'), t));
+    }
+  },
   anvil_side: (c) => {
     const p = ['#3e3e42', '#46464a', '#38383c', '#4e4e52'].map(hex);
     c.noiseFill(p, 0.35);
@@ -865,6 +906,7 @@ function paint(c, name) {
     for (let k = 0; k < h; k++) { const x = 7 + Math.round(Math.sin(k * 0.7) * 1.2); c.set(x, 15 - k, shade(col, 0.85 + c.h(x, k) * 0.3)); if (k > 3 && k % 3 === 0) { c.set(x + 1, 15 - k, col); c.set(x - 1, 14 - k, col); } }
   }
   else if (name.startsWith('potatoes_')) rootCrop(c, +name.slice(9), '#4a9a34', '#2f7424', '#c8a25a', 3);
+  else if (name.startsWith('cinderroot_')) cinderroot(c, +name.slice(11));
   else if (name.startsWith('beetroots_')) rootCrop(c, +name.slice(10), '#3f8a2a', '#9a2a3a', '#8a1e2e', 2);
   else if (name.startsWith('bed_head_top_') || name.startsWith('bed_foot_top_')) bedTop(c, name.startsWith('bed_head'), +name.slice(-1));
   else if (GEN[name]) GEN[name](c);

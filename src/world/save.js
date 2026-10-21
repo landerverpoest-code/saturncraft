@@ -1,6 +1,7 @@
 // World persistence in IndexedDB: modified chunks (run-length encoded),
 // player state, world time, furnaces and persistent passive mobs.
 import { chunkKey } from './world.js';
+import { cleanEffects } from '../player/effects.js';
 
 const DB_NAME = 'saturncraft';
 const STORE = 'worlds';
@@ -66,6 +67,7 @@ export function playerSaveData(p) {
     x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, health: p.health,
     food: p.hunger.food, saturation: p.hunger.saturation, exhaustion: p.hunger.exhaustion,
     air: p.air, spawn: p.spawn, bed: p.bed || null, slots: p.inventory.slots, armor: p.inventory.armor, xp: p.xp, gamemode: p.gamemode, flying: p.flying, selected: p.inventory.selected, enchSeed: p.enchSeed,
+    effects: p.effects,
   };
 }
 
@@ -91,6 +93,7 @@ export async function saveGame(game) {
     chests: [...game.chests.values()],
     signs: [...game.signs],
     frames: [...game.frames],
+    brewingStands: [...(game.brewingStands || new Map()).values()],
     worldSpawn: game.worldSpawn,
     weather: game.weather.save(),
     milestones: game.milestones.save(),
@@ -142,6 +145,7 @@ export function applySave(game, data) {
   for (const c of data.chests || []) game.chests.set(`${c.x},${c.y},${c.z}`, c);
   for (const [k, l] of data.signs || []) game.signs.set(k, l);
   for (const [k, st] of data.frames || []) game.frames.set(k, st);
+  for (const s of data.brewingStands || []) if (s && Array.isArray(s.slots)) game.brewingStands.set(`${s.x},${s.y},${s.z}`, s);
   for (const k of data.generated) game.spawner.generated.add(k);
   for (const [k, v] of Object.entries(data.savedMobs)) game.spawner.savedMobs.set(+k, v);
   // live mobs go back into their chunk's saved list so they reappear when it loads
@@ -163,6 +167,7 @@ export function applyPlayerSave(game, d) {
   if (d.armor) p.inventory.armor = d.armor.map((s) => (s ? { ...s } : null));
   if (d.xp) p.xp = { ...d.xp };
   if (Number.isInteger(d.enchSeed)) p.enchSeed = d.enchSeed;
+  p.effects = cleanEffects(d.effects);
   if (d.gamemode) p.setGamemode(d.gamemode);
   p.flying = !!d.flying && p.creative;
   p.inventory.selected = d.selected;

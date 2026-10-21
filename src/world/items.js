@@ -3,6 +3,7 @@
 // reference numbers.
 import { BLOCKS, B, TOOL, TIER } from './blocks.js';
 import { COLORS } from './colors.js';
+import { POTIONS, POTION_KEYS, potionColor } from './potions.js';
 
 export const ITEMS = [];
 export const I = {};
@@ -179,6 +180,25 @@ item('glowshard_dust', 'Glowshard Dust', { iconStyle: ['dust', { h: '#ffd860' }]
 item('eye_of_the_void', 'Eye of the Void', { stack: 16, voidEye: true, iconStyle: ['pearl', { h: '#3aa88a', H: '#c8ff6a' }] });
 // Enchanted book: carries stack.ench, applied to gear at an anvil (see world/enchantments.js)
 item('enchanted_book', 'Enchanted Book', { stack: 1, enchBook: true, iconStyle: ['book', { h: '#7a2a8a', H: '#a050c0', w: '#f0e4c8' }] });
+
+// Brewing (see world/potions.js, world/brewing.js); appended so earlier ids stay stable
+item('gold_nugget', 'Gold Nugget', { iconStyle: ['nugget', { h: '#f1cc3a' }] });
+item('glass_vial', 'Glass Vial', { iconStyle: ['vial', { g: '#dbe8f5', h: '#a9bfd6', H: '#e4eef8' }] });
+item('sugar', 'Sugar', { iconStyle: ['dust', { h: '#f4f4f8' }] });
+item('gilded_melon_slice', 'Gilded Melon Slice', { iconStyle: ['meat', { h: '#e8584a', w: '#f2cc3a' }] });
+item('gilded_carrot', 'Gilded Carrot', { food: { hunger: 6, saturation: 14.4 }, iconStyle: ['carrot', { h: '#f2c23a', H: '#fff0a0', s: '#d8a020' }] });
+item('ember_cream', 'Ember Cream', { iconStyle: ['pearl', { h: '#c8501e', H: '#ffb040' }] });
+item('fermented_spider_eye', 'Fermented Skitterer Eye', { iconStyle: ['egg', { h: '#7a2a40' }] });
+item('cinderroot', 'Cinderroot', { places: B.CINDERROOT, iconStyle: ['root', { h: '#a8202a', s: '#5a1018' }] });
+item('wraith_tear', 'Wraith Tear', { iconStyle: ['tear', { h: '#d8f0f4' }] });
+item('milk_bucket', 'Milk Bucket', { stack: 1, milk: true, iconStyle: ['bucket', { h: '#b8b8b8', w: '#f6f6f2' }] });
+// one drinkable and one splash item per elixir kind
+export const POTION_ITEM = {}, SPLASH_ITEM = {};
+for (const kind of POTION_KEYS) {
+  const p = POTIONS[kind], color = potionColor(kind);
+  POTION_ITEM[kind] = item(kind === 'water' ? 'water_vial' : 'elixir_' + kind, p.name, { stack: 1, potion: { kind, splash: false }, drink: true, iconStyle: ['vial', { g: '#c8dcf0', h: color }] }).id;
+  SPLASH_ITEM[kind] = item(kind === 'water' ? 'splash_water_vial' : 'splash_elixir_' + kind, 'Splash ' + p.name, { stack: 1, potion: { kind, splash: true }, throwable: 'potion', iconStyle: ['splash', { g: '#c8dcf0', h: color }] }).id;
+}
 
 // Fuel for block items
 for (const id of [B.OAK_PLANKS, B.SPRUCE_PLANKS, B.BIRCH_PLANKS, B.JUNGLE_PLANKS, B.ACACIA_PLANKS, B.DARK_OAK_PLANKS, B.OAK_LOG, B.BIRCH_LOG, B.SPRUCE_LOG, B.JUNGLE_LOG, B.ACACIA_LOG, B.DARK_OAK_LOG, B.WORKBENCH]) ITEMS[id].fuel = 300;

@@ -114,7 +114,7 @@ export const DIMENSION_MOBS = {
     name: 'Ashwraith', role: 'ghast', category: CATEGORY.MONSTER,
     health: 10, speed: 0.1, width: 4, height: 4, followRange: 64, sound: 'warble',
     flying: true, fireImmune: true, noFallDamage: true, customAI: ashwraithAI,
-    drops: [{ id: I.GUNPOWDER, min: 0, max: 2 }],
+    drops: [{ id: I.GUNPOWDER, min: 0, max: 2 }, { id: I.WRAITH_TEAR, min: 0, max: 1 }],
   },
   cinder_brute: {
     name: 'Cinder Brute', role: 'piglin brute', category: CATEGORY.MONSTER,

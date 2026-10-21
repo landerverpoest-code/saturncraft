@@ -43,6 +43,8 @@ import { saveGame, applySave, applyPlayerSave } from './world/save.js';
 import { DimensionManager } from './world/dimensions/manager.js';
 import { DIMENSIONS } from './world/dimensions/dims.js';
 import { EnchantBooks } from './render/enchantBooks.js';
+import { newStand, tickStand } from './world/brewing.js';
+import { effectsColor } from './player/effects.js';
 
 // Spherical (radial distance) fog instead of view-depth fog, so chunk edges never show at screen corners
 THREE.ShaderChunk.fog_vertex = `#ifdef USE_FOG
@@ -75,6 +77,7 @@ export class Game {
     this.chests = new Map();      // "x,y,z" -> { x, y, z, slots: 27 stacks }
     this.signs = new Map();       // "x,y,z" -> four lines of text
     this.frames = new Map();      // "x,y,z" -> the item stack in an item frame
+    this.brewingStands = new Map(); // "x,y,z" -> Brewing Alembic state (see world/brewing.js)
     this.fps = 0; this.frameCount = 0; this.fpsTime = 0;
     this.net = null;              // multiplayer session (src/net/session.js), null in single-player
   }
@@ -317,6 +320,21 @@ export class Game {
   }
 
   /** Rain on the ground: splashes near the player; puts out burning things. */
+  /** Swirls of the active effects' colours around the player (fewer while invisible). */
+  effectParticles() {
+    const p = this.player;
+    // (not in first person: points that close to the eyes would cover the view)
+    if (p.dead || this.perspective === 0 || this.ticks % (p.effects.invisibility ? 6 : 2) !== 0) return;
+    const list = [];
+    for (const k in p.effects) list.push([k, p.effects[k].amp]);
+    const col = effectsColor(list);
+    if (!col) return;
+    const a = (this.ticks * 0.37) % (Math.PI * 2) + Math.random() * 0.6, r = 0.45 + Math.random() * 0.15;
+    const h = 0.1 + Math.random() * 1.6;
+    // tangential drift makes them circle and rise around the body
+    this.particles.emit(p.x + Math.cos(a) * r, p.y + h, p.z + Math.sin(a) * r, -Math.sin(a) * 0.035, 0.03, Math.cos(a) * 0.035, col[0], col[1], col[2], 22, -0.0015);
+  }
+
   tickRain() {
     const wth = this.weather, p = this.player;
     if (wth.level < 0.2) return;
@@ -431,6 +449,23 @@ export class Game {
     return f;
   }
 
+  getBrewingStand(x, y, z) {
+    const k = `${x},${y},${z}`; // (a multiplayer guest keeps copies of the host's stands here)
+    let s = this.brewingStands.get(k);
+    if (!s) { s = newStand(x, y, z); this.brewingStands.set(k, s); }
+    return s;
+  }
+
+  tickBrewing() {
+    for (const s of this.brewingStands.values()) {
+      if (!this.world.isLoaded(s.x, s.z)) continue;
+      if (this.world.getBlock(s.x, s.y, s.z) !== B.BREWING_STAND) continue;
+      const r = tickStand(s);
+      if (r === 'done') this.audio.play('brew', [s.x + 0.5, s.y + 0.5, s.z + 0.5]);
+      if (s.brewTime > 0 && Math.random() < 0.15) this.particles.emit(s.x + 0.5 + (Math.random() - 0.5) * 0.3, s.y + 0.85, s.z + 0.5 + (Math.random() - 0.5) * 0.3, 0, 0.02, 0, 0.85, 0.75, 0.95, 20, -0.001);
+    }
+  }
+
   getChest(x, y, z, metaHint) {
     const k = `${x},${y},${z}`;
     let c = this.chests.get(k);
@@ -461,7 +496,8 @@ export class Game {
       const k = `${x},${y},${z}`;
       if (this.ui.chest && this.ui.chest === this.chests.get(k)) this.ui.close();
       if (this.ui.furnace && this.ui.furnace === this.furnaces.get(k)) this.ui.close();
-      this.chests.delete(k); this.furnaces.delete(k);
+      if (this.ui.brewing && this.ui.brewing === this.brewingStands.get(k)) this.ui.close();
+      this.chests.delete(k); this.furnaces.delete(k); this.brewingStands.delete(k);
       return;
     }
     if (id === B.CHEST) {
@@ -473,6 +509,7 @@ export class Game {
         if (this.ui.chest === c) this.ui.close();
       }
     }
+    if (id === B.BREWING_STAND) this.spillBrewing(x, y, z);
     if (id === B.FURNACE || id === B.FURNACE_LIT) {
       const k = `${x},${y},${z}`;
       const f = this.furnaces.get(k);
@@ -482,6 +519,15 @@ export class Game {
         if (this.ui.furnace === f) this.ui.close();
       }
     }
+  }
+
+  /** Spill a broken Brewing Alembic's vials, ingredient and fuel. */
+  spillBrewing(x, y, z) {
+    const k = `${x},${y},${z}`, s = this.brewingStands.get(k);
+    if (!s) return;
+    for (const st of s.slots) if (st) this.entities.spawnItem(x + 0.5, y + 0.5, z + 0.5, st);
+    this.brewingStands.delete(k);
+    if (this.ui.brewing === s) this.ui.close();
   }
 
   tickFurnaces() {
@@ -628,7 +674,8 @@ export class Game {
     if (p.riding) this.seatPlayer();
     this.spawner.tick();
     if (!this.net || this.net.isHost) this.spawnerBlocks.tick();
-    if (!this.net || this.net.isHost) this.tickFurnaces(); // guests see the host's furnaces
+    if (!this.net || this.net.isHost) { this.tickFurnaces(); this.tickBrewing(); } // guests see the host's furnaces and alembics
+    this.effectParticles();
     this.particles.tick();
     if (this.net) this.net.tick();
     if (this.ticks % 1200 === 0) this.save(); // autosave every minute
@@ -666,7 +713,7 @@ export class Game {
     if (this.ui.open === 'death' || this.ui.open === 'chat') { inp.consumeMouse(); inp.endFrame(); return; }
     if (inp.flyToggle) { inp.flyToggle = false; if (p.creative && !this.ui.blocking) { p.flying = !p.flying; p.flyGrace = 10; } }
     if (inp.wasPressed('inventory')) {
-      if (['inventory', 'workbench', 'furnace', 'chest', 'creative', 'trade'].includes(this.ui.open)) this.ui.close();
+      if (['inventory', 'workbench', 'furnace', 'chest', 'creative', 'trade', 'brewing'].includes(this.ui.open)) this.ui.close();
       else if (!this.ui.blocking) { this.input.unlock(); if (p.creative) this.ui.openCreative(); else this.ui.openInventory(); }
     }
     if (inp.wasPressed('pause') && this.ui.blocking) {
@@ -749,6 +796,10 @@ export class Game {
     this.audio.setRain(wlevel * (Weather.precipitation(this.world.biomeAt(Math.floor(x), Math.floor(z))) === 'rain' ? 1 : 0),
       this.world.heightAt(Math.floor(x), Math.floor(z)) > y + eye);
     terrainUniforms.uTime.value = sec;
+    // Night Vision lifts the darkest light to near daylight (flickering in its last 10 seconds)
+    const nv = p.effects.night_vision;
+    this.nightVision = !nv ? 0 : nv.ticks > 200 ? 1 : 0.7 + Math.sin((nv.ticks - alpha) * Math.PI * 0.2) * 0.3;
+    terrainUniforms.uMinLight.value = Math.max(this.dims.baseLight(), this.nightVision * 0.75);
     const R = this.chunks.renderDistance * 16;
     this.clouds.update(this.camera, smoothTime, this.sky, Math.max(192, R * 1.8));
     if (this.signRenderer) this.signRenderer.update();

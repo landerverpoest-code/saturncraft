@@ -87,7 +87,7 @@ export class RemotePlayer {
 
   update(game, sec, now = performance.now()) {
     const s = this.state;
-    if (!s || s.dead) { this.root.visible = false; return; }
+    if (!s || s.dead || s.invisible) { this.root.visible = false; return; } // Invisibility hides the whole player
     this.root.visible = true;
     const f = Math.min(1, (now - this.t0) / this.interval);
     const a = this.from;
@@ -142,6 +142,7 @@ function makeTarget(rp) {
     get dead() { return !rp.state || !!rp.state.dead; },
     get creative() { return !!st().creative; },
     get sneaking() { return !!st().sneaking; },
+    get invisible() { return !!st().invisible; },
     get eyeHeight() { return st().sneaking ? PHYS.PLAYER_SNEAK_EYE : PHYS.PLAYER_EYE; },
     width: 0.6, height: PHYS.PLAYER_HEIGHT,
     body: { height: PHYS.PLAYER_HEIGHT, width: PHYS.PLAYER_WIDTH, vx: 0, vy: 0, vz: 0, onGround: true },

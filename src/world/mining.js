@@ -23,7 +23,7 @@ export function canHarvest(blockId, tool = HAND) {
  * Fraction of the block destroyed per game tick.
  * @param {number} blockId
  * @param {object} tool  tool stats (HAND for bare hand)
- * @param {{onGround?: boolean, inWater?: boolean, swiftdig?: number}} ctx  swiftdig = the tool's Swiftdig level
+ * @param {{onGround?: boolean, inWater?: boolean, swiftdig?: number, haste?: number}} ctx  swiftdig = the tool's Swiftdig level, haste = Haste effect level
  */
 export function breakProgressPerTick(blockId, tool = HAND, ctx = {}) {
   const b = BLOCKS[blockId];
@@ -32,6 +32,7 @@ export function breakProgressPerTick(blockId, tool = HAND, ctx = {}) {
   let speed = 1;
   if (isCorrectToolType(b, tool)) speed = tool.type === 'sword' ? 1.5 : tool.speed;
   if (ctx.swiftdig && speed > 1) speed += swiftdigBonus(ctx.swiftdig);
+  if (ctx.haste) speed *= 1 + 0.2 * ctx.haste;
   if (ctx.inWater) speed /= 5;
   if (ctx.onGround === false) speed /= 5;
   const divisor = canHarvest(blockId, tool) ? 30 : 100;
@@ -117,6 +118,7 @@ function baseDrops(blockId, b, rng, meta) {
       if (rng() < 0.02) out.push({ id: I.POISONOUS_POTATO, count: 1 });
       return out;
     }
+    case 'cinderroot': return [{ id: I.CINDERROOT, count: (meta & 7) >= 3 ? randInt(rng, 2, 4) : 1 }];
     case 'beetroots': {
       if ((meta & 7) < 7) return [{ id: I.BEETROOT_SEEDS, count: 1 }];
       let seeds = 1;

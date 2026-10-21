@@ -37,6 +37,7 @@ import { addXp } from '../player/experience.js';
 import { MAX_USES } from '../mobs/trades.js';
 import { runCommand } from '../ui/commands.js';
 import { DIMENSIONS } from '../world/dimensions/dims.js';
+import { POTIONS } from '../world/potions.js';
 
 const STATE_EVERY = 2;      // ticks between player / entity updates (10 Hz)
 const ENV_EVERY = 20;       // time + weather once a second (also the heartbeat)
@@ -68,7 +69,7 @@ function joinLink(code) {
   return `${location.origin}${location.pathname}?${keep}`;
 }
 
-const CONTAINER_BLOCKS = new Set([B.CHEST, B.FURNACE, B.FURNACE_LIT]);
+const CONTAINER_BLOCKS = new Set([B.CHEST, B.FURNACE, B.FURNACE_LIT, B.BREWING_STAND]);
 const contKey = (k, x, y, z) => `${k}:${x},${y},${z}`;
 const finite = (...v) => v.every(Number.isFinite);
 /** Stand-in for a player whose pet is waiting for them while they are offline. */
@@ -397,6 +398,12 @@ export class HostSession extends Session {
     return true;
   }
 
+  /** A splash elixir broke near a guest: their own game applies the effects (strength f). */
+  splashRemote(t, potionId, f) {
+    const c = this.clients.get(t.remote ? t.remote.id : -1);
+    if (c) c.ch.send({ t: 'fx', p: potionId, f: Math.round(f * 1000) / 1000 });
+  }
+
   /** A guest dropped / threw / shot something: it becomes a shared entity here. */
   remoteSpawn(c, m) {
     const g = this.game, ents = g.entities;
@@ -410,7 +417,9 @@ export class HostSession extends Session {
     } else if (m.k === 'xp') {
       if (m.n > 0) ents.spawnXp(m.x, m.y, m.z, Math.min(100000, m.n | 0));
     } else if (m.k === 'arrow' && v) {
-      ents.spawnArrow(m.x, m.y, m.z, v[0], v[1], v[2], c.rp.target, !!m.crit, m.thrown === 'egg' || m.thrown === 'snowball' ? m.thrown : null, Math.max(0, Math.min(5, m.power | 0)));
+      const pot = m.thrown === 'potion' && ITEMS[m.potion | 0] && ITEMS[m.potion | 0].potion && ITEMS[m.potion | 0].potion.splash ? m.potion | 0 : 0;
+      if (m.thrown === 'potion' && !pot) return;
+      ents.spawnArrow(m.x, m.y, m.z, v[0], v[1], v[2], c.rp.target, !!m.crit, m.thrown === 'egg' || m.thrown === 'snowball' || pot ? m.thrown : null, Math.max(0, Math.min(5, m.power | 0)), pot);
     } else if (m.k === 'boat') {
       ents.spawnBoat(m.x, m.y, m.z, +m.yaw || 0, !!m.cart);
     } else if (m.k === 'tnt') {
@@ -523,6 +532,7 @@ export class HostSession extends Session {
     const g = this.game, id = g.world.getBlock(x, y, z);
     if (kind === 'chest') return id === B.CHEST ? g.getChest(x, y, z) : null;
     if (kind === 'furnace') return id === B.FURNACE || id === B.FURNACE_LIT ? g.getFurnace(x, y, z) : null;
+    if (kind === 'brewing') return id === B.BREWING_STAND ? g.getBrewingStand(x, y, z) : null;
     return null;
   }
 
@@ -793,6 +803,15 @@ export class ClientSession extends Session {
         break;
       case 'ents': if (m.d === g.world.dimension && !g.dims.pending) this.ents.apply(m.m); break;
       case 'hurt': p.hurt(m.a, m.s, m.x != null ? { x: m.x, z: m.z } : null); break;
+      case 'fx': {
+        // a splash elixir reached us on the host
+        const d = ITEMS[m.p | 0], f = Math.max(0, Math.min(1, +m.f || 0));
+        if (d && d.potion && f > 0) {
+          if (d.potion.kind === 'water') p.fireTicks = 0;
+          for (const [type, ticks, amp] of POTIONS[d.potion.kind].effects) p.applyEffect(type, ticks, amp, f);
+        }
+        break;
+      }
       case 'got': {
         const got = copyStack(m.st);
         if (!got || !ITEMS[got.id]) break;

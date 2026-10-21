@@ -124,6 +124,20 @@ export class CinderdeepGenerator {
     // 7. Ember Bastions
     this.stampBastions(blocks, meta, cx, cz);
 
+    // 8. wild Cinderroot patches on open Mournsand (own random stream, so the rest of the terrain is unchanged)
+    const rr = mulberry32(hash4(this.seed, cx, cz, 9173));
+    if (rr() < 0.3) {
+      const px = 2 + Math.floor(rr() * 12), pz = 2 + Math.floor(rr() * 12);
+      for (let n = 0; n < 14; n++) {
+        const x = px + Math.floor(rr() * 5) - 2, z = pz + Math.floor(rr() * 5) - 2;
+        for (let y = CINDER_LAVA + 1; y < 110; y++) {
+          if (blocks[cidx(x, y, z)] !== B.MOURNSAND || blocks[cidx(x, y + 1, z)] !== B.AIR) continue;
+          if (rr() < 0.6) { blocks[cidx(x, y + 1, z)] = B.CINDERROOT; meta[cidx(x, y + 1, z)] = Math.floor(rr() * 4); }
+          break;
+        }
+      }
+    }
+
     for (let z = 0; z < 16; z++) for (let x = 0; x < 16; x++) {
       let y = CINDER_CEILING;
       while (y > 0 && !blocks[cidx(x, y, z)]) y--;
@@ -188,6 +202,11 @@ export class CinderdeepGenerator {
         }
         if (hub && along === 0 && across === 0) {
           blocks[cidx(x, y + 1, z)] = B.SPAWNER; meta[cidx(x, y + 1, z)] = EMBER_LORD_SPAWNER_META;
+        }
+        if (hub && along <= -2 && along >= -4 && across <= -2 && across >= -4) {
+          // a planter of ripe Cinderroot in the hub
+          blocks[cidx(x, y, z)] = B.MOURNSAND;
+          blocks[cidx(x, y + 1, z)] = B.CINDERROOT; meta[cidx(x, y + 1, z)] = 3;
         }
         if (hub && along === 3 && across === 3) { blocks[cidx(x, y + 1, z)] = B.CHEST; meta[cidx(x, y + 1, z)] = 8; } // loot chest
       }
