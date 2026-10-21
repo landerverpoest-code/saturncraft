@@ -1,4 +1,5 @@
 // Game orchestrator: fixed 20 TPS simulation with interpolated rendering.
+import { newMap, updateMap, MAP_SIZE } from './world/maps.js';
 import { KEEP_BITS, unpairAfterBreak } from './world/chests.js';
 import * as THREE from 'three';
 import { World } from './world/world.js';
@@ -80,6 +81,7 @@ export class Game {
     this.chests = new Map();      // "x,y,z" -> { x, y, z, slots: 27 stacks }
     this.signs = new Map();       // "x,y,z" -> four lines of text
     this.frames = new Map();      // "x,y,z" -> the item stack in an item frame
+    this.maps = new Map();        // map id -> filled map (world/maps.js)
     this.brewingStands = new Map(); // "x,y,z" -> Brewing Alembic state (see world/brewing.js)
     this.fps = 0; this.frameCount = 0; this.fpsTime = 0;
     this.net = null;              // multiplayer session (src/net/session.js), null in single-player
@@ -460,6 +462,32 @@ export class Game {
     return s;
   }
 
+  /** A new filled map of the square around x,z (ids are random so players' maps never clash). */
+  createMap(x, z) {
+    let id;
+    do id = 1 + Math.floor(Math.random() * 0x7ffffffe); while (this.maps.has(id));
+    const m = newMap(id, x, z, this.world.dimension);
+    this.maps.set(id, m);
+    updateMap(m, this.world, x, z, MAP_SIZE * MAP_SIZE);
+    return m;
+  }
+
+  /** The map behind a filled-map stack (a blank one is made for a map from another player). */
+  mapOf(st) {
+    if (!st || !Number.isInteger(st.map)) return null;
+    let m = this.maps.get(st.map);
+    if (!m) { m = newMap(st.map, (st.mapX | 0) * 128 + 64, (st.mapZ | 0) * 128 + 64, this.world.dimension); this.maps.set(st.map, m); }
+    return m;
+  }
+
+  /** A held map keeps drawing what is around its holder. */
+  tickMaps() {
+    const st = this.player.inventory.selectedStack;
+    if (!st || st.id !== I.FILLED_MAP || this.player.dead) return;
+    const m = this.mapOf(st);
+    if (m && m.dimension === this.world.dimension && this.ticks % 2 === 0) { updateMap(m, this.world, this.player.x, this.player.z, 600); m.dirty = true; }
+  }
+
   tickBrewing() {
     for (const s of this.brewingStands.values()) {
       if (!this.world.isLoaded(s.x, s.z)) continue;
@@ -739,6 +767,7 @@ export class Game {
     if (p.riding) this.seatPlayer();
     this.spawner.tick();
     if (!this.net || this.net.isHost) this.spawnerBlocks.tick();
+    this.tickMaps();
     if (!this.net || this.net.isHost) { this.tickFurnaces(); this.tickBrewing(); } // guests see the host's furnaces and alembics
     this.effectParticles();
     this.particles.tick();

@@ -109,7 +109,7 @@ export function sameEnch(a, b) {
 
 /** Can two stacks be merged into one? Never for durability items, nor enchanted with plain. */
 export function canStack(a, b) {
-  return !!a && !!b && a.id === b.id && !(ITEMS[a.id] && ITEMS[a.id].durability) && sameEnch(a.ench, b.ench) && (a.rw | 0) === (b.rw | 0);
+  return !!a && !!b && a.id === b.id && !(ITEMS[a.id] && ITEMS[a.id].durability) && sameEnch(a.ench, b.ench) && (a.rw | 0) === (b.rw | 0) && a.map === b.map;
 }
 
 /** A cleaned copy of an enchantment map from untrusted data (network, saves). */
@@ -128,6 +128,7 @@ export function withExtras(dst, src) {
   const e = src && cleanEnch(src.ench);
   if (e) dst.ench = e;
   if (src && src.rw > 0) dst.rw = src.rw | 0;
+  if (src && Number.isInteger(src.map)) { dst.map = src.map; dst.mapX = src.mapX | 0; dst.mapZ = src.mapZ | 0; } // filled maps
   return dst;
 }
 

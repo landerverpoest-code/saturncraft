@@ -200,6 +200,10 @@ for (const kind of POTION_KEYS) {
   SPLASH_ITEM[kind] = item(kind === 'water' ? 'splash_water_vial' : 'splash_elixir_' + kind, 'Splash ' + p.name, { stack: 1, potion: { kind, splash: true }, throwable: 'potion', iconStyle: ['splash', { g: '#c8dcf0', h: color }] }).id;
 }
 
+// maps: an empty map is filled in where it is first used (stack.map = id, mapX/mapZ = the 128-block square)
+item('empty_map', 'Empty Map', { emptyMap: true, iconStyle: ['map', { p: '#e8dcb8', e: '#a89868', g: '#e8dcb8', w: '#e8dcb8' }] });
+item('filled_map', 'Map', { stack: 1, filledMap: true, iconStyle: ['map', { p: '#e8dcb8', e: '#a89868', g: '#5a9a3a', w: '#3a6ad8' }] });
+
 // Fuel for block items
 for (const id of [B.OAK_PLANKS, B.SPRUCE_PLANKS, B.BIRCH_PLANKS, B.JUNGLE_PLANKS, B.ACACIA_PLANKS, B.DARK_OAK_PLANKS, B.OAK_LOG, B.BIRCH_LOG, B.SPRUCE_LOG, B.JUNGLE_LOG, B.ACACIA_LOG, B.DARK_OAK_LOG, B.WORKBENCH]) ITEMS[id].fuel = 300;
 for (const id of [B.OAK_SAPLING, B.BIRCH_SAPLING, B.SPRUCE_SAPLING, B.JUNGLE_SAPLING, B.ACACIA_SAPLING, B.DARK_OAK_SAPLING]) ITEMS[id].fuel = 100;

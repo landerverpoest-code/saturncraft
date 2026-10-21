@@ -1,4 +1,5 @@
 // Block selection outline, break-progress cracks and the first-person held item.
+import { MAP_SIZE, mapPos } from '../world/maps.js';
 import * as THREE from 'three';
 import { BLOCKS, SHAPE } from '../world/blocks.js';
 import { ITEMS } from '../world/items.js';
@@ -87,6 +88,19 @@ export class HeldItem {
     this.glintMat = null;
     if (id == null) { this.group.add(this.hand); this.hand.position.set(0.52, -0.48, -0.8); this.hand.rotation.set(-0.55, 0.2, 0.32); return; }
     const d = ITEMS[id];
+    this.mapView = null;
+    if (d.filledMap) {
+      // a held map: a parchment sheet in front of the view showing the map
+      const cv = document.createElement('canvas'); cv.width = cv.height = 144;
+      const tex = new THREE.CanvasTexture(cv);
+      tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter; tex.colorSpace = THREE.SRGBColorSpace;
+      this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.5), new THREE.MeshLambertMaterial({ map: tex }));
+      this.mesh.position.set(0.12, -0.12, -0.62);
+      this.mesh.rotation.set(-0.32, -0.1, 0.03);
+      this.mapView = { canvas: cv, tex, last: '' };
+      this.group.add(this.mesh);
+      return;
+    }
     if (d.block !== undefined && (BLOCKS[d.block].shape === SHAPE.CUBE || BLOCKS[d.block].shape === SHAPE.CACTUS || BLOCKS[d.block].shape === SHAPE.SLAB || BLOCKS[d.block].shape === SHAPE.STAIRS)) {
       const b = BLOCKS[d.block];
       const side = new THREE.MeshLambertMaterial({ map: blockFaceTexture(b.tex.side), transparent: true, alphaTest: 0.3 });
@@ -115,8 +129,13 @@ export class HeldItem {
     const st = p.inventory.selectedStack;
     const id = st ? st.id : null;
     const glint = !!(st && st.ench && Object.keys(st.ench).length);
-    const key = id == null ? null : id + (glint ? ':g' : '');
+    const key = id == null ? null : id + (glint ? ':g' : '') + (st && st.map ? ':m' + st.map : '');
     if (key !== this.currentId) { this.currentId = key; this.dial = null; this.build(id, glint); this.equipAnim = 1; }
+    if (this.mapView) {
+      const m = g.mapOf(st);
+      const sig = m ? `${m.filled},${Math.floor(p.x)},${Math.floor(p.z)},${Math.round(p.yaw * 8)}` : '';
+      if (m && (m.dirty || sig !== this.mapView.last) && g.ticks % 3 === 0) { m.dirty = false; this.mapView.last = sig; drawMap(this.mapView.canvas, m, p, g.world.dimension); this.mapView.tex.needsUpdate = true; }
+    }
     if (this.dial) {
       // the compass points at the world spawn (and spins outside the overworld); the clock shows the sky
       let a = 0, light = 1, suns = 0;
@@ -153,4 +172,31 @@ export class HeldItem {
     renderer.clearDepth();
     renderer.render(this.scene, this.camera);
   }
+}
+
+/** Paint a map onto a 144 x 144 canvas: parchment border, the pixels, and an arrow for the player. */
+function drawMap(cv, m, p, dimension) {
+  const ctx = cv.getContext('2d'), img = ctx.createImageData(MAP_SIZE, MAP_SIZE);
+  for (let i = 0, o = 0; i < MAP_SIZE * MAP_SIZE; i++, o += 3) {
+    const px = m.px;
+    if (px[o] || px[o + 1] || px[o + 2]) { img.data[i * 4] = px[o]; img.data[i * 4 + 1] = px[o + 1]; img.data[i * 4 + 2] = px[o + 2]; }
+    else { img.data[i * 4] = 216; img.data[i * 4 + 1] = 200; img.data[i * 4 + 2] = 160; } // unexplored parchment
+    img.data[i * 4 + 3] = 255;
+  }
+  ctx.fillStyle = '#c8b48a'; ctx.fillRect(0, 0, 144, 144);
+  ctx.fillStyle = '#8a7650'; ctx.fillRect(2, 2, 140, 140);
+  ctx.fillStyle = '#d8c8a0'; ctx.fillRect(4, 4, 136, 136);
+  ctx.putImageData(img, 8, 8);
+  if (m.dimension !== dimension) return;
+  // the player: a white arrow pointing the way they face (clamped to the edge outside the map)
+  let [mx, mz] = mapPos(m, p.x, p.z);
+  const outside = mx < 0 || mz < 0 || mx >= MAP_SIZE || mz >= MAP_SIZE;
+  mx = Math.max(1, Math.min(MAP_SIZE - 2, mx)); mz = Math.max(1, Math.min(MAP_SIZE - 2, mz));
+  ctx.save();
+  ctx.translate(8 + mx, 8 + mz);
+  if (outside) { ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#202020'; ctx.beginPath(); ctx.arc(0, 0, 2.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.restore(); return; }
+  ctx.rotate(-p.yaw);
+  ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(3.5, 4); ctx.lineTo(0, 2); ctx.lineTo(-3.5, 4); ctx.closePath();
+  ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#202020'; ctx.lineWidth = 1; ctx.fill(); ctx.stroke();
+  ctx.restore();
 }

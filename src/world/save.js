@@ -1,5 +1,6 @@
 // World persistence in IndexedDB: modified chunks (run-length encoded),
 // player state, world time, furnaces and persistent passive mobs.
+import { encodeMap, decodeMap } from './maps.js';
 import { chunkKey } from './world.js';
 import { cleanEffects } from '../player/effects.js';
 
@@ -93,6 +94,7 @@ export async function saveGame(game) {
     chests: [...game.chests.values()],
     signs: [...game.signs],
     frames: [...game.frames],
+    maps: [...game.maps.values()].map(encodeMap),
     brewingStands: [...(game.brewingStands || new Map()).values()],
     worldSpawn: game.worldSpawn,
     weather: game.weather.save(),
@@ -145,6 +147,7 @@ export function applySave(game, data) {
   for (const c of data.chests || []) game.chests.set(`${c.x},${c.y},${c.z}`, c);
   for (const [k, l] of data.signs || []) game.signs.set(k, l);
   for (const [k, st] of data.frames || []) game.frames.set(k, st);
+  for (const d of data.maps || []) { const m = decodeMap(d); if (m) game.maps.set(m.id, m); }
   for (const s of data.brewingStands || []) if (s && Array.isArray(s.slots)) game.brewingStands.set(`${s.x},${s.y},${s.z}`, s);
   for (const k of data.generated) game.spawner.generated.add(k);
   for (const [k, v] of Object.entries(data.savedMobs)) game.spawner.savedMobs.set(+k, v);

@@ -159,6 +159,18 @@ export class Interaction {
       this.swing = SWING_TICKS;
       return;
     }
+    if (d && d.emptyMap && input.rightPressed) {
+      // an empty map becomes a map of the 128-block square around the player
+      const m = g.createMap(p.x, p.z);
+      const filled = { id: I.FILLED_MAP, count: 1, damage: 0, map: m.id, mapX: Math.floor(m.x0 / 128), mapZ: Math.floor(m.z0 / 128) };
+      if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
+      if (!p.inventory.selectedStack) p.inventory.slots[p.inventory.selected] = filled;
+      else if (p.inventory.add(filled)) g.entities.spawnItem(p.x, p.y + 1, p.z, filled);
+      p.inventory.changed();
+      g.audio.play('page', [p.x, p.y + 1, p.z]);
+      this.swing = SWING_TICKS;
+      return;
+    }
     if (d && d.throwable === 'potion' && input.rightPressed) {
       // splash elixirs: thrown at 0.5 blocks/tick, aimed 20 degrees above the view
       const [ex, ey, ez] = p.eyePos();

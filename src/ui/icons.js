@@ -83,6 +83,7 @@ function circuitIcon(ctx, c, b) {
 
 // 16x16 templates. '.' = transparent; other chars mapped per item.
 const T = {
+  map: ['................', '.eeeeeeeeeeeeee.', '.eppppppppppppe.', '.epgggpppwwwwpe.', '.eggggggpwwwwwe.', '.epggggggpwwwpe.', '.eppgggggppwwpe.', '.epppggggggpppe.', '.eppwwpggggggpe.', '.epwwwwpgggggpe.', '.ewwwwwppggggge.', '.epwwwppppgggpe.', '.eppppppppppppe.', '.eeeeeeeeeeeeee.', '................', '................'],
   stick: ['................', '............ss..', '...........ss...', '..........ss....', '.........ss.....', '........ss......', '.......ss.......', '......ss........', '.....ss.........', '....ss..........', '...ss...........', '..ss............', '................', '................', '................', '................'],
   ingot: ['................', '................', '................', '................', '.....hhhhhhh....', '....hHHHHHHhh...', '...hHHHHHHhhh...', '..hhhhhhhhhhh...', '..hhhhhhhhhh....', '..hhhhhhhhh.....', '................', '................', '................', '................', '................', '................'],
   gem: ['................', '................', '.....hhhhhh.....', '....hHHHHHHh....', '...hHHhhhhHHh...', '..hhhhhhhhhhhh..', '...hhhhhhhhhh...', '....hhhhhhhh....', '.....hhhhhh.....', '......hhhh......', '.......hh.......', '................', '................', '................', '................', '................'],
