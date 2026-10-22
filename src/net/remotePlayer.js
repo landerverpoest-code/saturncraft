@@ -7,6 +7,8 @@ import { buildModel, animateModel } from '../mobs/models.js';
 import { itemCanvas } from '../ui/icons.js';
 import { lightAt } from '../entities/entities.js';
 import { PHYS } from '../physics/constants.js';
+import { heldLightLevel } from '../world/items.js';
+import { REMOTE_LIGHTS } from '../render/terrainMaterial.js';
 
 const SWING_MS = 300;
 
@@ -28,6 +30,16 @@ function nameTagSprite(name) {
   s.scale.set(w / 40 * 0.32, 0.32, 1);
   s.renderOrder = 10;
   return s;
+}
+
+/** Lights carried by the other players in view: where the hand is and how strong the light is. */
+export function heldLights(remotes) {
+  const out = [];
+  for (const rp of remotes.values()) {
+    const level = rp.heldLight();
+    if (level > 0 && out.length < REMOTE_LIGHTS) out.push({ x: rp.root.position.x, y: rp.root.position.y + 1.3, z: rp.root.position.z, level });
+  }
+  return out;
 }
 
 export class RemotePlayer {
@@ -53,6 +65,9 @@ export class RemotePlayer {
     this.itemId = -1; this.item = null;
     this.target = makeTarget(this);
   }
+
+  /** Light level of what this player holds (0 when nothing lights). */
+  heldLight() { return this.state && !this.state.dead && this.root.visible ? heldLightLevel(this.state.held) : 0; }
 
   /** A new state arrived (see protocol.unpackPlayerState). */
   setState(s, now = performance.now()) {

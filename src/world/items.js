@@ -253,3 +253,11 @@ item('sky_rocket', 'Sky Rocket', { rocket: true, iconStyle: [ICON_ROCKET, { h: '
 item('hushfruit', 'Hushfruit', { food: { hunger: 4, saturation: 2.4, always: true, teleport: true }, iconStyle: ['apple', { h: '#8a5aa0', H: '#b68ac8', s: '#4a3058', l: '#c8a8d8' }] });
 item('popped_hushfruit', 'Popped Hushfruit', { iconStyle: ['potato', { h: '#c8a4d4', H: '#e4d0ec', s: '#8a6a98' }] });
 ITEMS[B.GLOOMSHELL_BOX].stack = 1; // a box keeps its contents in the item (stack.contents), so it never stacks
+
+/** Light level (0-15) an item gives when held: a torch, lantern or other light block; 0 for the rest. */
+export function heldLightLevel(id) {
+  const d = id != null && ITEMS[id];
+  if (!d) return 0;
+  const b = BLOCKS[d.block ?? d.places];
+  return b && b.emit ? b.emit : 0;
+}

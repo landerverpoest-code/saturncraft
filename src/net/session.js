@@ -49,6 +49,7 @@ const TIMEOUT_MS = 30000;
 const ENTITY_RANGE = 80;    // entities further than this from a client are not sent to it
 const REACH = 12;           // blocks: how far from a player its edits / actions may be (reach + latency slack)
 const GUEST_SIM_RADIUS = 4; // chunks the host keeps loaded (and simulates) around each guest
+const GUEST_TICK_RADIUS = 2; // chunks around each guest that get random ticks (crops, leaves, fire, ice...); the costliest part per guest
 const SLEEP_MS = 4500;      // a guest has to lie in bed this long before the night can be skipped
 
 /** Message channel over a transport conn: JSON objects in, JSON objects out. */
@@ -641,7 +642,7 @@ export class HostSession extends Session {
       if (pl.obj.dead) continue;
       const cx = Math.floor(pl.obj.x / 16), cz = Math.floor(pl.obj.z / 16);
       if (!done.some(([x, z]) => Math.max(Math.abs(x - cx), Math.abs(z - cz)) <= 2 * r)) {
-        runRandomTicks(g.world, cx, cz, Math.min(r, GUEST_SIM_RADIUS));
+        runRandomTicks(g.world, cx, cz, Math.min(r, GUEST_TICK_RADIUS));
         done.push([cx, cz]);
       }
       g.player = pl.obj;
@@ -679,14 +680,17 @@ export class HostSession extends Session {
       for (const c of this.joined()) if (c.raw) list.push([c.id, ...c.raw]);
       this.broadcast({ t: 'pl', p: list });
       const riderOf = (b) => (b.rider === g.player ? 0 : b.remoteRider || -1);
+      // an entity is packed at most once per tick, however many clients have it in range
       const ents = g.entities.list.filter((x) => !x.removed && (!x.dead || x.kind === 'mob') && x.kind !== 'eye');
+      const packed = new Map();
       for (const c of this.joined()) {
         const s = c.rp.state;
         if (!s) continue;
         const near = [];
         for (const x of ents) {
           if (Math.abs(x.x - s.x) > ENTITY_RANGE || Math.abs(x.z - s.z) > ENTITY_RANGE) continue;
-          const a = packEntity(x, riderOf);
+          let a = packed.get(x);
+          if (a === undefined) { a = packEntity(x, riderOf) || null; packed.set(x, a); }
           if (a) near.push(a);
         }
         c.ch.send({ t: 'ents', m: near, d: g.world.dimension });

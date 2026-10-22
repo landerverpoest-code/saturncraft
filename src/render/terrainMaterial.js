@@ -3,11 +3,15 @@
 import * as THREE from 'three';
 import { generateTextureData, TEX_NAMES, TEX_SIZE, texId } from '../world/textures.js';
 
+export const REMOTE_LIGHTS = 8;
+
 export const terrainUniforms = {
   uAtlas: { value: null },
   uTorch: { value: new THREE.Color(1.0, 0.82, 0.6) },
   uMinLight: { value: 0.035 },
   uHand: { value: 0 },
+  // light sources of the other players (a held torch or lantern): world xyz + light level, level 0 = unused
+  uRemoteLights: { value: Array.from({ length: REMOTE_LIGHTS }, () => new THREE.Vector4()) },
   uWind: { value: 1 }, // how hard plants and leaves sway (stronger in storms) // light level of what the player holds (a torch lights the area around them)
   uTime: { value: 0 },
   uFire: { value: texId('fire') },
@@ -39,6 +43,7 @@ attribute vec4 lit;
 varying vec2 vTuv;
 varying vec3 vLit;
 varying float vShade;
+varying vec3 vWorld;
 flat varying float vTile;
 uniform float uTime;
 uniform float uWind;`)
@@ -55,6 +60,7 @@ if (wave > 0.5) {
   transformed.z += cos(ph * 0.83 + wp.x * 0.11) * amp * 0.7;
   if (wave < 1.5) transformed.y += sin(ph * 1.9 + wp.z) * amp * 0.4;
 }
+vWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;
 vTile = lit.w;
 vShade = abs(normal.y) > 0.5 ? (normal.y > 0.0 ? 1.0 : 0.55) : (abs(normal.z) > 0.5 ? 0.82 : 0.68);
 `);
@@ -65,6 +71,8 @@ uniform sampler2DArray uAtlas;
 uniform vec3 uTorch;
 uniform float uMinLight;
 uniform float uHand;
+uniform vec4 uRemoteLights[${REMOTE_LIGHTS}];
+varying vec3 vWorld;
 uniform float uTime;
 uniform float uFire;
 uniform float uFireFrames;
@@ -90,6 +98,10 @@ diffuseColor *= texel;`)
         'vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;',
         `float skyB = lightCurve(vLit.x);
 float handL = uHand > 0.0 ? clamp((uHand - length(vViewPosition) * 1.1) / 15.0, 0.0, 1.0) : 0.0;
+for (int i = 0; i < ${REMOTE_LIGHTS}; i++) {
+  vec4 rl = uRemoteLights[i];
+  if (rl.w > 0.0) handL = max(handL, clamp((rl.w - distance(vWorld, rl.xyz) * 1.1) / 15.0, 0.0, 1.0));
+}
 float blkB = lightCurve(max(vLit.y, handL));
 float aoF = 1.0 - vLit.z * 0.19;
 vec3 outgoingLight = reflectedLight.directDiffuse * skyB * mix(1.0, aoF, 0.5)
