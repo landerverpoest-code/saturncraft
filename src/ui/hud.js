@@ -6,6 +6,7 @@ import { hasEnch, enchLines } from '../world/enchantments.js';
 import { ITEMS } from '../world/items.js';
 import { armorTotals } from '../player/armor.js';
 import { xpToNextLevel } from '../player/experience.js';
+import { PlayerMarkers } from './playerMarkers.js';
 
 const svg = (inner) => `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" shape-rendering="crispEdges">${inner}</svg>`)}`;
 const heartPath = 'M9 16 L2 9 Q0 6 2 3.5 Q4.5 1 7 3 L9 5 L11 3 Q13.5 1 16 3.5 Q18 6 16 9 Z';
@@ -40,6 +41,7 @@ export class HUD {
       <div id="effects"></div>
       <div id="debug" class="hidden"></div>
       <div id="coords" class="hidden"></div>
+      <div id="markers-root"></div>
       <div id="toast"></div>
       <div id="item-name"></div>
       <div id="bottom">
@@ -66,6 +68,7 @@ export class HUD {
     this.makeIcons(this.healthEl, 10); this.makeIcons(this.foodEl, 10); this.makeIcons(this.airEl, 10);
     this.debugEl = this.root.querySelector('#debug');
     this.coordsEl = this.root.querySelector('#coords');
+    this.markers = new PlayerMarkers(this.root.querySelector('#markers-root'));
     this.skyCanvas = this.root.querySelector('#skyinfo canvas');
     this.phaseLabel = this.root.querySelector('#phase-label');
     this.timeLabel = this.root.querySelector('#time-label');
@@ -192,6 +195,8 @@ export class HUD {
     if (this.frame % 5 === 0) this.drawEffects();
     if (this.frame++ % 10 === 0) this.drawSky();
     if (this.showDebug && this.frame % 6 === 0) this.debugEl.textContent = g.debugText();
+    if (g.net) this.markers.update(g);
+    else this.markers.clear();
     // coordinates (pause menu setting); the F3 screen already shows them
     const coords = !!g.settings.showCoords && !this.showDebug;
     this.coordsEl.classList.toggle('hidden', !coords);

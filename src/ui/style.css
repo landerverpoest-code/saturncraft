@@ -50,6 +50,11 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 
 #skyinfo { position: absolute; right: 10px; top: 10px; display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: rgba(8, 10, 20, .45); border-radius: 8px; font-size: 13px; }
 #skyinfo canvas { width: 96px; height: 48px; }
+#markers-root { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.marker { position: absolute; left: 0; top: 0; display: flex; flex-direction: column; align-items: center; transform-origin: 0 0; white-space: nowrap; font: bold 13px/1.2 sans-serif; color: #fff; text-shadow: 1px 1px 0 #000; margin-left: -60px; width: 120px; text-align: center; }
+.marker .d { font-weight: normal; opacity: .8; font-size: 11px; }
+.marker.pinned { color: #ffe2a6; }
+.marker .arrow { font-size: 16px; display: inline-block; margin-bottom: 2px; }
 #coords { position: absolute; left: 6px; top: 6px; font: 13px/1.35 monospace; color: #fff; background: rgba(0,0,0,.45); padding: 4px 8px; border-radius: 4px; }
 #debug { position: absolute; left: 6px; top: 6px; font: 13px/1.35 monospace; white-space: pre; background: rgba(0,0,0,.45); padding: 6px 8px; border-radius: 4px; }
 #overlay-scope { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at center, transparent 0, transparent 33vmin, rgba(0,0,0,.55) 35vmin, #000 37vmin); }
