@@ -32,6 +32,8 @@ export function createTransport(params = urlParams()) {
 function wrapDataConnection(dc) {
   const conn = { peer: dc.peer, onData: null, onClose: null, closed: false };
   conn.send = (s) => { if (!conn.closed && dc.open) dc.send(s); };
+  // bytes still waiting to go out (the browser's buffer plus PeerJS's own queue): lets the host skip snapshots
+  conn.backlog = () => { try { return (dc.dataChannel ? dc.dataChannel.bufferedAmount : 0) + (dc.bufferSize || 0) * 16384; } catch { return 0; } };
   conn.close = () => { if (conn.closed) return; conn.closed = true; try { dc.close(); } catch { /* already gone */ } };
   const closed = () => { if (conn._closedFired) return; conn._closedFired = true; conn.closed = true; if (conn.onClose) conn.onClose(); };
   dc.on('data', (d) => { if (conn.onData) conn.onData(d); });

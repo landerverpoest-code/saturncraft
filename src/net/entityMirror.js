@@ -23,9 +23,13 @@ export class EntityMirror {
     this.ticks = 0;
   }
 
-  /** Apply a snapshot (list of packed entities near us); entities missing from it are gone. */
-  apply(list) {
-    const g = this.game, seen = new Set();
+  /**
+   * Apply a snapshot: packed entities near us. Without `ids` it is a full list and entities
+   * missing from it are gone; with `ids` the list holds only what changed and `ids` names
+   * everything that is still there.
+   */
+  apply(list, ids = null) {
+    const g = this.game, seen = new Set(ids || []);
     for (const a of list || []) {
       const s = unpackEntity(a);
       if (!s) continue;
