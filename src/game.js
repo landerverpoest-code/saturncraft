@@ -71,7 +71,7 @@ THREE.ShaderChunk.fog_vertex = `#ifdef USE_FOG
 
 const CAVE_FOG = new THREE.Color(0.012, 0.012, 0.018);
 export const DIFFICULTIES = ['peaceful', 'easy', 'normal', 'hard'];
-export const DEFAULT_SETTINGS = { renderDistance: 8, fov: 75, sensitivity: 100, volume: 0.5, music: 0.5, shadows: true, shadowMapSize: 1024, pixelRatioCap: 1.25, daylightCycle: true, hostileMobs: true, difficulty: 'normal' };
+export const DEFAULT_SETTINGS = { renderDistance: 8, fov: 75, sensitivity: 100, volume: 0.5, music: 0.5, shadows: true, shadowMapSize: 1024, pixelRatioCap: 1.25, daylightCycle: true, hostileMobs: true, difficulty: 'normal', showCoords: false };
 
 export class Game {
   constructor(canvas, seed, settings, hooks = {}, saveData = null) {
@@ -275,7 +275,7 @@ export class Game {
     if (k === 'sensitivity') this.input.sensitivity = 0.0022 * v / 100;
     if (k === 'volume') this.audio.setVolume(v);
     if (k === 'music') this.music.setVolume(v);
-    if (k === 'shadows') this.sky.setShadowsEnabled(v);
+    if (k === 'shadows') this.sky.setShadowsEnabled(v && (this.quality || 0) < 2);
     if ((k === 'hostileMobs' && !v) || (k === 'difficulty' && v === 'peaceful')) this.removeHostileMobs();
     if (k === 'difficulty') this.player.difficulty = v;
     if (k === 'daylightCycle' && !v) this.freezeAtDay();
@@ -926,17 +926,44 @@ export class Game {
     requestAnimationFrame((t) => this.frame(t));
     let dt = now - this.lastTime;
     this.lastTime = now;
+    this.governQuality(dt);
     if (dt > 250) dt = 250;
     this.handleFrameInput();
     const pauseSim = this.ui.open === 'pause' && !this.net; // a shared world keeps running
     if (!pauseSim) {
       this.acc += dt;
+      // after a hitch, catch up a few ticks at most instead of stalling again on a burst of them
+      if (this.acc > TICK_MS * 4) this.acc = TICK_MS * 4;
       while (this.acc >= TICK_MS) { this.tick(); this.acc -= TICK_MS; }
     }
     const alpha = pauseSim ? 1 : this.acc / TICK_MS;
     this.render(alpha, now / 1000);
     this.frameCount++;
     if (now - this.fpsTime > 1000) { this.fps = this.frameCount; this.frameCount = 0; this.fpsTime = now; }
+  }
+
+  /**
+   * Smoothness: when frames keep coming in slow (below about 22 fps for two seconds), trade
+   * quality for frame rate, first pixel density, then sun shadows. Quality comes back
+   * once frames have been fast for fifteen seconds. Only the renderer changes; settings stay.
+   */
+  governQuality(dt) {
+    if (dt > 2000) return; // loading, or a background tab: not a sign of a slow machine
+    if (dt > 45) { this.slowMs = (this.slowMs || 0) + dt; this.fastMs = 0; }
+    else if (dt < 22) { this.fastMs = (this.fastMs || 0) + dt; this.slowMs = 0; }
+    const level = this.quality || 0;
+    if (this.slowMs > 2000 && level < 2) { this.setQuality(level + 1); this.slowMs = 0; }
+    else if (this.fastMs > 15000 && level > 0) { this.setQuality(level - 1); this.fastMs = 0; }
+  }
+
+  setQuality(level) {
+    this.quality = level;
+    this.renderer.setPixelRatio(level >= 1 ? 1 : Math.min(window.devicePixelRatio, this.settings.pixelRatioCap));
+    this.renderer.setSize(window.innerWidth, window.innerHeight, false);
+    this.sky.setShadowsEnabled(this.settings.shadows && level < 2);
+    const names = ['', 'pixel density lowered', 'sun shadows off'];
+    if (level > 0 && level <= 2) this.hud.toast(`Smoothing the picture: ${names[level]}`);
+    if (level === 0) this.hud.toast('Picture quality restored');
   }
 
   render(alpha, sec) {

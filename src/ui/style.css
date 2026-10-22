@@ -50,6 +50,12 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 
 #skyinfo { position: absolute; right: 10px; top: 10px; display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: rgba(8, 10, 20, .45); border-radius: 8px; font-size: 13px; }
 #skyinfo canvas { width: 96px; height: 48px; }
+#markers-root { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.marker { position: absolute; left: 0; top: 0; display: flex; flex-direction: column; align-items: center; transform-origin: 0 0; white-space: nowrap; font: bold 13px/1.2 sans-serif; color: #fff; text-shadow: 1px 1px 0 #000; margin-left: -60px; width: 120px; text-align: center; }
+.marker .d { font-weight: normal; opacity: .8; font-size: 11px; }
+.marker.pinned { color: #ffe2a6; }
+.marker .arrow { font-size: 16px; display: inline-block; margin-bottom: 2px; }
+#coords { position: absolute; left: 6px; top: 6px; font: 13px/1.35 monospace; color: #fff; background: rgba(0,0,0,.45); padding: 4px 8px; border-radius: 4px; }
 #debug { position: absolute; left: 6px; top: 6px; font: 13px/1.35 monospace; white-space: pre; background: rgba(0,0,0,.45); padding: 6px 8px; border-radius: 4px; }
 #overlay-scope { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at center, transparent 0, transparent 33vmin, rgba(0,0,0,.55) 35vmin, #000 37vmin); }
 #overlay-vignette { position: absolute; inset: 0; pointer-events: none; transition: background .2s; }
@@ -109,8 +115,9 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 .creative-search { width: 100%; box-sizing: border-box; padding: 5px 8px; margin-bottom: 8px; border-radius: 3px; border: 1px solid rgba(0,0,0,.3); font: inherit; }
 #hud.creative #health, #hud.creative #food, #hud.creative #armor, #hud.creative #xpbar { visibility: hidden; }
 
-#title-bg { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; image-rendering: pixelated; }
-#title-screen { isolation: isolate; }
+/* fixed so it stays behind the whole scrollable title screen; no pointer events so wheel and touch scrolling reach the screen */
+#title-bg { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; image-rendering: pixelated; pointer-events: none; }
+#title-screen { isolation: isolate; overflow-y: auto; justify-content: safe center; padding: 16px 0; }
 #title-screen > *:not(canvas) { position: relative; }
 .title-wrap { position: relative; }
 #title-screen h1 { font-family: 'Courier New', monospace; font-weight: 900; font-size: clamp(40px, 9vw, 92px); letter-spacing: 6px; color: #f4dca8;
@@ -145,6 +152,16 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 .milestone-row img { width: 32px; height: 32px; image-rendering: pixelated; }
 .milestone-row .d { font-size: 12px; opacity: .8; }
 
+.world-list { display: flex; flex-direction: column; gap: 6px; width: 300px; max-width: calc(100vw - 32px); margin-bottom: 8px; }
+.world-head { font-size: 13px; opacity: .8; }
+.world-row { display: flex; gap: 6px; }
+.world-row .btn { min-width: 0; }
+.world-play { flex: 1; display: flex; flex-direction: column; align-items: flex-start; text-align: left; padding: 6px 10px; }
+.world-play b { font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.world-play span { font-size: 11px; opacity: .75; }
+.world-icon { flex: 0 0 44px; padding: 0; font-size: 18px; }
+.world-del:hover { background: linear-gradient(#9a4a4a, #6d3030); }
+.btn:disabled { opacity: .55; cursor: default; }
 .btn-row { display: flex; gap: 8px; width: 300px; }
 .btn-row .btn { flex: 1; min-width: 0; width: auto; font-size: 13px; padding-left: 4px; padding-right: 4px; }
 /* multiplayer */

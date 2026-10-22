@@ -9,6 +9,7 @@ import { POTIONS } from '../world/potions.js';
 import { breakProgressPerTick, blockDrops, canHarvest } from '../world/mining.js';
 import { enchLevel, meleeBonus, silkDropsSelf } from '../world/enchantments.js';
 import { PHYS } from '../physics/constants.js';
+import { Body } from '../physics/body.js';
 import { EXHAUSTION } from './survival.js';
 import { meleeWithEffects } from './effects.js';
 import { lightAt } from '../entities/entities.js';
@@ -624,7 +625,13 @@ export class Interaction {
     const cur = w.getBlock(px, py, pz);
     if (pshape === SHAPE.SLAB && cur === placeId && w.getMeta(px, py, pz) !== SLAB_DOUBLE) return this.finishPlace(px, py, pz, placeId, SLAB_DOUBLE);
     if (cur && !BLOCKS[cur].replaceable) return false;
-    if (SOLID[placeId] && (p.intersectsBlock(px, py, pz) || g.entities.blockOccupied(px, py, pz))) return false;
+    // pillaring: mid-jump with the feet still dipping into the cell below, place it anyway and lift the player on top
+    let lift = false;
+    if (SOLID[placeId] && p.intersectsBlock(px, py, pz)) {
+      if (!this.canPillarLift(px, py, pz, placeId)) return false;
+      lift = true;
+    }
+    if (SOLID[placeId] && g.entities.blockOccupied(px, py, pz)) return false;
     let meta = d.placeMeta || 0;
     const upper = t.face[1] === -1 || (t.face[1] === 0 && hitY - Math.floor(hitY) > 0.5);
     if (pshape === SHAPE.SLAB) meta = upper ? SLAB_TOP : 0;
@@ -675,6 +682,7 @@ export class Interaction {
       return true;
     }
     w.setBlockUrgent(px, py, pz, placeId, meta);
+    if (lift) { p.body.y = py + 1; p.body.vy = Math.max(p.body.vy, 0); }
     if (chestPair) w.setBlockUrgent(chestPair.x, chestPair.y, chestPair.z, B.CHEST, chestPair.meta);
     if (placeId === B.GLOOMSHELL_BOX && g.onBoxPlaced) g.onBoxPlaced(px, py, pz, st); // the box unpacks what it carried
     if (CROPS.has(placeId) && g.milestones) g.milestones.event('plant');
@@ -820,6 +828,24 @@ export class Interaction {
       return true;
     }
     return false;
+  }
+
+  /**
+   * Can a full block go into the cell under a jumping player? Allowed once the feet are in the
+   * upper part of the cell, standing on it fits (no overlap with other blocks), and the player
+   * is above the cell's centre, so pillaring up does not need frame-perfect timing.
+   */
+  canPillarLift(x, y, z, id) {
+    const g = this.game, b = g.player.body;
+    if (BLOCKS[id].shape !== SHAPE.CUBE || b.onGround || b.inWater || b.inLava) return false;
+    if (Math.floor(b.x) !== x || Math.floor(b.z) !== z || b.y < y + 0.35 || b.y >= y + 1) return false;
+    const h = b.width / 2, boxes = [];
+    Body.solidBoxes(g.world, b.x - h, y + 1, b.z - h, b.x + h, y + 1 + b.height, b.z + h, boxes);
+    for (let i = 0; i < boxes.length; i += 6) {
+      if (boxes[i] < b.x + h && boxes[i + 3] > b.x - h && boxes[i + 1] < y + 1 + b.height && boxes[i + 4] > y + 1 &&
+          boxes[i + 2] < b.z + h && boxes[i + 5] > b.z - h) return false;
+    }
+    return true;
   }
 
   /** Put a block (used for merging slabs) and consume one item. */
