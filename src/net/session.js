@@ -47,6 +47,8 @@ const PSAVE_EVERY = 100;    // clients send their inventory etc. every 5 s
 const CONTAINER_EVERY = 4;  // open chests / furnaces are re-sent when they change
 const TIMEOUT_MS = 30000;
 const ENTITY_RANGE = 80;    // entities further than this from a client are not sent to it
+const BACKLOG_LIMIT = 128 * 1024; // bytes queued for a guest before its snapshots are skipped
+const FULL_EVERY = 20;      // every 20th entity snapshot (2 s) is a full list, the others only what changed
 const REACH = 12;           // blocks: how far from a player its edits / actions may be (reach + latency slack)
 const GUEST_SIM_RADIUS = 4; // chunks the host keeps loaded (and simulates) around each guest
 const SLEEP_MS = 4500;      // a guest has to lie in bed this long before the night can be skipped
@@ -60,6 +62,8 @@ class Channel {
     conn.onClose = onClose;
   }
   send(msg) { for (const s of encodeMessage(msg)) this.conn.send(s); }
+  /** Bytes queued but not yet sent on this connection (0 if the transport can't tell). */
+  backlog() { return this.conn.backlog ? this.conn.backlog() : 0; }
   close() { this.conn.close(); }
 }
 
@@ -110,11 +114,22 @@ class Session {
   startBackground() {
     if (this.bgTimer) return;
     // keep simulating (and talking) while the tab is in the background, where frames stop
-    this.bgTimer = setInterval(() => {
+    const beat = () => {
       if (this.isClient && !this.closed && performance.now() - (this.lastKeepAlive || 0) > 4000) { this.lastKeepAlive = performance.now(); this.send({ t: 'ka' }); }
       const g = this.game;
-      if (g && g.running && performance.now() - g.lastTime > 400) g.backgroundTick(performance.now());
-    }, 250);
+      if (g && g.running && performance.now() - g.lastTime > 200) g.backgroundTick(performance.now());
+    };
+    // Browsers slow timers in background tabs down to once a second, and after a few minutes to once a
+    // minute: a host in another window would then serve its guests a minute late. A worker's timer keeps
+    // its pace, so the beat comes from a tiny worker (with a plain timer as the fallback).
+    try {
+      const src = 'setInterval(function () { postMessage(0); }, 100);';
+      this.bgWorker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+      this.bgWorker.onmessage = beat;
+      this.bgTimer = -1;
+    } catch {
+      this.bgTimer = setInterval(beat, 250);
+    }
   }
 
   render(sec) {
@@ -451,7 +466,7 @@ export class HostSession extends Session {
   remoteTake(c, m) {
     const e = this.entity(m.id), s = c.rp.state;
     if (!e || !s || s.dead) return;
-    if (Math.hypot(e.x - s.x, e.y - (s.y + 0.9), e.z - s.z) > 3.5) return;
+    if (Math.hypot(e.x - s.x, e.y - (s.y + 0.9), e.z - s.z) > 6) return; // (slack for a guest position that lags a little)
     if (e.kind === 'item') {
       if (e.pickupDelay > 0) return;
       const n = Math.max(0, Math.min(e.stack.count, m.n | 0));
@@ -677,19 +692,31 @@ export class HostSession extends Session {
     if (this.ticks % STATE_EVERY === 0) {
       const list = [[0, ...this.ownState()]];
       for (const c of this.joined()) if (c.raw) list.push([c.id, ...c.raw]);
-      this.broadcast({ t: 'pl', p: list });
       const riderOf = (b) => (b.rider === g.player ? 0 : b.remoteRider || -1);
       const ents = g.entities.list.filter((x) => !x.removed && (!x.dead || x.kind === 'mob') && x.kind !== 'eye');
       for (const c of this.joined()) {
+        // a guest whose connection can't keep up skips snapshots (newer ones replace them anyway), so the
+        // queue never grows into seconds or minutes of delay; edits, chat and the like still go through
+        if (c.ch.backlog() > BACKLOG_LIMIT) { c.skipped = (c.skipped || 0) + 1; continue; }
+        c.ch.send({ t: 'pl', p: list });
         const s = c.rp.state;
         if (!s) continue;
-        const near = [];
+        // only entities that changed since the last snapshot this guest got, plus the ids of all that are there;
+        // a full list every FULL_EVERY snapshots (and after a dimension change)
+        const full = !c.entCache || c.entDim !== g.world.dimension || ++c.entCount % FULL_EVERY === 0;
+        if (full) { c.entCache = new Map(); c.entDim = g.world.dimension; }
+        const changed = [], ids = [], cache = new Map();
         for (const x of ents) {
           if (Math.abs(x.x - s.x) > ENTITY_RANGE || Math.abs(x.z - s.z) > ENTITY_RANGE) continue;
           const a = packEntity(x, riderOf);
-          if (a) near.push(a);
+          if (!a) continue;
+          const key = JSON.stringify(a);
+          cache.set(a[1], key);
+          ids.push(a[1]);
+          if (c.entCache.get(a[1]) !== key) changed.push(a);
         }
-        c.ch.send({ t: 'ents', m: near, d: g.world.dimension });
+        c.entCache = cache;
+        c.ch.send(full ? { t: 'ents', m: changed, d: g.world.dimension } : { t: 'ents', m: changed, ids, d: g.world.dimension });
       }
     }
     if (this.ticks % CONTAINER_EVERY === 0) this.syncContainers();
@@ -707,7 +734,7 @@ export class HostSession extends Session {
     for (const c of [...this.clients.values()]) { this.clients.delete(c.id); setTimeout(() => c.ch.close(), 300); }
     setTimeout(() => { if (this.handle) this.handle.close(); }, 400);
     if (this.edits) this.edits.detach();
-    clearInterval(this.bgTimer);
+    clearInterval(this.bgTimer); if (this.bgWorker) { this.bgWorker.terminate(); this.bgWorker = null; }
     if (this.game) this.game.chunks.extraCenters = [];
     this.disposeRemotes();
   }
@@ -824,9 +851,8 @@ export class ClientSession extends Session {
         if (typeof m.df === 'string') g.settings.difficulty = m.df;
         this.setOptions(m);
         break;
-      case 'ents': if (m.d === g.world.dimension && !g.dims.pending) this.ents.apply(m.m); break;
+      case 'ents': if (m.d === g.world.dimension && !g.dims.pending) this.ents.apply(m.m, m.ids); break;
       case 'hurt': p.hurt(m.a, m.s, m.x != null ? { x: m.x, z: m.z } : null); break;
-      case 'eff': if (typeof m.e === 'string' && EFFECTS[m.e] && !EFFECTS[m.e].instant) p.addEffect(m.e, Math.max(0, Math.min(72000, m.d | 0)), Math.max(0, Math.min(10, m.a | 0))); break;
       case 'fx': {
         // a splash elixir reached us on the host
         const d = ITEMS[m.p | 0], f = Math.max(0, Math.min(1, +m.f || 0));
@@ -836,8 +862,10 @@ export class ClientSession extends Session {
         }
         break;
       }
-      case 'eff': // a mob's hit or arrow gave us an effect on the host
-        if (EFFECTS[m.e]) p.applyEffect(m.e, Math.max(0, Math.min(1e6, m.d | 0)), Math.max(0, Math.min(255, m.a | 0)), Math.max(0, Math.min(1, +m.f || 0)));
+      case 'eff': // an effect laid on us on the host (a mob's hit or arrow, a splash, Levitation, Mining Fatigue)
+        if (typeof m.e !== 'string' || !EFFECTS[m.e]) break;
+        if (m.f !== undefined) p.applyEffect(m.e, Math.max(0, Math.min(1e6, m.d | 0)), Math.max(0, Math.min(255, m.a | 0)), Math.max(0, Math.min(1, +m.f || 0)));
+        else if (!EFFECTS[m.e].instant) p.addEffect(m.e, Math.max(0, Math.min(72000, m.d | 0)), Math.max(0, Math.min(10, m.a | 0)));
         break;
       case 'got': {
         const got = copyStack(m.st);
@@ -1048,7 +1076,7 @@ export class ClientSession extends Session {
     if (this.stalled()) this.lastSeen = performance.now();
     const e = this.edits.take();
     if (e.length) this.send({ t: 'ed', e, d: this.game.world.dimension });
-    if (this.ticks % STATE_EVERY === 0) this.send({ t: 'st', s: this.ownState() });
+    if (this.ticks % STATE_EVERY === 0 && this.ch.backlog() < BACKLOG_LIMIT) this.send({ t: 'st', s: this.ownState() }); // skip while our upload is behind
     if (this.ticks % PSAVE_EVERY === 0) this.send({ t: 'ps', p: playerSaveData(this.game.player) });
     if (this.ticks % ENV_EVERY === 0 && performance.now() - this.lastSeen > TIMEOUT_MS) this.lost('Lost connection to the host (timed out)');
   }
@@ -1057,7 +1085,7 @@ export class ClientSession extends Session {
   lost(msg) {
     if (this.closed) return;
     this.closed = true;
-    clearInterval(this.bgTimer);
+    clearInterval(this.bgTimer); if (this.bgWorker) { this.bgWorker.terminate(); this.bgWorker = null; }
     try { this.ch && this.ch.close(); } catch { /* gone */ }
     if (!this.game) { if (this._fail) this._fail(new Error(msg)); return; }
     const g = this.game;
@@ -1077,7 +1105,7 @@ export class ClientSession extends Session {
     if (this.closed) return;
     try { this.send({ t: 'ps', p: playerSaveData(this.game.player) }); this.send({ t: 'bye' }); } catch { /* gone */ }
     this.closed = true;
-    clearInterval(this.bgTimer);
+    clearInterval(this.bgTimer); if (this.bgWorker) { this.bgWorker.terminate(); this.bgWorker = null; }
     if (this.edits) this.edits.detach();
     if (this.ents) this.ents.clear();
     this.disposeRemotes();
