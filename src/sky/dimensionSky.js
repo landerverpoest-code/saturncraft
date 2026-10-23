@@ -38,7 +38,8 @@ void main() {
     float s = smoothstep(0.32, 0.0, length(f)) * (0.6 + 0.4 * sin(uTime * (1.0 + h * 3.0) + h * 40.0));
     c += vec3(0.85, 0.85, 1.0) * s * (h - 0.985) * 66.0;
   }
-  gl_FragColor = vec4(c, 1.0);
+  gl_FragColor = vec4(pow(c, vec3(2.2)), 1.0); // linear, so the shader pass sees the same colours
+  #include <colorspace_fragment>
 }`;
 
 export class DimensionSky {

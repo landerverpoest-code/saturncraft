@@ -201,7 +201,7 @@ void main() {
 
   if (uUnderwater > 0.5) col = mix(col, vec3(0.05, 0.15, 0.4), 0.7);
   col = mix(col, vec3(0.012, 0.012, 0.018), uCave); // deep underground the sky beyond unloaded land is dark
-  gl_FragColor = vec4(col, 1.0);
+  gl_FragColor = vec4(col, 0.0); // alpha 0 marks open sky for the light shafts (see render/postfx.js)
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
 }

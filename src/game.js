@@ -54,6 +54,7 @@ import { effectsColor } from './player/effects.js';
 import { changeSound, CIRCUIT_BLOCK } from './world/circuits.js';
 import { FACING6 } from './world/circuitShapes.js';
 import { findStormRod, lightningCleanCopper } from './world/caves.js';
+import { PostFX } from './render/postfx.js';
 
 // Spherical (radial distance) fog instead of view-depth fog, so chunk edges never show at screen corners
 THREE.ShaderChunk.fog_vertex = `#ifdef USE_FOG
@@ -71,7 +72,7 @@ THREE.ShaderChunk.fog_vertex = `#ifdef USE_FOG
 
 const CAVE_FOG = new THREE.Color(0.012, 0.012, 0.018);
 export const DIFFICULTIES = ['peaceful', 'easy', 'normal', 'hard'];
-export const DEFAULT_SETTINGS = { renderDistance: 8, fov: 75, sensitivity: 100, volume: 0.5, music: 0.5, shadows: true, shadowMapSize: 1024, pixelRatioCap: 1.25, daylightCycle: true, hostileMobs: true, difficulty: 'normal', showCoords: false };
+export const DEFAULT_SETTINGS = { renderDistance: 8, fov: 75, sensitivity: 100, volume: 0.5, music: 0.5, shadows: true, shaders: true, shadowMapSize: 1024, pixelRatioCap: 1.25, daylightCycle: true, hostileMobs: true, difficulty: 'normal', showCoords: false };
 
 export class Game {
   constructor(canvas, seed, settings, hooks = {}, saveData = null) {
@@ -105,6 +106,8 @@ export class Game {
     this.renderer.shadowMap.autoUpdate = true;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.autoClear = false;
+    this.postfx = new PostFX(this.renderer);
+    this.postfx.enabled = s.shaders !== false;
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(s.fov, window.innerWidth / window.innerHeight, 0.05, 1200);
     this.scene.add(this.camera);
@@ -276,6 +279,7 @@ export class Game {
     if (k === 'volume') this.audio.setVolume(v);
     if (k === 'music') this.music.setVolume(v);
     if (k === 'shadows') this.sky.setShadowsEnabled(v && (this.quality || 0) < 2);
+    if (k === 'shaders') this.postfx.enabled = v !== false && (this.quality || 0) < 3;
     if ((k === 'hostileMobs' && !v) || (k === 'difficulty' && v === 'peaceful')) this.removeHostileMobs();
     if (k === 'difficulty') this.player.difficulty = v;
     if (k === 'daylightCycle' && !v) this.freezeAtDay();
@@ -952,7 +956,7 @@ export class Game {
     if (dt > 45) { this.slowMs = (this.slowMs || 0) + dt; this.fastMs = 0; }
     else if (dt < 22) { this.fastMs = (this.fastMs || 0) + dt; this.slowMs = 0; }
     const level = this.quality || 0;
-    if (this.slowMs > 2000 && level < 2) { this.setQuality(level + 1); this.slowMs = 0; }
+    if (this.slowMs > 2000 && level < 3) { this.setQuality(level + 1); this.slowMs = 0; }
     else if (this.fastMs > 15000 && level > 0) { this.setQuality(level - 1); this.fastMs = 0; }
   }
 
@@ -961,8 +965,9 @@ export class Game {
     this.renderer.setPixelRatio(level >= 1 ? 1 : Math.min(window.devicePixelRatio, this.settings.pixelRatioCap));
     this.renderer.setSize(window.innerWidth, window.innerHeight, false);
     this.sky.setShadowsEnabled(this.settings.shadows && level < 2);
-    const names = ['', 'pixel density lowered', 'sun shadows off'];
-    if (level > 0 && level <= 2) this.hud.toast(`Smoothing the picture: ${names[level]}`);
+    this.postfx.enabled = this.settings.shaders !== false && level < 3;
+    const names = ['', 'pixel density lowered', 'sun shadows off', 'shaders off'];
+    if (level > 0 && level <= 3) this.hud.toast(`Smoothing the picture: ${names[level]}`);
     if (level === 0) this.hud.toast('Picture quality restored');
   }
 
@@ -1015,6 +1020,11 @@ export class Game {
     const hb = hd ? BLOCKS[hd.block ?? hd.places] : null;
     this.handLight = hb && hb.emit ? hb.emit : 0;
     terrainUniforms.uHand.value = this.handLight;
+    const ss = this.shaftSun(st, 0);
+    if (ss) { terrainUniforms.uSunDir.value.set(ss.dir[0], ss.dir[1], ss.dir[2]); terrainUniforms.uSunCol.value.copy(ss.color).multiplyScalar(Math.min(1, ss.strength * 1.6)); }
+    else terrainUniforms.uSunCol.value.setRGB(0, 0, 0);
+    terrainUniforms.uGlow.value = this.postfx.enabled ? 1 : 0;
+    terrainUniforms.uSkyTop.value.copy(this.sky.zenith); terrainUniforms.uSkyLow.value.copy(this.sky.horizon);
     terrainUniforms.uWind.value = 1 + wlevel * 1.2 + (this.weather.storm || 0) * 1.2; // plants sway harder in rain and storms
     const R = this.chunks.renderDistance * 16;
     this.clouds.update(this.camera, smoothTime, this.sky, Math.max(192, R * 1.8));
@@ -1043,13 +1053,27 @@ export class Game {
     this.playerModel.update(this, this.perspective !== 0 && this.cameraDist > 0.8, alpha, sec); // no model when the camera is squeezed into the head
     if (this.net) this.net.render(sec);
     this.overlay.update(this.interaction, p.dead);
-    this.renderer.clear();
+    const fx = this.postfx.enabled;
+    if (fx) this.postfx.begin(); else this.renderer.clear();
     this.renderer.render(this.scene, this.camera);
     if (this.perspective === 0 && !zoom) this.held.render(this.renderer, alpha, sec);
+    if (fx) this.postfx.end(this.camera, sec, this.shaftSun(st, cd), b.eyeInWater);
     this.hud.setScope(zoom);
     this.hud.update();
     this.ui.tickOpen();
     this.lastSkyState = st;
+  }
+
+  /** The sun the light shafts stream from: the brightest one up, fading in rain and underground. */
+  shaftSun(st, cave) {
+    if (this.world.dimension !== 'overworld' || !st || !st.suns) return null;
+    let best = null;
+    for (const s of st.suns) if (s.elevation > 0 && (!best || s.factor > best.factor)) best = s;
+    if (!best) return null;
+    const c = (this.shaftColor = this.shaftColor || new THREE.Color());
+    c.setRGB(best.color[0], best.color[1], best.color[2]);
+    const low = Math.exp(-best.elevation * 3); // long golden shafts when the sun is low
+    return { dir: best.dir, color: c, strength: best.factor * (0.55 + 0.45 * low) * (1 - this.weather.level * 0.85) * (1 - cave) };
   }
 
   debugText() {

@@ -21,6 +21,8 @@ const rd = document.getElementById('t-rd');
 const sh = document.getElementById('t-sh');
 rd.value = settings.renderDistance; document.getElementById('t-rdv').textContent = settings.renderDistance;
 sh.checked = settings.shadows;
+const fx = document.getElementById('t-fx');
+fx.checked = settings.shaders !== false;
 rd.addEventListener('input', () => { document.getElementById('t-rdv').textContent = rd.value; });
 
 let game = null;
@@ -94,6 +96,7 @@ async function start(saveData = null, net = null, slot = null) {
   }
   settings.renderDistance = +rd.value;
   settings.shadows = sh.checked;
+  settings.shaders = fx.checked;
   saveSettings(settings);
   title.classList.add('hidden');
   stopTitleScene();
