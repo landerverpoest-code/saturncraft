@@ -411,7 +411,7 @@ poison from eyes) follow the documented table.
 * Chests (27 slots, shift-click transfer, contents drop when broken, saved with the world); furnaces and chests face the player when placed; two chests side by side facing the same way join into a 54-slot Large Chest (not while sneaking, never three in a row), also shared in multiplayer; barrels (6 planks + 2 oak slabs) hold 27 stacks like a chest but never join
 * Bow and arrows (player and Rattler), arrow pick-up
 * Crossbow (stick, iron ingot, string, flint): hold use for 1.25 s to load an arrow, then click to fire a fast, flat, always-critical shot; 465 uses, takes bow enchantments, found in outpost chests and dropped by Marauders (8.5 %)
-* Tidespear: a strong melee weapon (9 damage, 250 uses); hold use for half a second and release to throw it (8 damage, flies straight through water); it lands as an item to pick back up, in multiplayer too. Sodden Shamblers drop one now and then (6 %)
+* Tidespear: a strong melee weapon (9 damage, 250 uses); hold use for half a second and release to throw it (8 damage, flies straight through water); it lands as an item to pick back up, in multiplayer too. One Sodden Shambler in 16 carries a Tidespear (shown in its hand), hurls it at targets 4–20 blocks away every 3 s (8 damage) and drops it, worn, a quarter of the time when a player kills it
 * Composter (seven oak slabs): plant matter raises the compost a layer with the reference chances (seeds and leaves 30 %, cactus and cane 50 %, crops and flowers 65 %, bread and baked potatoes 85 %, pumpkin pie always); seven layers settle a second later and the full composter gives Bone Meal
 * Ambient particles: leaves drift down from tree canopies in the wind, fireflies glow over swamps, forests and jungles on dry nights, and dust hangs in the air of caves
 * Death screen, item drop on death, respawn; pause menu with settings
@@ -458,7 +458,7 @@ poison from eyes) follow the documented table.
 * Taming of animals other than Howlers, Purrlings, Squawklets and Gallopers
 * Large structures beyond villages, temples, wrecks, Tide Citadels, outposts, ruined rifts, dungeons, sanctums, bastions and Hollow Cities; job-site blocks
 * Dispensers, droppers and comparators; dyed Gloomshell Boxes
-* Mob equipment (held weapons and armour, the drowned's trident), baby mobs other than Shambler-kin and passive animals, Shambler jockeys, tipped-arrow drops, swamp hut cats
+* Mob equipment (held weapons and armour, apart from the Sodden Shambler's Tidespear), baby mobs other than Shambler-kin and passive animals, Shambler jockeys, tipped-arrow drops, swamp hut cats
 * Crawling pose; firework stars (Sky Rockets always burst in one random colour and never hurt)
 
 ## Other dimensions

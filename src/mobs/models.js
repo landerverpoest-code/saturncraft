@@ -446,6 +446,9 @@ MODELS.sodden_shambler = {
     ['armR', [4, 12, 4], [-6, 22, 0], [0, -4, 0], '#4a8a86', { anim: 'armForward' }],
     ['legL', [4, 12, 4], [2, 12, 0], [0, -6, 0], '#24463e', { anim: 'legA' }],
     ['legR', [4, 12, 4], [-2, 12, 0], [0, -6, 0], '#24463e', { anim: 'legB' }],
+    // a Tidespear in the hand (shown for the ones that carry one)
+    ['spear', [1, 1, 22], [-6, 22, 0], [0, -11, 1], '#5aa898'],
+    ['spearHead', [5, 1, 3], [-6, 22, 0], [0, -11, 13], '#9adcc8'],
   ],
 };
 // Rime Rattler: a frost-blue Rattler in a ragged hood and cloak.

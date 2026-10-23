@@ -137,6 +137,13 @@ function soddenAI(m, g, p, pdist) {
   const b = m.body;
   let target = m.acquire(g, p, pdist, m.def.followRange);
   if (target && !soddenOkTarget(g, p) && m.lastHurtByPlayer === 0) { m.target = null; target = false; }
+  // one with a Tidespear throws it at targets 4-20 blocks away it can see (every 3 s)
+  if (target && m.special) {
+    const d = Math.hypot(p.x - m.x, p.y - m.y, p.z - m.z);
+    if (d > 4 && d < 20 && m.canSee(g, p.x, p.y + 1.5, p.z)) {
+      if (++m.bowCharge >= 30 && m.attackCooldown <= 0) { throwSpear(m, g, p); m.bowCharge = 0; m.attackCooldown = 60; }
+    } else m.bowCharge = 0;
+  }
   if (target && b.inWater) {
     // swim straight at it, in three dimensions
     const dx = p.x - m.x, dy = p.y + 0.5 - m.y, dz = p.z - m.z, d = Math.hypot(dx, dy, dz) || 1;
@@ -151,6 +158,21 @@ function soddenAI(m, g, p, pdist) {
   }
   if (target) { m.chase(g, p, 1); m.tryMelee(g, p); return; }
   m.wanderAI(g, 1);
+}
+
+/** A Sodden Shambler hurls its Tidespear (it vanishes where it lands; the mob keeps its own). */
+function throwSpear(m, g, p) {
+  const sx = m.x, sy = m.eyeY - 0.1, sz = m.z;
+  const dx = p.x - sx, dz = p.z - sz, dy = p.y + 1 - sy + Math.hypot(dx, dz) * 0.12, l = Math.hypot(dx, dy, dz) || 1;
+  g.entities.spawnArrow(sx, sy, sz, dx / l * 1.6, dy / l * 1.6, dz / l * 1.6, m, false, 'spear');
+  g.audio.play('bow', [sx, sy, sz], 0.6);
+}
+
+function soddenRender(m, mesh) {
+  const parts = mesh.userData.parts;
+  if (!parts || !parts.spear) return;
+  parts.spear.visible = parts.spearHead.visible = !!m.special;
+  parts.spear.rotation.x = parts.spearHead.rotation.x = parts.armR.rotation.x;
 }
 
 // ---- registration ----------------------------------------------------------------------
@@ -185,8 +207,12 @@ export const VARIANT_MOBS = {
     name: 'Sodden Shambler', role: 'drowned', category: CATEGORY.MONSTER,
     health: 20, speed: 0.23, width: 0.6, height: 1.95, attack: 3, followRange: 35, armor: 2, sound: 'grunt',
     burnsInSun: true, sinks: true, aquaticSpawn: true,
-    customAI: soddenAI,
-    drops: [SHAMBLER.drops[0], { id: I.COPPER_INGOT, min: 1, max: 1, playerOnly: true, chance: 0.11, plunderChance: 0.02 }, { oneOf: [[I.TIDESPEAR, 0.0625]], playerOnly: true }],
+    customAI: soddenAI, customRender: soddenRender,
+    onSpawn: (m) => { m.special = Math.random() < 0.0625; }, // 1 in 16 carries a Tidespear
+    onDeath: (m, g, byPlayer) => { // and drops it now and then (worn) when a player kills it
+      if (m.special && byPlayer && Math.random() < 0.25) g.entities.spawnItem(m.x, m.y + 0.5, m.z, { id: I.TIDESPEAR, count: 1, damage: 50 + Math.floor(Math.random() * 150) });
+    },
+    drops: [SHAMBLER.drops[0], { id: I.COPPER_INGOT, min: 1, max: 1, playerOnly: true, chance: 0.11, plunderChance: 0.02 }],
   },
   rime_rattler: {
     name: 'Rime Rattler', role: 'stray', category: CATEGORY.MONSTER,

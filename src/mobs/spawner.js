@@ -48,6 +48,7 @@ export class MobSpawner {
     const m = new Mob(type, x, y, z);
     m._game = this.game;
     if (m.def.babyChance && Math.random() < m.def.babyChance) m.setBaby(true); // 5 % of Shamblers are babies (for good)
+    if (m.def.onSpawn) m.def.onSpawn(m);
     this.game.entities.add(m);
     return m;
   }
