@@ -317,6 +317,7 @@ export class World {
           this.emit('fallingBlock', t.x, t.y, t.z, id);
         }
       } else if (CIRCUIT_BLOCK[id]) this.circuits.tick(t.x, t.y, t.z, id);
+      else if (id === B.COMPOSTER && (this.getMeta(t.x, t.y, t.z) & 15) === 7) this.setBlock(t.x, t.y, t.z, B.COMPOSTER, 8); // the compost settles
     }
     this.circuits.drain();
   }

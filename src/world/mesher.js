@@ -9,7 +9,7 @@ import { railHeight } from './rails.js';
 import { ARTS, artOf, partOf } from './paintings.js';
 import { crystalTex, orientPoint } from './caves.js';
 import { circuitParts, partPoint, wireMask, wireColor } from './circuitShapes.js';
-import { doorBox, ladderBox, SIDE_DIRS, DOOR_UPPER, BED_HEAD, BED_BOX, slabBox, stairBoxes, fenceConnects, fenceRenderBoxes, gateRenderBoxes, paneConnects, paneBoxes, snowBox, wallConnects, wallBoxes, trapdoorBox, blockBoxes } from './shapes.js';
+import { doorBox, ladderBox, SIDE_DIRS, DOOR_UPPER, BED_HEAD, BED_BOX, slabBox, stairBoxes, fenceConnects, fenceRenderBoxes, gateRenderBoxes, paneConnects, paneBoxes, snowBox, wallConnects, wallBoxes, trapdoorBox, blockBoxes, compostBox } from './shapes.js';
 
 export const PAD = 18;
 export const PAD_VOL = PAD * PAD * PAD;
@@ -63,6 +63,7 @@ const BED_TOPS = [0, 1, 2, 3].map((r) => [texId('bed_foot_top_' + r), texId('bed
 const BED_SIDE = texId('bed_side'), BED_BOTTOM = texId('oak_planks');
 const WIRE_DOT = texId('cinnabar_wire_dot'), WIRE_LINE = texId('cinnabar_wire_line'), WIRE_HALF = texId('cinnabar_wire_half');
 const tileOf = (name) => texId(name) ?? 0;
+const COMPOST = texId('compost'), COMPOST_READY = texId('compost_ready');
 
 class Buf {
   constructor(cap = 16384) { this.alloc(cap); this.n = 0; this.ni = 0; this.yBase = 0; }
@@ -316,6 +317,8 @@ export function meshSection(sec) {
       const tiles = [0, 1, 2, 3, 4, 5].map((d) => FACE_TILE[id * 6 + d]);
       if (FRONT_TILE[id] >= 0) tiles[FURNACE_FRONT_DIR[meta[i] & 3]] = FRONT_TILE[id]; // the Wyrm Head's face
       for (const b of blockBoxes(id, meta[i])) emitBox(buf, x, y, z, b[0], b[1], b[2], b[3], b[4], b[5], tiles, sk * 17, bk * 17, 'box');
+      const cb = id === B.COMPOSTER && compostBox(meta[i] & 15);
+      if (cb) emitBox(buf, x, y, z, cb[0], cb[1], cb[2], cb[3], cb[4], cb[5], (meta[i] & 15) >= 8 ? COMPOST_READY : COMPOST, sk * 17, bk * 17, 'box');
       if (id === B.CAMPFIRE) {
         // the flames: two crossed planes of animated fire, full bright
         const tile = FACE_TILE[B.FIRE * 6 + 2], sky = sk * 17, h = 0.9, y0 = y + 0.1;

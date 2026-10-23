@@ -66,7 +66,7 @@ export const B = {
   WAXED_COPPER_BLOCK: 235, WAXED_DULLED_COPPER: 236, WAXED_TARNISHED_COPPER: 237, WAXED_VERDIGRIS_COPPER: 238,
   STORM_ROD: 239, VIOLITE_BLOCK: 240, BUDDING_VIOLITE: 241, SMALL_VIOLITE_BUD: 242, MEDIUM_VIOLITE_BUD: 243,
   LARGE_VIOLITE_BUD: 244, VIOLITE_CLUSTER: 245, CHALKSTONE: 246, SMOOTH_BASALT: 247, SHADED_GLASS: 248,
-  SEEPSTONE: 249, SEEPSTONE_SPIKE: 250,
+  SEEPSTONE: 249, SEEPSTONE_SPIKE: 250, COMPOSTER: 251,
 };
 
 const defaults = {
@@ -148,6 +148,8 @@ def(B.BEEHIVE, 'Beehive', { hardness: 0.6, resistance: 0.6, tool: TOOL.AXE, soun
 // Shellback eggs: meta bits 0-1 = eggs - 1, bits 2-3 = how cracked (they hatch after the third crack)
 def(B.TURTLE_EGG, 'Shellback Egg', { hardness: 0.5, resistance: 0.5, sound: 'stone', opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, drops: null, tex: { all: 'turtle_egg' } });
 // hopper: meta 0 = spout down, 1-4 = spout to SIDE_DIRS[meta - 1] (world/hoppers.js)
+// Composter: meta = compost level 0..8 (see world/composter.js)
+def(B.COMPOSTER, 'Composter', { hardness: 0.6, resistance: 0.6, tool: TOOL.AXE, sound: 'wood', flammable: true, opaque: false, shape: SHAPE.BOXES, tex: { top: 'composter_top', bottom: 'composter_bottom', side: 'composter_side' } });
 def(B.HOPPER, 'Hopper', { hardness: 3, resistance: 4.8, tool: TOOL.PICKAXE, tier: TIER.WOOD, sound: 'metal', opaque: false, shape: SHAPE.BOXES, container: true, tex: { all: 'hopper' } });
 def(B.HAY_BALE, 'Hay Bale', { hardness: 0.5, resistance: 0.5, tool: TOOL.HOE, sound: 'grass', flammable: true, tex: { top: 'hay_top', bottom: 'hay_top', side: 'hay_side' } });
 // Cocoa pods: meta bits 0-1 the side of the jungle log they hang on, 2-3 the age (0-2)

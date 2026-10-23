@@ -246,7 +246,12 @@ const HOPPER_BOXES = [
   [...HOPPER_BOWL, [6 / 16, 4 / 16, 12 / 16, 10 / 16, 8 / 16, 1]], // +z
   [...HOPPER_BOWL, [0, 4 / 16, 6 / 16, 4 / 16, 8 / 16, 10 / 16]], // -x
 ];
+// composter: four walls round a floor
+const COMPOSTER_BOXES = [[0, 0, 0, 1, 2 / 16, 1], [0, 0, 0, 1, 1, 2 / 16], [0, 0, 14 / 16, 1, 1, 1], [0, 0, 2 / 16, 2 / 16, 1, 14 / 16], [14 / 16, 0, 2 / 16, 1, 1, 14 / 16]];
+/** The compost inside a composter at `level` (null when empty). */
+export const compostBox = (level) => (level > 0 ? [2 / 16, 2 / 16, 2 / 16, 14 / 16, Math.min(15, 1 + level * 2) / 16, 14 / 16] : null);
 export function blockBoxes(id, meta) {
+  if (id === B.COMPOSTER) return COMPOSTER_BOXES;
   if (id === B.ANVIL) return meta & 1 ? ANVIL_Z : ANVIL_X;
   if (id === B.CAMPFIRE) return CAMPFIRE_BOXES;
   if (id === B.OAK_SIGN) return (meta & 1) ? SIGN_X : SIGN_Z;
@@ -275,7 +280,7 @@ SHAPED_COLLISION[B.BED] = 1;
 SHAPED_COLLISION[B.GLASS_PANE] = 1;
 SHAPED_COLLISION[B.SNOW_LAYER] = 1;
 SHAPED_COLLISION[B.SEEPSTONE_SPIKE] = 1;
-for (const id of [B.COBBLESTONE_WALL, B.MOSSY_COBBLESTONE_WALL, B.OAK_TRAPDOOR, B.ENCHANTING_TABLE, B.ANVIL, B.CAMPFIRE, B.LANTERN, B.BREWING_STAND, B.TURTLE_EGG, B.HOPPER]) SHAPED_COLLISION[id] = 1;
+for (const id of [B.COBBLESTONE_WALL, B.MOSSY_COBBLESTONE_WALL, B.OAK_TRAPDOOR, B.ENCHANTING_TABLE, B.ANVIL, B.CAMPFIRE, B.LANTERN, B.BREWING_STAND, B.TURTLE_EGG, B.HOPPER, B.COMPOSTER]) SHAPED_COLLISION[id] = 1;
 /** Snow layer box (n = meta + 1 layers); collision is one layer lower, so a single layer has none. */
 export const snowBox = (meta, collide = false) => [0, 0, 0, 1, ((meta & 7) + (collide ? 0 : 1)) * 2 / 16, 1];
 for (const id of [B.OAK_FENCE, B.SPRUCE_FENCE, B.BIRCH_FENCE, B.OAK_FENCE_GATE]) SHAPED_COLLISION[id] = 1;

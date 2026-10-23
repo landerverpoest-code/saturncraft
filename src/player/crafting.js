@@ -107,6 +107,7 @@ shaped(['PSP', 'P P', 'PSP'], { P: 'planks', S: B.OAK_SLAB }, B.BARREL, 1);
 shaped(['PPP', 'PCP', 'PPP'], { P: I.PAPER, C: I.COMPASS }, I.EMPTY_MAP, 1);
 shaped(['SSS', 'S S'], { S: I.SCUTE }, I.TURTLE_SHELL, 1);
 shaped(['I I', 'ICI', ' I '], { I: I.IRON_INGOT, C: B.CHEST }, B.HOPPER, 1);
+shaped(['S S', 'S S', 'SSS'], { S: B.OAK_SLAB }, B.COMPOSTER, 1);
 shaped(['PPP', 'HHH', 'PPP'], { P: 'planks', H: I.HONEYCOMB }, B.BEEHIVE, 1);
 shapeless([I.HONEY_BOTTLE], I.SUGAR, 3);
 // Tide Citadel blocks (reference prismarine recipes)

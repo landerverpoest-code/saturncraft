@@ -40,6 +40,7 @@ for (const n of Object.keys(CAVE_TEX)) addTex(n); // caves content (world/caveTe
 ARTS.forEach(([, w, h], art) => { for (let p = 0; p < w * h; p++) addTex(`painting_${art}_${p}`); });
 for (let i = 0; i < 8; i++) addTex('fire_' + i);
 addTex('lava_flow');
+addTex('compost'); addTex('compost_ready');
 for (let i = 0; i < 10; i++) addTex('destroy_' + i);
 
 export function texId(name) { return texIndex.get(name); }
@@ -707,6 +708,28 @@ const GEN = {
   hive_front_honey: (c) => {
     GEN.hive_front(c);
     for (const [x, y0, l] of [[3, 5, 4], [6, 5, 2], [12, 5, 5], [9, 11, 3]]) for (let y = y0; y < y0 + l; y++) c.set(x, y, hex(y === y0 + l - 1 ? '#ffb020' : '#f0a018'));
+  },
+  composter_side: (c) => {
+    planks(c, '#8a6236');
+    for (let y = 0; y < 16; y++) { c.set(0, y, hex('#5a3d1e')); c.set(15, y, hex('#5a3d1e')); }
+    for (let x = 0; x < 16; x++) { c.set(x, 0, hex('#5a3d1e')); c.set(x, 15, hex('#4a3218')); }
+  },
+  composter_top: (c) => {
+    planks(c, '#8a6236');
+    for (let y = 2; y < 14; y++) for (let x = 2; x < 14; x++) c.set(x, y, shade(hex('#3a2a18'), 0.9 + ((x * 5 + y * 3) % 4) * 0.04)); // the open top
+  },
+  composter_bottom: (c) => planks(c, '#7a5530'),
+  compost: (c) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const n = c.h(x, y, 21);
+      c.set(x, y, n < 0.18 ? hex('#5a7a2a') : shade(hex('#4a3a20'), 0.8 + n * 0.4));
+    }
+  },
+  compost_ready: (c) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const n = c.h(x, y, 23);
+      c.set(x, y, n < 0.3 ? shade(hex('#ecebe4'), 0.9 + n) : shade(hex('#5a4a2a'), 0.8 + n * 0.4));
+    }
   },
   barrel_side: (c) => {
     // vertical staves with two iron hoops

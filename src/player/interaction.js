@@ -3,6 +3,7 @@
 import { Mob } from '../mobs/mob.js';
 import { pairOnPlace } from '../world/chests.js';
 import { hopperPlaceMeta } from '../world/hoppers.js';
+import { compost, READY, SETTLE_TICKS } from '../world/composter.js';
 import { B, BLOCKS, SOLID, SHAPE, isFluid, CROPS } from '../world/blocks.js';
 import { ITEMS, I, toolOf, isBlockItem, WOOL_ITEMS, POTION_ITEM } from '../world/items.js';
 import { POTIONS } from '../world/potions.js';
@@ -41,7 +42,7 @@ const ORE_XP = {
 };
 const BREAK_DELAY = 5;
 /** Blocks that right-click opens / toggles instead of using the held item. */
-const USABLE_BLOCKS = new Set([B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.CHEST, B.BARREL, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL, B.BREWING_STAND, B.GLOOMSHELL_BOX, B.HOPPER]);
+const USABLE_BLOCKS = new Set([B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.CHEST, B.BARREL, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL, B.BREWING_STAND, B.GLOOMSHELL_BOX, B.HOPPER, B.COMPOSTER]);
 const CIRCUIT_USE = new Set([B.LEVER, B.STONE_BUTTON, B.REPEATER, B.CHIME_BLOCK]);
 const CIRCUIT_PLACE = new Set([B.LEVER, B.STONE_BUTTON, B.CINNABAR_WIRE, B.REPEATER, B.WOODEN_PRESSURE_PLATE, B.PISTON, B.STICKY_PISTON]);
 const USE_DELAY = 4;
@@ -372,6 +373,29 @@ export class Interaction {
     g.audio.play('bow');
   }
 
+  /** Fill a composter with the held plant matter, or empty a ready one (Bone Meal pops out). */
+  useComposter(t, st) {
+    const g = this.game, p = g.player, w = g.world, level = w.getMeta(t.x, t.y, t.z) & 15;
+    const cx = t.x + 0.5, cz = t.z + 0.5;
+    if (level >= READY) {
+      w.setBlockUrgent(t.x, t.y, t.z, B.COMPOSTER, 0);
+      g.entities.spawnItem(cx, t.y + 1.1, cz, { id: I.BONE_MEAL, count: 1 }, [0, 0.15, 0]);
+      g.audio.play('place_gravel', [cx, t.y + 1, cz]);
+      return true;
+    }
+    if (level === 7) { w.scheduleTick(t.x, t.y, t.z, SETTLE_TICKS); return false; } // still settling
+    const r = st && compost(level, st.id);
+    if (!r) return false;
+    if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
+    if (r.level !== level) {
+      w.setBlockUrgent(t.x, t.y, t.z, B.COMPOSTER, r.level);
+      if (r.level === 7) w.scheduleTick(t.x, t.y, t.z, SETTLE_TICKS);
+    }
+    for (let k = 0; k < 6; k++) g.particles.emit(cx + (Math.random() - 0.5) * 0.6, t.y + 0.4 + r.level / 9, cz + (Math.random() - 0.5) * 0.6, 0, 0.02, 0, 0.4, 0.8, 0.3, 16, -0.001);
+    g.audio.play('place_gravel', [cx, t.y + 0.5, cz], 0.6);
+    return true;
+  }
+
   /** A crossbow drawn for 1.25 s takes an arrow (none needed in creative or with Endless). */
   loadCrossbow() {
     const g = this.game, p = g.player, inv = p.inventory, bow = inv.selectedStack;
@@ -618,6 +642,7 @@ export class Interaction {
       }
       if (t.id === B.CHEST || t.id === B.BARREL || t.id === B.GLOOMSHELL_BOX || t.id === B.HOPPER) { g.ui.openChest(t.x, t.y, t.z); g.audio.play('chest_open', [t.x + 0.5, t.y + 0.5, t.z + 0.5]); return true; }
     }
+    if (t && t.id === B.COMPOSTER && !p.sneaking && this.useComposter(t, st)) { this.swing = SWING_TICKS; return true; }
     if (!st) return false;
     // Bone meal: crops grow 2-5 stages; on grass it sprouts tall grass and flowers around
     if (d.boneMeal && this.boneMeal(t)) {
