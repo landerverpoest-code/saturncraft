@@ -70,7 +70,7 @@ class Buf {
     const old = this.pos ? this : null;
     this.cap = cap;
     const pos = new Float32Array(cap * 3), nrm = new Int8Array(cap * 3), uv = new Float32Array(cap * 2);
-    const col = new Uint8Array(cap * 3), lit = new Uint8Array(cap * 4), idx = new Uint32Array(cap * 1.5);
+    const col = new Uint8Array(cap * 3), lit = new Uint16Array(cap * 4), idx = new Uint32Array(cap * 1.5);
     if (old) {
       pos.set(old.pos); nrm.set(old.nrm); uv.set(old.uv); col.set(old.col); lit.set(old.lit); idx.set(old.idx);
     }

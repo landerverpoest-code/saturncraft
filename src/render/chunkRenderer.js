@@ -274,7 +274,7 @@ export class ChunkRenderer {
       }
       const ranges = new Int32Array(SECTION_COUNT * 2); // per section: first index, index count
       const pos = new Float32Array(nv * 3), nrm = new Int8Array(nv * 3), uv = new Float32Array(nv * 2);
-      const col = new Uint8Array(nv * 3), lit = new Uint8Array(nv * 4), idx = new Uint32Array(ni);
+      const col = new Uint8Array(nv * 3), lit = new Uint16Array(nv * 4), idx = new Uint32Array(ni);
       let vo = 0, io = 0;
       for (let s = 0; s < SECTION_COUNT; s++) {
         const p = c.render.sections[s] && c.render.sections[s][layer];
