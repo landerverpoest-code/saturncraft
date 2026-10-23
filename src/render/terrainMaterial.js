@@ -73,11 +73,14 @@ flat varying float vTile;
 uniform float uTime;
 uniform float uWind;
 varying float vWave;
+varying float vUnder;
 ${water ? 'varying vec3 vWN;' : ''}`)
       .replace('#include <begin_vertex>', `#include <begin_vertex>
 vTuv = tuv;
-float wave = floor(lit.z / 4.0 + 0.01);
-vLit = vec3(lit.x / 255.0, lit.y / 255.0, lit.z - wave * 4.0);
+vUnder = floor(lit.z / 16.0 + 0.01);
+float flags = lit.z - vUnder * 16.0;
+float wave = floor(flags / 4.0 + 0.01);
+vLit = vec3(lit.x / 255.0, lit.y / 255.0, flags - wave * 4.0);
 vWave = wave;
 if (wave > 0.5) {
   // plants sway at the top, leaves rustle a little, in a breeze that rolls across the land
@@ -112,6 +115,7 @@ varying vec3 vLit;
 varying float vShade;
 flat varying float vTile;
 varying float vWave;
+varying float vUnder;
 uniform vec3 uSunDir;
 uniform vec3 uSunCol;
 uniform vec3 uSkyTop;
@@ -152,6 +156,14 @@ vec3 outgoingLight = reflectedLight.directDiffuse * skyB * mix(1.0, aoF, 0.5)
 if (uGlow > 0.0) {
   float gl = texelFetch(uGlowTiles, ivec2(int(vTile + 0.5), 0), 0).r * 1.275;
   if (gl > 0.0) outgoingLight += diffuseColor.rgb * gl * uGlow * smoothstep(0.45, 0.95, max(texel.r, max(texel.g, texel.b)));
+}
+if (uGlow > 0.0 && vUnder > 0.5) {
+  // caustics: sunlight focused by the waves above dances over the sea floor
+  vec2 cp = vWorld.xz * 0.9 + vWorld.y * 0.3;
+  float c1 = sin(cp.x * 2.1 + uTime * 1.3 + sin(cp.y * 1.7 + uTime * 0.9) * 1.6);
+  float c2 = sin(cp.y * 2.3 - uTime * 1.1 + sin(cp.x * 1.9 - uTime * 0.7) * 1.6);
+  float caustic = pow(max(0.0, 1.0 - abs(c1 + c2) * 0.6), 4.0);
+  outgoingLight += diffuseColor.rgb * (uSunCol * 0.9 + vec3(0.08)) * caustic * skyB * skyB;
 }
 if (uGlow > 0.0) {
   vec3 toFrag = normalize(vWorld - cameraPosition);

@@ -104,6 +104,7 @@ class Buf {
 
 // wind: vertex 'ao' values carry a sway flag on top of the 0-3 occlusion (terrainMaterial.js decodes it)
 const WAVE_LEAF = 4, WAVE_TOP = 8;
+const UNDERWATER = 16; // a face under water: the shader plays caustics over it
 
 const opaqueBuf = new Buf();
 const cutoutBuf = new Buf(4096); // alpha-tested (leaves, plants, glass, torches)
@@ -174,7 +175,7 @@ export function meshSection(sec) {
           const [s, t] = CORNERS[k];
           buf.vert(
             x + f.o[0] + s * f.u[0] + t * f.v[0], y + f.o[1] + s * f.u[1] + t * f.v[1], z + f.o[2] + s * f.u[2] + t * f.v[2],
-            f.n[0], f.n[1], f.n[2], s, 1 - t, r, g, b2, sk[k], bl[k], ao[k] + leafWave, tile);
+            f.n[0], f.n[1], f.n[2], s, 1 - t, r, g, b2, sk[k], bl[k], ao[k] + leafWave + (nb === B.WATER ? UNDERWATER : 0), tile);
         }
         buf.quad(ao[0] + ao[2] > ao[1] + ao[3]);
       }
