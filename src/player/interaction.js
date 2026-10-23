@@ -153,6 +153,12 @@ export class Interaction {
       else this.bowDraw = 0;
       return;
     }
+    if (d && d.spear) {
+      // hold to raise the Tidespear, release after half a second to throw it
+      if (input.right) this.bowDraw++;
+      else { if (this.bowDraw >= 10) this.throwSpear(); this.bowDraw = 0; }
+      if (input.right) return;
+    }
     if (d && d.bow) {
       if (input.right) this.bowDraw++;
       else if (this.bowDraw > 0) { this.releaseBow(); this.bowDraw = 0; }
@@ -304,7 +310,7 @@ export class Interaction {
       if (fire && mob.kind === 'mob' && !(mob.def && mob.def.fireImmune)) mob.fireTicks = Math.max(mob.fireTicks || 0, fire * 80);
       if (crit) g.particles && g.particles.crit(mob.x, mob.y + mob.height * 0.6, mob.z);
       if (p.sprinting && cd > 0.9) p.sprinting = false;
-      if (tool.type) p.inventory.damageSelected(tool.type === 'sword' ? 1 : 2);
+      if (tool.type) p.inventory.damageSelected(tool.type === 'sword' || tool.type === 'spear' ? 1 : 2);
     }
     p.hunger.addExhaustion(EXHAUSTION.ATTACK);
     p.attackTicks = 0;
@@ -376,6 +382,20 @@ export class Interaction {
     inv.slots[inv.selected] = { ...inv.slots[inv.selected], id: I.CROSSBOW_LOADED };
     inv.changed();
     g.audio.play('click', [p.x, p.y + 1, p.z]);
+  }
+
+  /** Throw the held Tidespear: it flies like a heavy arrow and lands as an item with its wear. */
+  throwSpear() {
+    const g = this.game, p = g.player, inv = p.inventory, st = inv.selectedStack;
+    const [ex, ey, ez] = p.eyePos(), [dx, dy, dz] = p.lookDir();
+    inv.damageSelected(1);
+    const spear = inv.selectedStack; // null if that throw broke it
+    if (!spear) return;
+    g.entities.spawnArrow(ex, ey - 0.1, ez, dx * 2.5, dy * 2.5, dz * 2.5, p, false, 'spear', 0, 0, { ...spear });
+    if (!p.creative) inv.slots[inv.selected] = null;
+    inv.changed();
+    g.audio.play('bow', [ex, ey, ez], 0.8);
+    this.swing = SWING_TICKS;
   }
 
   /** Fire a loaded crossbow: a fast, flat, always-critical arrow. */

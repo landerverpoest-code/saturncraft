@@ -347,6 +347,14 @@ export class Arrow {
     this.dead = false;
     this.prev = [x, y, z];
     this.pickup = !thrown && shooter && shooter.isPlayer;
+    this.item = null; // a thrown Tidespear: the stack it lands as
+  }
+
+  /** A thrown Tidespear stops here and lies as an item (the host shares it like any drop). */
+  land(game) {
+    this.dead = true;
+    if (this.item && (!game.net || !game.net.isClient)) game.entities.spawnItem(this.x - this.vx * 0.1, this.y + 0.1, this.z - this.vz * 0.1, this.item, [0, 0.05, 0]);
+    game.audio.play('arrow_hit', [this.x, this.y, this.z]);
   }
 
   /** A snowball or egg hits something: puff, and an egg may hatch Clucklings (1/8, of which 1/32 four). */
@@ -378,6 +386,11 @@ export class Arrow {
     let endT = hit ? hit.dist : speed;
     // entity collision
     const target = game.entities.sweepHit(this, this.x, this.y, this.z, this.vx / speed, this.vy / speed, this.vz / speed, endT);
+    if (target && this.thrown === 'spear') {
+      target.hurt(8, 'arrow', this.shooter, 0.6, this);
+      this.land(game);
+      return;
+    }
     if (target && this.thrown) {
       // no damage, just a knock (snowballs and eggs); an elixir breaks on whoever it hits
       if (this.thrown === 'potion') { const t = rayAABBDist(this, target); this.x += this.vx / speed * t; this.y += this.vy / speed * t; this.z += this.vz / speed * t; }
@@ -396,6 +409,7 @@ export class Arrow {
       this.vx *= -0.1; this.vy *= -0.1; this.vz *= -0.1;
       return;
     }
+    if (hit && this.thrown === 'spear') { this.x += this.vx / speed * hit.dist; this.y += this.vy / speed * hit.dist; this.z += this.vz / speed * hit.dist; this.land(game); return; }
     if (hit && this.thrown) { this.x += this.vx / speed * hit.dist; this.y += this.vy / speed * hit.dist; this.z += this.vz / speed * hit.dist; this.shatter(game); return; }
     if (hit) {
       this.x += this.vx / speed * hit.dist; this.y += this.vy / speed * hit.dist; this.z += this.vz / speed * hit.dist;
@@ -405,9 +419,9 @@ export class Arrow {
     }
     this.x += this.vx; this.y += this.vy; this.z += this.vz;
     const inWater = w.getBlock(Math.floor(this.x), Math.floor(this.y), Math.floor(this.z)) === B.WATER;
-    const drag = inWater ? 0.6 : 0.99;
+    const drag = inWater && this.thrown !== 'spear' ? 0.6 : 0.99; // a Tidespear cuts through water
     this.vx *= drag; this.vy *= drag; this.vz *= drag;
-    this.vy -= this.thrown && this.thrown !== 'potion' ? 0.03 : 0.05;
+    this.vy -= this.thrown && this.thrown !== 'potion' && this.thrown !== 'spear' ? 0.03 : 0.05;
     if (this.y < MIN_Y - 64 || this.age > 1200) this.dead = true;
   }
 }
@@ -443,10 +457,11 @@ export class EntityManager {
   }
   spawnBoat(x, y, z, yaw, cart = false) { return this.netSpawn('boat', { x, y, z, yaw, cart }) ? null : this.add(cart ? new Minecart(x, y, z, yaw) : new Boat(x, y, z, yaw)); }
   spawnFallingBlock(x, y, z, id) { return this.netSpawn('falling', {}) ? null : this.add(new FallingBlock(x, y, z, id)); }
-  spawnArrow(x, y, z, vx, vy, vz, shooter, crit, thrown = null, power = 0, potion = 0) {
-    if (this.netSpawn('arrow', { x, y, z, v: [vx, vy, vz], crit, thrown, power: power || undefined, potion: potion || undefined })) return null;
+  spawnArrow(x, y, z, vx, vy, vz, shooter, crit, thrown = null, power = 0, potion = 0, item = null) {
+    if (this.netSpawn('arrow', { x, y, z, v: [vx, vy, vz], crit, thrown, power: power || undefined, potion: potion || undefined, item: item || undefined })) return null;
     const a = this.add(new Arrow(x, y, z, vx, vy, vz, shooter, crit, thrown, potion));
     a.power = power | 0; // Strongdraw level of the bow
+    a.item = item;
     return a;
   }
 
@@ -599,8 +614,8 @@ export class EntityManager {
         for (const mat of m.material) mat.color.setScalar(L);
       } else if (e.kind === 'arrow') {
         m.position.set(px, py, pz);
-        if (!e.stuck && !e.thrown) m.lookAt(px + e.vx, py + e.vy, pz + e.vz);
-        m.material.color.setScalar(L);
+        if (!e.stuck && (!e.thrown || e.thrown === 'spear')) m.lookAt(px + e.vx, py + e.vy, pz + e.vz);
+        if (e.thrown === 'spear') m.material.color.setRGB(0.35 * L, 0.66 * L, 0.6 * L); else m.material.color.setScalar(L);
       } else if (e.renderUpdate) {
         e.renderUpdate(m, px, py, pz, alpha, L, timeSec); // mobs and custom entities (fireballs, thrown eyes)
       }
@@ -687,6 +702,17 @@ export class EntityManager {
       const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: iconTexture(e.potion, false), alphaTest: 0.3 }));
       s.scale.setScalar(0.32);
       return s;
+    }
+    if (e.kind === 'arrow' && e.thrown === 'spear') {
+      // shaft and three prongs, pointing along the flight
+      const mat = new THREE.MeshLambertMaterial({ color: 0x5aa898 });
+      const g = new THREE.Group();
+      const shaft = new THREE.Mesh(this.cubeGeo, mat); shaft.scale.set(0.06, 0.06, 1.3); shaft.position.z = -0.2;
+      g.add(shaft);
+      for (const ox of [-0.09, 0, 0.09]) { const t = new THREE.Mesh(this.cubeGeo, mat); t.scale.set(0.04, 0.04, 0.25); t.position.set(ox, 0, 0.5); g.add(t); }
+      const bar = new THREE.Mesh(this.cubeGeo, mat); bar.scale.set(0.24, 0.05, 0.05); bar.position.z = 0.38; g.add(bar);
+      g.material = mat;
+      return g;
     }
     if (e.kind === 'arrow' && e.thrown) {
       const m = new THREE.Mesh(this.cubeGeo, new THREE.MeshLambertMaterial({ color: e.thrown === 'egg' ? 0xefe3c8 : 0xf4f8ff }));

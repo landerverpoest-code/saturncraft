@@ -411,6 +411,7 @@ poison from eyes) follow the documented table.
 * Chests (27 slots, shift-click transfer, contents drop when broken, saved with the world); furnaces and chests face the player when placed; two chests side by side facing the same way join into a 54-slot Large Chest (not while sneaking, never three in a row), also shared in multiplayer; barrels (6 planks + 2 oak slabs) hold 27 stacks like a chest but never join
 * Bow and arrows (player and Rattler), arrow pick-up
 * Crossbow (stick, iron ingot, string, flint): hold use for 1.25 s to load an arrow, then click to fire a fast, flat, always-critical shot; 465 uses, takes bow enchantments, found in outpost chests and dropped by Marauders (8.5 %)
+* Tidespear: a strong melee weapon (9 damage, 250 uses); hold use for half a second and release to throw it (8 damage, flies straight through water); it lands as an item to pick back up, in multiplayer too. Sodden Shamblers drop one now and then (6 %)
 * Death screen, item drop on death, respawn; pause menu with settings
 * Procedural sound effects with stereo panning; world saving
 * Generative music: every 5–10 minutes a calm piano piece is composed on the spot (major by day, minor at night, low and sparse underground) with reverb; distant rumbles in dark caves; music volume in the pause menu

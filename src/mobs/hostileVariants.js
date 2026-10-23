@@ -186,7 +186,7 @@ export const VARIANT_MOBS = {
     health: 20, speed: 0.23, width: 0.6, height: 1.95, attack: 3, followRange: 35, armor: 2, sound: 'grunt',
     burnsInSun: true, sinks: true, aquaticSpawn: true,
     customAI: soddenAI,
-    drops: [SHAMBLER.drops[0], { id: I.COPPER_INGOT, min: 1, max: 1, playerOnly: true, chance: 0.11, plunderChance: 0.02 }],
+    drops: [SHAMBLER.drops[0], { id: I.COPPER_INGOT, min: 1, max: 1, playerOnly: true, chance: 0.11, plunderChance: 0.02 }, { oneOf: [[I.TIDESPEAR, 0.0625]], playerOnly: true }],
   },
   rime_rattler: {
     name: 'Rime Rattler', role: 'stray', category: CATEGORY.MONSTER,

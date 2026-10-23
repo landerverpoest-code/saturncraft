@@ -230,7 +230,7 @@ export const HAND = { type: null, speed: 1, tier: -1, damage: 1, attackSpeed: 4 
 export function toolOf(stack) {
   if (!stack) return HAND;
   const d = ITEMS[stack.id];
-  return d && d.tool ? d.tool : HAND;
+  return d && (d.tool || d.weapon) ? d.tool || d.weapon : HAND;
 }
 
 export const TOOL_TYPES = TOOL;
@@ -255,6 +255,10 @@ item('popped_hushfruit', 'Popped Hushfruit', { iconStyle: ['potato', { h: '#c8a4
 // Crossbow: hold use to load an arrow (1.25 s), then click to fire it, harder and flatter than a bow
 item('crossbow', 'Crossbow', { stack: 1, durability: 465, crossbow: true });
 item('crossbow_loaded', 'Crossbow (Loaded)', { stack: 1, durability: 465, crossbow: true, loaded: true });
+// Tidespear (reference: trident): a strong melee weapon that can be thrown (hold use, release);
+// it lands as an item to pick back up. Dropped by Sodden Shamblers.
+const ICON_SPEAR = ['................', '...........h.h.h', '...........hHhHh', '............hHh.', '...........hhh..', '..........ss....', '.........ss.....', '........ss......', '.......ss.......', '......ss........', '.....ss.........', '....ss..........', '...ss...........', '..ss............', '.ss.............', '................'];
+item('tidespear', 'Tidespear', { stack: 1, durability: 250, spear: true, weapon: { type: 'spear', speed: 1, tier: -1, damage: 9, attackSpeed: 1.1 }, iconStyle: [ICON_SPEAR, { h: '#5aa898', H: '#9adcc8', s: '#3f7a72', S: '#6ab0a4' }] });
 ITEMS[B.GLOOMSHELL_BOX].stack = 1; // a box keeps its contents in the item (stack.contents), so it never stacks
 
 /** Light level (0-15) an item gives when held: a torch, lantern or other light block; 0 for the rest. */

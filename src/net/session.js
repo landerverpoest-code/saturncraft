@@ -32,6 +32,7 @@ import { packChunk, unpackChunk, playerSaveData, applyPlayerSave } from '../worl
 import { chunkKey } from '../world/world.js';
 import { B } from '../world/blocks.js';
 import { I, ITEMS } from '../world/items.js';
+import { withExtras } from '../world/enchantments.js';
 import { rayAABB } from '../entities/entities.js';
 import { runRandomTicks } from '../world/randomTicks.js';
 import { addXp } from '../player/experience.js';
@@ -452,7 +453,10 @@ export class HostSession extends Session {
     } else if (m.k === 'arrow' && v) {
       const pot = m.thrown === 'potion' && ITEMS[m.potion | 0] && ITEMS[m.potion | 0].potion && ITEMS[m.potion | 0].potion.splash ? m.potion | 0 : 0;
       if (m.thrown === 'potion' && !pot) return;
-      ents.spawnArrow(m.x, m.y, m.z, v[0], v[1], v[2], c.rp.target, !!m.crit, m.thrown === 'egg' || m.thrown === 'snowball' || pot ? m.thrown : null, Math.max(0, Math.min(5, m.power | 0)), pot);
+      // a guest's thrown Tidespear carries its stack (with wear and enchantments)
+      const spear = m.thrown === 'spear' && m.item && m.item.id === I.TIDESPEAR ? withExtras({ id: I.TIDESPEAR, count: 1, damage: Math.max(0, m.item.damage | 0) }, m.item) : null;
+      if (m.thrown === 'spear' && !spear) return;
+      ents.spawnArrow(m.x, m.y, m.z, v[0], v[1], v[2], c.rp.target, !!m.crit, m.thrown === 'egg' || m.thrown === 'snowball' || pot || spear ? m.thrown : null, Math.max(0, Math.min(5, m.power | 0)), pot, spear);
     } else if (m.k === 'boat') {
       ents.spawnBoat(m.x, m.y, m.z, +m.yaw || 0, !!m.cart);
     } else if (m.k === 'tnt') {

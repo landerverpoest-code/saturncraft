@@ -52,3 +52,28 @@ describe('crossbow', () => {
     expect(game.player.inventory.slots[0].id).toBe(I.CROSSBOW);
   });
 });
+
+describe('tidespear', () => {
+  it('hits hard in melee and is thrown with its wear', async () => {
+    const { toolOf } = await import('../src/world/items.js');
+    expect(toolOf({ id: I.TIDESPEAR, count: 1 }).damage).toBe(9);
+    const { game, arrows } = fakeGame([{ id: I.TIDESPEAR, count: 1, damage: 3 }]);
+    const it = Object.create(Interaction.prototype);
+    it.game = game;
+    it.throwSpear();
+    expect(game.player.inventory.slots[0]).toBe(null);
+    expect(arrows[0].args[8]).toBe('spear');
+    expect(arrows[0].args[11]).toMatchObject({ id: I.TIDESPEAR, damage: 4 });
+  });
+  it('lands as an item where it hits', async () => {
+    const { Arrow } = await import('../src/entities/entities.js');
+    const drops = [];
+    const world = { raycast: () => ({ dist: 0.5 }), getBlock: () => 0 };
+    const game = { world, net: null, audio: { play() {} }, entities: { sweepHit: () => null, spawnItem: (x, y, z, st) => drops.push(st) } };
+    const a = new Arrow(0, 70, 0, 0, -1, 0, null, false, 'spear');
+    a.item = { id: I.TIDESPEAR, count: 1, damage: 4 };
+    a.tick(game);
+    expect(a.dead).toBe(true);
+    expect(drops).toEqual([{ id: I.TIDESPEAR, count: 1, damage: 4 }]);
+  });
+});
