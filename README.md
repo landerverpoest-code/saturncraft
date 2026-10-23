@@ -528,7 +528,6 @@ Code: `src/world/dimensions/` (registry and scaling, generators, portal logic, s
 * **Water physics**: no bubble columns.
 * **Explosions** do not set fire and do not knock items back.
 * **The Hollow's late game**: there is a single Far Gate (the reference opens a new gateway per boss kill, up to 20) and it stands on the island's rim instead of floating at y 75; its far end is generated with the island rather than built on first use. Gloomshells spawn naturally inside a city's bounds (up to 6) instead of being placed with it, they sit on floors only, and Drift Sparks cannot be shot down. The ship's Voidwing lies in a chest rather than an item frame. Hollow Cities are a fixed house-tower-bridge-ship layout rather than the reference's random piece grammar.
-* **Torches** can only be placed on the top of blocks.
 * **Furnace** state is stored by block position rather than as a block entity;
   breaking a furnace drops its contents.
 * **Render/entity distance**: entities render up to 64 blocks away and only
