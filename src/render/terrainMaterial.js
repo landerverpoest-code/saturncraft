@@ -175,6 +175,14 @@ if (uGlow > 0.0) {
     float top = vShade > 0.99 ? 1.0 : 0.35;
     outgoingLight *= 1.0 - 0.2 * wet;
     outgoingLight += mix(uSkyLow, uSkyTop, 0.3) * pow(1.0 - abs(toFrag.y), 4.0) * 0.3 * wet * top * skyB;
+    if (top > 0.5) {
+      // raindrops: little rings spreading in a scatter of cells over the ground
+      vec2 cell = floor(vWorld.xz * 2.0), f = fract(vWorld.xz * 2.0) - 0.5;
+      float h = fract(sin(dot(cell, vec2(127.1, 311.7))) * 43758.5453);
+      float t = fract(uTime * 0.9 + h);
+      float ring = smoothstep(0.05, 0.0, abs(length(f + (h - 0.5) * 0.4) - t * 0.45)) * (1.0 - t);
+      outgoingLight += mix(uSkyLow, uSkyTop, 0.5) * ring * 0.35 * wet * skyB;
+    }
   }`}
 }
 ${water ? `if ((abs(vTile - uWaterTiles.x) < 0.5 || abs(vTile - uWaterTiles.y) < 0.5) && vWN.y > 0.5 && cameraPosition.y > vWorld.y) {
