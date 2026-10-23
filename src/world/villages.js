@@ -13,7 +13,7 @@ import { SIDE_DIRS, DOOR_UPPER, BED_HEAD } from './shapes.js';
 
 export const VILLAGE_REGION = 320;
 const REACH = 56; // how far buildings may reach from the centre
-export const PROFESSIONS = ['farmer', 'librarian', 'smith', 'shepherd', 'butcher'];
+export const PROFESSIONS = ['farmer', 'librarian', 'smith', 'shepherd', 'butcher', 'fletcher', 'cleric'];
 
 const STYLES = {
   plains: { corner: B.OAK_LOG, wall: B.OAK_PLANKS, floor: B.COBBLESTONE, roof: B.OAK_STAIRS, roofSlab: B.OAK_SLAB, fence: B.OAK_FENCE },
