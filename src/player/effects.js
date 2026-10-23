@@ -23,6 +23,7 @@ export const EFFECTS = {
   slow_falling:    { name: 'Slow Falling', color: '#f3cfb9', good: true, glyph: 'feather' },
   hunger:          { name: 'Hunger', color: '#587653', good: false, glyph: 'food' },
   levitation:      { name: 'Levitation', color: '#ceffff', good: false, glyph: 'feather' },
+  absorption:      { name: 'Absorption', color: '#2552a5', good: true, glyph: 'heart' },
 };
 export const EFFECT_KEYS = Object.keys(EFFECTS);
 

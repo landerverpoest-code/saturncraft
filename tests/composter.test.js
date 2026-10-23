@@ -29,3 +29,23 @@ describe('composter', () => {
     expect(compostBox(8)[4]).toBeCloseTo(15 / 16);
   });
 });
+
+describe('gilded apple and absorption', () => {
+  it('is crafted from eight gold ingots round an apple', () => {
+    const G = { id: I.GOLD_INGOT, count: 1 }, A = { id: I.APPLE, count: 1 };
+    expect(craft([G, G, G, G, A, G, G, G, G], 3)).toEqual({ id: I.GILDED_APPLE, count: 1 });
+  });
+  it('golden hearts take damage before health and vanish with the effect', async () => {
+    const { Player } = await import('../src/player/player.js');
+    const p = new Player();
+    p.addEffect('absorption', 2400, 0);
+    expect(p.absorption).toBe(4);
+    p.hurt(3, 'generic');
+    expect(p.absorption).toBe(1);
+    expect(p.health).toBe(20);
+    p.invulnerable = 0;
+    p.hurt(3, 'generic');
+    expect(p.absorption).toBe(0);
+    expect(p.health).toBe(18);
+  });
+});

@@ -413,6 +413,7 @@ poison from eyes) follow the documented table.
 * Crossbow (stick, iron ingot, string, flint): hold use for 1.25 s to load an arrow, then click to fire a fast, flat, always-critical shot; 465 uses, takes bow enchantments, found in outpost chests and dropped by Marauders (8.5 %)
 * Tidespear: a strong melee weapon (9 damage, 250 uses); hold use for half a second and release to throw it (8 damage, flies straight through water); it lands as an item to pick back up, in multiplayer too. One Sodden Shambler in 16 carries a Tidespear (shown in its hand), hurls it at targets 4–20 blocks away every 3 s (8 damage) and drops it, worn, a quarter of the time when a player kills it
 * Composter (seven oak slabs): plant matter raises the compost a layer with the reference chances (seeds and leaves 30 %, cactus and cane 50 %, crops and flowers 65 %, bread and baked potatoes 85 %, pumpkin pie always); seven layers settle a second later and the full composter gives Bone Meal
+* Gilded Apple (eight gold ingots round an apple; also in dungeon, mineshaft, desert temple, igloo and ruined rift chests): always edible, Regeneration II for 5 s and **Absorption** for 2 minutes: a row of four golden hearts above the red ones that takes damage first
 * Ambient particles: leaves drift down from tree canopies in the wind, fireflies glow over swamps, forests and jungles on dry nights, and dust hangs in the air of caves
 * Death screen, item drop on death, respawn; pause menu with settings
 * Procedural sound effects with stereo panning; world saving
@@ -454,7 +455,7 @@ poison from eyes) follow the documented table.
 
 **Not yet implemented**
 
-* Lingering elixirs and tipped arrows, Turtle Master / Decay / Luck elixirs, beacons (Haste only comes from `/effect`), Absorption and Wither effects; Mining Fatigue's slower attack speed and the Elder Deepeye's ghost face; prismarine-style slabs/stairs/walls and the animated tidestone texture; effect particles of other players in multiplayer
+* Lingering elixirs and tipped arrows, Turtle Master / Decay / Luck elixirs, beacons (Haste only comes from `/effect`), Wither effect; Mining Fatigue's slower attack speed and the Elder Deepeye's ghost face; prismarine-style slabs/stairs/walls and the animated tidestone texture; effect particles of other players in multiplayer
 * Taming of animals other than Howlers, Purrlings, Squawklets and Gallopers
 * Large structures beyond villages, temples, wrecks, Tide Citadels, outposts, ruined rifts, dungeons, sanctums, bastions and Hollow Cities; job-site blocks
 * Dispensers, droppers and comparators; dyed Gloomshell Boxes

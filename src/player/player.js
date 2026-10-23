@@ -20,7 +20,7 @@ export class Player {
     this.body = new Body(PHYS.PLAYER_WIDTH, PHYS.PLAYER_HEIGHT);
     this.prev = { x: 0, y: 0, z: 0 };
     this.yaw = 0; this.pitch = 0;
-    this.health = MAX_HEALTH;
+    this.health = MAX_HEALTH; this.absorption = 0;
     this.hunger = new HungerManager();
     this.air = MAX_AIR;
     this.fireTicks = 0;
@@ -114,6 +114,8 @@ export class Player {
     // Bulwark (all damage but the void / starving) and Featherstep (falls) on worn armour
     const epf = protectionFactor(this.inventory.armor, source);
     if (epf > 0) amount = protectionReduce(amount, epf);
+    // Absorption's golden hearts take the damage first
+    if (this.absorption > 0) { const soak = Math.min(this.absorption, amount); this.absorption -= soak; amount -= soak; }
     this.health = Math.max(0, this.health - amount);
     this.hunger.addExhaustion(EXHAUSTION.DAMAGE);
     if (attacker && attacker.kind === 'mob') this.lastHurtBy = attacker; // tamed Howlers defend their owner
@@ -139,7 +141,7 @@ export class Player {
 
   respawn() {
     this.dead = false;
-    this.health = MAX_HEALTH;
+    this.health = MAX_HEALTH; this.absorption = 0;
     this.hunger = new HungerManager();
     this.air = MAX_AIR;
     this.fireTicks = 0;
@@ -151,6 +153,7 @@ export class Player {
   addEffect(type, ticks, amp = 0) {
     if (!EFFECTS[type] || this.dead) return false;
     const ok = stackEffect(this.effects, type, ticks, amp);
+    if (ok && type === 'absorption') this.absorption = Math.max(this.absorption || 0, 4 * (this.effects.absorption.amp + 1)); // golden hearts
     if (ok) for (const f of this.listeners.effect || []) f(type);
     return ok;
   }
@@ -295,6 +298,7 @@ export class Player {
     }
     const before = Object.keys(this.effects).length;
     tickEffects(this.effects);
+    if (!this.effects.absorption) this.absorption = 0;
     if (Object.keys(this.effects).length !== before) for (const f of this.listeners.effect || []) f(null);
 
     if (!this.creative) this.hunger.tick(this);

@@ -14,6 +14,8 @@ const ICON = {
   heartEmpty: svg(`<path d="${heartPath}" fill="#2a1414" stroke="#000" stroke-width="1.2"/>`),
   heartFull: svg(`<path d="${heartPath}" fill="#e3263a" stroke="#000" stroke-width="1.2"/><path d="M4 5 L6 4" stroke="#ffb3b3" stroke-width="1.5"/>`),
   heartHalf: svg(`<defs><clipPath id="c"><rect x="0" y="0" width="9" height="18"/></clipPath></defs><path d="${heartPath}" fill="#2a1414" stroke="#000" stroke-width="1.2"/><path d="${heartPath}" fill="#e3263a" clip-path="url(#c)"/>`),
+  heartGold: svg(`<path d="${heartPath}" fill="#f2c23a" stroke="#000" stroke-width="1.2"/><path d="M4 5 L6 4" stroke="#fff4b0" stroke-width="1.5"/>`),
+  heartGoldHalf: svg(`<defs><clipPath id="g"><rect x="0" y="0" width="9" height="18"/></clipPath></defs><path d="${heartPath}" fill="#f2c23a" stroke="#000" stroke-width="1.2" clip-path="url(#g)"/>`),
   heartPoison: svg(`<path d="${heartPath}" fill="#7a9a2a" stroke="#000" stroke-width="1.2"/>`),
   foodEmpty: svg(`<rect x="3" y="5" width="12" height="10" rx="3" fill="#2a2214" stroke="#000"/><rect x="5" y="2" width="8" height="4" fill="#2a2214" stroke="#000"/>`),
   foodFull: svg(`<rect x="3" y="5" width="12" height="10" rx="3" fill="#d88a2a" stroke="#000"/><rect x="5" y="2" width="8" height="4" fill="#f2d48a" stroke="#000"/><rect x="5" y="7" width="3" height="2" fill="#ffd27a"/>`),
@@ -45,6 +47,7 @@ export class HUD {
       <div id="toast"></div>
       <div id="item-name"></div>
       <div id="bottom">
+        <div id="bars3" style="width:calc(var(--slot) * 9 + 8px);display:none"><div class="bar" id="absorb"></div></div>
         <div id="bars2" style="width:calc(var(--slot) * 9 + 8px);display:flex;justify-content:space-between"><div class="bar" id="armor"></div><div class="bar right" id="air"></div></div>
         <div id="bars"><div class="bar" id="health"></div><div class="bar right" id="food"></div></div>
         <div id="xpbar"><div id="xpfill"></div><span id="xplevel"></span></div>
@@ -59,13 +62,14 @@ export class HUD {
       this.slots.push(s);
     }
     this.healthEl = this.root.querySelector('#health');
+    this.absorbEl = this.root.querySelector('#absorb');
     this.foodEl = this.root.querySelector('#food');
     this.airEl = this.root.querySelector('#air');
     this.armorEl = this.root.querySelector('#armor');
     this.makeIcons(this.armorEl, 10);
     this.xpFill = this.root.querySelector('#xpfill');
     this.xpLevel = this.root.querySelector('#xplevel');
-    this.makeIcons(this.healthEl, 10); this.makeIcons(this.foodEl, 10); this.makeIcons(this.airEl, 10);
+    this.makeIcons(this.healthEl, 10); this.makeIcons(this.absorbEl, 10); this.makeIcons(this.foodEl, 10); this.makeIcons(this.airEl, 10);
     this.debugEl = this.root.querySelector('#debug');
     this.coordsEl = this.root.querySelector('#coords');
     this.markers = new PlayerMarkers(this.root.querySelector('#markers-root'));
@@ -151,6 +155,17 @@ export class HUD {
       img.style.transform = p.health <= 4 ? `translateY(${Math.round(Math.sin(performance.now() / 60 + i * 2) * 1.5)}px)` : '';
       img.style.filter = blink ? 'brightness(2.2)' : '';
     });
+    // Absorption: a row of golden hearts above the red ones
+    const ab = Math.ceil(p.absorption || 0);
+    if (ab !== this.lastAbsorb) {
+      this.lastAbsorb = ab;
+      this.absorbEl.parentElement.style.display = ab > 0 && !p.creative ? 'flex' : 'none';
+      [...this.absorbEl.children].forEach((img, i) => {
+        const v = ab - i * 2;
+        img.style.display = v > 0 ? '' : 'none';
+        if (v > 0) img.src = v >= 2 ? ICON.heartGold : ICON.heartGoldHalf;
+      });
+    }
     const food = p.hunger.food;
     const hungerFx = !!p.effects.hunger;
     [...this.foodEl.children].forEach((img, i) => {

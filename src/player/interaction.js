@@ -323,6 +323,7 @@ export class Interaction {
     const f = ITEMS[st.id].food;
     p.hunger.eat(f.hunger, f.saturation);
     if (f.effect && Math.random() < f.effect.chance) p.addEffect(f.effect.type, f.effect.ticks);
+    for (const [type, ticks, amp] of f.effects || []) p.addEffect(type, ticks, amp); // a Gilded Apple's sure effects
     p.inventory.removeFromSlot(p.inventory.selected, 1);
     if (f.leaves) p.inventory.add({ id: f.leaves === 'vial' ? I.GLASS_VIAL : I.BOWL, count: 1, damage: 0 }); // soup leaves its bowl, honey its vial
     if (f.cures && p.effects[f.cures]) { delete p.effects[f.cures]; for (const fn of p.listeners.effect || []) fn(null); }
