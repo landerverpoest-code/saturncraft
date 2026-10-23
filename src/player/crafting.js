@@ -131,6 +131,7 @@ shaped(['SS', 'SS'], { S: I.STRING }, B.WOOL, 1);
 shaped(['I I', ' I '], { I: I.IRON_INGOT }, I.BUCKET, 1);
 shaped(['F', 'S', 'E'], { F: I.FLINT, S: I.STICK, E: I.FEATHER }, I.ARROW, 4);
 shaped([' TS', 'T S', ' TS'], { T: I.STICK, S: I.STRING }, I.BOW, 1);
+shaped(['TIT', 'SFS', ' T '], { T: I.STICK, I: I.IRON_INGOT, S: I.STRING, F: I.FLINT }, I.CROSSBOW, 1);
 for (const [blk, it] of [[B.COAL_BLOCK, I.COAL], [B.IRON_BLOCK, I.IRON_INGOT], [B.GOLD_BLOCK, I.GOLD_INGOT], [B.DIAMOND_BLOCK, I.DIAMOND]]) {
   shaped(['XXX', 'XXX', 'XXX'], { X: it }, blk, 1);
   shapeless([blk], it, 9);

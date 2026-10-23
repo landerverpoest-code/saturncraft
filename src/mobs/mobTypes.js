@@ -60,7 +60,7 @@ export const MOBS = {
   marauder: {
     name: 'Marauder', role: 'pillager', category: CATEGORY.MONSTER, raider: true,
     health: 24, speed: 0.35, width: 0.6, height: 1.95, followRange: 32, ranged: true, sound: 'hmm',
-    drops: [{ id: I.ARROW, min: 0, max: 2 }, { id: I.BERYL, min: 0, max: 1, playerOnly: true }],
+    drops: [{ id: I.ARROW, min: 0, max: 2 }, { id: I.BERYL, min: 0, max: 1, playerOnly: true }, { oneOf: [[I.CROSSBOW, 0.085]], playerOnly: true }],
   },
   voidwalker: {
     name: 'Voidwalker', role: 'enderman', category: CATEGORY.MONSTER,

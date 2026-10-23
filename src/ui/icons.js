@@ -171,6 +171,8 @@ const GEAR = {
   bow: ['bow', { wood: WOOD_HANDLE, str: ramp('#ecebe4'), acc: ramp('#5a4a3a') }],
   shears: ['shears', { head: ramp('#d4d4d8', { hiMix: 0.7 }), acc: ramp('#7a4a2a') }],
   flint_and_steel: ['igniter', { head: ramp('#a4a4ac', { hiMix: 0.65 }), acc: ramp('#4a4a50', { speckle: true }) }],
+  crossbow: ['crossbow', { wood: WOOD_HANDLE, head: ramp('#c8c8cc', { hiMix: 0.6 }), str: ramp('#ecebe4'), acc: ramp('#6a4a2a') }],
+  crossbow_loaded: ['crossbow_loaded', { wood: WOOD_HANDLE, head: ramp('#c8c8cc', { hiMix: 0.6 }), str: ramp('#ecebe4'), acc: ramp('#6a4a2a') }],
   arrow: ['arrow', { head: ramp('#8e8e96', { hiMix: 0.55 }), wood: WOOD_HANDLE, acc: ramp('#f2f2ee', { hiMix: 0.6 }) }],
 };
 

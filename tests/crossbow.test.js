@@ -1,0 +1,54 @@
+import { describe, it, expect } from 'vitest';
+import { craft } from '../src/player/crafting.js';
+import { I, ITEMS } from '../src/world/items.js';
+import { categories } from '../src/world/enchantments.js';
+import { Interaction } from '../src/player/interaction.js';
+
+const s = (id) => (id == null ? null : { id, count: 1 });
+
+function fakeGame(slots) {
+  const arrows = [];
+  const inv = {
+    slots, selected: 0,
+    get selectedStack() { return this.slots[this.selected]; },
+    removeFromSlot(i, n) { this.slots[i].count -= n; if (this.slots[i].count <= 0) this.slots[i] = null; },
+    damageSelected(n) { this.slots[this.selected].damage = (this.slots[this.selected].damage | 0) + n; },
+    changed() {},
+  };
+  const player = { inventory: inv, creative: false, x: 0, y: 64, z: 0, eyePos: () => [0, 65.6, 0], lookDir: () => [0, 0, -1] };
+  return {
+    arrows,
+    game: { player, audio: { play() {} }, entities: { spawnArrow: (...a) => { const e = { args: a }; arrows.push(e); return e; } } },
+  };
+}
+
+describe('crossbow', () => {
+  it('is crafted from sticks, an iron ingot, string and flint', () => {
+    const T = I.STICK, R = I.IRON_INGOT, S = I.STRING, F = I.FLINT;
+    expect(craft([T, R, T, S, F, S, null, T, null].map(s), 3)).toEqual({ id: I.CROSSBOW, count: 1 });
+  });
+  it('takes bow enchantments', () => {
+    expect(categories(I.CROSSBOW)).toEqual(['bow']);
+    expect(ITEMS[I.CROSSBOW_LOADED].durability).toBe(ITEMS[I.CROSSBOW].durability);
+  });
+  it('loads an arrow, then fires a fast critical one and wears', () => {
+    const { game, arrows } = fakeGame([{ id: I.CROSSBOW, count: 1, damage: 0 }, { id: I.ARROW, count: 3 }]);
+    const it = Object.create(Interaction.prototype);
+    it.game = game;
+    it.loadCrossbow();
+    expect(game.player.inventory.slots[0].id).toBe(I.CROSSBOW_LOADED);
+    expect(game.player.inventory.slots[1].count).toBe(2);
+    it.fireCrossbow();
+    expect(arrows.length).toBe(1);
+    expect(arrows[0].args[5]).toBeCloseTo(-3.15); // vz
+    expect(arrows[0].args[7]).toBe(true); // critical
+    expect(game.player.inventory.slots[0]).toMatchObject({ id: I.CROSSBOW, damage: 1 });
+  });
+  it('does not load without arrows', () => {
+    const { game } = fakeGame([{ id: I.CROSSBOW, count: 1, damage: 0 }]);
+    const it = Object.create(Interaction.prototype);
+    it.game = game;
+    it.loadCrossbow();
+    expect(game.player.inventory.slots[0].id).toBe(I.CROSSBOW);
+  });
+});

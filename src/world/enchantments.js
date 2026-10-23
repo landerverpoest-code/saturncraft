@@ -59,7 +59,7 @@ export function categories(id) {
   if (id === I.BOOK || id === I.ENCHANTED_BOOK) return ['book'];
   if (d.tool) return d.tool.type === 'sword' ? ['sword'] : d.tool.type === 'axe' ? ['tool', 'axe'] : ['tool'];
   if (d.armor) return d.armor.slot === 3 ? ['armor', 'boots'] : ['armor'];
-  if (d.bow) return ['bow'];
+  if (d.bow || d.crossbow) return ['bow'];
   if (d.shears) return ['shears'];
   if (d.durability) return ['gear'];
   return [];
@@ -71,7 +71,7 @@ export function enchantability(id) {
   if (id === I.BOOK) return 1;
   if (d.tool) return TOOL_ENCHANTABILITY[d.tool.material] || 0;
   if (d.armor) return ARMOR_ENCHANTABILITY[d.armor.material] || 0;
-  if (d.bow) return 1;
+  if (d.bow || d.crossbow) return 1;
   return 0;
 }
 

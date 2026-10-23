@@ -147,6 +147,12 @@ export class Interaction {
     // Farglass: hold right mouse to look through it (game.render narrows the view)
     p.zooming = !!(d && d.spyglass && input.right);
     if (p.zooming) return;
+    if (d && d.crossbow) {
+      if (d.loaded) { if (input.rightPressed) this.fireCrossbow(); }
+      else if (input.right) { if (++this.bowDraw >= 25) { this.loadCrossbow(); this.bowDraw = 0; } }
+      else this.bowDraw = 0;
+      return;
+    }
     if (d && d.bow) {
       if (input.right) this.bowDraw++;
       else if (this.bowDraw > 0) { this.releaseBow(); this.bowDraw = 0; }
@@ -358,6 +364,30 @@ export class Interaction {
     if (!endless) p.inventory.removeFromSlot(slot, 1);
     p.inventory.damageSelected(1);
     g.audio.play('bow');
+  }
+
+  /** A crossbow drawn for 1.25 s takes an arrow (none needed in creative or with Endless). */
+  loadCrossbow() {
+    const g = this.game, p = g.player, inv = p.inventory, bow = inv.selectedStack;
+    const free = p.creative || enchLevel(bow, 'endless') > 0;
+    const slot = inv.slots.findIndex((s) => s && s.id === I.ARROW);
+    if (slot < 0 && !free) return;
+    if (!free) inv.removeFromSlot(slot, 1);
+    inv.slots[inv.selected] = { ...inv.slots[inv.selected], id: I.CROSSBOW_LOADED };
+    inv.changed();
+    g.audio.play('click', [p.x, p.y + 1, p.z]);
+  }
+
+  /** Fire a loaded crossbow: a fast, flat, always-critical arrow. */
+  fireCrossbow() {
+    const g = this.game, p = g.player, inv = p.inventory, bow = inv.selectedStack;
+    const [ex, ey, ez] = p.eyePos(), [dx, dy, dz] = p.lookDir();
+    const arrow = g.entities.spawnArrow(ex, ey - 0.1, ez, dx * 3.15, dy * 3.15, dz * 3.15, p, true, null, enchLevel(bow, 'strongdraw'));
+    if (arrow && (p.creative || enchLevel(bow, 'endless') > 0)) arrow.pickup = false;
+    inv.slots[inv.selected] = { ...bow, id: I.CROSSBOW };
+    inv.changed();
+    inv.damageSelected(1);
+    g.audio.play('bow', null, 1.2);
   }
 
   /** Right-click action. Returns true if something happened. */
