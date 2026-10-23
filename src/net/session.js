@@ -456,7 +456,8 @@ export class HostSession extends Session {
       // a guest's thrown Tidespear carries its stack (with wear and enchantments)
       const spear = m.thrown === 'spear' && m.item && m.item.id === I.TIDESPEAR ? withExtras({ id: I.TIDESPEAR, count: 1, damage: Math.max(0, m.item.damage | 0) }, m.item) : null;
       if (m.thrown === 'spear' && !spear) return;
-      ents.spawnArrow(m.x, m.y, m.z, v[0], v[1], v[2], c.rp.target, !!m.crit, m.thrown === 'egg' || m.thrown === 'snowball' || pot || spear ? m.thrown : null, Math.max(0, Math.min(5, m.power | 0)), pot, spear);
+      const tip = !m.thrown && m.item && ITEMS[m.item.id] && ITEMS[m.item.id].tipped ? { id: m.item.id, count: 1 } : null;
+      ents.spawnArrow(m.x, m.y, m.z, v[0], v[1], v[2], c.rp.target, !!m.crit, m.thrown === 'egg' || m.thrown === 'snowball' || pot || spear ? m.thrown : null, Math.max(0, Math.min(5, m.power | 0)), pot, spear || tip);
     } else if (m.k === 'boat') {
       ents.spawnBoat(m.x, m.y, m.z, +m.yaw || 0, !!m.cart);
     } else if (m.k === 'tnt') {
@@ -484,7 +485,7 @@ export class HostSession extends Session {
       c.ch.send({ t: 'gotxp', v: e.value });
     } else if (e.kind === 'arrow' && e.stuck && e.pickup) {
       e.dead = true;
-      c.ch.send({ t: 'got', st: { id: I.ARROW, count: 1, damage: 0 } });
+      c.ch.send({ t: 'got', st: { id: e.pickupId || I.ARROW, count: 1, damage: 0 } });
     }
   }
 

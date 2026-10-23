@@ -77,3 +77,21 @@ describe('tidespear', () => {
     expect(drops).toEqual([{ id: I.TIDESPEAR, count: 1, damage: 4 }]);
   });
 });
+
+describe('tipped arrows', () => {
+  it('eight arrows round a splash elixir make eight tipped arrows', async () => {
+    const { TIPPED_ARROW, SPLASH_ITEM } = await import('../src/world/items.js');
+    const A = { id: I.ARROW, count: 1 }, P = { id: SPLASH_ITEM.poison, count: 1 };
+    expect(craft([A, A, A, A, P, A, A, A, A], 3)).toEqual({ id: TIPPED_ARROW.poison, count: 8 });
+    expect(ITEMS[TIPPED_ARROW.poison].name).toBe('Arrow of Poison');
+  });
+  it('a tipped arrow carries an eighth of the effect and is picked up as itself', async () => {
+    const { TIPPED_ARROW } = await import('../src/world/items.js');
+    const { Arrow } = await import('../src/entities/entities.js');
+    const a = new Arrow(0, 0, 0, 0, 0, 0, null);
+    a.setTip(TIPPED_ARROW.long_slowness);
+    expect(a.effect[0]).toBe('slowness');
+    expect(a.effect[1]).toBe(Math.floor(4 * 60 * 20 / 8));
+    expect(a.pickupId).toBe(TIPPED_ARROW.long_slowness);
+  });
+});

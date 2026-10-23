@@ -261,9 +261,19 @@ const ICON_SPEAR = ['................', '...........h.h.h', '...........hHhHh', 
 item('tidespear', 'Tidespear', { stack: 1, durability: 250, spear: true, weapon: { type: 'spear', speed: 1, tier: -1, damage: 9, attackSpeed: 1.1 }, iconStyle: [ICON_SPEAR, { h: '#5aa898', H: '#9adcc8', s: '#3f7a72', S: '#6ab0a4' }] });
 // Gilded Apple (reference: golden apple): always edible; Regeneration II for 5 s and Absorption for 2 min
 item('gilded_apple', 'Gilded Apple', { food: { hunger: 4, saturation: 9.6, always: true, effects: [['regeneration', 100, 1], ['absorption', 2400, 0]] }, iconStyle: ['apple', { h: '#f2c23a', H: '#fff0a0', s: '#8a6a2a', l: '#3a8a2a' }] });
+// Tipped arrows: eight arrows round a splash elixir; the hit lays an eighth of the elixir's effect
+export const TIPPED_ARROW = {};
+for (const kind of POTION_KEYS) {
+  const p = POTIONS[kind];
+  if (!p.effects.length) continue;
+  TIPPED_ARROW[kind] = item('tipped_arrow_' + kind, p.name.replace('Elixir of', 'Arrow of'), { tipped: kind, gear: ['arrow', { tip: potionColor(kind) }] }).id;
+}
 ITEMS[B.GLOOMSHELL_BOX].stack = 1; // a box keeps its contents in the item (stack.contents), so it never stacks
 
 /** Light level (0-15) an item gives when held: a torch, lantern or other light block; 0 for the rest. */
+/** Is this item an arrow a bow can shoot (plain or tipped)? */
+export const isArrow = (id) => id === I.ARROW || !!(ITEMS[id] && ITEMS[id].tipped);
+
 export function heldLightLevel(id) {
   const d = id != null && ITEMS[id];
   if (!d) return 0;

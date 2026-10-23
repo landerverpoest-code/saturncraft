@@ -5,7 +5,7 @@ import { pairOnPlace } from '../world/chests.js';
 import { hopperPlaceMeta } from '../world/hoppers.js';
 import { compost, READY, SETTLE_TICKS } from '../world/composter.js';
 import { B, BLOCKS, SOLID, SHAPE, isFluid, CROPS } from '../world/blocks.js';
-import { ITEMS, I, toolOf, isBlockItem, WOOL_ITEMS, POTION_ITEM } from '../world/items.js';
+import { ITEMS, I, toolOf, isBlockItem, WOOL_ITEMS, POTION_ITEM, isArrow } from '../world/items.js';
 import { POTIONS } from '../world/potions.js';
 import { breakProgressPerTick, blockDrops, canHarvest } from '../world/mining.js';
 import { enchLevel, meleeBonus, silkDropsSelf } from '../world/enchantments.js';
@@ -357,8 +357,9 @@ export class Interaction {
 
   releaseBow() {
     const g = this.game, p = g.player;
-    const slot = p.inventory.slots.findIndex((s) => s && s.id === I.ARROW);
+    const slot = p.inventory.slots.findIndex((s) => s && isArrow(s.id));
     if (slot < 0) return;
+    const ammo = p.inventory.slots[slot].id;
     // charge curve: f = t/20; power = (f^2 + 2f)/3 capped at 1
     let f = this.bowDraw / 20;
     f = (f * f + f * 2) / 3;
@@ -367,7 +368,7 @@ export class Interaction {
     const [ex, ey, ez] = p.eyePos();
     const [dx, dy, dz] = p.lookDir();
     const bow = p.inventory.selectedStack, endless = enchLevel(bow, 'endless') > 0;
-    const arrow = g.entities.spawnArrow(ex, ey - 0.1, ez, dx * 3 * f, dy * 3 * f, dz * 3 * f, p, f >= 1, null, enchLevel(bow, 'strongdraw'));
+    const arrow = g.entities.spawnArrow(ex, ey - 0.1, ez, dx * 3 * f, dy * 3 * f, dz * 3 * f, p, f >= 1, null, enchLevel(bow, 'strongdraw'), 0, ammo !== I.ARROW ? { id: ammo, count: 1 } : null);
     if (arrow && endless) arrow.pickup = false; // Endless arrows cannot be picked back up
     if (!endless) p.inventory.removeFromSlot(slot, 1);
     p.inventory.damageSelected(1);

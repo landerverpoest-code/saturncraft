@@ -206,6 +206,7 @@ function itemIcon(d) {
   if (d.dial) { const c = document.createElement('canvas'); c.width = c.height = 32; drawDial(c, d.dial, 0, 1, 2); return c; }
   if (d.tool) return gridCanvas(toolGrid(d.tool));
   if (GEAR[d.key]) return gridCanvas(paintTemplate(GEAR_TEMPLATES[GEAR[d.key][0]], GEAR[d.key][1]));
+  if (d.tipped) { const a = GEAR.arrow[1]; return gridCanvas(paintTemplate(GEAR_TEMPLATES.arrow, { ...a, head: ramp(d.gear[1].tip, { hiMix: 0.5 }) })); }
   if (d.woolColor) {
     return blockIcon(BLOCKS[d.places], WOOL_RGB[d.woolColor]);
   } else if (d.dye) {
@@ -310,6 +311,11 @@ export function tooltipHTML(st, extra = '') {
   for (const l of lines) h += `<div class="tt-ench">${esc(l)}</div>`;
   const dur = d.durability;
   if (dur && st.damage > 0) h += `<div class="tt-dura">Durability: ${dur - st.damage} / ${dur}</div>`;
+  if (d.tipped) {
+    for (const [type, ticks, amp] of POTIONS[d.tipped].effects) {
+      h += `<div class="${EFFECTS[type].good ? 'tt-good' : 'tt-bad'}">${esc(effectLabel(type, amp))}${EFFECTS[type].instant ? '' : ` (${formatTicks(Math.floor(ticks / 8))})`}</div>`;
+    }
+  }
   if (d.potion) {
     const fx = POTIONS[d.potion.kind].effects;
     if (!fx.length) h += '<div class="tt-dura">No Effects</div>';

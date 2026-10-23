@@ -5,6 +5,7 @@ import { Body } from '../physics/body.js';
 import { B, BLOCKS, SOLID, SHAPE, isFluid } from '../world/blocks.js';
 import { stalactiteDamage, crystalTex, FACING_DOWN } from '../world/caves.js';
 import { ITEMS, I, maxStack } from '../world/items.js';
+import { POTIONS } from '../world/potions.js';
 import { itemCanvas } from '../ui/icons.js';
 import { texturePixels } from '../world/textures.js';
 import { MIN_Y } from '../world/constants.js';
@@ -348,6 +349,15 @@ export class Arrow {
     this.prev = [x, y, z];
     this.pickup = !thrown && shooter && shooter.isPlayer;
     this.item = null; // a thrown Tidespear: the stack it lands as
+    this.pickupId = I.ARROW; // a tipped arrow is picked back up as itself
+  }
+
+  /** Make this a tipped arrow (item id): its hit lays an eighth of the elixir's effect. */
+  setTip(id) {
+    const d = ITEMS[id], fx = d && d.tipped && POTIONS[d.tipped].effects[0];
+    if (!fx) return;
+    this.pickupId = id;
+    this.effect = [fx[0], Math.max(1, Math.floor(fx[1] / 8)), fx[2]];
   }
 
   /** A thrown Tidespear stops here and lies as an item (the host shares it like any drop). */
@@ -375,7 +385,7 @@ export class Arrow {
       if (this.age > 1200) this.dead = true;
       const p = game.player;
       if (this.pickup && !p.dead && Math.abs(p.x - this.x) < 1.2 && Math.abs(p.z - this.z) < 1.2 && this.y > p.y - 0.5 && this.y < p.y + 2.3) {
-        if (p.inventory.add({ id: I.ARROW, count: 1 }) === 0) { this.dead = true; game.audio.play('pop'); }
+        if (p.inventory.add({ id: this.pickupId || I.ARROW, count: 1 }) === 0) { this.dead = true; game.audio.play('pop'); }
       }
       return;
     }
@@ -462,6 +472,7 @@ export class EntityManager {
     const a = this.add(new Arrow(x, y, z, vx, vy, vz, shooter, crit, thrown, potion));
     a.power = power | 0; // Strongdraw level of the bow
     a.item = item;
+    if (item && !thrown) a.setTip(item.id);
     return a;
   }
 
