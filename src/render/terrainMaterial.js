@@ -74,7 +74,7 @@ uniform float uTime;
 uniform float uWind;
 varying float vWave;
 varying float vUnder;
-${water ? 'varying vec3 vWN;' : ''}`)
+${water ? 'varying vec3 vWN; uniform vec2 uWaterTiles; uniform float uGlow;' : ''}`)
       .replace('#include <begin_vertex>', `#include <begin_vertex>
 vTuv = tuv;
 vUnder = floor(lit.z / 16.0 + 0.01);
@@ -92,6 +92,12 @@ if (wave > 0.5) {
   if (wave < 1.5) transformed.y += sin(ph * 1.9 + wp.z) * amp * 0.4;
 }
 vWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;
+${water ? `if (uGlow > 0.0 && (abs(lit.w - uWaterTiles.x) < 0.5 || abs(lit.w - uWaterTiles.y) < 0.5) && fract(vWorld.y) > 0.05) {
+  // the water surface heaves gently (vertices at a block's bottom edge stay put, so faces keep meeting)
+  float wv = sin(vWorld.x * 0.8 + uTime * 1.4) * 0.5 + sin(vWorld.z * 0.9 - uTime * 1.1 + vWorld.x * 0.3) * 0.5;
+  transformed.y += wv * 0.035 - 0.04;
+  vWorld.y += wv * 0.035 - 0.04;
+}` : ''}
 vTile = lit.w;
 ${water ? 'vWN = normal;' : ''}
 vShade = abs(normal.y) > 0.5 ? (normal.y > 0.0 ? 1.0 : 0.55) : (abs(normal.z) > 0.5 ? 0.82 : 0.68);
