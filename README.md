@@ -413,6 +413,7 @@ poison from eyes) follow the documented table.
 * Crossbow (stick, iron ingot, string, flint): hold use for 1.25 s to load an arrow, then click to fire a fast, flat, always-critical shot; 465 uses, takes bow enchantments, found in outpost chests and dropped by Marauders (8.5 %)
 * Tidespear: a strong melee weapon (9 damage, 250 uses); hold use for half a second and release to throw it (8 damage, flies straight through water); it lands as an item to pick back up, in multiplayer too. Sodden Shamblers drop one now and then (6 %)
 * Composter (seven oak slabs): plant matter raises the compost a layer with the reference chances (seeds and leaves 30 %, cactus and cane 50 %, crops and flowers 65 %, bread and baked potatoes 85 %, pumpkin pie always); seven layers settle a second later and the full composter gives Bone Meal
+* Ambient particles: leaves drift down from tree canopies in the wind, fireflies glow over swamps, forests and jungles on dry nights, and dust hangs in the air of caves
 * Death screen, item drop on death, respawn; pause menu with settings
 * Procedural sound effects with stereo panning; world saving
 * Generative music: every 5–10 minutes a calm piano piece is composed on the spot (major by day, minor at night, low and sparse underground) with reverb; distant rumbles in dark caves; music volume in the pause menu
