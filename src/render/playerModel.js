@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { buildModel, animateModel } from '../mobs/models.js';
 import { itemCanvas } from '../ui/icons.js';
 import { lightAt } from '../entities/entities.js';
+import { entityGlow } from './entityLight.js';
 import { SWING_TICKS } from '../player/interaction.js';
 import { wearArmor, lightArmor } from './armorModel.js';
 
@@ -60,7 +61,7 @@ export class PlayerModel {
     this.anim.hurtTime = p.hurtTime;
     this.anim.headPitch = p.pitch;
     const L = lightAt(game, x, y + 1.6, z);
-    animateModel(this.root, this.anim, alpha, L, sec);
+    animateModel(this.root, this.anim, alpha, L, sec, entityGlow(game, x, y + 1.2, z));
     wearArmor(this.root, p.inventory.armor.map((s) => (s ? s.id : null)));
     lightArmor(this.root, L);
     const parts = this.root.userData.parts;

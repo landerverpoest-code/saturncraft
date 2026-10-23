@@ -727,7 +727,8 @@ export class Game {
     const night = 1 - Math.min(1, this.sky.state.combined * 1.6);
     // fireflies over swamps, forests and jungles on warm dry nights
     if (night > 0.5 && this.weather.level < 0.2 && Math.random() < 0.5 * night) {
-      const x = p.x + (Math.random() - 0.5) * 28, z = p.z + (Math.random() - 0.5) * 28;
+      const a = Math.random() * Math.PI * 2, r = 5 + Math.random() * 12; // not right in front of the eyes
+      const x = p.x + Math.cos(a) * r, z = p.z + Math.sin(a) * r;
       const key = BIOMES[w.biomeAt(Math.floor(x), Math.floor(z))]?.key;
       if (FIREFLY_BIOMES.has(key)) {
         const y = w.heightAt(Math.floor(x), Math.floor(z)) + 1 + Math.random() * 3;

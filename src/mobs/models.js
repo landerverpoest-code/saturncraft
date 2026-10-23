@@ -671,7 +671,7 @@ export function buildModel(type) {
   return root;
 }
 
-export function animateModel(root, mob, alpha, L, sec) {
+export function animateModel(root, mob, alpha, L, sec, glow = null) {
   const { parts, mats } = root.userData;
   const swing = mob.limbSwing * 0.6662;
   const amt = mob.limbAmount;
@@ -729,7 +729,10 @@ export function animateModel(root, mob, alpha, L, sec) {
   for (const m of mats) {
     m.color.copy(m.userData.base).multiplyScalar(L);
     if (m.userData.emissive) m.emissive.copy(m.userData.emissive).multiplyScalar(0.6 + 0.4 * Math.sin(sec * 4));
-    else m.emissive.setRGB(hurt ? 0.45 : flash, flash, flash);
+    else {
+      if (glow) m.emissive.copy(m.userData.base).multiply(glow); else m.emissive.setRGB(0, 0, 0); // torchlight and moonlight
+      if (hurt || flash) { m.emissive.r += hurt ? 0.45 : flash; m.emissive.g += flash; m.emissive.b += flash; }
+    }
   }
 }
 

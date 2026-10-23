@@ -6,6 +6,7 @@ import { wearArmor, lightArmor } from '../render/armorModel.js';
 import { buildModel, animateModel } from '../mobs/models.js';
 import { itemCanvas } from '../ui/icons.js';
 import { lightAt } from '../entities/entities.js';
+import { entityGlow } from '../render/entityLight.js';
 import { PHYS } from '../physics/constants.js';
 import { heldLightLevel } from '../world/items.js';
 import { REMOTE_LIGHTS } from '../render/terrainMaterial.js';
@@ -125,7 +126,7 @@ export class RemotePlayer {
     this.anim.hurtTime = s.hurt ? 5 : 0;
     this.anim.headPitch = cur.pitch;
     const L = lightAt(game, cur.x, cur.y + 1.6, cur.z);
-    animateModel(this.root, this.anim, 1, L, sec);
+    animateModel(this.root, this.anim, 1, L, sec, entityGlow(game, cur.x, cur.y + 1.2, cur.z));
     wearArmor(this.root, s.armor || [null, null, null, null]);
     lightArmor(this.root, L);
     const parts = this.root.userData.parts;
