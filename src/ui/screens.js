@@ -813,7 +813,9 @@ export class UI {
       <div class="field"><label>Volume: <b id="volv">${Math.round(g.settings.volume * 100)}</b>%</label><input type="range" min="0" max="100" value="${Math.round(g.settings.volume * 100)}" id="vol"></div>
       <div class="field"><label>Music: <b id="musv">${Math.round((g.settings.music ?? 0.5) * 100)}</b>%</label><input type="range" min="0" max="100" value="${Math.round((g.settings.music ?? 0.5) * 100)}" id="mus"></div>
       <div class="field"><label><input type="checkbox" id="sh" ${g.settings.shadows ? 'checked' : ''}> Sun shadows (3 shadow-casting lights)</label></div>
-      <div class="field"><label><input type="checkbox" id="fx" ${g.settings.shaders !== false ? 'checked' : ''}> Shaders (bloom, light shafts, colour)</label></div>
+      <div class="btn-row"><button class="btn" id="fx">Shaders: ${g.settings.shaders !== false ? 'On' : 'Off'}</button>
+      <button class="btn" id="fast">Low-lag graphics</button></div>
+      <div class="sub" style="font-size:12px;opacity:.7;margin:-4px 0 6px">Laggy? Turn shaders off here or press F7 at any time</div>
       <div class="btn-row"><button class="btn" id="dlc">Day/night cycle: ${g.settings.daylightCycle !== false ? 'On' : 'Off'}</button>
       <button class="btn" id="hm">Hostile mobs: ${g.settings.hostileMobs !== false ? 'On' : 'Off'}</button></div>
       <button class="btn" id="crd">Show coordinates: ${g.settings.showCoords ? 'On' : 'Off'}</button>
@@ -830,12 +832,19 @@ export class UI {
     bind('vol', 'volv', (v) => { g.setSetting('volume', v / 100); return v; });
     bind('mus', 'musv', (v) => { g.setSetting('music', v / 100); return v; });
     s.querySelector('#sh').addEventListener('change', (e) => g.setSetting('shadows', e.target.checked));
-    s.querySelector('#fx').addEventListener('change', (e) => g.setSetting('shaders', e.target.checked));
     const toggle = (id, key, label) => {
       const b = s.querySelector('#' + id);
       b.onclick = () => { const on = g.settings[key] === false; g.setSetting(key, on); b.textContent = `${label}: ${on ? 'On' : 'Off'}`; };
     };
     toggle('dlc', 'daylightCycle', 'Day/night cycle');
+    toggle('fx', 'shaders', 'Shaders');
+    s.querySelector('#fast').onclick = () => {
+      // everything that costs the most frames off at once: shaders, sun shadows, high pixel density, far chunks
+      g.setSetting('shaders', false); g.setSetting('shadows', false); g.setSetting('pixelRatioCap', 1);
+      if (g.settings.renderDistance > 6) { g.setSetting('renderDistance', 6); s.querySelector('#rd').value = 6; s.querySelector('#rdv').textContent = 6; }
+      s.querySelector('#fx').textContent = 'Shaders: Off'; s.querySelector('#sh').checked = false;
+      g.hud.toast('Low-lag graphics: shaders and shadows off');
+    };
     toggle('hm', 'hostileMobs', 'Hostile mobs');
     toggle('crd', 'showCoords', 'Show coordinates');
     const db = s.querySelector('#diff');

@@ -39,6 +39,7 @@ export const terrainUniforms = {
   uSunCol: { value: new THREE.Color(0, 0, 0) },
   uSkyTop: { value: new THREE.Color(0.3, 0.5, 0.9) },
   uSkyLow: { value: new THREE.Color(0.7, 0.8, 1.0) },
+  uWet: { value: 0 }, // how wet the open ground looks (rain)
 };
 
 export function createTextureArray() {
@@ -71,11 +72,13 @@ varying vec3 vWorld;
 flat varying float vTile;
 uniform float uTime;
 uniform float uWind;
+varying float vWave;
 ${water ? 'varying vec3 vWN;' : ''}`)
       .replace('#include <begin_vertex>', `#include <begin_vertex>
 vTuv = tuv;
 float wave = floor(lit.z / 4.0 + 0.01);
 vLit = vec3(lit.x / 255.0, lit.y / 255.0, lit.z - wave * 4.0);
+vWave = wave;
 if (wave > 0.5) {
   // plants sway at the top, leaves rustle a little, in a breeze that rolls across the land
   vec4 wp = modelMatrix * vec4(position, 1.0);
@@ -108,12 +111,14 @@ varying vec2 vTuv;
 varying vec3 vLit;
 varying float vShade;
 flat varying float vTile;
-${water ? `varying vec3 vWN;
-uniform vec2 uWaterTiles;
+varying float vWave;
 uniform vec3 uSunDir;
 uniform vec3 uSunCol;
 uniform vec3 uSkyTop;
-uniform vec3 uSkyLow;` : ''}
+uniform vec3 uSkyLow;
+uniform float uWet;
+${water ? `varying vec3 vWN;
+uniform vec2 uWaterTiles;` : ''}
 #define SUN_MASK ( vLit.x > 0.0 ) // sunlight is scaled by sky light: none underground
 float lightCurve(float f) {
   float b = f / (4.0 - 3.0 * f);
@@ -137,6 +142,8 @@ for (int i = 0; i < ${REMOTE_LIGHTS}; i++) {
   if (rl.w > 0.0) handL = max(handL, clamp((rl.w - distance(vWorld, rl.xyz) * 1.1) / 15.0, 0.0, 1.0));
 }
 float blkB = lightCurve(max(vLit.y, handL));
+// with shaders on, torchlight flickers a little, in slow waves that roll across the blocks
+if (uGlow > 0.0) blkB *= 1.0 + 0.05 * sin(uTime * 8.3 + vWorld.x * 0.31 + vWorld.z * 0.27) * sin(uTime * 13.1 + vWorld.y * 0.43);
 float aoF = 1.0 - vLit.z * 0.19;
 vec3 outgoingLight = reflectedLight.directDiffuse * skyB * mix(1.0, aoF, 0.5)
   + reflectedLight.indirectDiffuse * skyB * aoF * vShade
@@ -145,6 +152,18 @@ vec3 outgoingLight = reflectedLight.directDiffuse * skyB * mix(1.0, aoF, 0.5)
 if (uGlow > 0.0) {
   float gl = texelFetch(uGlowTiles, ivec2(int(vTile + 0.5), 0), 0).r * 1.275;
   if (gl > 0.0) outgoingLight += diffuseColor.rgb * gl * uGlow * smoothstep(0.45, 0.95, max(texel.r, max(texel.g, texel.b)));
+}
+if (uGlow > 0.0) {
+  vec3 toFrag = normalize(vWorld - cameraPosition);
+  // sunlight glowing through leaves and grass when looking towards the sun
+  if (vWave > 0.5) outgoingLight += diffuseColor.rgb * uSunCol * pow(max(dot(toFrag, uSunDir), 0.0), 6.0) * 0.7 * skyB;
+  // rain: surfaces open to the sky darken and pick up a sheen of the sky
+  ${water ? '' : `float wet = uWet * smoothstep(0.8, 1.0, vLit.x);
+  if (wet > 0.0) {
+    float top = vShade > 0.99 ? 1.0 : 0.35;
+    outgoingLight *= 1.0 - 0.2 * wet;
+    outgoingLight += mix(uSkyLow, uSkyTop, 0.3) * pow(1.0 - abs(toFrag.y), 4.0) * 0.3 * wet * top * skyB;
+  }`}
 }
 ${water ? `if ((abs(vTile - uWaterTiles.x) < 0.5 || abs(vTile - uWaterTiles.y) < 0.5) && vWN.y > 0.5 && cameraPosition.y > vWorld.y) {
   // ripples: a few travelling waves bend the surface normal

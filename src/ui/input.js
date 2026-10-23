@@ -2,7 +2,7 @@
 export const KEYS = {
   forward: ['KeyW', 'ArrowUp'], back: ['KeyS', 'ArrowDown'], left: ['KeyA', 'ArrowLeft'], right: ['KeyD', 'ArrowRight'],
   jump: ['Space'], sneak: ['ShiftLeft', 'ShiftRight'], sprint: ['ControlLeft', 'ControlRight', 'KeyR'],
-  inventory: ['KeyE'], drop: ['KeyQ'], debug: ['F3'], hud: ['F1'], pause: ['Escape'], perspective: ['F5'],
+  inventory: ['KeyE'], drop: ['KeyQ'], debug: ['F3'], hud: ['F1'], pause: ['Escape'], perspective: ['F5'], shaders: ['F7'],
 };
 
 export class Input {
@@ -22,7 +22,7 @@ export class Input {
 
     window.addEventListener('keydown', (e) => {
       if (e.repeat) { if (this.locked) e.preventDefault(); return; }
-      if (['Space', 'F1', 'F3', 'F5', 'Tab', 'Slash'].includes(e.code) || (e.ctrlKey && e.code === 'KeyW')) e.preventDefault();
+      if (['Space', 'F1', 'F3', 'F5', 'F7', 'Tab', 'Slash'].includes(e.code) || (e.ctrlKey && e.code === 'KeyW')) e.preventDefault();
       if (KEYS.jump.includes(e.code)) {
         const now = performance.now();
         if (now - this.lastJumpTap < 280) { this.flyToggle = true; this.lastJumpTap = 0; } else this.lastJumpTap = now;

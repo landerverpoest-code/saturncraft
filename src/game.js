@@ -280,6 +280,7 @@ export class Game {
     if (k === 'volume') this.audio.setVolume(v);
     if (k === 'music') this.music.setVolume(v);
     if (k === 'shadows') this.sky.setShadowsEnabled(v && (this.quality || 0) < 2);
+    if (k === 'pixelRatioCap') { this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, v)); this.renderer.setSize(window.innerWidth, window.innerHeight, false); }
     if (k === 'shaders') this.postfx.enabled = v !== false && (this.quality || 0) < 3;
     if ((k === 'hostileMobs' && !v) || (k === 'difficulty' && v === 'peaceful')) this.removeHostileMobs();
     if (k === 'difficulty') this.player.difficulty = v;
@@ -907,6 +908,7 @@ export class Game {
     }
     if (inp.wasPressed('debug')) { this.hud.showDebug = !this.hud.showDebug; this.hud.debugEl.classList.toggle('hidden', !this.hud.showDebug); }
     if (inp.wasPressed('hud')) this.hud.setVisible(!this.hud.visible);
+    if (inp.wasPressed('shaders')) { const on = this.settings.shaders === false; this.setSetting('shaders', on); this.hud.toast(`Shaders ${on ? 'on' : 'off'} (F7)`); }
     if (inp.wasPressed('perspective')) { this.perspective = (this.perspective + 1) % 3; document.getElementById('crosshair').style.visibility = this.perspective === 2 ? 'hidden' : ''; }
     if (!this.ui.blocking) {
       const m = inp.consumeMouse();
@@ -1023,6 +1025,8 @@ export class Game {
     const ss = this.shaftSun(st, 0);
     if (ss) { terrainUniforms.uSunDir.value.set(ss.dir[0], ss.dir[1], ss.dir[2]); terrainUniforms.uSunCol.value.copy(ss.color).multiplyScalar(Math.min(1, ss.strength * 1.6)); }
     else terrainUniforms.uSunCol.value.setRGB(0, 0, 0);
+    terrainUniforms.uWet.value = this.world.dimension === 'overworld' && Weather.precipitation(this.world.biomeAt(Math.floor(x), Math.floor(z))) === 'rain' ? this.weather.level : 0;
+    this.weatherFx.uniforms.uAlpha.value = this.postfx.enabled ? 0.55 : 1;
     terrainUniforms.uGlow.value = this.postfx.enabled ? 1 : 0;
     terrainUniforms.uSkyTop.value.copy(this.sky.zenith); terrainUniforms.uSkyLow.value.copy(this.sky.horizon);
     // torches and lanterns carried by the other players light the terrain around them too
@@ -1064,6 +1068,13 @@ export class Game {
     if (fx) this.postfx.begin(); else this.renderer.clear();
     this.renderer.render(this.scene, this.camera);
     if (this.perspective === 0 && !zoom) this.held.render(this.renderer, alpha, sec);
+    if (fx) {
+      let warm = 0;
+      if (this.world.dimension === 'overworld') for (const su of st.suns) if (su.elevation > -0.05) warm = Math.max(warm, su.factor * Math.exp(-Math.max(0, su.elevation) * 6));
+      const night = this.world.dimension === 'overworld' ? (1 - Math.min(1, st.combined)) * (1 - cd) : 0;
+      const hp = p.health / 20;
+      this.postfx.grade(warm * (1 - cd), night * (1 - this.nightVision), Math.min(1, (p.hurtTime > 0 ? p.hurtTime / 10 : 0) * 0.6 + (hp < 0.3 && !p.creative && !p.dead ? (0.3 - hp) * 1.2 * (0.6 + 0.4 * Math.sin(sec * 5)) : 0)));
+    }
     if (fx) this.postfx.end(this.camera, sec, this.shaftSun(st, cd), b.eyeInWater);
     this.hud.setScope(zoom);
     this.hud.update();

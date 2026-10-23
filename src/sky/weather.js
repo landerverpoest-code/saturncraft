@@ -85,6 +85,7 @@ void main() {
 const fragment = /* glsl */ `
 uniform float uTime;
 uniform float uLevel;
+uniform float uAlpha; // lower with shaders on: blending in linear light makes streaks look brighter
 uniform vec3 uColor;
 varying vec2 vUv;
 varying float vSeed;
@@ -111,13 +112,13 @@ void main() {
   }
   a *= uLevel * smoothstep(${R.toFixed(1)}, ${(R * 0.5).toFixed(1)}, vDist);
   if (a < 0.02) discard;
-  gl_FragColor = vec4(uColor * (vKind < 0.5 ? 0.85 : 1.0), a * (vKind < 0.5 ? 0.55 : 0.9));
+  gl_FragColor = vec4(uColor * (vKind < 0.5 ? 0.85 : 1.0), a * uAlpha * (vKind < 0.5 ? 0.55 : 0.9));
   #include <colorspace_fragment>
 }`;
 
 export class WeatherRenderer {
   constructor(scene) {
-    this.uniforms = { uTime: { value: 0 }, uLevel: { value: 0 }, uColor: { value: new THREE.Color(0.75, 0.8, 0.9) } };
+    this.uniforms = { uTime: { value: 0 }, uLevel: { value: 0 }, uAlpha: { value: 1 }, uColor: { value: new THREE.Color(0.75, 0.8, 0.9) } };
     this.geometry = new THREE.BufferGeometry();
     this.mesh = new THREE.Mesh(this.geometry, new THREE.ShaderMaterial({
       vertexShader: vertex, fragmentShader: fragment, uniforms: this.uniforms,

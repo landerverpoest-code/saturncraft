@@ -56,7 +56,7 @@ void main() {
 }`;
 
 const COMPOSITE = `uniform sampler2D tScene; uniform sampler2D tBloom; uniform sampler2D tRays;
-uniform float uBloom; uniform vec3 uRayColor; uniform float uTime; uniform float uWater; uniform float uAspect; uniform float uSaturation;
+uniform float uBloom; uniform vec3 uRayColor; uniform float uTime; uniform float uWater; uniform float uAspect; uniform float uSaturation; uniform vec3 uGrade; uniform float uHurt;
 varying vec2 vUv;
 float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
 vec3 shoulder(vec3 c) {
@@ -71,13 +71,14 @@ void main() {
   vec3 c = texture2D(tScene, uv).rgb;
   c += texture2D(tBloom, uv).rgb * uBloom;
   c += texture2D(tRays, uv).rgb * uRayColor;
-  c = shoulder(max(c * 1.06, vec3(0.0)));
+  c = shoulder(max(c * 1.06 * uGrade, vec3(0.0)));
   float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
   c = max(mix(vec3(l), c, uSaturation), vec3(0.0));
   c = toSRGB(clamp(c, 0.0, 1.0));
   c = mix(c, c * c * (3.0 - 2.0 * c), 0.2); // a little contrast
   vec2 v = (vUv - 0.5) * vec2(uAspect, 1.0);
   c *= 1.0 - 0.28 * smoothstep(0.45, 1.05, length(v));
+  c = mix(c, vec3(0.55, 0.02, 0.02), uHurt * smoothstep(0.25, 1.0, length(v))); // red edges when hurt
   c += (hash(vUv * 917.0 + fract(uTime)) - 0.5) / 255.0; // dither away banding in the sky
   gl_FragColor = vec4(c, 1.0);
 }`;
@@ -106,7 +107,7 @@ export class PostFX {
     this.composite = mat(COMPOSITE, {
       tScene: { value: this.target.texture }, tBloom: { value: this.levels[0].texture }, tRays: { value: this.rays.texture },
       uBloom: { value: 0.6 }, uRayColor: { value: new THREE.Color(0, 0, 0) }, uTime: { value: 0 }, uWater: { value: 0 },
-      uAspect: { value: 1 }, uSaturation: { value: 1.1 },
+      uAspect: { value: 1 }, uSaturation: { value: 1.1 }, uGrade: { value: new THREE.Color(1, 1, 1) }, uHurt: { value: 0 },
     });
     this.size = new THREE.Vector2();
     this.sunNdc = new THREE.Vector3();
@@ -141,6 +142,17 @@ export class PostFX {
    * Finish the frame onto the screen. `sun` = { dir: [x,y,z], color: THREE.Color, strength } for
    * the light shafts (strength 0 for none), `underwater` ripples the picture.
    */
+  /**
+   * Colour grading: `warm` (0-1) tints the picture golden when the sun is low, `night` (0-1)
+   * cools it towards moonlight blue, `hurt` (0-1) reddens the edges.
+   */
+  grade(warm, night, hurt) {
+    const g = this.composite.uniforms.uGrade.value;
+    g.setRGB(1 + 0.07 * warm - 0.12 * night, 1 - 0.02 * warm - 0.05 * night, 1 - 0.14 * warm + 0.1 * night);
+    this.composite.uniforms.uHurt.value = hurt;
+    this.composite.uniforms.uSaturation.value = 1.1 - 0.25 * night;
+  }
+
   end(camera, sec, sun, underwater) {
     const r = this.renderer, aspect = this.w / Math.max(1, this.h);
     // bloom: bright pass, blur down the chain, then add each level back on the way up
