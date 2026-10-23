@@ -7,7 +7,8 @@ import { KEEP_BITS, unpairAfterBreak } from './world/chests.js';
 import * as THREE from 'three';
 import { World } from './world/world.js';
 import { B, BLOCKS } from './world/blocks.js';
-import { ITEMS, I, toolOf } from './world/items.js';
+import { ITEMS, I, toolOf, heldLightLevel } from './world/items.js';
+import { heldLights } from './net/remotePlayer.js';
 import { blockDrops } from './world/mining.js';
 import { withExtras, cleanContents } from './world/enchantments.js';
 import { runRandomTicks } from './world/randomTicks.js';
@@ -1016,15 +1017,21 @@ export class Game {
     this.nightVision = !nv ? 0 : nv.ticks > 200 ? 1 : 0.7 + Math.sin((nv.ticks - alpha) * Math.PI * 0.2) * 0.3;
     terrainUniforms.uMinLight.value = Math.max(this.dims.baseLight(), this.nightVision * 0.75);
     // a torch (or any light-giving block) in the hand lights up the area around the player
-    const held = p.dead ? null : p.inventory.selectedStack, hd = held && ITEMS[held.id];
-    const hb = hd ? BLOCKS[hd.block ?? hd.places] : null;
-    this.handLight = hb && hb.emit ? hb.emit : 0;
+    const held = p.dead ? null : p.inventory.selectedStack;
+    this.handLight = held ? heldLightLevel(held.id) : 0;
     terrainUniforms.uHand.value = this.handLight;
     const ss = this.shaftSun(st, 0);
     if (ss) { terrainUniforms.uSunDir.value.set(ss.dir[0], ss.dir[1], ss.dir[2]); terrainUniforms.uSunCol.value.copy(ss.color).multiplyScalar(Math.min(1, ss.strength * 1.6)); }
     else terrainUniforms.uSunCol.value.setRGB(0, 0, 0);
     terrainUniforms.uGlow.value = this.postfx.enabled ? 1 : 0;
     terrainUniforms.uSkyTop.value.copy(this.sky.zenith); terrainUniforms.uSkyLow.value.copy(this.sky.horizon);
+    // torches and lanterns carried by the other players light the terrain around them too
+    this.remoteLights = this.net ? heldLights(this.net.remotes) : [];
+    const rl = terrainUniforms.uRemoteLights.value;
+    for (let i = 0; i < rl.length; i++) {
+      const s = this.remoteLights[i];
+      rl[i].set(s ? s.x : 0, s ? s.y : 0, s ? s.z : 0, s ? s.level : 0);
+    }
     terrainUniforms.uWind.value = 1 + wlevel * 1.2 + (this.weather.storm || 0) * 1.2; // plants sway harder in rain and storms
     const R = this.chunks.renderDistance * 16;
     this.clouds.update(this.camera, smoothTime, this.sky, Math.max(192, R * 1.8));

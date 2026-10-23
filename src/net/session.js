@@ -51,6 +51,7 @@ const BACKLOG_LIMIT = 128 * 1024; // bytes queued for a guest before its snapsho
 const FULL_EVERY = 20;      // every 20th entity snapshot (2 s) is a full list, the others only what changed
 const REACH = 12;           // blocks: how far from a player its edits / actions may be (reach + latency slack)
 const GUEST_SIM_RADIUS = 4; // chunks the host keeps loaded (and simulates) around each guest
+const GUEST_TICK_RADIUS = 2; // chunks around each guest that get random ticks (crops, leaves, fire, ice...); the costliest part per guest
 const SLEEP_MS = 4500;      // a guest has to lie in bed this long before the night can be skipped
 
 /** Message channel over a transport conn: JSON objects in, JSON objects out. */
@@ -656,7 +657,7 @@ export class HostSession extends Session {
       if (pl.obj.dead) continue;
       const cx = Math.floor(pl.obj.x / 16), cz = Math.floor(pl.obj.z / 16);
       if (!done.some(([x, z]) => Math.max(Math.abs(x - cx), Math.abs(z - cz)) <= 2 * r)) {
-        runRandomTicks(g.world, cx, cz, Math.min(r, GUEST_SIM_RADIUS));
+        runRandomTicks(g.world, cx, cz, Math.min(r, GUEST_TICK_RADIUS));
         done.push([cx, cz]);
       }
       g.player = pl.obj;
@@ -693,7 +694,9 @@ export class HostSession extends Session {
       const list = [[0, ...this.ownState()]];
       for (const c of this.joined()) if (c.raw) list.push([c.id, ...c.raw]);
       const riderOf = (b) => (b.rider === g.player ? 0 : b.remoteRider || -1);
+      // an entity is packed at most once per tick, however many clients have it in range
       const ents = g.entities.list.filter((x) => !x.removed && (!x.dead || x.kind === 'mob') && x.kind !== 'eye');
+      const packed = new Map(); // entity -> its snapshot and key, made once however many guests can see it
       for (const c of this.joined()) {
         // a guest whose connection can't keep up skips snapshots (newer ones replace them anyway), so the
         // queue never grows into seconds or minutes of delay; edits, chat and the like still go through
@@ -708,12 +711,16 @@ export class HostSession extends Session {
         const changed = [], ids = [], cache = new Map();
         for (const x of ents) {
           if (Math.abs(x.x - s.x) > ENTITY_RANGE || Math.abs(x.z - s.z) > ENTITY_RANGE) continue;
-          const a = packEntity(x, riderOf);
-          if (!a) continue;
-          const key = JSON.stringify(a);
-          cache.set(a[1], key);
-          ids.push(a[1]);
-          if (c.entCache.get(a[1]) !== key) changed.push(a);
+          let p = packed.get(x);
+          if (p === undefined) {
+            const a = packEntity(x, riderOf);
+            p = a ? { a, key: JSON.stringify(a) } : null;
+            packed.set(x, p);
+          }
+          if (!p) continue;
+          cache.set(p.a[1], p.key);
+          ids.push(p.a[1]);
+          if (c.entCache.get(p.a[1]) !== p.key) changed.push(p.a);
         }
         c.entCache = cache;
         c.ch.send(full ? { t: 'ents', m: changed, d: g.world.dimension } : { t: 'ents', m: changed, ids, d: g.world.dimension });
