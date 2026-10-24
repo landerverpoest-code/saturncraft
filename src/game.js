@@ -75,7 +75,7 @@ THREE.ShaderChunk.fog_vertex = `#ifdef USE_FOG
 
 const CAVE_FOG = new THREE.Color(0.012, 0.012, 0.018);
 export const DIFFICULTIES = ['peaceful', 'easy', 'normal', 'hard'];
-const FIREFLY_BIOMES = new Set(['swamp', 'forest', 'flower_forest', 'dark_forest', 'jungle', 'birch_forest']);
+const FIREFLY_BIOMES = new Set(['swamp', 'forest', 'flower_forest', 'blossom_grove', 'dark_forest', 'jungle', 'birch_forest']);
 
 export const DEFAULT_SETTINGS = { renderDistance: 8, fov: 75, sensitivity: 100, volume: 0.5, music: 0.5, shadows: true, shaders: true, shadowMapSize: 1024, pixelRatioCap: 1.25, daylightCycle: true, hostileMobs: true, difficulty: 'normal', showCoords: false };
 
@@ -717,7 +717,7 @@ export class Game {
         this.particles.emit(x + 0.5 + s[0] * off, y + (m ? 0.92 : 0.72), z + 0.5 + s[1] * off, 0, 0.01, 0, 0.45, 0.45, 0.45, 20, -0.001);
       } else if (id === B.LAVA && !w.getBlock(x, y + 1, z) && Math.random() < 0.05) {
         this.particles.emit(x + Math.random(), y + 1, z + Math.random(), (Math.random() - 0.5) * 0.1, 0.15, (Math.random() - 0.5) * 0.1, 1, 0.55, 0.15, 30, 0.02);
-      } else if (LEAVES.has(id) && Math.random() < 0.04 && !w.getBlock(x, y - 1, z)) {
+      } else if (LEAVES.has(id) && Math.random() < (id === B.BLOSSOM_LEAVES ? 0.3 : 0.04) && !w.getBlock(x, y - 1, z)) {
         // a leaf drifts down from the canopy, sideways with the wind
         const c = this.leafColor(id, x, z), L = this.ambientLight(x + 0.5, y - 0.5, z + 0.5), wind = terrainUniforms.uWind.value;
         this.particles.emit(x + Math.random(), y - 0.05, z + Math.random(), 0.02 * wind, -0.02, 0.012 * wind, c[0] * L, c[1] * L, c[2] * L, 90, 0.0004);
@@ -760,6 +760,7 @@ export class Game {
     const lin = (v) => Math.pow(v / 255, 2.2);
     if (id === B.BIRCH_LEAVES) return [lin(128), lin(167), lin(85)];
     if (id === B.SPRUCE_LEAVES) return [lin(97), lin(153), lin(97)];
+    if (id === B.BLOSSOM_LEAVES) return Math.random() < 0.2 ? [lin(253), lin(230), lin(238)] : [lin(240), lin(162), lin(192)]; // petals
     const b = BIOMES[this.world.biomeAt(x, z)] || BIOMES[3], c = b.foliage || foliageColor(b.temp, b.humid);
     return [lin(c[0] * 0.8), lin(c[1] * 0.8), lin(c[2] * 0.8)];
   }

@@ -49,7 +49,7 @@ export const SPAWN_TABLES = {
     mushroom_fields: [],
   },
   creature: {
-    plains: [...FARM_ANIMALS, { type: 'galloper', weight: 5, min: 2, max: 6 }, { type: 'hopper', weight: 4, min: 2, max: 3 }], birch_forest: FARM_ANIMALS, flower_forest: FARM_ANIMALS, dark_forest: FARM_ANIMALS,
+    plains: [...FARM_ANIMALS, { type: 'galloper', weight: 5, min: 2, max: 6 }, { type: 'hopper', weight: 4, min: 2, max: 3 }], birch_forest: FARM_ANIMALS, flower_forest: FARM_ANIMALS, blossom_grove: FARM_ANIMALS, dark_forest: FARM_ANIMALS,
     // swamps and savannas: the same farm animals (reference swamps add slimes, savannas horses)
     swamp: FARM_ANIMALS, savanna: [...FARM_ANIMALS, { type: 'galloper', weight: 6, min: 2, max: 6 }],
     // jungles: mostly pigs and chickens

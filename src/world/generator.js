@@ -80,8 +80,8 @@ export function sampleOreHeight(f, rng) {
 const SNOW_GROUND = new Set([B.SNOWY_GRASS, B.DIRT, B.STONE, B.GRAVEL, B.SAND, B.ICE, B.COBBLESTONE, B.ANDESITE, B.GRANITE, B.DIORITE]);
 
 // Ground cover per biome: chance of tall grass, flowers and small mushrooms on a grass block.
-const GRASS_P = { [BIOME.PLAINS]: 0.22, [BIOME.TAIGA]: 0.07, [BIOME.SAVANNA]: 0.35, [BIOME.JUNGLE]: 0.3, [BIOME.SWAMP]: 0.12, [BIOME.DARK_FOREST]: 0.06, [BIOME.FLOWER_FOREST]: 0.08 };
-const FLOWER_P = { [BIOME.FLOWER_FOREST]: 0.2, [BIOME.SWAMP]: 0.012, [BIOME.JUNGLE]: 0.004, [BIOME.SAVANNA]: 0.006, [BIOME.DARK_FOREST]: 0.004 };
+const GRASS_P = { [BIOME.BLOSSOM_GROVE]: 0.2, [BIOME.PLAINS]: 0.22, [BIOME.TAIGA]: 0.07, [BIOME.SAVANNA]: 0.35, [BIOME.JUNGLE]: 0.3, [BIOME.SWAMP]: 0.12, [BIOME.DARK_FOREST]: 0.06, [BIOME.FLOWER_FOREST]: 0.08 };
+const FLOWER_P = { [BIOME.BLOSSOM_GROVE]: 0.05, [BIOME.FLOWER_FOREST]: 0.2, [BIOME.SWAMP]: 0.012, [BIOME.JUNGLE]: 0.004, [BIOME.SAVANNA]: 0.006, [BIOME.DARK_FOREST]: 0.004 };
 const SHROOM_P = { [BIOME.DARK_FOREST]: 0.025, [BIOME.SWAMP]: 0.01, [BIOME.TAIGA]: 0.003 };
 const TERRACOTTAS = new Set([B.TERRACOTTA, B.ORANGE_TERRACOTTA, B.YELLOW_TERRACOTTA, B.WHITE_TERRACOTTA, B.BROWN_TERRACOTTA, B.RED_TERRACOTTA, B.LIGHT_GRAY_TERRACOTTA]);
 const MAX_TREE_DENSITY = 0.14;
@@ -245,6 +245,8 @@ export class TerrainGenerator {
       if (h < 0.62) return BIOME.SAVANNA;
       return BIOME.JUNGLE;
     }
+    // pink Blossom Groves on mild, hilly ground
+    if (top > 76 && t < 1.0 && h > 0.3 && col.variant > 0.35) return BIOME.BLOSSOM_GROVE;
     if (h > 0.76) return BIOME.DARK_FOREST;
     if (h > 0.62) return col.variant > 0.3 ? BIOME.FLOWER_FOREST : BIOME.FOREST;
     if (h > 0.45 && t < 0.85) return BIOME.BIRCH_FOREST;
@@ -573,6 +575,7 @@ export class TerrainGenerator {
       case BIOME.TAIGA: return 0.035;
       case BIOME.SNOWY_TAIGA: return 0.03;
       case BIOME.FLOWER_FOREST: return 0.022;
+      case BIOME.BLOSSOM_GROVE: return 0.007;
       case BIOME.SWAMP: return 0.012;
       case BIOME.SAVANNA: return 0.005;
       case BIOME.MUSHROOM_FIELDS: return 0.004;
@@ -591,6 +594,7 @@ export class TerrainGenerator {
       case BIOME.BIRCH_FOREST: return tr < 0.85 ? 'birch' : 'oak';
       case BIOME.FOREST: return tr < 0.2 ? 'birch' : 'oak';
       case BIOME.FLOWER_FOREST: return tr < 0.3 ? 'birch' : 'oak';
+      case BIOME.BLOSSOM_GROVE: return 'blossom';
       case BIOME.SWAMP: return 'swamp_oak';
       case BIOME.JUNGLE: return tr < 0.11 ? 'jungle_big' : tr < 0.5 ? 'jungle' : 'jungle_bush';
       case BIOME.SAVANNA: return tr < 0.85 ? 'acacia' : 'oak';
@@ -625,6 +629,7 @@ export class TerrainGenerator {
           const f = h(x, z, 42);
           if (biome === BIOME.FLOWER_FOREST) blocks[above] = f < 0.3 ? B.SUNPETAL : f < 0.55 ? B.REDBLOOM : f < 0.8 ? B.ROSETTE : B.SKYBELL;
           else if (biome === BIOME.SWAMP) blocks[above] = B.SKYBELL;
+          else if (biome === BIOME.BLOSSOM_GROVE) blocks[above] = f < 0.75 ? B.ROSETTE : B.SKYBELL;
           else blocks[above] = f < 0.5 ? B.SUNPETAL : B.REDBLOOM;
         } else if (r < flowerP + shroomP) blocks[above] = h(x, z, 42) < 0.6 ? B.BROWN_MUSHROOM : B.RED_MUSHROOM;
         else if (r < flowerP + shroomP + grassP) blocks[above] = B.TALL_GRASS;

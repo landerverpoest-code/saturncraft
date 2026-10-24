@@ -218,8 +218,8 @@ item('violite_shard', 'Violite Shard', { iconStyle: ['gem', { h: '#9a6ae0', H: '
 item('farglass', 'Farglass', { stack: 1, spyglass: true, iconStyle: ['horn', { h: '#d47a4c', H: '#f0a070', s: '#5a2e8a' }] });
 
 // Fuel for block items
-for (const id of [B.OAK_PLANKS, B.SPRUCE_PLANKS, B.BIRCH_PLANKS, B.JUNGLE_PLANKS, B.ACACIA_PLANKS, B.DARK_OAK_PLANKS, B.OAK_LOG, B.BIRCH_LOG, B.SPRUCE_LOG, B.JUNGLE_LOG, B.ACACIA_LOG, B.DARK_OAK_LOG, B.WORKBENCH]) ITEMS[id].fuel = 300;
-for (const id of [B.OAK_SAPLING, B.BIRCH_SAPLING, B.SPRUCE_SAPLING, B.JUNGLE_SAPLING, B.ACACIA_SAPLING, B.DARK_OAK_SAPLING]) ITEMS[id].fuel = 100;
+for (const id of [B.BLOSSOM_PLANKS, B.BLOSSOM_LOG, B.OAK_PLANKS, B.SPRUCE_PLANKS, B.BIRCH_PLANKS, B.JUNGLE_PLANKS, B.ACACIA_PLANKS, B.DARK_OAK_PLANKS, B.OAK_LOG, B.BIRCH_LOG, B.SPRUCE_LOG, B.JUNGLE_LOG, B.ACACIA_LOG, B.DARK_OAK_LOG, B.WORKBENCH]) ITEMS[id].fuel = 300;
+for (const id of [B.OAK_SAPLING, B.BIRCH_SAPLING, B.SPRUCE_SAPLING, B.JUNGLE_SAPLING, B.ACACIA_SAPLING, B.DARK_OAK_SAPLING, B.BLOSSOM_SAPLING]) ITEMS[id].fuel = 100;
 ITEMS[B.COAL_BLOCK].fuel = 16000;
 
 export function itemDef(id) { return ITEMS[id]; }

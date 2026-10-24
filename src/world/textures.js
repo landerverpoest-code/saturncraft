@@ -461,6 +461,19 @@ const GEN = {
   acacia_planks: (c) => planks(c, '#b0603a'),
   acacia_leaves: (c) => leavesTex(c, 0.74),
   acacia_sapling: (c) => sapling(c, '#8a9a2a', '#5f6a1a', '#6a645a', false),
+  blossom_log: (c) => logSide(c, '#3e2a34', '#2a1c24', false),
+  blossom_log_top: (c) => logTop(c, '#3e2a34', '#d8a49a'),
+  blossom_planks: (c) => planks(c, '#e2b2a6'),
+  blossom_leaves: (c) => {
+    // pink petals with a few paler blooms and gaps
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const n = c.h(x, y);
+      if (n > 0.8) { c.set(x, y, [0, 0, 0], 0); continue; }
+      const f = 0.78 + c.h(x >> 1, y >> 1, 3) * 0.24;
+      c.set(x, y, c.h(x, y, 9) < 0.12 ? hex('#fde6ee') : shade(hex('#f0a2c0'), f));
+    }
+  },
+  blossom_sapling: (c) => sapling(c, '#f0a2c0', '#c87898', '#3e2a34', false),
   dark_oak_log: (c) => logSide(c, '#3e2d18', '#2a1e10', false),
   dark_oak_log_top: (c) => logTop(c, '#3e2d18', '#5c4329'),
   dark_oak_planks: (c) => planks(c, '#4f3720'),

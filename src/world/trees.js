@@ -5,8 +5,8 @@ import { B } from './blocks.js';
 import { hashf, mulberry32 } from './noise.js';
 import { SIDE_DIRS } from './shapes.js';
 
-export const LEAVES = new Set([B.OAK_LEAVES, B.BIRCH_LEAVES, B.SPRUCE_LEAVES, B.JUNGLE_LEAVES, B.ACACIA_LEAVES, B.DARK_OAK_LEAVES]);
-export const LOGS = new Set([B.OAK_LOG, B.BIRCH_LOG, B.SPRUCE_LOG, B.JUNGLE_LOG, B.ACACIA_LOG, B.DARK_OAK_LOG]);
+export const LEAVES = new Set([B.OAK_LEAVES, B.BIRCH_LEAVES, B.SPRUCE_LEAVES, B.JUNGLE_LEAVES, B.ACACIA_LEAVES, B.DARK_OAK_LEAVES, B.BLOSSOM_LEAVES]);
+export const LOGS = new Set([B.OAK_LOG, B.BIRCH_LOG, B.SPRUCE_LOG, B.JUNGLE_LOG, B.ACACIA_LOG, B.DARK_OAK_LOG, B.BLOSSOM_LOG]);
 
 /**
  * Blocks of a tree of `kind`; r in [0,1) picks the variation. Kinds: 'oak',
@@ -203,6 +203,31 @@ const BIG_SHAPES = {
     }
     return finish(out);
   },
+  // Blossom: a slim trunk that splits into two or three leaning branches, each under a wide,
+  // flat pink crown with petals hanging from its rim
+  blossom(rng) {
+    const out = [];
+    const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    const h = 3 + Math.floor(rng() * 2);
+    for (let k = 0; k < h; k++) out.push([0, k, 0, B.BLOSSOM_LOG, true]);
+    out.push([0, -1, 0, B.DIRT, true]);
+    const first = Math.floor(rng() * 4), n = rng() < 0.4 ? 3 : 2;
+    for (let b = 0; b < n; b++) {
+      const d = dirs[b === 0 ? first : b === 1 ? first ^ 1 : (first + 2) % 4]; // one way, the opposite way, then sideways
+      let x = 0, y = h - 1, z = 0;
+      const len = 2 + Math.floor(rng() * 2);
+      for (let k = 0; k < len; k++) { x += d[0]; z += d[1]; y++; out.push([x, y, z, B.BLOSSOM_LOG, true]); }
+      y++; out.push([x, y, z, B.BLOSSOM_LOG, true]);
+      disc(out, x, y, z, 3.3, B.BLOSSOM_LEAVES, 0);
+      disc(out, x, y + 1, z, 2.4, B.BLOSSOM_LEAVES, 0);
+      disc(out, x, y + 2, z, 1.2, B.BLOSSOM_LEAVES, 0);
+      for (let k = 0; k < 6; k++) {
+        const a = rng() * Math.PI * 2, r = 2.2 + rng();
+        out.push([Math.round(x + Math.cos(a) * r), y - 1, Math.round(z + Math.sin(a) * r), B.BLOSSOM_LEAVES, false]);
+      }
+    }
+    return finish(out);
+  },
   // Dark oak: thick 2x2 trunk with stubby branches under a broad, dense crown
   dark_oak(rng) {
     const out = [], h = 6 + Math.floor(rng() * 3);
@@ -240,7 +265,7 @@ const BIG_SHAPES = {
 
 export const PLANTS = new Set([B.TALL_GRASS, B.SUNPETAL, B.REDBLOOM, B.SKYBELL, B.ROSETTE, B.BROWN_MUSHROOM, B.RED_MUSHROOM, B.DEAD_BUSH, B.VINES]);
 const SOFT = new Set([B.AIR, ...PLANTS,
-  B.OAK_SAPLING, B.BIRCH_SAPLING, B.SPRUCE_SAPLING, B.JUNGLE_SAPLING, B.ACACIA_SAPLING, B.DARK_OAK_SAPLING]);
+  B.OAK_SAPLING, B.BIRCH_SAPLING, B.SPRUCE_SAPLING, B.JUNGLE_SAPLING, B.ACACIA_SAPLING, B.DARK_OAK_SAPLING, B.BLOSSOM_SAPLING]);
 
 /**
  * Grow a tree from a sapling at x,y,z in a live world. Fails (returns false)
@@ -269,9 +294,9 @@ export function growTree(world, x, y, z, kind, rng = Math.random) {
 }
 
 export const SAPLING_TREE = { [B.OAK_SAPLING]: 'oak', [B.BIRCH_SAPLING]: 'birch', [B.SPRUCE_SAPLING]: 'spruce',
-  [B.JUNGLE_SAPLING]: 'jungle', [B.ACACIA_SAPLING]: 'acacia', [B.DARK_OAK_SAPLING]: 'dark_oak' };
+  [B.JUNGLE_SAPLING]: 'jungle', [B.ACACIA_SAPLING]: 'acacia', [B.DARK_OAK_SAPLING]: 'dark_oak', [B.BLOSSOM_SAPLING]: 'blossom' };
 export const LEAF_SAPLING = { [B.OAK_LEAVES]: B.OAK_SAPLING, [B.BIRCH_LEAVES]: B.BIRCH_SAPLING, [B.SPRUCE_LEAVES]: B.SPRUCE_SAPLING,
-  [B.JUNGLE_LEAVES]: B.JUNGLE_SAPLING, [B.ACACIA_LEAVES]: B.ACACIA_SAPLING, [B.DARK_OAK_LEAVES]: B.DARK_OAK_SAPLING };
+  [B.JUNGLE_LEAVES]: B.JUNGLE_SAPLING, [B.ACACIA_LEAVES]: B.ACACIA_SAPLING, [B.DARK_OAK_LEAVES]: B.DARK_OAK_SAPLING, [B.BLOSSOM_LEAVES]: B.BLOSSOM_SAPLING };
 
 /**
  * Leaf decay: natural leaves (meta 0) with no log within 4 steps through

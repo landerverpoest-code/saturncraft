@@ -67,6 +67,7 @@ export const B = {
   STORM_ROD: 239, VIOLITE_BLOCK: 240, BUDDING_VIOLITE: 241, SMALL_VIOLITE_BUD: 242, MEDIUM_VIOLITE_BUD: 243,
   LARGE_VIOLITE_BUD: 244, VIOLITE_CLUSTER: 245, CHALKSTONE: 246, SMOOTH_BASALT: 247, SHADED_GLASS: 248,
   SEEPSTONE: 249, SEEPSTONE_SPIKE: 250, COMPOSTER: 251,
+  BLOSSOM_LOG: 252, BLOSSOM_LEAVES: 253, BLOSSOM_PLANKS: 254, BLOSSOM_SAPLING: 255,
 };
 
 const defaults = {
@@ -260,6 +261,11 @@ def(B.ACACIA_LOG, 'Acacia Log', logDef('Acacia', 'acacia'));
 def(B.ACACIA_LEAVES, 'Acacia Leaves', { ...leaves, drops: 'leaves' });
 def(B.ACACIA_PLANKS, 'Acacia Planks', plankDef);
 def(B.ACACIA_SAPLING, 'Acacia Sapling', { ...plant });
+// Blossom Grove wood (reference: cherry): pink leaves in their own colour (no biome tint)
+def(B.BLOSSOM_LOG, 'Blossom Log', logDef('Blossom', 'blossom'));
+def(B.BLOSSOM_LEAVES, 'Blossom Leaves', { ...leaves, tint: null, drops: 'leaves' });
+def(B.BLOSSOM_PLANKS, 'Blossom Planks', plankDef);
+def(B.BLOSSOM_SAPLING, 'Blossom Sapling', { ...plant });
 def(B.DARK_OAK_LOG, 'Dark Oak Log', logDef('Dark Oak', 'dark_oak'));
 // thick canopies: dark oak leaves let less light through
 def(B.DARK_OAK_LEAVES, 'Dark Oak Leaves', { ...leaves, opacity: 2, drops: 'oak_leaves' });
