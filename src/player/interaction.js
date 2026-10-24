@@ -42,7 +42,7 @@ const ORE_XP = {
 };
 const BREAK_DELAY = 5;
 /** Blocks that right-click opens / toggles instead of using the held item. */
-const USABLE_BLOCKS = new Set([B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.CHEST, B.BARREL, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL, B.BREWING_STAND, B.GLOOMSHELL_BOX, B.HOPPER, B.COMPOSTER, B.SWEET_BERRY_BUSH, B.JUKEBOX]);
+const USABLE_BLOCKS = new Set([B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.CHEST, B.BARREL, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL, B.BREWING_STAND, B.GLOOMSHELL_BOX, B.HOPPER, B.COMPOSTER, B.SWEET_BERRY_BUSH, B.JUKEBOX, B.CAVE_VINES_LIT]);
 const CIRCUIT_USE = new Set([B.LEVER, B.STONE_BUTTON, B.REPEATER, B.CHIME_BLOCK]);
 const CIRCUIT_PLACE = new Set([B.LEVER, B.STONE_BUTTON, B.CINNABAR_WIRE, B.REPEATER, B.WOODEN_PRESSURE_PLATE, B.PISTON, B.STICKY_PISTON]);
 const USE_DELAY = 4;
@@ -135,7 +135,10 @@ export class Interaction {
       return;
     }
     // food that is also a seed (carrots) is planted when aimed at the top of farmland
-    const plants = d && d.places && this.target && this.target.id === B.FARMLAND && this.target.face[1] === 1;
+    const tg = this.target;
+    const plants = d && d.places && tg && ((tg.id === B.FARMLAND && tg.face[1] === 1)
+      || (d.places === B.SWEET_BERRY_BUSH && tg.face[1] === 1 && (tg.id === B.GRASS || tg.id === B.DIRT || tg.id === B.SNOWY_GRASS)) // berries are planted on soil
+      || (d.places === B.CAVE_VINES && tg.face[1] === -1)); // glow berries hang under a block
     if (input.right && d && d.food && !plants) {
       if (p.hunger.canEat() || d.food.always) {
         this.eating++;
@@ -663,6 +666,14 @@ export class Interaction {
     }
     if (t && t.id === B.COMPOSTER && !p.sneaking && this.useComposter(t, st)) { this.swing = SWING_TICKS; return true; }
     if (t && t.id === B.SWEET_BERRY_BUSH && this.useBerryBush(t, st, d)) { this.swing = SWING_TICKS; return true; }
+    if (t && t.id === B.CAVE_VINES_LIT) {
+      // pick the glow berries
+      g.entities.spawnItem(t.x + 0.5, t.y + 0.3, t.z + 0.5, { id: I.GLOW_BERRIES, count: 1 });
+      w.setBlockUrgent(t.x, t.y, t.z, B.CAVE_VINES, 0);
+      g.audio.play('pop', [t.x + 0.5, t.y + 0.5, t.z + 0.5]);
+      this.swing = SWING_TICKS;
+      return true;
+    }
     if (t && t.id === B.JUKEBOX && !p.sneaking) {
       // eject the disc that is playing, or put the held disc in
       const m = w.getMeta(t.x, t.y, t.z);

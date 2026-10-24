@@ -11,13 +11,54 @@ import { geodeIn, geodeLayer, GEODE_RADII, BUDDING_CHANCE, BUD_PLACE_CHANCE, BUD
 const noises = new Map();
 function noisesFor(seed) {
   let n = noises.get(seed);
-  if (!n) { n = { geode: new Simplex(hash4(seed, 31, 911, 3)), seep: new Simplex(hash4(seed, 32, 911, 3)) }; noises.set(seed, n); }
+  if (!n) { n = { geode: new Simplex(hash4(seed, 31, 911, 3)), seep: new Simplex(hash4(seed, 32, 911, 3)), lush: new Simplex(hash4(seed, 33, 911, 3)) }; noises.set(seed, n); }
   return n;
 }
 const cellHash = (seed, key, x, y, z) => hashf(seed ^ Math.imul(key, 0x2c1b3c6d), x, y, z);
 
 const ROCK = new Uint8Array(BLOCK_LIMIT);
 for (const id of [B.STONE, B.DEEPSTONE, B.GRANITE, B.DIORITE, B.ANDESITE, B.TUFF, B.SEEPSTONE]) ROCK[id] = 1;
+
+/** Lush caves: a region of the underground (about a tenth) where cave floors grow moss and azaleas. */
+export function lushRegion(seed, x, z) { return noisesFor(seed).lush.fbm2(x / 340, z / 340, 2); }
+export const LUSH_THRESHOLD = 0.3;
+
+function stampLush(gen, blocks, meta, cx, cz, heightmap) {
+  const seed = gen.seed, x0 = cx * 16, z0 = cz * 16;
+  if (lushRegion(seed, x0 + 8, z0 + 8) < LUSH_THRESHOLD - 0.1) return;
+  const vines = [];
+  for (let z = 0; z < 16; z++) for (let x = 0; x < 16; x++) {
+    const wx = x0 + x, wz = z0 + z;
+    if (lushRegion(seed, wx, wz) < LUSH_THRESHOLD) continue;
+    const top = heightmap[x + z * 16] - 12;
+    for (let y = Math.max(MIN_Y + 6, 0); y < top; y++) {
+      const i = cidx(x, y, z);
+      if (!ROCK[blocks[i]]) continue;
+      const above = cidx(x, y + 1, z), below = cidx(x, y - 1, z);
+      if (blocks[above] === B.AIR) {
+        // a mossy floor with carpets, azaleas and the odd tuft of grass
+        if (cellHash(seed, 20, wx, y, wz) < 0.85) blocks[i] = B.MOSS_BLOCK;
+        const r = cellHash(seed, 21, wx, y, wz);
+        if (blocks[i] === B.MOSS_BLOCK) {
+          if (r < 0.25) blocks[above] = B.MOSS_CARPET;
+          else if (r < 0.29) blocks[above] = cellHash(seed, 22, wx, y, wz) < 0.4 ? B.FLOWERING_AZALEA : B.AZALEA;
+          else if (r < 0.4) blocks[above] = B.TALL_GRASS;
+        }
+      } else if (blocks[below] === B.AIR) {
+        // a mossy ceiling with hanging cave vines
+        if (cellHash(seed, 23, wx, y, wz) < 0.45) blocks[i] = B.MOSS_BLOCK;
+        if (cellHash(seed, 24, wx, y, wz) < 0.12) vines.push([x, y, z, 1 + Math.floor(cellHash(seed, 25, wx, y, wz) * 6), wx, wz]);
+      }
+    }
+  }
+  for (const [x, y, z, want, wx, wz] of vines) {
+    for (let k = 1; k <= want; k++) {
+      const i = cidx(x, y - k, z);
+      if (blocks[i] !== B.AIR || blocks[cidx(x, y - k - 1, z)] !== B.AIR) break;
+      blocks[i] = cellHash(seed, 26, wx, y - k, wz) < 0.3 ? B.CAVE_VINES_LIT : B.CAVE_VINES;
+    }
+  }
+}
 
 /** Region strength of Seepstone caves at a column (they occupy roughly a tenth of the underground). */
 export function seepRegion(seed, x, z) { return noisesFor(seed).seep.fbm2(x / 380, z / 380, 2); }
@@ -32,6 +73,7 @@ export function stampCaveFeatures(gen, blocks, meta, cx, cz, heightmap) {
     stampGeode(gen.seed, blocks, meta, cx, cz, g);
   }
   stampSeepstone(gen, blocks, meta, cx, cz, heightmap);
+  stampLush(gen, blocks, meta, cx, cz, heightmap);
 }
 
 /** The part of geode `g` inside chunk (cx, cz). */

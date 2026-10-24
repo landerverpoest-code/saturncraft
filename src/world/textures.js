@@ -179,6 +179,27 @@ function berryBush(c, age) {
   }
 }
 
+/** A round leafy bush on a short stem; the flowering one has pink blossoms. */
+function azaleaTex(c, flowers) {
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
+  for (let y = 2; y < 12; y++) for (let x = 2; x < 14; x++) {
+    if (Math.hypot(x - 7.5, (y - 7) * 1.2) > 6 || c.h(x, y, 43) > 0.85) continue;
+    c.set(x, y, shade(hex('#5a8a2a'), 0.75 + c.h(x, y, 44) * 0.35));
+    if (flowers && c.h(x, y, 45) < 0.14) c.set(x, y, hex('#e88ac8'));
+  }
+  for (let y = 12; y < 16; y++) { c.set(7, y, hex('#6a4a2a')); c.set(8, y, hex('#5a3e22')); }
+}
+/** A hanging vine; the lit one carries glowing orange berries. */
+function caveVine(c, lit) {
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
+  for (let y = 0; y < 16; y++) {
+    const x = 7 + Math.round(Math.sin(y * 0.7) * 1.5);
+    c.set(x, y, hex('#4a7a2a')); c.set(x + 1, y, hex('#3a6a1e'));
+    if (y % 4 === 1) { c.set(x - 1, y, hex('#5a8a32')); c.set(x + 2, y + 1, hex('#5a8a32')); }
+  }
+  if (lit) for (const [x, y] of [[5, 4], [10, 9], [6, 13]]) { c.set(x, y, hex('#ffb030')); c.set(x + 1, y, hex('#ffd060')); c.set(x, y + 1, hex('#e88a1a')); c.set(x + 1, y + 1, hex('#ffb030')); }
+}
+
 /** Cut and polished stone: a smooth face with a faint frame. */
 function polished(c, base) {
   const b = hex(base);
@@ -906,6 +927,11 @@ const GEN = {
     }
     c.set(5, 4, g); c.set(6, 3, g); c.set(10, 9, g); c.set(11, 8, d);
   },
+  moss_block: (c) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, shade(hex('#5a7a2a'), 0.75 + c.h(x, y, 41) * 0.25 + (c.h(x >> 2, y >> 2, 42) - 0.5) * 0.2)); },
+  azalea: (c) => azaleaTex(c, false),
+  flowering_azalea: (c) => azaleaTex(c, true),
+  cave_vines: (c) => caveVine(c, false),
+  cave_vines_lit: (c) => caveVine(c, true),
   bone_block_side: (c) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, shade(hex('#e4ddc4'), (x % 5 === 0 ? 0.85 : 1) * (0.94 + c.h(x, y) * 0.08))); },
   bone_block_top: (c) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const r = Math.hypot(x - 7.5, y - 7.5); c.set(x, y, shade(hex('#e4ddc4'), r < 3 ? 0.75 : r > 7 ? 0.85 : 0.97 + c.h(x, y) * 0.05)); } },
   jukebox_side: (c) => {

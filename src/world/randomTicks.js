@@ -75,6 +75,10 @@ export function randomTickBlock(world, x, y, z, id, rng = Math.random) {
     const age = world.getMeta(x, y, z);
     if (age >= 15) { world.setBlock(x, y + 1, z, B.SUGAR_CANE, 0); world.setBlock(x, y, z, B.SUGAR_CANE, 0); }
     else world.setBlock(x, y, z, B.SUGAR_CANE, age + 1);
+  } else if (id === B.CAVE_VINES || id === B.CAVE_VINES_LIT) {
+    // cave vines grow down a little and grow glow berries
+    if (id === B.CAVE_VINES && rng() < 0.1) world.setBlock(x, y, z, B.CAVE_VINES_LIT);
+    else if (rng() < 0.05 && !world.getBlock(x, y - 1, z) && !world.getBlock(x, y - 2, z)) world.setBlock(x, y - 1, z, B.CAVE_VINES);
   } else if (id === B.KELP) {
     // kelp grows a section up into the water above, 14 % of random ticks, up to 16 tall
     if (world.getBlock(x, y + 1, z) !== B.WATER || world.getBlock(x, y + 2, z) !== B.WATER || rng() > 0.14) return;
@@ -164,7 +168,7 @@ function rawBlockLight(world, x, y, z) { return world.getLight(x, y, z) & 15; }
 
 /** Ids that react to random ticks (fast pre-filter). */
 export const RANDOM_TICKS = new Uint8Array(BLOCK_LIMIT);
-for (const id of [B.HUSHVINE_FLOWER, B.CINDERROOT, B.GRASS, B.FARMLAND, B.SUGAR_CANE, B.BAMBOO, B.KELP, B.LAVA, B.FIRE, B.SNOW_LAYER, B.ICE, B.COCOA, B.SWEET_BERRY_BUSH, B.TURTLE_EGG, ...CROPS, ...LEAVES, ...Object.keys(SAPLING_TREE).map(Number)]) RANDOM_TICKS[id] = 1;
+for (const id of [B.HUSHVINE_FLOWER, B.CINDERROOT, B.GRASS, B.FARMLAND, B.SUGAR_CANE, B.BAMBOO, B.KELP, B.CAVE_VINES, B.CAVE_VINES_LIT, B.LAVA, B.FIRE, B.SNOW_LAYER, B.ICE, B.COCOA, B.SWEET_BERRY_BUSH, B.TURTLE_EGG, ...CROPS, ...LEAVES, ...Object.keys(SAPLING_TREE).map(Number)]) RANDOM_TICKS[id] = 1;
 for (let id = 0; id < BLOCK_LIMIT; id++) if (CIRCUIT_SETTLE[id]) RANDOM_TICKS[id] = 1;
 const CAVE_TICK = new Uint8Array(BLOCK_LIMIT);
 for (const id of CAVE_TICKING) { CAVE_TICK[id] = 1; RANDOM_TICKS[id] = 1; }

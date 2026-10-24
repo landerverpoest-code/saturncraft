@@ -8,7 +8,7 @@ import { CLOUD_Y } from '../sky/clouds.js';
 // pixels are pushed above white so the bloom pass haloes them).
 const GLOW = {
   lava: 0.9, lava_flow: 0.9, furnace_front_lit: 0.8, torch: 1.1, pumpkin_lantern: 0.7, fire: 1, lantern: 1, lantern_top: 0.5,
-  glowshard: 0.8, rift: 0.8, hollow_gate: 0.6, far_gate: 0.6, cinnabar_torch: 0.9, cinnabar_lamp_on: 0.8, wisp_rod: 1, tide_lantern: 0.8,
+  glowshard: 0.8, rift: 0.8, hollow_gate: 0.6, far_gate: 0.6, cinnabar_torch: 0.9, cinnabar_lamp_on: 0.8, wisp_rod: 1, tide_lantern: 0.8, cave_vines_lit: 0.9,
 };
 for (let i = 0; i < 8; i++) GLOW['fire_' + i] = 1;
 function glowTexture() {

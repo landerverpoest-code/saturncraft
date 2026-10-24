@@ -456,6 +456,13 @@ for (const [name, key] of [['Tube', 'TUBE'], ['Brain', 'BRAIN'], ['Bubble', 'BUB
   CORALS.push([block, coral, key.toLowerCase()]);
 }
 ext('BONE_BLOCK'); def(B.BONE_BLOCK, 'Bone Block', { hardness: 2, resistance: 2, tool: TOOL.PICKAXE, tier: TIER.WOOD, tex: { top: 'bone_block_top', bottom: 'bone_block_top', side: 'bone_block_side' } });
+// Lush caves: moss, azaleas and hanging cave vines whose glow berries light the cave
+ext('MOSS_BLOCK'); def(B.MOSS_BLOCK, 'Moss Block', { hardness: 0.1, resistance: 0.1, tool: TOOL.HOE, sound: 'grass', flammable: true });
+ext('MOSS_CARPET'); def(B.MOSS_CARPET, 'Moss Carpet', { hardness: 0.1, resistance: 0.1, sound: 'grass', flammable: true, opaque: false, shape: SHAPE.SNOW, needsSupport: true, carpet: true, tex: { all: 'moss_block' } });
+ext('AZALEA'); def(B.AZALEA, 'Azalea', { ...plant, hardness: 0, sound: 'grass', flammable: true });
+ext('FLOWERING_AZALEA'); def(B.FLOWERING_AZALEA, 'Flowering Azalea', { ...plant, hardness: 0, sound: 'grass', flammable: true });
+ext('CAVE_VINES'); def(B.CAVE_VINES, 'Cave Vines', { ...plant, sound: 'grass', drops: null, hanging: true, tex: { all: 'cave_vines' } });
+ext('CAVE_VINES_LIT'); def(B.CAVE_VINES_LIT, 'Cave Vines with Glow Berries', { ...plant, sound: 'grass', emit: 14, drops: null, hanging: true, tex: { all: 'cave_vines_lit' } });
 // Jukebox: meta = the disc inside (DISCS index + 1), 0 when empty (see world/items.js DISCS)
 ext('JUKEBOX'); def(B.JUKEBOX, 'Jukebox', { hardness: 2, resistance: 6, tool: TOOL.AXE, sound: 'wood', flammable: true, drops: 'jukebox', tex: { top: 'jukebox_top', bottom: 'jukebox_side', side: 'jukebox_side' } });
 export const isDoor = (id) => !!BLOCKS[id] && BLOCKS[id].shape === SHAPE.DOOR;

@@ -278,6 +278,8 @@ export class World {
     if (id === B.CINDERROOT) return below === B.MOURNSAND;
     if (id === B.HUSHVINE) return hushvineSupported((a, b, c) => this.getBlock(a, b, c), x, y, z);
     if (id === B.HUSHVINE_FLOWER) return hushFlowerSupported((a, b, c) => this.getBlock(a, b, c), x, y, z);
+    if (BLOCKS[id].hanging) { const above = this.getBlock(x, y + 1, z); return !!SOLID[above] || above === B.CAVE_VINES || above === B.CAVE_VINES_LIT; }
+    if (id === B.AZALEA || id === B.FLOWERING_AZALEA) return below === B.MOSS_BLOCK || below === B.GRASS || below === B.DIRT || below === B.CLAY;
     if (id === B.KELP) return below === B.KELP || (!!SOLID[below]);
     if (id === B.SEAGRASS || (BLOCKS[id].waterlogged && id !== B.KELP)) return !!SOLID[below];
     if (id === B.BAMBOO) return below === B.BAMBOO || below === B.GRASS || below === B.DIRT || below === B.SAND || below === B.GRAVEL || below === B.MYCELIUM;
@@ -287,7 +289,7 @@ export class World {
       for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const n = this.getBlock(x + dx, y - 1, z + dz); if (n === B.WATER || n === B.ICE) return true; }
       return false;
     }
-    return below === B.GRASS || below === B.DIRT || below === B.SNOWY_GRASS || below === B.MYCELIUM;
+    return below === B.GRASS || below === B.DIRT || below === B.SNOWY_GRASS || below === B.MYCELIUM || below === B.MOSS_BLOCK;
   }
 
   /** Remove a block, optionally dropping it as items (used for support loss, fluids). */
