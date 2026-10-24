@@ -22,7 +22,7 @@ import { Particles } from './render/particles.js';
 import { HeldItem, BlockOverlay } from './render/overlays.js';
 import { PlayerModel } from './render/playerModel.js';
 import { Sky } from './sky/sky.js';
-import { Clouds } from './sky/clouds.js';
+import { Clouds, CLOUD_CELL } from './sky/clouds.js';
 import { Weather, WeatherRenderer } from './sky/weather.js';
 import { SignRenderer } from './render/signs.js';
 import { FrameRenderer } from './render/frames.js';
@@ -1072,6 +1072,12 @@ export class Game {
     const ss = this.shaftSun(st, 0);
     if (ss) { terrainUniforms.uSunDir.value.set(ss.dir[0], ss.dir[1], ss.dir[2]); terrainUniforms.uSunCol.value.copy(ss.color).multiplyScalar(Math.min(1, ss.strength * 1.6)); }
     else terrainUniforms.uSunCol.value.setRGB(0, 0, 0);
+    // cloud shadows drift over the land (shaders on, overworld, clouds shown)
+    const cl = this.clouds;
+    if (this.postfx.enabled && cl.shadowTex && cl.origin && this.world.dimension === 'overworld' && cl.visible) {
+      terrainUniforms.uCloudTex.value = cl.shadowTex;
+      terrainUniforms.uCloud.value.set(cl.origin[0], cl.origin[1], cl.shadowN * CLOUD_CELL, 0.55 * (1 - this.weather.level));
+    } else terrainUniforms.uCloud.value.w = 0;
     terrainUniforms.uWet.value = this.world.dimension === 'overworld' && Weather.precipitation(this.world.biomeAt(Math.floor(x), Math.floor(z))) === 'rain' ? this.weather.level : 0;
     this.weatherFx.uniforms.uAlpha.value = this.postfx.enabled ? 0.55 : 1;
     terrainUniforms.uGlow.value = this.postfx.enabled ? 1 : 0;

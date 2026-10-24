@@ -2,6 +2,7 @@
 // shadow maps work) with a texture-array lookup and baked sky/block light.
 import * as THREE from 'three';
 import { generateTextureData, TEX_NAMES, TEX_SIZE, texId } from '../world/textures.js';
+import { CLOUD_Y } from '../sky/clouds.js';
 
 // How strongly each light-giving texture glows when shaders are on (its bright
 // pixels are pushed above white so the bloom pass haloes them).
@@ -39,7 +40,9 @@ export const terrainUniforms = {
   uSunCol: { value: new THREE.Color(0, 0, 0) },
   uSkyTop: { value: new THREE.Color(0.3, 0.5, 0.9) },
   uSkyLow: { value: new THREE.Color(0.7, 0.8, 1.0) },
-  uWet: { value: 0 }, // how wet the open ground looks (rain)
+  uWet: { value: 0 },
+  uCloudTex: { value: null },
+  uCloud: { value: new THREE.Vector4(0, 0, 1, 0) }, // cover texture corner x, z, its size in blocks, shadow strength // how wet the open ground looks (rain)
 };
 
 export function createTextureArray() {
@@ -127,6 +130,8 @@ uniform vec3 uSunCol;
 uniform vec3 uSkyTop;
 uniform vec3 uSkyLow;
 uniform float uWet;
+uniform sampler2D uCloudTex;
+uniform vec4 uCloud;
 ${water ? `varying vec3 vWN;
 uniform vec2 uWaterTiles;` : ''}
 #define SUN_MASK ( vLit.x > 0.0 ) // sunlight is scaled by sky light: none underground
@@ -155,7 +160,14 @@ float blkB = lightCurve(max(vLit.y, handL));
 // with shaders on, torchlight flickers a little, in slow waves that roll across the blocks
 if (uGlow > 0.0) blkB *= 1.0 + 0.05 * sin(uTime * 8.3 + vWorld.x * 0.31 + vWorld.z * 0.27) * sin(uTime * 13.1 + vWorld.y * 0.43);
 float aoF = 1.0 - vLit.z * 0.19;
-vec3 outgoingLight = reflectedLight.directDiffuse * skyB * mix(1.0, aoF, 0.5)
+float cloudSh = 1.0;
+if (uCloud.w > 0.0 && uSunDir.y > 0.05) {
+  // cloud shadows: follow the sun's ray up to the cloud layer and look at the cover there
+  vec3 cp = vWorld + uSunDir * ((${CLOUD_Y.toFixed(1)} - vWorld.y) / uSunDir.y);
+  vec2 cuv = (cp.xz - uCloud.xy) / uCloud.z;
+  if (all(greaterThan(cuv, vec2(0.0))) && all(lessThan(cuv, vec2(1.0)))) cloudSh = 1.0 - uCloud.w * texture2D(uCloudTex, cuv).r;
+}
+vec3 outgoingLight = reflectedLight.directDiffuse * skyB * mix(1.0, aoF, 0.5) * cloudSh
   + reflectedLight.indirectDiffuse * skyB * aoF * vShade
   + diffuseColor.rgb * (uTorch * blkB * 1.15 + vec3(uMinLight)) * aoF * vShade
   + totalEmissiveRadiance;

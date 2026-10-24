@@ -84,6 +84,14 @@ export class Clouds {
       if (!at(i, j - 1)) quad([x1, 0, z0], [x0, 0, z0], [x0, H, z0], [x1, H, z0], 0.8);
       if (!at(i, j + 1)) quad([x0, 0, z1], [x1, 0, z1], [x1, H, z1], [x0, H, z1], 0.8);
     }
+    // the cloud cover as a small texture, so the terrain shader can cast cloud shadows
+    const cover = new Uint8Array(N * N * 4);
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) cover[(i + j * N) * 4] = at(i, j) * 255;
+    if (this.shadowTex) this.shadowTex.dispose();
+    this.shadowTex = new THREE.DataTexture(cover, N, N, THREE.RGBAFormat);
+    this.shadowTex.magFilter = this.shadowTex.minFilter = THREE.LinearFilter;
+    this.shadowTex.needsUpdate = true;
+    this.shadowN = N;
     const g = this.geometry;
     g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     g.setAttribute('shade', new THREE.Float32BufferAttribute(shade, 1));
@@ -104,6 +112,7 @@ export class Clouds {
     const j0 = Math.floor(camera.position.z / CLOUD_CELL) - (N >> 1);
     const key = `${i0},${j0},${N}`;
     if (key !== this.key) { this.key = key; this.rebuild(i0, j0, N); }
+    this.origin = [i0 * CLOUD_CELL + drift, j0 * CLOUD_CELL]; // world x, z of the cover texture's corner
     for (const m of [this.depthMesh, this.mesh]) {
       m.position.set(i0 * CLOUD_CELL + drift, CLOUD_Y, j0 * CLOUD_CELL);
       m.visible = this.visible;
