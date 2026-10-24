@@ -272,6 +272,10 @@ shaped([' S ', 'SGS', ' S '], { S: I.VIOLITE_SHARD, G: B.GLASS }, B.SHADED_GLASS
 shaped(['S', 'C', 'C'], { S: I.VIOLITE_SHARD, C: I.COPPER_INGOT }, I.FARGLASS, 1);
 shaped(['PP', 'PP'], { P: B.SEEPSTONE_SPIKE }, B.SEEPSTONE, 1);
 COLOR_BLOCKS.glass.forEach((id, c) => shaped(['GGG', 'GDG', 'GGG'], { G: B.GLASS, D: DYES[c] }, id, 8));
+COLOR_BLOCKS.pane.forEach((id, c) => shaped(['GGG', 'GGG'], { G: COLOR_BLOCKS.glass[c] }, id, 16));
+COLOR_BLOCKS.carpet.forEach((id, c) => shaped(['WW'], { W: WOOL_ITEMS[c] }, id, 3));
+shapeless([B.STONE_BRICKS, B.VINES], B.MOSSY_STONE_BRICKS, 1);
+shaped(['S', 'S'], { S: B.STONE_BRICK_SLAB }, B.CHISELED_STONE_BRICKS, 1);
 COLOR_BLOCKS.terracotta.forEach((id, c) => shaped(['TTT', 'TDT', 'TTT'], { T: B.TERRACOTTA, D: DYES[c] }, id, 8));
 COLOR_BLOCKS.concrete.forEach((id, c) => shapeless([DYES[c], B.SAND, B.SAND, B.SAND, B.SAND, B.GRAVEL, B.GRAVEL, B.GRAVEL, B.GRAVEL], id, 8));
 for (const [raw, polished] of [[B.GRANITE, B.POLISHED_GRANITE], [B.DIORITE, B.POLISHED_DIORITE], [B.ANDESITE, B.POLISHED_ANDESITE]]) shaped(['XX', 'XX'], { X: raw }, polished, 4);
@@ -292,5 +296,5 @@ export const SMELTING = {
   [I.RAW_PORK]: I.COOKED_PORK, [I.POTATO]: I.BAKED_POTATO, [I.RAW_RABBIT]: I.COOKED_RABBIT, [I.RAW_SILVERFIN]: I.COOKED_SILVERFIN, [I.RAW_REDFIN]: I.COOKED_REDFIN, [I.RAW_BEEF]: I.STEAK, [I.RAW_CHICKEN]: I.COOKED_CHICKEN,
   [I.RAW_MUTTON]: I.COOKED_MUTTON, [B.OAK_LOG]: I.COAL, [B.SPRUCE_LOG]: I.COAL, [B.BIRCH_LOG]: I.COAL,
   [B.JUNGLE_LOG]: I.COAL, [B.ACACIA_LOG]: I.COAL, [B.DARK_OAK_LOG]: I.COAL, [B.BLOSSOM_LOG]: I.COAL, [B.RED_SAND]: B.GLASS,
-  [B.WET_SOAKMOSS]: B.SOAKMOSS, [B.STONE]: B.SMOOTH_STONE,
+  [B.WET_SOAKMOSS]: B.SOAKMOSS, [B.STONE]: B.SMOOTH_STONE, [B.STONE_BRICKS]: B.CRACKED_STONE_BRICKS,
 };

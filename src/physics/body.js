@@ -121,7 +121,7 @@ export class Body {
   /** Update inWater/inLava flags from overlapping fluid blocks. */
   updateFluidState(world, eyeHeight) {
     const b = this.box();
-    this.inWater = false; this.inLava = false; this.eyeInWater = false; this.eyeInLava = false; this.inFire = false; this.inWeb = false;
+    this.inWater = false; this.inLava = false; this.eyeInWater = false; this.eyeInLava = false; this.inFire = false; this.inWeb = false; this.inBerry = false;
     const ey = this.y + eyeHeight;
     const flow = [0, 0, 0];
     for (let x = Math.floor(b[0] + 0.001); x <= Math.floor(b[3] - 0.001); x++)
@@ -130,6 +130,7 @@ export class Body {
           const id = world.getBlock(x, y, z);
           if (id === B.FIRE) { this.inFire = true; continue; }
           if (id === B.COBWEB) { this.inWeb = true; continue; }
+          if (id === B.SWEET_BERRY_BUSH) { this.inBerry = true; continue; }
           if (id !== B.WATER && id !== B.LAVA) continue;
           const top = y + (world.getBlock(x, y + 1, z) === id ? 1 : liquidHeight(world.getMeta(x, y, z)));
           if (b[1] < top) {
@@ -163,6 +164,7 @@ export class Body {
     let fwd = (input.forward || 0) * PHYS.INPUT_SCALE, str = (input.strafe || 0) * PHYS.INPUT_SCALE;
     if (input.sneak) { fwd *= PHYS.SNEAK_MULTIPLIER; str *= PHYS.SNEAK_MULTIPLIER; }
     let speed = (input.speed ?? PHYS.WALK_SPEED) * (input.sprint ? PHYS.SPRINT_MULTIPLIER : 1);
+    if (this.inBerry && !this.inWeb) { this.vx *= 0.8; this.vz *= 0.8; this.vy = Math.max(this.vy, -0.25); } // pushing through a berry bush
     if (this.inWeb) { this.vx *= 0.25; this.vy *= 0.05; this.vz *= 0.25; this.fallDistance = 0; speed *= 0.25; } // stuck in a cobweb
 
     if (this.inWater || this.inLava) {

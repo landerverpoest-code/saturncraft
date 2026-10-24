@@ -87,6 +87,10 @@ export function randomTickBlock(world, x, y, z, id, rng = Math.random) {
     if (world.getMeta(x, y, z) === 0 && !leavesConnected(world, x, y, z)) world.breakBlock(x, y, z, true);
   } else if (id === B.TURTLE_EGG) {
     if (world.onEggTick) world.onEggTick(x, y, z); // cracking and hatching need the sky (game.js)
+  } else if (id === B.SWEET_BERRY_BUSH) {
+    // berries ripen in the light: 1 in 5 per random tick, ages 0-3
+    const age = world.getMeta(x, y, z) & 3;
+    if (age < 3 && rng() < 0.2 && rawLight(world, x, y + 1, z) >= 9) world.setBlock(x, y, z, id, age + 1);
   } else if (id === B.COCOA) {
     const m = world.getMeta(x, y, z);
     if (((m >> 2) & 3) < 2 && rng() < 0.2) world.setBlock(x, y, z, B.COCOA, m + 4);
@@ -145,7 +149,7 @@ function rawBlockLight(world, x, y, z) { return world.getLight(x, y, z) & 15; }
 
 /** Ids that react to random ticks (fast pre-filter). */
 export const RANDOM_TICKS = new Uint8Array(BLOCK_LIMIT);
-for (const id of [B.HUSHVINE_FLOWER, B.CINDERROOT, B.GRASS, B.FARMLAND, B.SUGAR_CANE, B.LAVA, B.FIRE, B.SNOW_LAYER, B.ICE, B.COCOA, B.TURTLE_EGG, ...CROPS, ...LEAVES, ...Object.keys(SAPLING_TREE).map(Number)]) RANDOM_TICKS[id] = 1;
+for (const id of [B.HUSHVINE_FLOWER, B.CINDERROOT, B.GRASS, B.FARMLAND, B.SUGAR_CANE, B.LAVA, B.FIRE, B.SNOW_LAYER, B.ICE, B.COCOA, B.SWEET_BERRY_BUSH, B.TURTLE_EGG, ...CROPS, ...LEAVES, ...Object.keys(SAPLING_TREE).map(Number)]) RANDOM_TICKS[id] = 1;
 for (let id = 0; id < BLOCK_LIMIT; id++) if (CIRCUIT_SETTLE[id]) RANDOM_TICKS[id] = 1;
 const CAVE_TICK = new Uint8Array(BLOCK_LIMIT);
 for (const id of CAVE_TICKING) { CAVE_TICK[id] = 1; RANDOM_TICKS[id] = 1; }

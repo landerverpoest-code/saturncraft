@@ -960,7 +960,7 @@ export class UI {
     this.open = 'death';
     const msgs = {
       fall: 'hit the ground too hard', lava: 'tried to swim in lava', fire: 'burned to death', drown: 'drowned',
-      starve: 'starved to death', cactus: 'was pricked to death', void: 'fell out of the world', explosion: 'was blown up',
+      starve: 'starved to death', cactus: 'was pricked to death', berry_bush: 'was poked to death by a sweet berry bush', void: 'fell out of the world', explosion: 'was blown up',
       arrow: 'was shot by a Rattler', poison: 'succumbed to poison', magic: 'was killed by magic',
       wall: 'experienced kinetic energy',
     };

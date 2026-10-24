@@ -42,7 +42,7 @@ const ORE_XP = {
 };
 const BREAK_DELAY = 5;
 /** Blocks that right-click opens / toggles instead of using the held item. */
-const USABLE_BLOCKS = new Set([B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.CHEST, B.BARREL, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL, B.BREWING_STAND, B.GLOOMSHELL_BOX, B.HOPPER, B.COMPOSTER]);
+const USABLE_BLOCKS = new Set([B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.CHEST, B.BARREL, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL, B.BREWING_STAND, B.GLOOMSHELL_BOX, B.HOPPER, B.COMPOSTER, B.SWEET_BERRY_BUSH]);
 const CIRCUIT_USE = new Set([B.LEVER, B.STONE_BUTTON, B.REPEATER, B.CHIME_BLOCK]);
 const CIRCUIT_PLACE = new Set([B.LEVER, B.STONE_BUTTON, B.CINNABAR_WIRE, B.REPEATER, B.WOODEN_PRESSURE_PLATE, B.PISTON, B.STICKY_PISTON]);
 const USE_DELAY = 4;
@@ -375,6 +375,23 @@ export class Interaction {
     g.audio.play('bow');
   }
 
+  /** Pick a ripe berry bush (it drops back to age 1), or bone-meal it a stage riper. */
+  useBerryBush(t, st, d) {
+    const g = this.game, p = g.player, w = g.world, age = w.getMeta(t.x, t.y, t.z) & 3;
+    if (d && d.boneMeal && age < 3) {
+      w.setBlockUrgent(t.x, t.y, t.z, B.SWEET_BERRY_BUSH, age + 1);
+      if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
+      for (let k = 0; k < 8; k++) g.particles.emit(t.x + Math.random(), t.y + Math.random() * 0.6, t.z + Math.random(), 0, 0.02, 0, 0.4, 0.9, 0.3, 20, -0.001);
+      return true;
+    }
+    if (age < 2) return false;
+    const n = age === 3 ? 2 + Math.floor(Math.random() * 2) : 1 + Math.floor(Math.random() * 2);
+    g.entities.spawnItem(t.x + 0.5, t.y + 0.6, t.z + 0.5, { id: I.SWEET_BERRIES, count: n });
+    w.setBlockUrgent(t.x, t.y, t.z, B.SWEET_BERRY_BUSH, 1);
+    g.audio.play('pop', [t.x + 0.5, t.y + 0.5, t.z + 0.5]);
+    return true;
+  }
+
   /** Fill a composter with the held plant matter, or empty a ready one (Bone Meal pops out). */
   useComposter(t, st) {
     const g = this.game, p = g.player, w = g.world, level = w.getMeta(t.x, t.y, t.z) & 15;
@@ -645,6 +662,7 @@ export class Interaction {
       if (t.id === B.CHEST || t.id === B.BARREL || t.id === B.GLOOMSHELL_BOX || t.id === B.HOPPER) { g.ui.openChest(t.x, t.y, t.z); g.audio.play('chest_open', [t.x + 0.5, t.y + 0.5, t.z + 0.5]); return true; }
     }
     if (t && t.id === B.COMPOSTER && !p.sneaking && this.useComposter(t, st)) { this.swing = SWING_TICKS; return true; }
+    if (t && t.id === B.SWEET_BERRY_BUSH && this.useBerryBush(t, st, d)) { this.swing = SWING_TICKS; return true; }
     if (!st) return false;
     // Bone meal: crops grow 2-5 stages; on grass it sprouts tall grass and flowers around
     if (d.boneMeal && this.boneMeal(t)) {

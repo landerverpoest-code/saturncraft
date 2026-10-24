@@ -452,6 +452,13 @@ for (const [unlit, lit, fast] of [[B.FURNACE, B.FURNACE_LIT, null], [B.SMOKER, B
   FURNACE_KIND.set(unlit, k); FURNACE_KIND.set(lit, k);
 }
 export const isFurnace = (id) => FURNACE_KIND.has(id);
+// stone brick variants
+ext('MOSSY_STONE_BRICKS'); def(B.MOSSY_STONE_BRICKS, 'Mossy Stone Bricks', { hardness: 1.5, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD });
+ext('CRACKED_STONE_BRICKS'); def(B.CRACKED_STONE_BRICKS, 'Cracked Stone Bricks', { hardness: 1.5, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD });
+ext('CHISELED_STONE_BRICKS'); def(B.CHISELED_STONE_BRICKS, 'Chiseled Stone Bricks', { hardness: 1.5, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD });
+// Sweet Berry Bush (taiga): meta = age 0..3; ripe bushes give berries; prickly to walk through
+ext('SWEET_BERRY_BUSH');
+def(B.SWEET_BERRY_BUSH, 'Sweet Berry Bush', { ...plant, drops: null, flammable: true, tex: { all: 'sweet_berry_bush_3' } });
 
 // sixteen colours of stained glass, concrete and terracotta (the plain colours that were missing)
 export const COLOR_BLOCKS = { glass: [], concrete: [], terracotta: [] };
@@ -463,6 +470,15 @@ for (const [key, name] of COLORS) {
   def(B[K + '_CONCRETE'], `${name} Concrete`, { hardness: 1.8, resistance: 1.8, tool: TOOL.PICKAXE, tier: TIER.WOOD });
   if (!B[K + '_TERRACOTTA']) { ext(K + '_TERRACOTTA'); def(B[K + '_TERRACOTTA'], `${name} Terracotta`, clayStone); }
   COLOR_BLOCKS.terracotta.push(B[K + '_TERRACOTTA']);
+}
+// carpets (a thin sheet of wool) and stained glass panes in every colour
+COLOR_BLOCKS.carpet = []; COLOR_BLOCKS.pane = [];
+for (const [key, name] of COLORS) {
+  const K = key.toUpperCase();
+  COLOR_BLOCKS.carpet.push(ext(K + '_CARPET'));
+  def(B[K + '_CARPET'], `${name} Carpet`, { hardness: 0.1, resistance: 0.1, sound: 'wool', flammable: true, opaque: false, shape: SHAPE.SNOW, needsSupport: true, carpet: true, tex: { all: key + '_carpet' } });
+  COLOR_BLOCKS.pane.push(ext(K + '_STAINED_GLASS_PANE'));
+  def(B[K + '_STAINED_GLASS_PANE'], `${name} Stained Glass Pane`, { hardness: 0.3, resistance: 0.3, opaque: false, opacity: 0, shape: SHAPE.PANE, layer: LAYER.TRANSLUCENT, drops: null, sound: 'glass', tex: { all: key + '_stained_glass' } });
 }
 
 export const NUM_BLOCKS = BLOCKS.length;

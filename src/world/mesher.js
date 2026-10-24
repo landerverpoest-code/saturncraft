@@ -64,6 +64,7 @@ const BED_SIDE = texId('bed_side'), BED_BOTTOM = texId('oak_planks');
 const WIRE_DOT = texId('cinnabar_wire_dot'), WIRE_LINE = texId('cinnabar_wire_line'), WIRE_HALF = texId('cinnabar_wire_half');
 const tileOf = (name) => texId(name) ?? 0;
 const COMPOST = texId('compost'), COMPOST_READY = texId('compost_ready');
+const BERRY_TILES = [0, 1, 2, 3].map((i) => texId('sweet_berry_bush_' + i));
 
 class Buf {
   constructor(cap = 16384) { this.alloc(cap); this.n = 0; this.ni = 0; this.yBase = 0; }
@@ -183,7 +184,7 @@ export function meshSection(sec) {
       meshLiquid(buf, blocks, light, meta, i, id, x, y, z);
     } else if (shape === SHAPE.CROSS) {
       const l = light[i];
-      const tile = FACE_TILE[id * 6 + 2];
+      const tile = id === B.SWEET_BERRY_BUSH ? BERRY_TILES[meta[i] & 3] : FACE_TILE[id * 6 + 2];
       let r = 255, g = 255, b2 = 255;
       if (id === B.TALL_GRASS) { r = colors[ci]; g = colors[ci + 1]; b2 = colors[ci + 2]; }
       const sky = (l >> 4) * 17, blk = (l & 15) * 17;

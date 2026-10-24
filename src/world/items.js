@@ -272,6 +272,7 @@ for (const kind of POTION_KEYS) {
 // Charm of Undying (reference: totem of undying): saves its holder from death once (player/player.js)
 const ICON_CHARM = ['................', '......hhhh......', '.....hHHHHh.....', '.....hHwwHh.....', '.....hwkkwh.....', '...hhhhhhhhhh...', '..hHhhhhhhhhHh..', '...hh.hHHh.hh...', '......hhhh......', '.....hHhhHh.....', '.....hhkkhh.....', '......hhhh......', '......h..h......', '.....hh..hh.....', '................', '................'];
 item('charm_of_undying', 'Charm of Undying', { stack: 1, undying: true, iconStyle: [ICON_CHARM, { h: '#e8b83a', H: '#fff0a0', w: '#6ad8a8', k: '#2a6a4a' }] });
+item('sweet_berries', 'Sweet Berries', { food: { hunger: 2, saturation: 0.4 }, places: B.SWEET_BERRY_BUSH, iconStyle: ['seeds', { h: '#c8202e', H: '#ff6a6a' }] });
 ITEMS[B.GLOOMSHELL_BOX].stack = 1; // a box keeps its contents in the item (stack.contents), so it never stacks
 
 /** Light level (0-15) an item gives when held: a torch, lantern or other light block; 0 for the rest. */

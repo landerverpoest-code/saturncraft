@@ -42,6 +42,7 @@ ARTS.forEach(([, w, h], art) => { for (let p = 0; p < w * h; p++) addTex(`painti
 for (let i = 0; i < 8; i++) addTex('fire_' + i);
 addTex('lava_flow');
 addTex('compost'); addTex('compost_ready');
+for (let i = 0; i < 4; i++) addTex('sweet_berry_bush_' + i);
 for (let i = 0; i < 10; i++) addTex('destroy_' + i);
 
 export function texId(name) { return texIndex.get(name); }
@@ -158,6 +159,22 @@ function logTop(c, bark, inner) {
     if (x === 0 || y === 0 || x === 15 || y === 15) { c.set(x, y, shade(b, 0.9 + c.h(x, y) * 0.15)); continue; }
     const ring = Math.floor(r + c.h(x, y, 2) * 0.6) % 3 === 0;
     c.set(x, y, shade(w, ring ? 0.8 : 0.98 + c.h(x, y) * 0.06));
+  }
+}
+
+/** Sweet berry bush at age 0-3: a low sprig growing into a leafy bush with green, then red berries. */
+function berryBush(c, age) {
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
+  const top = [11, 6, 3, 2][age];
+  for (let y = top; y < 16; y++) for (let x = 1; x < 15; x++) {
+    const w = (16 - y) / (16 - top);
+    if (Math.abs(x - 7.5) > 7 * Math.min(1, 0.4 + w) || c.h(x, y, 21) > 0.62) continue;
+    c.set(x, y, shade(hex('#2f5a2a'), 0.75 + c.h(x, y, 22) * 0.45));
+  }
+  if (age >= 2) for (let k = 0; k < (age === 3 ? 9 : 5); k++) {
+    const x = 2 + Math.floor(c.h(k, 0, 23) * 12), y = top + 1 + Math.floor(c.h(k, 1, 24) * (13 - top));
+    const col = age === 3 ? hex('#c8202e') : hex('#7aa83a');
+    c.set(x, y, col); c.set(x + 1, y, shade(col, 0.8)); c.set(x, y + 1, shade(col, 0.7));
   }
 }
 
@@ -978,6 +995,24 @@ const GEN = {
     for (let y = 0; y < 7; y++) { c.set(7, y, m); }
     for (let y = 8; y < 15; y++) { c.set(15, y, m); }
   },
+  mossy_stone_bricks: (c) => {
+    GEN.stone_bricks(c);
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) if (c.h(x >> 1, y >> 1, 11) < 0.3 + (y > 10 ? 0.2 : 0)) c.set(x, y, shade(hex('#5a7a3a'), 0.8 + c.h(x, y) * 0.3));
+  },
+  cracked_stone_bricks: (c) => {
+    GEN.stone_bricks(c);
+    const d = hex('#3e3e42');
+    let x = 3, y = 0;
+    for (let k = 0; k < 16; k++) { c.set(x, y, d); y++; if (c.h(k, 0, 12) < 0.5) x++; else if (x > 1) x--; }
+    x = 11; y = 8;
+    for (let k = 0; k < 8; k++) { c.set(x, y, d); y++; x += c.h(k, 1, 13) < 0.5 ? 1 : -1; }
+  },
+  chiseled_stone_bricks: (c) => {
+    stoneBase(c);
+    const m = hex('#555558'), l = hex('#a8a8ac');
+    for (let i = 0; i < 16; i++) { c.set(i, 0, m); c.set(i, 15, m); c.set(0, i, m); c.set(15, i, m); c.set(i, 1, l); c.set(1, i, l); }
+    for (let y = 4; y < 12; y++) for (let x = 4; x < 12; x++) if (x === 4 || x === 11 || y === 4 || y === 11 || (x === y) || (x + y === 15)) c.set(x, y, m);
+  },
 };
 
 function metalBlock(c, base) {
@@ -1056,6 +1091,7 @@ function paint(c, name) {
     const col = st === 7 ? hex('#a8782a') : mix(hex('#4a9a2a'), hex('#8aa02a'), st / 7);
     for (let k = 0; k < h; k++) { const x = 7 + Math.round(Math.sin(k * 0.7) * 1.2); c.set(x, 15 - k, shade(col, 0.85 + c.h(x, k) * 0.3)); if (k > 3 && k % 3 === 0) { c.set(x + 1, 15 - k, col); c.set(x - 1, 14 - k, col); } }
   }
+  else if (name.startsWith('sweet_berry_bush_')) berryBush(c, +name.slice(17));
   else if (name.startsWith('potatoes_')) rootCrop(c, +name.slice(9), '#4a9a34', '#2f7424', '#c8a25a', 3);
   else if (name.startsWith('cinderroot_')) cinderroot(c, +name.slice(11));
   else if (name.startsWith('beetroots_')) rootCrop(c, +name.slice(10), '#3f8a2a', '#9a2a3a', '#8a1e2e', 2);
@@ -1081,6 +1117,7 @@ for (const [key, , rgb] of COLORS) {
   };
   COLOR_TEX[key + '_concrete'] = (c) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, shade(rgb, 0.95 + c.h(x, y) * 0.06)); };
   if (TERRACOTTA_RGB[key]) COLOR_TEX[key + '_terracotta'] = (c) => terracotta(c, TERRACOTTA_RGB[key]);
+  COLOR_TEX[key + '_carpet'] = (c) => { GEN.wool(c); for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const p = c.get(x, y); c.set(x, y, [p[0] * rgb[0] / 255, p[1] * rgb[1] / 255, p[2] * rgb[2] / 255]); } };
 }
 
 /** Pixel data for all layers: Uint8Array(16*16*4*N) */

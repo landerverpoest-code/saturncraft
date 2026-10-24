@@ -634,6 +634,9 @@ export class TerrainGenerator {
         } else if (r < flowerP + shroomP) blocks[above] = h(x, z, 42) < 0.6 ? B.BROWN_MUSHROOM : B.RED_MUSHROOM;
         else if (r < flowerP + shroomP + grassP) blocks[above] = B.TALL_GRASS;
       } else if (ground === B.MYCELIUM && r < 0.025) blocks[above] = h(x, z, 42) < 0.5 ? B.BROWN_MUSHROOM : B.RED_MUSHROOM;
+      // sweet berry bushes in taiga patches, most of them ripe
+      if ((biome === BIOME.TAIGA || biome === BIOME.SNOWY_TAIGA) && (ground === B.GRASS || ground === B.SNOWY_GRASS) && !blocks[above]
+        && hashf(this.seed, (x0 + x) >> 3, (z0 + z) >> 3, 49) < 0.1 && h(x, z, 50) < 0.2) { blocks[above] = B.SWEET_BERRY_BUSH; meta[above] = h(x, z, 51) < 0.6 ? 3 : 2; }
       // pumpkin patches (plains/taiga) and melons (forests, plenty in jungles)
       const patch = biome === BIOME.JUNGLE ? 0.12 : 0.03;
       if (ground === B.GRASS && !blocks[above] && hashf(this.seed, (x0 + x) >> 3, (z0 + z) >> 3, 46) < patch && h(x, z, 47) < 0.12) {

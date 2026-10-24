@@ -291,6 +291,8 @@ export class Player {
       this.hurt(1, 'fire');
     }
     if (b.inWater) this.fireTicks = 0;
+    // walking through a grown berry bush pricks (reference: 1 damage while moving)
+    if (b.inBerry && Math.hypot(b.vx, b.vz) > 0.01 && (world.getMeta(Math.floor(b.x), Math.floor(b.y + 0.1), Math.floor(b.z)) & 3) > 0) this.hurt(1, 'berry_bush');
     // standing on a lit campfire burns (1 per second)
     if (!this.creative && world.getBlock(Math.floor(b.x), Math.floor(b.y - 0.01), Math.floor(b.z)) === B.CAMPFIRE && this.attackTicks % 20 === 0) this.hurt(1, 'fire');
     if (this.fireTicks > 0) {
