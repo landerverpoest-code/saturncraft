@@ -1,4 +1,5 @@
 // Chat commands (T or / opens the chat). Each returns a message to print.
+import { BIOMES } from '../world/biomes.js';
 import { ITEMS, I, maxStack } from '../world/items.js';
 import { mineshaftsNear } from '../world/mineshafts.js';
 import { templesNear, wrecksNear, outpostsNear } from '../world/temples.js';
@@ -65,7 +66,7 @@ export const HELP = [
   '/enchant <name> [level]  (the held item; names: ' + ENCH_KEYS.join(', ') + ')',
   '/summon <mob> [x y z]',
   '/xp <amount> [levels]',
-  '/locate <village|temple|outpost|shipwreck|monument|mineshaft|sanctum|bastion|hut|ruin|city|gate>',
+  '/locate <village|temple|outpost|shipwreck|monument|mineshaft|sanctum|bastion|hut|ruin|city|gate> or /locate biome <name>',
   '/dimension <overworld|cinderdeep|hollow>',
   '/effect give <effect> [seconds] [level],  /effect clear  (effects: ' + EFFECT_KEYS.join(', ') + ')',
   '/kill,  /clear,  /spawnpoint,  /seed,  /heal',
@@ -222,6 +223,22 @@ export function runCommand(game, text) {
         if (what === 'gate') { const a = gen.gatewayMain(), b = gen.gatewayExit(); return `The Far Gate stands at ${a.x}, ${a.y + 1}, ${a.z}; it leads to ${b.x}, ${b.y + 1}, ${b.z}`; }
         const c = gen.nearestCity(p.x, p.z);
         return c ? `The nearest Hollow City is at ${c.x}, ${c.y}, ${c.z} (${Math.round(Math.hypot(c.x - p.x, c.z - p.z))} blocks away)${c.ship ? ', with a ship' : ''}` : 'No Hollow City found nearby';
+      }
+      if (what === 'biome' && args[1]) {
+        // spiral out in 32-block steps up to 3000 blocks for the nearest column of that biome
+        if (game.world.dimension !== 'overworld') return 'Biomes are only found in the overworld';
+        const key = args[1].toLowerCase(), b = BIOMES.find((x) => x.key === key);
+        if (!b) return `Unknown biome. Try: ${BIOMES.map((x) => x.key).join(', ')}`;
+        const gen = game.world.gen;
+        for (let r = 0; r <= 3000; r += 32) {
+          const n = Math.max(1, Math.round(r * Math.PI * 2 / 32));
+          for (let k = 0; k < n; k++) {
+            const x = Math.round(p.x + Math.cos(k / n * Math.PI * 2) * r), z = Math.round(p.z + Math.sin(k / n * Math.PI * 2) * r);
+            const col = gen.column(x, z);
+            if (gen.biomeFor(col, gen.surfaceAt(x, z, col)) === b.id) return `The nearest ${b.name} is at ${x}, ~, ${z} (${r} blocks away)`;
+          }
+        }
+        return `No ${b.name} within 3000 blocks`;
       }
       if (what === 'bastion') {
         if (game.world.dimension !== 'cinderdeep') return 'Ember Bastions are only found in the Cinderdeep';
