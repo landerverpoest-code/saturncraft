@@ -6,7 +6,7 @@ import { newMap, updateMap, MAP_SIZE } from './world/maps.js';
 import { KEEP_BITS, unpairAfterBreak } from './world/chests.js';
 import * as THREE from 'three';
 import { World } from './world/world.js';
-import { B, BLOCKS } from './world/blocks.js';
+import { B, BLOCKS, SOLID } from './world/blocks.js';
 import { ITEMS, I, toolOf, heldLightLevel } from './world/items.js';
 import { heldLights } from './net/remotePlayer.js';
 import { blockDrops } from './world/mining.js';
@@ -733,6 +733,18 @@ export class Game {
         this.particles.emit(x + Math.random(), y - 0.05, z + Math.random(), 0.02 * wind, -0.02, 0.012 * wind, c[0] * L, c[1] * L, c[2] * L, 90, 0.0004);
       }
     }
+    // dust kicked up when sprinting, and a splash when landing in water
+    const b = p.body;
+    if (p.sprinting && b.onGround && !b.inWater && Math.random() < 0.6) {
+      let id = w.getBlock(Math.floor(p.x), Math.floor(p.y - 0.2), Math.floor(p.z));
+      if (id === B.GRASS) id = B.DIRT; // its top is a grey texture tinted per biome
+      if (BLOCKS[id] && BLOCKS[id].tex && SOLID[id]) this.particles.footDust(p.x, p.y, p.z, id, this.ambientLight(p.x, p.y + 0.5, p.z));
+    }
+    if (b.inWater && !this.wasInWater && b.vy < -0.25) {
+      for (let k = 0; k < 30; k++) this.particles.emit(p.x + (Math.random() - 0.5) * 0.8, p.y + 0.4, p.z + (Math.random() - 0.5) * 0.8, (Math.random() - 0.5) * 0.2, 0.15 + Math.random() * 0.2, (Math.random() - 0.5) * 0.2, 0.7, 0.8, 1, 20, 0.03);
+      this.audio.play('splash', [p.x, p.y, p.z]);
+    }
+    this.wasInWater = b.inWater;
     if (w.dimension !== 'overworld') return;
     const night = 1 - Math.min(1, this.sky.state.combined * 1.6);
     // fireflies over swamps, forests and jungles on warm dry nights

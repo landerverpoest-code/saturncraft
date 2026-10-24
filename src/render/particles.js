@@ -61,6 +61,15 @@ export class Particles {
     }
   }
 
+  /** A puff of the ground's colour at the feet (sprinting). */
+  footDust(x, y, z, id, light = 1) {
+    const px = texturePixels(BLOCKS[id].tex.top);
+    const pi = Math.floor(Math.random() * 256) * 4;
+    if (px[pi + 3] < 100) return;
+    this.emit(x + (Math.random() - 0.5) * 0.4, y + 0.05, z + (Math.random() - 0.5) * 0.4, (Math.random() - 0.5) * 0.05, 0.05 + Math.random() * 0.04, (Math.random() - 0.5) * 0.05,
+      lin(px[pi]) * light, lin(px[pi + 1]) * light, lin(px[pi + 2]) * light, 10 + Math.random() * 6, 0.02);
+  }
+
   crit(x, y, z) {
     for (let k = 0; k < 12; k++) this.emit(x, y, z, (Math.random() - 0.5) * 0.4, Math.random() * 0.3, (Math.random() - 0.5) * 0.4, 1, 0.9, 0.5, 12, 0.02);
   }
