@@ -20,7 +20,7 @@
 // ticks and then drains the queue with a cap on the work per tick. Only the
 // authoritative world (single player or the multiplayer host) simulates:
 // guests set `enabled = false` and just apply the host's block edits.
-import { B, BLOCKS, SOLID, BLOCK_LIMIT } from './blocks.js';
+import { B, BLOCKS, SOLID, BLOCK_LIMIT, isFurnace } from './blocks.js';
 import { MIN_Y, MAX_Y } from './constants.js';
 import { SIDE_DIRS, DOOR_OPEN, DOOR_UPPER, TRAPDOOR_OPEN, GATE_OPEN } from './shapes.js';
 import {
@@ -193,7 +193,7 @@ export function solveNetwork(w, x, y, z, cap = MAX_NETWORK) {
 /** Blocks a piston cannot move at all. */
 export function immovable(id, meta) {
   const d = BLOCKS[id];
-  if (!d || d.hardness < 0 || id === B.OBSIDIAN || d.container || id === B.FURNACE || id === B.FURNACE_LIT || id === B.SPAWNER) return true;
+  if (!d || d.hardness < 0 || id === B.OBSIDIAN || d.container || isFurnace(id) || id === B.SPAWNER) return true;
   if (id === B.ENCHANTING_TABLE || id === B.PISTON_HEAD || id === B.RIFT) return true;
   if (isPiston(id) && meta & PISTON_EXTENDED) return true;
   return false;

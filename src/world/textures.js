@@ -897,6 +897,16 @@ const GEN = {
     GEN.furnace_front(c);
     for (let y = 10; y < 14; y++) for (let x = 4; x < 12; x++) c.set(x, y, mix(hex('#ff7a1a'), hex('#ffe066'), c.h(x, y)));
   },
+  // Smoker: a stone oven in a dark wooden frame
+  smoker_top: (c) => { c.noiseFill(['#5e5a56', '#6a6460', '#524e4a'].map(hex), 0.3); for (let i = 0; i < 16; i++) for (const j of [0, 15]) { c.set(i, j, hex('#4a3420')); c.set(j, i, hex('#4a3420')); } },
+  smoker_side: (c) => { planks(c, '#5a4028'); for (let y = 5; y < 11; y++) for (let x = 0; x < 16; x++) c.set(x, y, shade(hex('#6a6662'), 0.9 + c.h(x, y) * 0.15)); },
+  smoker_front: (c) => { GEN.smoker_side(c); for (let y = 6; y < 11; y++) for (let x = 4; x < 12; x++) c.set(x, y, hex('#1a1714')); },
+  smoker_front_lit: (c) => { GEN.smoker_front(c); for (let y = 8; y < 11; y++) for (let x = 4; x < 12; x++) c.set(x, y, mix(hex('#ff7a1a'), hex('#ffd060'), c.h(x, y))); },
+  // Blast Furnace: smooth dark stone bound with iron
+  blast_furnace_top: (c) => { c.noiseFill(['#5a5a5e', '#646468', '#4e4e52'].map(hex), 0.2); for (let i = 3; i < 13; i++) for (let j = 3; j < 13; j++) c.set(i, j, hex('#3a3a3e')); },
+  blast_furnace_side: (c) => { c.noiseFill(['#5a5a5e', '#646468', '#4e4e52'].map(hex), 0.2); for (let x = 0; x < 16; x++) { c.set(x, 0, hex('#9a9aa0')); c.set(x, 15, hex('#9a9aa0')); c.set(x, 7, hex('#8a8a90')); } },
+  blast_furnace_front: (c) => { GEN.blast_furnace_side(c); for (let y = 9; y < 14; y++) for (let x = 3; x < 13; x++) c.set(x, y, (x & 1) ? hex('#2a2a2e') : hex('#141416')); },
+  blast_furnace_front_lit: (c) => { GEN.blast_furnace_front(c); for (let y = 9; y < 14; y++) for (let x = 3; x < 13; x += 2) c.set(x, y, mix(hex('#ff7a1a'), hex('#fff0a0'), c.h(x, y))); },
   torch: (c) => {
     for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
     for (let y = 6; y < 16; y++) { c.set(7, y, hex('#7a5a32')); c.set(8, y, hex('#5f4526')); }

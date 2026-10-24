@@ -369,7 +369,7 @@ export function bountyCount(count, level, rng = Math.random) {
 }
 
 // Blocks that Gentle Hand cannot pick up whole (multi-part blocks, crops, etc.)
-const NO_SILK = new Set([B.BED, B.DOOR, B.WHEAT, B.CARROTS, B.POTATOES, B.BEETROOTS, B.FIRE, B.SPAWNER, B.FURNACE_LIT, B.FARMLAND, B.SNOW_LAYER, B.CINDERROOT]);
+const NO_SILK = new Set([B.BED, B.DOOR, B.WHEAT, B.CARROTS, B.POTATOES, B.BEETROOTS, B.FIRE, B.SPAWNER, B.FURNACE_LIT, B.SMOKER_LIT, B.BLAST_FURNACE_LIT, B.FARMLAND, B.SNOW_LAYER, B.CINDERROOT]);
 /** Does Gentle Hand make this block drop itself? */
 export function silkDropsSelf(blockId) {
   const b = BLOCKS[blockId];

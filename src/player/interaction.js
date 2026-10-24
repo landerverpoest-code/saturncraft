@@ -4,7 +4,7 @@ import { Mob } from '../mobs/mob.js';
 import { pairOnPlace } from '../world/chests.js';
 import { hopperPlaceMeta } from '../world/hoppers.js';
 import { compost, READY, SETTLE_TICKS } from '../world/composter.js';
-import { B, BLOCKS, SOLID, SHAPE, isFluid, CROPS } from '../world/blocks.js';
+import { B, BLOCKS, SOLID, SHAPE, isFluid, CROPS, isFurnace } from '../world/blocks.js';
 import { ITEMS, I, toolOf, isBlockItem, WOOL_ITEMS, POTION_ITEM, isArrow } from '../world/items.js';
 import { POTIONS } from '../world/potions.js';
 import { breakProgressPerTick, blockDrops, canHarvest } from '../world/mining.js';
@@ -42,7 +42,7 @@ const ORE_XP = {
 };
 const BREAK_DELAY = 5;
 /** Blocks that right-click opens / toggles instead of using the held item. */
-const USABLE_BLOCKS = new Set([B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.CHEST, B.BARREL, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL, B.BREWING_STAND, B.GLOOMSHELL_BOX, B.HOPPER, B.COMPOSTER]);
+const USABLE_BLOCKS = new Set([B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.CHEST, B.BARREL, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL, B.BREWING_STAND, B.GLOOMSHELL_BOX, B.HOPPER, B.COMPOSTER]);
 const CIRCUIT_USE = new Set([B.LEVER, B.STONE_BUTTON, B.REPEATER, B.CHIME_BLOCK]);
 const CIRCUIT_PLACE = new Set([B.LEVER, B.STONE_BUTTON, B.CINNABAR_WIRE, B.REPEATER, B.WOODEN_PRESSURE_PLATE, B.PISTON, B.STICKY_PISTON]);
 const USE_DELAY = 4;
@@ -605,7 +605,7 @@ export class Interaction {
         this.swing = SWING_TICKS;
         return true;
       }
-      if (t.id === B.FURNACE || t.id === B.FURNACE_LIT) { g.ui.openFurnace(t.x, t.y, t.z); return true; }
+      if (isFurnace(t.id)) { g.ui.openFurnace(t.x, t.y, t.z); return true; }
       if (t.id === B.BED) { g.trySleep(t.x, t.y, t.z); return true; }
       if (t.id === B.ENCHANTING_TABLE) { g.ui.openEnchanting(t.x, t.y, t.z); return true; }
       if (t.id === B.ANVIL) { g.ui.openAnvil(t.x, t.y, t.z); return true; }
@@ -1020,7 +1020,7 @@ export class Interaction {
 
   pickBlock(id) {
     const inv = this.game.player.inventory;
-    const asItem = { [B.CINNABAR_WIRE]: I.CINNABAR, [B.CINNABAR_TORCH_OFF]: B.CINNABAR_TORCH, [B.CINNABAR_LAMP_ON]: B.CINNABAR_LAMP, [B.DOOR]: I.OAK_DOOR, [B.BED]: I.BED, [B.WHEAT]: I.WHEAT_SEEDS, [B.MELON_STEM]: I.MELON_SEEDS, [B.PUMPKIN_STEM]: I.PUMPKIN_SEEDS, [B.CARROTS]: I.CARROT, [B.POTATOES]: I.POTATO, [B.BEETROOTS]: I.BEETROOT_SEEDS, [B.FURNACE_LIT]: B.FURNACE, [B.FARMLAND]: B.DIRT, [B.CINDERROOT]: I.CINDERROOT };
+    const asItem = { [B.CINNABAR_WIRE]: I.CINNABAR, [B.CINNABAR_TORCH_OFF]: B.CINNABAR_TORCH, [B.CINNABAR_LAMP_ON]: B.CINNABAR_LAMP, [B.DOOR]: I.OAK_DOOR, [B.BED]: I.BED, [B.WHEAT]: I.WHEAT_SEEDS, [B.MELON_STEM]: I.MELON_SEEDS, [B.PUMPKIN_STEM]: I.PUMPKIN_SEEDS, [B.CARROTS]: I.CARROT, [B.POTATOES]: I.POTATO, [B.BEETROOTS]: I.BEETROOT_SEEDS, [B.FURNACE_LIT]: B.FURNACE, [B.SMOKER_LIT]: B.SMOKER, [B.BLAST_FURNACE_LIT]: B.BLAST_FURNACE, [B.FARMLAND]: B.DIRT, [B.CINDERROOT]: I.CINDERROOT };
     const want = asItem[id] ?? id;
     for (let i = 0; i < 9; i++) if (inv.slots[i] && inv.slots[i].id === want) { inv.selected = i; return; }
     if (this.game.player.creative && ITEMS[want]) {

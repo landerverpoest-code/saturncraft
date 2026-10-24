@@ -30,7 +30,7 @@ import { RemotePlayer } from './remotePlayer.js';
 import { EntityMirror } from './entityMirror.js';
 import { packChunk, unpackChunk, playerSaveData, applyPlayerSave } from '../world/save.js';
 import { chunkKey } from '../world/world.js';
-import { B } from '../world/blocks.js';
+import { B, isFurnace } from '../world/blocks.js';
 import { I, ITEMS } from '../world/items.js';
 import { withExtras } from '../world/enchantments.js';
 import { rayAABB } from '../entities/entities.js';
@@ -77,7 +77,7 @@ function joinLink(code) {
   return `${location.origin}${location.pathname}?${keep}`;
 }
 
-const CONTAINER_BLOCKS = new Set([B.CHEST, B.BARREL, B.FURNACE, B.FURNACE_LIT, B.BREWING_STAND, B.GLOOMSHELL_BOX, B.HOPPER]);
+const CONTAINER_BLOCKS = new Set([B.CHEST, B.BARREL, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.BREWING_STAND, B.GLOOMSHELL_BOX, B.HOPPER]);
 const contKey = (k, x, y, z) => `${k}:${x},${y},${z}`;
 const finite = (...v) => v.every(Number.isFinite);
 /** Stand-in for a player whose pet is waiting for them while they are offline. */
@@ -573,7 +573,7 @@ export class HostSession extends Session {
       const h = id === B.CHEST ? doubleChestHalves(g.world, x, y, z) : null;
       return h && h[0].x === x && h[0].z === z ? doubleChestView(g.getChest(h[0].x, y, h[0].z), g.getChest(h[1].x, y, h[1].z)) : null;
     }
-    if (kind === 'furnace') return id === B.FURNACE || id === B.FURNACE_LIT ? g.getFurnace(x, y, z) : null;
+    if (kind === 'furnace') return isFurnace(id) ? g.getFurnace(x, y, z) : null;
     if (kind === 'brewing') return id === B.BREWING_STAND ? g.getBrewingStand(x, y, z) : null;
     return null;
   }

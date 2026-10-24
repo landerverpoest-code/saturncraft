@@ -6,7 +6,7 @@ import { newMap, updateMap, MAP_SIZE } from './world/maps.js';
 import { KEEP_BITS, unpairAfterBreak } from './world/chests.js';
 import * as THREE from 'three';
 import { World } from './world/world.js';
-import { B, BLOCKS, SOLID } from './world/blocks.js';
+import { B, BLOCKS, SOLID, isFurnace, FURNACE_KIND } from './world/blocks.js';
 import { ITEMS, I, toolOf, heldLightLevel } from './world/items.js';
 import { heldLights } from './net/remotePlayer.js';
 import { blockDrops } from './world/mining.js';
@@ -40,7 +40,7 @@ import { SpawnerBlocks, dungeonLoot } from './mobs/spawnerBlocks.js';
 import { newXp, deathXp } from './player/experience.js';
 import { Player } from './player/player.js';
 import { Interaction } from './player/interaction.js';
-import { SMELTING, SMELT_TIME } from './player/crafting.js';
+import { SMELTING, SMELT_TIME, fastCook } from './player/crafting.js';
 import { EntityManager } from './entities/entities.js';
 import { MobSpawner } from './mobs/spawner.js';
 import { HUD } from './ui/hud.js';
@@ -633,7 +633,7 @@ export class Game {
       }
     }
     if (id === B.BREWING_STAND) this.spillBrewing(x, y, z);
-    if (id === B.FURNACE || id === B.FURNACE_LIT) {
+    if (isFurnace(id)) {
       const k = `${x},${y},${z}`;
       const f = this.furnaces.get(k);
       if (f) {
@@ -683,6 +683,9 @@ export class Game {
         else { f.fuel.count--; if (f.fuel.count <= 0) f.fuel = null; }
       }
       if (f.burnTime > 0 && canSmelt) {
+        // a Smoker cooks food, a Blast Furnace ores and metal, twice as fast (and burns its fuel twice as fast)
+        const fk = FURNACE_KIND.get(this.world.getBlock(f.x, f.y, f.z));
+        if (fk && fk.fast && fastCook(fk.fast, f.input.id)) { f.cookTime++; if (f.burnTime > 0) f.burnTime--; }
         if (++f.cookTime >= SMELT_TIME) {
           f.cookTime = 0;
           if (f.output) f.output.count++; else f.output = { id: result, count: 1 };
@@ -693,7 +696,8 @@ export class Game {
       if (lit !== wasLit) {
         const meta = this.world.getMeta(f.x, f.y, f.z);
         const cur = this.world.getBlock(f.x, f.y, f.z);
-        if (cur === B.FURNACE || cur === B.FURNACE_LIT) this.world.setBlock(f.x, f.y, f.z, lit ? B.FURNACE_LIT : B.FURNACE, meta, false);
+        const fk = FURNACE_KIND.get(cur);
+        if (fk) this.world.setBlock(f.x, f.y, f.z, lit ? fk.lit : fk.unlit, meta, false);
       }
       if (lit && Math.random() < 0.1) this.particles.flame(f.x + 0.5, f.y + 0.4, f.z + 0.5);
     }

@@ -440,7 +440,8 @@ export class UI {
     this.furnace = f;
     if (this.game.net && this.game.net.isClient) this.game.net.openContainer('furnace', x, y, z, f); // the host's furnace
     const fuelOf = (st) => st && ITEMS[st.id] && ITEMS[st.id].fuel;
-    this.showContainer('furnace', 'Furnace', (panel) => {
+    const fid = this.game.world.getBlock(x, y, z), fname = BLOCKS[fid] ? BLOCKS[fid].name.replace(/^Lit /, '') : 'Furnace';
+    this.showContainer('furnace', fname, (panel) => {
       const top = el('<div class="inv-top"></div>');
       const mid = el('<div class="furnace-mid"></div>');
       mid.appendChild(this.makeSlot(() => f.input, (v) => { f.input = v; }));
@@ -701,7 +702,7 @@ export class UI {
   openCreative() {
     this.game.input.unlock();
     const g = this.game, inv = g.player.inventory;
-    const hidden = new Set([B.AIR, B.CINDERROOT, B.WATER, B.LAVA, B.FURNACE_LIT, B.WHEAT, B.CARROTS, B.POTATOES, B.BEETROOTS, B.MELON_STEM, B.PUMPKIN_STEM, B.DOOR, B.BED, B.FIRE, B.PAINTING, B.PAINTING_B, B.OAK_WALL_SIGN, B.COCOA]);
+    const hidden = new Set([B.AIR, B.CINDERROOT, B.WATER, B.LAVA, B.FURNACE_LIT, B.SMOKER_LIT, B.BLAST_FURNACE_LIT, B.WHEAT, B.CARROTS, B.POTATOES, B.BEETROOTS, B.MELON_STEM, B.PUMPKIN_STEM, B.DOOR, B.BED, B.FIRE, B.PAINTING, B.PAINTING_B, B.OAK_WALL_SIGN, B.COCOA]);
     const all = ITEMS.filter((d) => d && d.id && !hidden.has(d.id) && !(d.block && BLOCKS[d.block] && BLOCKS[d.block].hidden));
     this.showContainer('creative', 'Creative Inventory', (panel) => {
       const search = el('<input class="creative-search" placeholder="Search items...">');

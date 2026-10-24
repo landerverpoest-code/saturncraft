@@ -438,6 +438,21 @@ for (const [name, key, mat] of [['Brick', 'BRICK', B.BRICKS], ['Mossy Cobbleston
   def(stairs, `${name} Stairs`, { ...common, shape: SHAPE.STAIRS });
   STONE_SETS.push([mat, slab, stairs, name]);
 }
+// Smoker (food twice as fast) and Blast Furnace (ores and metal twice as fast); lit forms glow
+for (const [key, name, tex] of [['SMOKER', 'Smoker', 'smoker'], ['BLAST_FURNACE', 'Blast Furnace', 'blast_furnace']]) {
+  ext(key); ext(key + '_LIT');
+  const common = { hardness: 3.5, resistance: 3.5, tool: TOOL.PICKAXE, tier: TIER.WOOD, container: false };
+  def(B[key], name, { ...common, tex: { top: tex + '_top', bottom: tex + '_top', side: tex + '_side', front: tex + '_front' } });
+  def(B[key + '_LIT'], 'Lit ' + name, { ...common, emit: 13, drops: B[key], tex: { top: tex + '_top', bottom: tex + '_top', side: tex + '_side', front: tex + '_front_lit' } });
+}
+/** Every furnace-like block: its unlit and lit forms and what it cooks fast ('food', 'ore' or null). */
+export const FURNACE_KIND = new Map();
+for (const [unlit, lit, fast] of [[B.FURNACE, B.FURNACE_LIT, null], [B.SMOKER, B.SMOKER_LIT, 'food'], [B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, 'ore']]) {
+  const k = { unlit, lit, fast };
+  FURNACE_KIND.set(unlit, k); FURNACE_KIND.set(lit, k);
+}
+export const isFurnace = (id) => FURNACE_KIND.has(id);
+
 // sixteen colours of stained glass, concrete and terracotta (the plain colours that were missing)
 export const COLOR_BLOCKS = { glass: [], concrete: [], terracotta: [] };
 for (const [key, name] of COLORS) {

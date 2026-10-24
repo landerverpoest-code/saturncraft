@@ -5,7 +5,7 @@
 // the side into the fuel slot and give up their output; Brewing Alembics take
 // ingredients from above and vials or Ember Powder from the side.
 // Meta: 0 = spout down, 1-4 = spout towards SIDE_DIRS[meta - 1].
-import { B } from './blocks.js';
+import { B, isFurnace } from './blocks.js';
 import { ITEMS, I, maxStack } from './items.js';
 import { SIDE_DIRS } from './shapes.js';
 import { canStack } from './enchantments.js';
@@ -38,7 +38,7 @@ export function containerAccess(game, x, y, z) {
     const all = c.slots.map((_, i) => arraySlot(c.slots, i, id === B.GLOOMSHELL_BOX ? (st) => st.id !== B.GLOOMSHELL_BOX : undefined));
     return { insert: () => all, extract: all };
   }
-  if (id === B.FURNACE || id === B.FURNACE_LIT) {
+  if (isFurnace(id)) {
     const f = game.getFurnace(x, y, z);
     const input = keySlot(f, 'input'), fuel = keySlot(f, 'fuel', (st) => !!(ITEMS[st.id] && ITEMS[st.id].fuel));
     return { insert: (fromAbove) => [fromAbove ? input : fuel], extract: [keySlot(f, 'output')] };

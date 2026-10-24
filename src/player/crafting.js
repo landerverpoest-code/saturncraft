@@ -1,6 +1,6 @@
 // Shaped/shapeless crafting and furnace smelting recipes.
 import { B, WOOD_SETS, STONE_SETS, COLOR_BLOCKS } from '../world/blocks.js';
-import { I, DYES, WOOL_ITEMS, TIPPED_ARROW, SPLASH_ITEM } from '../world/items.js';
+import { I, ITEMS, DYES, WOOL_ITEMS, TIPPED_ARROW, SPLASH_ITEM } from '../world/items.js';
 import { COLOR } from '../world/colors.js';
 
 const TAGS = {
@@ -130,6 +130,8 @@ shaped(['WWW', 'PPP'], { W: B.WOOL, P: 'planks' }, I.BED, 1);
 shaped(['S S', 'SSS', 'S S'], { S: I.STICK }, B.LADDER, 3);
 shaped(['C', 'S'], { C: I.COAL, S: I.STICK }, B.TORCH, 4);
 shaped(['CCC', 'C C', 'CCC'], { C: 'stone_mat' }, B.FURNACE, 1);
+shaped([' L ', 'LFL', ' L '], { L: 'log', F: B.FURNACE }, B.SMOKER, 1);
+shaped(['III', 'IFI', 'SSS'], { I: I.IRON_INGOT, F: B.FURNACE, S: B.SMOOTH_STONE }, B.BLAST_FURNACE, 1);
 shaped(['SS', 'SS'], { S: B.STONE }, B.STONE_BRICKS, 4);
 shaped(['SS', 'SS'], { S: B.SAND }, B.SANDSTONE, 1);
 shaped(['SS', 'SS'], { S: I.STRING }, B.WOOL, 1);
@@ -276,6 +278,13 @@ for (const [raw, polished] of [[B.GRANITE, B.POLISHED_GRANITE], [B.DIORITE, B.PO
 
 // Smelting: input -> output; 200 ticks per item (10 s)
 export const SMELT_TIME = 200;
+const ORE_INPUTS = new Set([I.RAW_IRON, I.RAW_GOLD, I.RAW_COPPER, B.IRON_ORE, B.GOLD_ORE, B.COPPER_ORE, B.DEEP_COPPER_ORE, B.DEEP_IRON_ORE, B.DEEP_GOLD_ORE]);
+/** Does a Smoker ('food') or Blast Furnace ('ore') cook this input fast? */
+export function fastCook(kind, input) {
+  if (kind === 'ore') return ORE_INPUTS.has(input);
+  const out = SMELTING[input];
+  return kind === 'food' && out !== undefined && !!(ITEMS[out] && ITEMS[out].food);
+}
 export const SMELTING = {
   [I.RAW_IRON]: I.IRON_INGOT, [I.RAW_GOLD]: I.GOLD_INGOT, [I.RAW_COPPER]: I.COPPER_INGOT,
   [B.IRON_ORE]: I.IRON_INGOT, [B.GOLD_ORE]: I.GOLD_INGOT, [B.COPPER_ORE]: I.COPPER_INGOT, [B.DEEP_COPPER_ORE]: I.COPPER_INGOT,

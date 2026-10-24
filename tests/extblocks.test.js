@@ -36,3 +36,18 @@ describe('extended block ids', () => {
     }
   });
 });
+
+describe('smoker and blast furnace', () => {
+  it('cook their own kind twice as fast', async () => {
+    const { fastCook } = await import('../src/player/crafting.js');
+    const { I } = await import('../src/world/items.js');
+    expect(fastCook('food', I.RAW_BEEF)).toBe(true);
+    expect(fastCook('food', B.SAND)).toBe(false);
+    expect(fastCook('ore', I.RAW_IRON)).toBe(true);
+    expect(fastCook('ore', I.RAW_BEEF)).toBe(false);
+  });
+  it('are crafted from a furnace', async () => {
+    const F = { id: B.FURNACE, count: 1 }, L = { id: B.OAK_LOG, count: 1 };
+    expect(craft([null, L, null, L, F, L, null, L, null], 3)).toEqual({ id: B.SMOKER, count: 1 });
+  });
+});
