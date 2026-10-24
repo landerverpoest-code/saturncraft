@@ -278,6 +278,8 @@ export class World {
     if (id === B.CINDERROOT) return below === B.MOURNSAND;
     if (id === B.HUSHVINE) return hushvineSupported((a, b, c) => this.getBlock(a, b, c), x, y, z);
     if (id === B.HUSHVINE_FLOWER) return hushFlowerSupported((a, b, c) => this.getBlock(a, b, c), x, y, z);
+    if (id === B.KELP) return below === B.KELP || (!!SOLID[below]);
+    if (id === B.SEAGRASS) return !!SOLID[below];
     if (id === B.BAMBOO) return below === B.BAMBOO || below === B.GRASS || below === B.DIRT || below === B.SAND || below === B.GRAVEL || below === B.MYCELIUM;
     if (id === B.SUGAR_CANE) {
       if (below === B.SUGAR_CANE) return true;
@@ -293,7 +295,7 @@ export class World {
     const id = this.getBlock(x, y, z);
     if (!id) return;
     const meta = this.getMeta(x, y, z);
-    this.setBlock(x, y, z, B.AIR);
+    this.setBlock(x, y, z, BLOCKS[id].waterlogged ? B.WATER : B.AIR);
     if (drop) this.emit('dropItems', x, y, z, id, meta);
   }
 

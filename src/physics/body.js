@@ -2,7 +2,7 @@
 // and 0.6 block step-up, following the reference game's movement order:
 // accelerate -> move/collide -> gravity & drag -> friction.
 import { PHYS, groundAccel } from './constants.js';
-import { BLOCKS, SOLID, B } from '../world/blocks.js';
+import { BLOCKS, SOLID, B, WATERLOGGED, isWaterish } from '../world/blocks.js';
 import { liquidHeight } from '../world/mesher.js';
 import { collisionBoxes, SHAPED_COLLISION } from '../world/shapes.js';
 
@@ -131,8 +131,13 @@ export class Body {
           if (id === B.FIRE) { this.inFire = true; continue; }
           if (id === B.COBWEB) { this.inWeb = true; continue; }
           if (id === B.SWEET_BERRY_BUSH) { this.inBerry = true; continue; }
+          if (WATERLOGGED[id]) { // kelp and seagrass stand in still, full water
+            this.inWater = true;
+            if (Math.floor(this.x) === x && Math.floor(this.z) === z && ey >= y && ey < y + 1) this.eyeInWater = true;
+            continue;
+          }
           if (id !== B.WATER && id !== B.LAVA) continue;
-          const top = y + (world.getBlock(x, y + 1, z) === id ? 1 : liquidHeight(world.getMeta(x, y, z)));
+          const top = y + (isWaterish(world.getBlock(x, y + 1, z)) && id === B.WATER ? 1 : world.getBlock(x, y + 1, z) === id ? 1 : liquidHeight(world.getMeta(x, y, z)));
           if (b[1] < top) {
             if (id === B.WATER) this.inWater = true; else this.inLava = true;
             fluidFlow(world, x, y, z, id, flow);

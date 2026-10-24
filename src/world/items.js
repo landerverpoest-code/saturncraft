@@ -222,6 +222,7 @@ item('farglass', 'Farglass', { stack: 1, spyglass: true, iconStyle: ['horn', { h
 for (const id of [B.BLOSSOM_PLANKS, B.BLOSSOM_LOG, B.OAK_PLANKS, B.SPRUCE_PLANKS, B.BIRCH_PLANKS, B.JUNGLE_PLANKS, B.ACACIA_PLANKS, B.DARK_OAK_PLANKS, B.OAK_LOG, B.BIRCH_LOG, B.SPRUCE_LOG, B.JUNGLE_LOG, B.ACACIA_LOG, B.DARK_OAK_LOG, B.WORKBENCH]) ITEMS[id].fuel = 300;
 for (const id of [B.OAK_SAPLING, B.BIRCH_SAPLING, B.SPRUCE_SAPLING, B.JUNGLE_SAPLING, B.ACACIA_SAPLING, B.DARK_OAK_SAPLING, B.BLOSSOM_SAPLING]) ITEMS[id].fuel = 100;
 ITEMS[B.COAL_BLOCK].fuel = 16000;
+ITEMS[B.DRIED_KELP_BLOCK].fuel = 4000;
 
 export function itemDef(id) { return ITEMS[id]; }
 export function maxStack(id) { return ITEMS[id] ? ITEMS[id].stack : 64; }
@@ -289,6 +290,7 @@ for (const [key, name, label, mood, root, bpm, rounds] of [
   const d = item('disc_' + key, 'Music Disc: ' + name, { stack: 1, disc: { index: DISCS.length, seed: 0x5eed + DISCS.length * 7919, mood, root, bpm, rounds, title: name }, iconStyle: [ICON_DISC, { k: '#1a1a1e', d: '#2e2e34', l: label, w: '#f4f0e4', h: '#2e2e34' }] });
   DISCS.push(d.id);
 }
+item('dried_kelp', 'Dried Kelp', { food: { hunger: 1, saturation: 0.6, fast: true }, iconStyle: ['meat', { h: '#3a4a2a', w: '#2a3a1e' }] });
 ITEMS[B.GLOOMSHELL_BOX].stack = 1; // a box keeps its contents in the item (stack.contents), so it never stacks
 
 /** Light level (0-15) an item gives when held: a torch, lantern or other light block; 0 for the rest. */

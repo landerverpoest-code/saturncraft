@@ -872,6 +872,18 @@ const GEN = {
       for (const k of [4, 8, 11]) { c.set(k, i, i % 3 ? bar : hi); c.set(i, k, i % 3 ? bar : hi); }
     }
   },
+  kelp: (c) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
+    const g = hex('#3a7a2a'), d = hex('#2a5a1e');
+    for (let y = 0; y < 16; y++) { const sw = Math.round(Math.sin(y * 0.6) * 1.5); c.set(7 + sw, y, g); c.set(8 + sw, y, d); }
+    for (let k = 0; k < 4; k++) { const y = 2 + k * 4, s = k & 1 ? 1 : -1; for (let i = 1; i < 5; i++) c.set(7 + s * i + (s > 0 ? 1 : 0), y + (i >> 1), shade(g, 0.9 + i * 0.05)); }
+  },
+  seagrass: (c) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
+    for (const [x0, h] of [[3, 9], [6, 14], [9, 11], [12, 7]]) for (let k = 0; k < h; k++) c.set(x0 + Math.round(Math.sin(k * 0.5) * 0.8), 15 - k, shade(hex('#4a9a3a'), 0.8 + (k / h) * 0.4));
+  },
+  dried_kelp_side: (c) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, shade(hex('#3a4a2a'), (y % 4 === 0 ? 0.7 : 0.9) + c.h(x, y) * 0.15)); },
+  dried_kelp_top: (c) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const r = Math.hypot(x - 7.5, y - 7.5); c.set(x, y, shade(hex('#3a4a2a'), (Math.floor(r) % 2 ? 0.8 : 1) + c.h(x, y) * 0.1)); } },
   bamboo: (c) => {
     // one thick green stalk with joints and a leaf or two
     for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);

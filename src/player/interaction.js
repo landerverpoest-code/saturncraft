@@ -272,7 +272,7 @@ export class Interaction {
   breakBlock(x, y, z, id, tool) {
     const g = this.game, p = g.player;
     const meta = g.world.getMeta(x, y, z);
-    g.world.setBlockUrgent(x, y, z, B.AIR);
+    g.world.setBlockUrgent(x, y, z, BLOCKS[id].waterlogged ? B.WATER : B.AIR); // kelp leaves its water behind
     if (g.onBlockBroken) g.onBlockBroken(x, y, z, id, meta);
     if (id === B.FIRE) { g.audio.play('fizz', [x + 0.5, y + 0.5, z + 0.5]); return; }
     g.audio.play('break_' + BLOCKS[id].sound, [x + 0.5, y + 0.5, z + 0.5]);

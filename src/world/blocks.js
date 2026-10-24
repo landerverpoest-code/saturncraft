@@ -442,6 +442,11 @@ for (const [name, key] of [['Spruce', 'SPRUCE'], ['Birch', 'BIRCH'], ['Jungle', 
 // Bamboo (jungles): grows quickly up to 12 tall on soil; meta = growth age like sugar cane
 ext('BAMBOO'); def(B.BAMBOO, 'Bamboo', { ...plant, hardness: 1, resistance: 1, tool: TOOL.AXE, sound: 'wood', flammable: true });
 ext('BAMBOO_PLANKS'); def(B.BAMBOO_PLANKS, 'Bamboo Planks', { hardness: 2, resistance: 3, tool: TOOL.AXE, sound: 'wood', flammable: true });
+// Underwater plants: they stand in water (waterlogged): water flows round them, you swim in them,
+// and breaking one leaves water behind. Kelp: meta = growth age; grows up towards the surface.
+ext('KELP'); def(B.KELP, 'Kelp', { ...plant, waterlogged: true, opacity: 1, sound: 'grass', drops: 'self' });
+ext('SEAGRASS'); def(B.SEAGRASS, 'Seagrass', { ...plant, waterlogged: true, opacity: 1, sound: 'grass', replaceable: true, drops: null });
+ext('DRIED_KELP_BLOCK'); def(B.DRIED_KELP_BLOCK, 'Dried Kelp Block', { hardness: 0.5, resistance: 2.5, tool: TOOL.HOE, sound: 'grass', flammable: true, tex: { top: 'dried_kelp_top', bottom: 'dried_kelp_top', side: 'dried_kelp_side' } });
 // Jukebox: meta = the disc inside (DISCS index + 1), 0 when empty (see world/items.js DISCS)
 ext('JUKEBOX'); def(B.JUKEBOX, 'Jukebox', { hardness: 2, resistance: 6, tool: TOOL.AXE, sound: 'wood', flammable: true, drops: 'jukebox', tex: { top: 'jukebox_top', bottom: 'jukebox_side', side: 'jukebox_side' } });
 export const isDoor = (id) => !!BLOCKS[id] && BLOCKS[id].shape === SHAPE.DOOR;
@@ -525,6 +530,10 @@ for (let i = 0; i < BLOCK_LIMIT; i++) {
 }
 
 export function isFluid(id) { return id === B.WATER || id === B.LAVA; }
+/** Waterlogged blocks (kelp, seagrass) count as water for swimming, fog and the water's faces. */
+export const WATERLOGGED = new Uint8Array(BLOCK_LIMIT);
+for (const b of BLOCKS) if (b && b.waterlogged) WATERLOGGED[b.id] = 1;
+export const isWaterish = (id) => id === B.WATER || WATERLOGGED[id] === 1;
 
 // Deepstone variants of ores, used by the generator.
 export const DEEP_VARIANT = {

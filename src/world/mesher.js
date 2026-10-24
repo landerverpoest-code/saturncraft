@@ -1,7 +1,7 @@
 // Face-culled section mesher with smooth lighting and ambient occlusion.
 // Input is a 18x18x18 padded copy of a 16^3 section (1 block border from
 // neighbours) so it can run inside a worker without access to the world.
-import { B, BLOCKS, OPAQUE, SOLID, SHAPES, LAYERS, SHAPE, LAYER, BLOCK_LIMIT } from './blocks.js';
+import { B, BLOCKS, OPAQUE, SOLID, SHAPES, LAYERS, SHAPE, LAYER, BLOCK_LIMIT, WATERLOGGED } from './blocks.js';
 import { LEAVES } from './trees.js';
 import { FACE_TILE, FRONT_TILE, texId } from './textures.js';
 import { WOOL_RGB } from './colors.js';
@@ -524,8 +524,9 @@ function cornerHeight(blocks, meta, i, id, cx, cz) {
   let sum = 0, w = 0;
   for (let dx = cx - 1; dx <= cx; dx++) for (let dz = cz - 1; dz <= cz; dz++) {
     const j = i + off(dx, 0, dz);
-    if (blocks[j + UP] === id) return 1;
+    if (blocks[j + UP] === id || (id === B.WATER && WATERLOGGED[blocks[j + UP]])) return 1;
     const b = blocks[j];
+    if (id === B.WATER && WATERLOGGED[b]) { sum += 8 / 9 * 10; w += 10; continue; } // kelp stands in still water
     if (b === id) {
       const m = meta[j], hh = liquidHeight(m), wt = (m & 7) === 0 && !(m & 8) ? 10 : 1;
       sum += hh * wt; w += wt;
@@ -537,7 +538,7 @@ const UP = off(0, 1, 0);
 
 function meshLiquid(buf, blocks, light, meta, i, id, x, y, z) {
   const above = blocks[i + FACE_N[2]];
-  const full = above === id;
+  const full = above === id || (id === B.WATER && WATERLOGGED[above] === 1);
   // surface heights at the corners (x, z): 00, 10, 11, 01
   const ch = full ? [1, 1, 1, 1] : [cornerHeight(blocks, meta, i, id, 0, 0), cornerHeight(blocks, meta, i, id, 1, 0), cornerHeight(blocks, meta, i, id, 1, 1), cornerHeight(blocks, meta, i, id, 0, 1)];
   const hAt = (vx, vz) => ch[vx ? (vz ? 2 : 1) : (vz ? 3 : 0)];
@@ -557,7 +558,7 @@ function meshLiquid(buf, blocks, light, meta, i, id, x, y, z) {
   for (let d = 0; d < 6; d++) {
     const ni = i + FACE_N[d];
     const nb = blocks[ni];
-    if (nb === id) continue;
+    if (nb === id || (id === B.WATER && WATERLOGGED[nb])) continue;
     if (OPAQUE[nb] && d !== 2) continue;
     if (d === 2 && OPAQUE[nb] && hMax >= 1) continue;
     if (isWater && nb === B.ICE) continue;

@@ -619,6 +619,14 @@ export class TerrainGenerator {
       }
       const ground = blocks[cidx(x, top, z)];
       const above = cidx(x, top + 1, z);
+      // kelp forests and seagrass meadows on the sea floor (the top stays two blocks under the surface)
+      if ((ground === B.SAND || ground === B.GRAVEL || ground === B.DIRT || ground === B.CLAY) && blocks[above] === B.WATER && top < SEA_LEVEL - 2 && biome !== BIOME.FROZEN_OCEAN) {
+        const r2 = h(x, z, 55);
+        if (r2 < 0.06 && top < SEA_LEVEL - 5) {
+          const n = 2 + Math.floor(h(x, z, 56) * (SEA_LEVEL - 3 - top));
+          for (let k = 1; k <= n && top + k < SEA_LEVEL - 1; k++) blocks[cidx(x, top + k, z)] = B.KELP;
+        } else if (r2 < 0.25) blocks[above] = B.SEAGRASS;
+      }
       if (blocks[above]) continue;
       const r = h(x, z, 41);
       if (ground === B.GRASS) {
