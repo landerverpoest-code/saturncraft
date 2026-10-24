@@ -20,7 +20,7 @@
 // ticks and then drains the queue with a cap on the work per tick. Only the
 // authoritative world (single player or the multiplayer host) simulates:
 // guests set `enabled = false` and just apply the host's block edits.
-import { B, BLOCKS, SOLID, BLOCK_LIMIT, isFurnace } from './blocks.js';
+import { B, BLOCKS, SOLID, SHAPE, BLOCK_LIMIT, isFurnace } from './blocks.js';
 import { MIN_Y, MAX_Y } from './constants.js';
 import { SIDE_DIRS, DOOR_OPEN, DOOR_UPPER, TRAPDOOR_OPEN, GATE_OPEN } from './shapes.js';
 import {
@@ -42,9 +42,12 @@ const H4 = SIDE_DIRS;
 const key = (x, y, z) => `${x},${y},${z}`;
 
 /** Blocks the simulation reacts to when something next to them changes. */
+const isDoorId = (id) => !!BLOCKS[id] && BLOCKS[id].shape === SHAPE.DOOR;
+const OPENABLE_SHAPE = (id) => !!BLOCKS[id] && (BLOCKS[id].shape === SHAPE.DOOR || BLOCKS[id].shape === SHAPE.TRAPDOOR || BLOCKS[id].shape === SHAPE.GATE);
 export const CIRCUIT_REACT = new Uint8Array(BLOCK_LIMIT);
 for (const id of [B.CINNABAR_WIRE, B.CINNABAR_TORCH, B.CINNABAR_TORCH_OFF, B.CINNABAR_LAMP, B.CINNABAR_LAMP_ON, B.REPEATER,
   B.PISTON, B.STICKY_PISTON, B.STONE_BUTTON, B.WOODEN_PRESSURE_PLATE, B.CHIME_BLOCK, B.DOOR, B.OAK_TRAPDOOR, B.OAK_FENCE_GATE, B.TNT]) CIRCUIT_REACT[id] = 1;
+for (const b of BLOCKS) if (b && (b.shape === SHAPE.DOOR || b.shape === SHAPE.TRAPDOOR || b.shape === SHAPE.GATE)) CIRCUIT_REACT[b.id] = 1;
 /** Blocks re-evaluated when their chunk loads or on random ticks (state may be stale after a reload). */
 export const CIRCUIT_SETTLE = new Uint8Array(BLOCK_LIMIT);
 for (const id of [B.CINNABAR_WIRE, B.CINNABAR_TORCH, B.CINNABAR_TORCH_OFF, B.CINNABAR_LAMP, B.CINNABAR_LAMP_ON, B.REPEATER,
@@ -339,30 +342,31 @@ export class Circuits {
       }
       case B.TNT: if (powerInto(w, x, y, z) > 0) { const f = this.onTNT || w.onTNT; if (f) this.act(() => f(x, y, z)); } break;
       case B.DOOR: case B.OAK_TRAPDOOR: case B.OAK_FENCE_GATE: this.updateOpenable(x, y, z, id, m); break;
+      default: if (OPENABLE_SHAPE(id)) this.updateOpenable(x, y, z, id, m);
     }
   }
 
   /** Doors, trapdoors and gates open while powered (only on changes, so hands can still open them). */
   updateOpenable(x, y, z, id, m) {
     const w = this.world;
-    if (id === B.DOOR) {
+    if (isDoorId(id)) {
       const by = m & DOOR_UPPER ? y - 1 : y;
-      if (w.getBlock(x, by, z) !== B.DOOR) return;
+      if (w.getBlock(x, by, z) !== id) return;
       const lm = w.getMeta(x, by, z);
-      const p = powerInto(w, x, by, z) > 0 || (w.getBlock(x, by + 1, z) === B.DOOR && powerInto(w, x, by + 1, z) > 0);
+      const p = powerInto(w, x, by, z) > 0 || (w.getBlock(x, by + 1, z) === id && powerInto(w, x, by + 1, z) > 0);
       if (p === !!(lm & OPENABLE_POWERED)) return;
       this.act(() => {
         for (const yy of [by, by + 1]) {
-          if (w.getBlock(x, yy, z) !== B.DOOR) continue;
+          if (w.getBlock(x, yy, z) !== id) continue;
           const mm = w.getMeta(x, yy, z);
-          w.setBlock(x, yy, z, B.DOOR, p ? mm | DOOR_OPEN | OPENABLE_POWERED : mm & ~(DOOR_OPEN | OPENABLE_POWERED), false);
+          w.setBlock(x, yy, z, id, p ? mm | DOOR_OPEN | OPENABLE_POWERED : mm & ~(DOOR_OPEN | OPENABLE_POWERED), false);
         }
       });
       return;
     }
     const p = powerInto(w, x, y, z) > 0;
     if (p === !!(m & OPENABLE_POWERED)) return;
-    const open = id === B.OAK_TRAPDOOR ? TRAPDOOR_OPEN : GATE_OPEN;
+    const open = BLOCKS[id].shape === SHAPE.TRAPDOOR ? TRAPDOOR_OPEN : GATE_OPEN;
     this.act(() => w.setBlock(x, y, z, id, p ? m | open | OPENABLE_POWERED : m & ~(open | OPENABLE_POWERED), false));
   }
 
@@ -539,9 +543,9 @@ export function changeSound(w, x, y, z, old, id) {
   if (old === id) {
     const m = w.getMeta(x, y, z);
     if (id === B.LEVER || id === B.STONE_BUTTON || id === B.WOODEN_PRESSURE_PLATE) return 'click';
-    if (id === B.DOOR || id === B.OAK_TRAPDOOR || id === B.OAK_FENCE_GATE) {
-      if (id === B.DOOR && m & DOOR_UPPER) return null;
-      const open = id === B.DOOR ? DOOR_OPEN : id === B.OAK_TRAPDOOR ? TRAPDOOR_OPEN : GATE_OPEN;
+    if (OPENABLE_SHAPE(id)) {
+      if (isDoorId(id) && m & DOOR_UPPER) return null;
+      const open = isDoorId(id) ? DOOR_OPEN : BLOCKS[id].shape === SHAPE.TRAPDOOR ? TRAPDOOR_OPEN : GATE_OPEN;
       return m & open ? 'door_open' : 'door_close';
     }
     if (id === B.CHIME_BLOCK && m & CHIME_POWERED) return 'chime_' + (m & 31);

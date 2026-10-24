@@ -703,6 +703,7 @@ export class UI {
     this.game.input.unlock();
     const g = this.game, inv = g.player.inventory;
     const hidden = new Set([B.AIR, B.CINDERROOT, B.WATER, B.LAVA, B.FURNACE_LIT, B.SMOKER_LIT, B.BLAST_FURNACE_LIT, B.WHEAT, B.CARROTS, B.POTATOES, B.BEETROOTS, B.MELON_STEM, B.PUMPKIN_STEM, B.DOOR, B.BED, B.FIRE, B.PAINTING, B.PAINTING_B, B.OAK_WALL_SIGN, B.COCOA]);
+    for (const b of BLOCKS) if (b && b.doorItem) hidden.add(b.id); // doors are placed from their door items
     const all = ITEMS.filter((d) => d && d.id && !hidden.has(d.id) && !(d.block && BLOCKS[d.block] && BLOCKS[d.block].hidden));
     this.showContainer('creative', 'Creative Inventory', (panel) => {
       const search = el('<input class="creative-search" placeholder="Search items...">');

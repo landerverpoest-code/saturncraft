@@ -104,7 +104,7 @@ function baseDrops(blockId, b, rng, meta, tool) {
     case 'melon': return [{ id: I.MELON_SLICE, count: 3 + Math.floor(rng() * 5) }];
     case 'bookshelf': return [{ id: I.BOOK, count: 3 }];
     case 'bed': return (meta & 8) ? [{ id: I.BED, count: 1 }] : []; // the head half drops the bed
-    case 'door': return (meta & 8) ? [] : [{ id: I.OAK_DOOR, count: 1 }]; // the lower half drops the door
+    case 'door': return (meta & 8) ? [] : [{ id: BLOCKS[blockId].doorItem || I.OAK_DOOR, count: 1 }]; // the lower half drops the door
     case 'seeds': return rng() < 0.125 ? [{ id: I.WHEAT_SEEDS, count: 1 }] : [];
     case 'carrots': {
       // mature: 1 + 1 + binomial(3, 4/7) carrots; otherwise the carrot back

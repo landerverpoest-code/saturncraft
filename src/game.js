@@ -6,7 +6,7 @@ import { newMap, updateMap, MAP_SIZE } from './world/maps.js';
 import { KEEP_BITS, unpairAfterBreak } from './world/chests.js';
 import * as THREE from 'three';
 import { World } from './world/world.js';
-import { B, BLOCKS, SOLID, isFurnace, FURNACE_KIND } from './world/blocks.js';
+import { B, BLOCKS, SOLID, SHAPE, isFurnace, FURNACE_KIND } from './world/blocks.js';
 import { ITEMS, I, toolOf, heldLightLevel } from './world/items.js';
 import { heldLights } from './net/remotePlayer.js';
 import { blockDrops } from './world/mining.js';
@@ -845,7 +845,7 @@ export class Game {
     const w = this.world, ci = w.circuits;
     ci.entitiesOn = (x, y, z) => this.feetPositions().some(([ex, ey, ez]) => Math.floor(ex) === x && Math.floor(ey + 0.05) === y && Math.floor(ez) === z);
     // sounds of changes made by the circuits (here, or on the host when we are a guest)
-    const OPENABLE = new Set([B.DOOR, B.OAK_TRAPDOOR, B.OAK_FENCE_GATE]);
+    const OPENABLE = new Set(BLOCKS.filter((b) => b && (b.shape === SHAPE.DOOR || b.shape === SHAPE.TRAPDOOR || b.shape === SHAPE.GATE)).map((b) => b.id));
     w.on('blockChanged', (x, y, z, old, id) => {
       if (!(CIRCUIT_BLOCK[old] || CIRCUIT_BLOCK[id] || OPENABLE.has(id))) return;
       if (!ci.acting && !(this.net && this.net.applyingRemote)) return;

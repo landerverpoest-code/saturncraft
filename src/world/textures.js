@@ -26,6 +26,7 @@ for (const b of BLOCKS) {
 addTex('furnace_side');
 addTex('farmland_moist');
 addTex('door_upper');
+for (const b of BLOCKS) if (b && b.doorTex) for (const n of b.doorTex) addTex(n);
 addTex('pumpkin_face');
 for (let r = 0; r < 4; r++) { addTex('bed_head_top_' + r); addTex('bed_foot_top_' + r); }
 for (let i = 0; i < 8; i++) addTex('wheat_' + i);
@@ -668,10 +669,10 @@ const GEN = {
   item_frame: (c) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const edge = x < 2 || y < 2 || x > 13 || y > 13; c.set(x, y, edge ? shade(hex('#8a6034'), 0.85 + c.h(x, y) * 0.3) : shade(hex('#9a7a5a'), 0.9 + c.h(x, y) * 0.15)); } },
   rail: (c) => railTex(c, false),
   rail_corner: (c) => railTex(c, true),
-  oak_trapdoor: (c) => {
+  oak_trapdoor: (c, base = '#a7834e', dark = '#6a4a28') => {
     // a plank frame with four square openings
-    planks(c, '#a7834e');
-    const d = hex('#6a4a28');
+    planks(c, base);
+    const d = hex(dark);
     for (let i = 0; i < 16; i++) { c.set(i, 0, d); c.set(i, 15, d); c.set(0, i, d); c.set(15, i, d); }
     for (const [ox, oy] of [[3, 3], [9, 3], [3, 9], [9, 9]]) for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) c.set(ox + x, oy + y, [0, 0, 0], 0);
   },
@@ -824,17 +825,17 @@ const GEN = {
     for (let y = 3; y < 9; y++) for (let x = 14; x < 16; x++) c.set(x, y, (x === 14 || y === 8) ? md : m);
     c.set(15, 6, md);
   },
-  door_lower: (c) => {
-    planks(c, '#9c7444');
-    const d = hex('#5a3d1e');
+  door_lower: (c, base = '#9c7444', dark = '#5a3d1e') => {
+    planks(c, base);
+    const d = hex(dark);
     for (let i = 0; i < 16; i++) { c.set(0, i, d); c.set(15, i, d); c.set(i, 15, d); }
     for (let y = 2; y < 13; y++) { c.set(3, y, shade(d, 1.3)); c.set(12, y, shade(d, 1.3)); }
     for (let x = 3; x < 13; x++) { c.set(x, 2, shade(d, 1.3)); c.set(x, 12, shade(d, 1.3)); }
     c.set(12, 1, hex('#8a8a8a')); c.set(13, 1, hex('#5a5a5a')); // handle
   },
-  door_upper: (c) => {
-    planks(c, '#9c7444');
-    const d = hex('#5a3d1e');
+  door_upper: (c, base = '#9c7444', dark = '#5a3d1e') => {
+    planks(c, base);
+    const d = hex(dark);
     for (let i = 0; i < 16; i++) { c.set(0, i, d); c.set(15, i, d); c.set(i, 0, d); }
     // two window panes
     for (let y = 3; y < 10; y++) for (const x0 of [3, 9]) for (let x = x0; x < x0 + 4; x++) c.set(x, y, [0, 0, 0], 0);
@@ -1103,6 +1104,14 @@ function paint(c, name) {
   else if (CIRCUIT_TEX[name]) CIRCUIT_TEX[name](c, { hex, mix, shade, gen: GEN, planks });
   else if (CAVE_TEX[name]) CAVE_TEX[name](c, { hex, mix, shade });
   else c.noiseFill(P.stone);
+}
+
+// doors and trapdoors of the other woods, in their planks' colours
+for (const [key, base] of [['spruce', '#6f4f2f'], ['birch', '#cdb987'], ['jungle', '#a07350'], ['acacia', '#b0603a'], ['dark_oak', '#4f3720'], ['blossom', '#e2b2a6']]) {
+  const dark = '#' + hex(base).map((v) => Math.round(v * 0.55).toString(16).padStart(2, '0')).join('');
+  GEN[key + '_door_lower'] = (c) => GEN.door_lower(c, base, dark);
+  GEN[key + '_door_upper'] = (c) => GEN.door_upper(c, base, dark);
+  GEN[key + '_trapdoor'] = (c) => GEN.oak_trapdoor(c, base, dark);
 }
 
 // stained glass, concrete and terracotta in the sixteen dye colours

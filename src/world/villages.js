@@ -18,8 +18,8 @@ export const PROFESSIONS = ['farmer', 'librarian', 'smith', 'shepherd', 'butcher
 const STYLES = {
   plains: { corner: B.OAK_LOG, wall: B.OAK_PLANKS, floor: B.COBBLESTONE, roof: B.OAK_STAIRS, roofSlab: B.OAK_SLAB, fence: B.OAK_FENCE },
   desert: { corner: B.SANDSTONE, wall: B.SANDSTONE, floor: B.SANDSTONE, roof: B.SANDSTONE_STAIRS, roofSlab: B.SANDSTONE_SLAB, fence: B.OAK_FENCE },
-  taiga: { corner: B.SPRUCE_LOG, wall: B.SPRUCE_PLANKS, floor: B.COBBLESTONE, roof: B.COBBLESTONE_STAIRS, roofSlab: B.COBBLESTONE_SLAB, fence: B.SPRUCE_FENCE },
-  savanna: { corner: B.ACACIA_LOG, wall: B.ACACIA_PLANKS, floor: B.COBBLESTONE, roof: B.OAK_STAIRS, roofSlab: B.OAK_SLAB, fence: B.OAK_FENCE },
+  taiga: { corner: B.SPRUCE_LOG, wall: B.SPRUCE_PLANKS, floor: B.COBBLESTONE, roof: B.SPRUCE_STAIRS, roofSlab: B.SPRUCE_SLAB, fence: B.SPRUCE_FENCE, door: B.SPRUCE_DOOR },
+  savanna: { corner: B.ACACIA_LOG, wall: B.ACACIA_PLANKS, floor: B.COBBLESTONE, roof: B.ACACIA_STAIRS, roofSlab: B.ACACIA_SLAB, fence: B.ACACIA_FENCE, door: B.ACACIA_DOOR },
 };
 
 const cache = new Map();
@@ -191,7 +191,8 @@ const BUILDERS = {
     // front door in the middle of the wall facing the road
     const mx = Math.floor((p.x0 + p.x1) / 2), mz = Math.floor((p.z0 + p.z1) / 2);
     const dx = fx > 0 ? p.x1 : fx < 0 ? p.x0 : mx, dz = fz > 0 ? p.z1 : fz < 0 ? p.z0 : mz;
-    set(dx, y, dz, B.DOOR, f); set(dx, y + 1, dz, B.DOOR, f | DOOR_UPPER);
+    const door = st.door || B.DOOR;
+    set(dx, y, dz, door, f); set(dx, y + 1, dz, door, f | DOOR_UPPER);
     set(dx + fx, y - 1, dz + fz, B.DIRT_PATH);
     // windows in the two side walls
     const left = (f + 1) & 3, right = (f + 3) & 3;

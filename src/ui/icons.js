@@ -205,6 +205,15 @@ function gridCanvas(grid) {
   return c;
 }
 
+/** A door item drawn in its planks' average colour. */
+function doorStyle(d) {
+  const px = texturePixels(BLOCKS[d.doorPlanks].tex.side);
+  let r = 0, g = 0, b = 0;
+  for (let i = 0; i < px.length; i += 4) { r += px[i]; g += px[i + 1]; b += px[i + 2]; }
+  const n = px.length / 4, h = (v, f = 1) => Math.min(255, Math.round(v / n * f)).toString(16).padStart(2, '0');
+  return ['door', { h: '#' + h(r) + h(g) + h(b), H: '#' + h(r, 1.2) + h(g, 1.2) + h(b, 1.2), w: '#' + h(r, 0.55) + h(g, 0.55) + h(b, 0.55) }];
+}
+
 function itemIcon(d) {
   let tpl, colors;
   if (d.dial) { const c = document.createElement('canvas'); c.width = c.height = 32; drawDial(c, d.dial, 0, 1, 2); return c; }
@@ -220,7 +229,7 @@ function itemIcon(d) {
     tpl = T[d.armor.piece];
     colors = { h: ARMOR_MATERIALS[d.armor.material].color };
   } else {
-    const st = d.iconStyle || ITEM_STYLE[d.key] || ['lump', { h: '#ff00ff' }];
+    const st = d.iconStyle || ITEM_STYLE[d.key] || (d.door ? doorStyle(d) : null) || ['lump', { h: '#ff00ff' }];
     tpl = Array.isArray(st[0]) ? st[0] : T[st[0]]; colors = st[1]; // a style may bring its own template
   }
   const c = document.createElement('canvas'); c.width = c.height = 32;

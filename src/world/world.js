@@ -1,6 +1,6 @@
 // Main-thread authoritative world: chunk storage, block/light access,
 // edits with light updates, scheduled block ticks and raycasting.
-import { B, BLOCKS, SOLID, OPAQUE, isFluid, CROPS } from './blocks.js';
+import { B, BLOCKS, SOLID, OPAQUE, SHAPE, isFluid, CROPS } from './blocks.js';
 import { LightEngine } from './lighting.js';
 import { MIN_Y, MAX_Y, WORLD_HEIGHT, SECTION_COUNT, cidx } from './constants.js';
 import { TerrainGenerator } from './generator.js';
@@ -260,10 +260,10 @@ export class World {
       const other = this.getBlock(x + dx * s, y, z + dz * s), om = this.getMeta(x + dx * s, y, z + dz * s);
       return other === B.BED && (om & BED_HEAD) !== head && (om & 3) === (meta & 3);
     }
-    if (id === B.DOOR) {
+    if (BLOCKS[id].shape === SHAPE.DOOR) {
       // the lower half stands on a solid block with its upper half above; the upper half sits on the lower
-      if ((metaIn ?? this.getMeta(x, y, z)) & DOOR_UPPER) return below === B.DOOR;
-      return !!SOLID[below] && below !== B.DOOR && this.getBlock(x, y + 1, z) === B.DOOR;
+      if ((metaIn ?? this.getMeta(x, y, z)) & DOOR_UPPER) return below === id;
+      return !!SOLID[below] && below !== id && this.getBlock(x, y + 1, z) === id;
     }
     if (id === B.RAIL) return railSupported(this, x, y, z);
     if (id === B.COCOA) { const [dx, , dz] = SIDE_DIRS[(metaIn ?? this.getMeta(x, y, z)) & 3]; return this.getBlock(x + dx, y, z + dz) === B.JUNGLE_LOG; }

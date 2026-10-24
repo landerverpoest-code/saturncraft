@@ -423,6 +423,17 @@ for (const [name, key, planks] of [['Spruce', 'SPRUCE', B.SPRUCE_PLANKS], ['Birc
   WOOD_SETS.push([planks, slab, stairs, fence, name]);
 }
 WOOD_SETS.unshift([B.OAK_PLANKS, B.OAK_SLAB, B.OAK_STAIRS, B.OAK_FENCE, 'Oak']);
+// doors and trapdoors of every other wood (they work like the oak ones: see isDoor / isTrapdoor)
+export const DOOR_SETS = [[B.OAK_PLANKS, B.DOOR, B.OAK_TRAPDOOR, 'Oak', 'oak']];
+BLOCKS[B.DOOR].doorTex = ['door_lower', 'door_upper'];
+for (const [name, key] of [['Spruce', 'spruce'], ['Birch', 'birch'], ['Jungle', 'jungle'], ['Acacia', 'acacia'], ['Dark Oak', 'dark_oak'], ['Blossom', 'blossom']]) {
+  const K = key.toUpperCase(), door = ext(K + '_DOOR'), trap = ext(K + '_TRAPDOOR');
+  def(door, `${name} Door`, { ...BLOCKS[B.DOOR], id: door, name: `${name} Door`, tex: { all: key + '_door_lower' }, doorTex: [key + '_door_lower', key + '_door_upper'] });
+  def(trap, `${name} Trapdoor`, { ...BLOCKS[B.OAK_TRAPDOOR], id: trap, name: `${name} Trapdoor`, tex: { all: key + '_trapdoor' } });
+  DOOR_SETS.push([B[K + '_PLANKS'], door, trap, name, key]);
+}
+export const isDoor = (id) => !!BLOCKS[id] && BLOCKS[id].shape === SHAPE.DOOR;
+export const isTrapdoor = (id) => !!BLOCKS[id] && BLOCKS[id].shape === SHAPE.TRAPDOOR;
 ext('POLISHED_GRANITE'); def(B.POLISHED_GRANITE, 'Polished Granite', { hardness: 1.5, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD });
 ext('POLISHED_DIORITE'); def(B.POLISHED_DIORITE, 'Polished Diorite', { hardness: 1.5, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD });
 ext('POLISHED_ANDESITE'); def(B.POLISHED_ANDESITE, 'Polished Andesite', { hardness: 1.5, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD });

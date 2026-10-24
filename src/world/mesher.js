@@ -59,6 +59,8 @@ const FARMLAND_MOIST = texId('farmland_moist');
 const RAIL_CORNER = texId('rail_corner');
 const PAINT_TILES = ARTS.map(([, w, h], art) => Array.from({ length: w * h }, (_, p) => texId(`painting_${art}_${p}`)));
 const DOOR_LOWER = texId('door_lower'), DOOR_UPPER_TILE = texId('door_upper');
+const DOOR_TILES = {};
+for (const b of BLOCKS) if (b && b.doorTex) DOOR_TILES[b.id] = b.doorTex.map(texId);
 const BED_TOPS = [0, 1, 2, 3].map((r) => [texId('bed_foot_top_' + r), texId('bed_head_top_' + r)]);
 const BED_SIDE = texId('bed_side'), BED_BOTTOM = texId('oak_planks');
 const WIRE_DOT = texId('cinnabar_wire_dot'), WIRE_LINE = texId('cinnabar_wire_line'), WIRE_HALF = texId('cinnabar_wire_half');
@@ -362,7 +364,8 @@ export function meshSection(sec) {
       emitBox(buf, x, y, z, ...BED_BOX, [BED_SIDE, BED_SIDE, top, BED_BOTTOM, BED_SIDE, BED_SIDE], (l >> 4) * 17, (l & 15) * 17, 'box');
     } else if (shape === SHAPE.DOOR) {
       const l = light[i], b = doorBox(meta[i]);
-      emitBox(buf, x, y, z, b[0], b[1], b[2], b[3], b[4], b[5], meta[i] & DOOR_UPPER ? DOOR_UPPER_TILE : DOOR_LOWER, (l >> 4) * 17, (l & 15) * 17, 'box');
+      const dt = DOOR_TILES[id] || [DOOR_LOWER, DOOR_UPPER_TILE];
+      emitBox(buf, x, y, z, b[0], b[1], b[2], b[3], b[4], b[5], meta[i] & DOOR_UPPER ? dt[1] : dt[0], (l >> 4) * 17, (l & 15) * 17, 'box');
     } else if (shape === SHAPE.LADDER) {
       // a thin panel just off the wall (both faces textured)
       const l = light[i], b = ladderBox(meta[i]);

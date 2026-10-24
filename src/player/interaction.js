@@ -4,7 +4,7 @@ import { Mob } from '../mobs/mob.js';
 import { pairOnPlace } from '../world/chests.js';
 import { hopperPlaceMeta } from '../world/hoppers.js';
 import { compost, READY, SETTLE_TICKS } from '../world/composter.js';
-import { B, BLOCKS, SOLID, SHAPE, isFluid, CROPS, isFurnace } from '../world/blocks.js';
+import { B, BLOCKS, SOLID, SHAPE, isFluid, CROPS, isFurnace, DOOR_SETS } from '../world/blocks.js';
 import { ITEMS, I, toolOf, isBlockItem, WOOL_ITEMS, POTION_ITEM, isArrow } from '../world/items.js';
 import { POTIONS } from '../world/potions.js';
 import { breakProgressPerTick, blockDrops, canHarvest } from '../world/mining.js';
@@ -459,7 +459,7 @@ export class Interaction {
     const st = p.inventory.selectedStack;
     const d = st && ITEMS[st.id];
     // Armour: right-click puts it on (swapping with what is worn), unless aiming at something usable
-    const usable = this.target && (USABLE_BLOCKS.has(this.target.id) || BLOCKS[this.target.id].shape === SHAPE.GATE);
+    const usable = this.target && (USABLE_BLOCKS.has(this.target.id) || [SHAPE.GATE, SHAPE.DOOR, SHAPE.TRAPDOOR].includes(BLOCKS[this.target.id].shape));
     if (d && d.armor && !usable) {
       const inv = p.inventory, worn = inv.armor[d.armor.slot];
       inv.armor[d.armor.slot] = st;
@@ -637,7 +637,7 @@ export class Interaction {
         this.swing = SWING_TICKS;
         return true;
       }
-      if (t.id === B.OAK_TRAPDOOR) {
+      if (BLOCKS[t.id].shape === SHAPE.TRAPDOOR) {
         const m = w.getMeta(t.x, t.y, t.z);
         w.setBlockUrgent(t.x, t.y, t.z, t.id, m ^ TRAPDOOR_OPEN);
         g.audio.play(m & TRAPDOOR_OPEN ? 'door_close' : 'door_open', [t.x + 0.5, t.y + 0.5, t.z + 0.5]);
@@ -651,10 +651,10 @@ export class Interaction {
         this.swing = SWING_TICKS;
         return true;
       }
-      if (t.id === B.DOOR) {
+      if (BLOCKS[t.id].shape === SHAPE.DOOR) {
         // open/close both halves together
         const m = w.getMeta(t.x, t.y, t.z), by = m & DOOR_UPPER ? t.y - 1 : t.y;
-        for (const yy of [by, by + 1]) if (w.getBlock(t.x, yy, t.z) === B.DOOR) w.setBlockUrgent(t.x, yy, t.z, B.DOOR, w.getMeta(t.x, yy, t.z) ^ DOOR_OPEN, false);
+        for (const yy of [by, by + 1]) if (w.getBlock(t.x, yy, t.z) === t.id) w.setBlockUrgent(t.x, yy, t.z, t.id, w.getMeta(t.x, yy, t.z) ^ DOOR_OPEN, false);
         g.audio.play(m & DOOR_OPEN ? 'door_close' : 'door_open', [t.x + 0.5, by + 1, t.z + 0.5]);
         this.swing = SWING_TICKS;
         return true;
@@ -1005,8 +1005,9 @@ export class Interaction {
     if (!SOLID[w.getBlock(px, py - 1, pz)]) return false;
     const dx = p.x - (px + 0.5), dz = p.z - (pz + 0.5);
     const facing = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 1 : 3) : (dz > 0 ? 2 : 0);
-    w.setBlockUrgent(px, py + 1, pz, B.DOOR, facing | DOOR_UPPER, false);
-    w.setBlockUrgent(px, py, pz, B.DOOR, facing);
+    const door = ITEMS[p.inventory.selectedStack.id].doorBlock || B.DOOR;
+    w.setBlockUrgent(px, py + 1, pz, door, facing | DOOR_UPPER, false);
+    w.setBlockUrgent(px, py, pz, door, facing);
     g.audio.play('place_wood', [px + 0.5, py + 0.5, pz + 0.5]);
     p.inventory.removeFromSlot(p.inventory.selected, 1);
     this.swing = SWING_TICKS;
@@ -1038,7 +1039,7 @@ export class Interaction {
 
   pickBlock(id) {
     const inv = this.game.player.inventory;
-    const asItem = { [B.CINNABAR_WIRE]: I.CINNABAR, [B.CINNABAR_TORCH_OFF]: B.CINNABAR_TORCH, [B.CINNABAR_LAMP_ON]: B.CINNABAR_LAMP, [B.DOOR]: I.OAK_DOOR, [B.BED]: I.BED, [B.WHEAT]: I.WHEAT_SEEDS, [B.MELON_STEM]: I.MELON_SEEDS, [B.PUMPKIN_STEM]: I.PUMPKIN_SEEDS, [B.CARROTS]: I.CARROT, [B.POTATOES]: I.POTATO, [B.BEETROOTS]: I.BEETROOT_SEEDS, [B.FURNACE_LIT]: B.FURNACE, [B.SMOKER_LIT]: B.SMOKER, [B.BLAST_FURNACE_LIT]: B.BLAST_FURNACE, [B.FARMLAND]: B.DIRT, [B.CINDERROOT]: I.CINDERROOT };
+    const asItem = { [B.CINNABAR_WIRE]: I.CINNABAR, [B.CINNABAR_TORCH_OFF]: B.CINNABAR_TORCH, [B.CINNABAR_LAMP_ON]: B.CINNABAR_LAMP, [B.DOOR]: I.OAK_DOOR, ...Object.fromEntries(DOOR_SETS.slice(1).map(([, door]) => [door, BLOCKS[door].doorItem])), [B.BED]: I.BED, [B.WHEAT]: I.WHEAT_SEEDS, [B.MELON_STEM]: I.MELON_SEEDS, [B.PUMPKIN_STEM]: I.PUMPKIN_SEEDS, [B.CARROTS]: I.CARROT, [B.POTATOES]: I.POTATO, [B.BEETROOTS]: I.BEETROOT_SEEDS, [B.FURNACE_LIT]: B.FURNACE, [B.SMOKER_LIT]: B.SMOKER, [B.BLAST_FURNACE_LIT]: B.BLAST_FURNACE, [B.FARMLAND]: B.DIRT, [B.CINDERROOT]: I.CINDERROOT };
     const want = asItem[id] ?? id;
     for (let i = 0; i < 9; i++) if (inv.slots[i] && inv.slots[i].id === want) { inv.selected = i; return; }
     if (this.game.player.creative && ITEMS[want]) {

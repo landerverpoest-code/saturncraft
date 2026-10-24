@@ -275,7 +275,7 @@ function boundsOf(boxes) {
 
 /** Blocks whose collision is not a full cube. */
 export const SHAPED_COLLISION = new Uint8Array(BLOCK_LIMIT);
-SHAPED_COLLISION[B.DOOR] = 1;
+for (const b of BLOCKS) if (b && (b.shape === SHAPE.DOOR || b.shape === SHAPE.TRAPDOOR)) SHAPED_COLLISION[b.id] = 1;
 SHAPED_COLLISION[B.BED] = 1;
 SHAPED_COLLISION[B.GLASS_PANE] = 1;
 SHAPED_COLLISION[B.SNOW_LAYER] = 1;
@@ -295,7 +295,7 @@ for (const b of BLOCKS) if (b && (b.shape === SHAPE.SLAB || b.shape === SHAPE.ST
  * cube. (Ladders and torches are not solid and never collide.)
  */
 export function collisionBoxes(id, meta, world, x, y, z) {
-  if (id === B.DOOR) return [doorBox(meta)];
+  if (BLOCKS[id].shape === SHAPE.DOOR) return [doorBox(meta)];
   const shp = BLOCKS[id].shape;
   if (shp === SHAPE.FENCE) return fenceBoxes(world ? fenceMask((a, b, c) => world.getBlock(a, b, c), x, y, z) : 0, 1.5);
   if (shp === SHAPE.GATE) return gateCollision(meta);
@@ -304,7 +304,7 @@ export function collisionBoxes(id, meta, world, x, y, z) {
   const sh = BLOCKS[id].shape;
   if (sh === SHAPE.SLAB) return [slabBox(meta)];
   if (sh === SHAPE.SNOW) return id === B.SNOW_LAYER && (meta & 7) ? [snowBox(meta, true)] : []; // carpets have none (like one layer of snow)
-  if (id === B.OAK_TRAPDOOR) return [trapdoorBox(meta)];
+  if (sh === SHAPE.TRAPDOOR) return [trapdoorBox(meta)];
   if (sh === SHAPE.WALL) return wallBoxes(world ? wallMask((a, b, c) => world.getBlock(a, b, c), x, y, z) : 0, 1.5);
   if (sh === SHAPE.STAIRS) return world ? stairBoxes(meta, (dx, dz) => [world.getBlock(x + dx, y, z + dz), world.getMeta(x + dx, y, z + dz)], (n) => BLOCKS[n] && BLOCKS[n].shape === SHAPE.STAIRS) : stairBoxes(meta);
   if (sh === SHAPE.BOXES) return id === B.ANVIL ? [boundsOf(blockBoxes(id, meta))] : id === B.BREWING_STAND ? ALEMBIC_COLLISION : blockBoxes(id, meta);
@@ -318,11 +318,11 @@ const FIRE_BOX = [0, 0, 0, 1, 1 / 16, 1];
 
 /** Selection (outline / raycast) box, or null for a full cube. */
 export function selectionBox(id, meta) {
-  if (id === B.DOOR) return doorBox(meta);
+  if (BLOCKS[id].shape === SHAPE.DOOR) return doorBox(meta);
   if (BLOCKS[id].shape === SHAPE.SNOW) return snowBox(id === B.SNOW_LAYER ? meta : 0);
   if (id === B.PAINTING || id === B.PAINTING_B) { const [dx, , dz] = SIDE_DIRS[meta & 3]; return [dx > 0 ? 15 / 16 : 0, 0, dz > 0 ? 15 / 16 : 0, dx < 0 ? 1 / 16 : 1, 1, dz < 0 ? 1 / 16 : 1]; }
   if (id === B.RAIL) return [0, 0, 0, 1, meta >= 2 && meta <= 5 ? 0.5 : 2 / 16, 1];
-  if (id === B.OAK_TRAPDOOR) return trapdoorBox(meta);
+  if (BLOCKS[id].shape === SHAPE.TRAPDOOR) return trapdoorBox(meta);
   if (BLOCKS[id].shape === SHAPE.WALL) return [4 / 16, 0, 4 / 16, 12 / 16, 1, 12 / 16];
   if (BLOCKS[id].shape === SHAPE.FENCE) return [P0, 0, P0, P1, 1, P1];
   if (BLOCKS[id].shape === SHAPE.PANE) return [7 / 16, 0, 7 / 16, 9 / 16, 1, 9 / 16];

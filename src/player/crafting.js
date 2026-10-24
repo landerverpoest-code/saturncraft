@@ -1,5 +1,5 @@
 // Shaped/shapeless crafting and furnace smelting recipes.
-import { B, WOOD_SETS, STONE_SETS, COLOR_BLOCKS } from '../world/blocks.js';
+import { B, BLOCKS, WOOD_SETS, STONE_SETS, COLOR_BLOCKS, DOOR_SETS } from '../world/blocks.js';
 import { I, ITEMS, DYES, WOOL_ITEMS, TIPPED_ARROW, SPLASH_ITEM } from '../world/items.js';
 import { COLOR } from '../world/colors.js';
 
@@ -86,7 +86,7 @@ shaped(['PIP', 'PPP', ' P '], { P: 'planks', I: I.IRON_INGOT }, I.SHIELD, 1);
 shaped(['  S', ' SW', 'S W'], { S: I.STICK, W: I.STRING }, I.FISHING_ROD, 1);
 shaped(['CCC', 'CCC'], { C: B.COBBLESTONE }, B.COBBLESTONE_WALL, 6);
 shaped(['CCC', 'CCC'], { C: B.MOSSY_COBBLESTONE }, B.MOSSY_COBBLESTONE_WALL, 6);
-shaped(['PPP', 'PPP'], { P: 'planks' }, B.OAK_TRAPDOOR, 2);
+for (const [planks, , trap] of DOOR_SETS) shaped(['PPP', 'PPP'], { P: planks }, trap, 2);
 shaped(['BBB'], { B: B.SNOW_BLOCK }, B.SNOW_LAYER, 6);
 shaped(['P P', ' P '], { P: 'planks' }, I.BOWL, 4);
 // Cinnabar circuitry (reference recipes; the lamp uses Glowshard for the glowing block)
@@ -124,7 +124,7 @@ for (const [mat, slab, stairs] of [[B.COBBLESTONE, B.COBBLESTONE_SLAB, B.COBBLES
   shaped(['XXX'], { X: mat }, slab, 6);
   shaped(['X  ', 'XX ', 'XXX'], { X: mat }, stairs, 4);
 }
-shaped(['PP', 'PP', 'PP'], { P: 'planks' }, I.OAK_DOOR, 3);
+for (const [planks, door] of DOOR_SETS) shaped(['PP', 'PP', 'PP'], { P: planks }, BLOCKS[door].doorItem, 3);
 shaped(['P P', 'PPP'], { P: 'planks' }, I.OAK_BOAT, 1);
 shaped(['WWW', 'PPP'], { W: B.WOOL, P: 'planks' }, I.BED, 1);
 shaped(['S S', 'SSS', 'S S'], { S: I.STICK }, B.LADDER, 3);

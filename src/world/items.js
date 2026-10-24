@@ -1,7 +1,7 @@
 // Item registry. Item ids 0..255 are block items (id === block id); 256+ are
 // pure items. Tool stats, food values and fuel times mirror the documented
 // reference numbers.
-import { BLOCKS, B, TOOL, TIER, isBlockId, EXT_BASE } from './blocks.js';
+import { BLOCKS, B, TOOL, TIER, isBlockId, EXT_BASE, DOOR_SETS } from './blocks.js';
 import { COLORS } from './colors.js';
 import { POTIONS, POTION_KEYS, potionColor } from './potions.js';
 
@@ -273,6 +273,12 @@ for (const kind of POTION_KEYS) {
 const ICON_CHARM = ['................', '......hhhh......', '.....hHHHHh.....', '.....hHwwHh.....', '.....hwkkwh.....', '...hhhhhhhhhh...', '..hHhhhhhhhhHh..', '...hh.hHHh.hh...', '......hhhh......', '.....hHhhHh.....', '.....hhkkhh.....', '......hhhh......', '......h..h......', '.....hh..hh.....', '................', '................'];
 item('charm_of_undying', 'Charm of Undying', { stack: 1, undying: true, iconStyle: [ICON_CHARM, { h: '#e8b83a', H: '#fff0a0', w: '#6ad8a8', k: '#2a6a4a' }] });
 item('sweet_berries', 'Sweet Berries', { food: { hunger: 2, saturation: 0.4 }, places: B.SWEET_BERRY_BUSH, iconStyle: ['seeds', { h: '#c8202e', H: '#ff6a6a' }] });
+// doors of the other woods (the oak door item came first)
+BLOCKS[B.DOOR].doorItem = I.OAK_DOOR;
+for (const [planks, door, , name, key] of DOOR_SETS.slice(1)) {
+  const d = item(key + '_door', `${name} Door`, { door: true, doorBlock: door, doorPlanks: planks });
+  BLOCKS[door].doorItem = d.id;
+}
 ITEMS[B.GLOOMSHELL_BOX].stack = 1; // a box keeps its contents in the item (stack.contents), so it never stacks
 
 /** Light level (0-15) an item gives when held: a torch, lantern or other light block; 0 for the rest. */
