@@ -8,7 +8,7 @@ import { stampSanctums } from './dimensions/sanctum.js';
 import { stampMonuments } from './monuments.js';
 import { stampCaveFeatures } from './caveGen.js';
 import { treeShape, LEAVES, LOGS, PLANTS } from './trees.js';
-import { B, DEEP_VARIANT, BLOCK_LIMIT } from './blocks.js';
+import { B, DEEP_VARIANT, BLOCK_LIMIT, CORALS } from './blocks.js';
 import { Simplex, hash4, hashf, mulberry32 } from './noise.js';
 import { carveChunk } from './carvers.js';
 import { stampRuins } from './ruinedPortals.js';
@@ -619,6 +619,18 @@ export class TerrainGenerator {
       }
       const ground = blocks[cidx(x, top, z)];
       const above = cidx(x, top + 1, z);
+      // coral reefs in warm, shallow seas: lumps of coral block with corals growing on them
+      if (biome === BIOME.OCEAN && cols[ci].temp > 0.95 && (ground === B.SAND || ground === B.GRAVEL) && blocks[above] === B.WATER && top < SEA_LEVEL - 3 && top > SEA_LEVEL - 16) {
+        const reef = hashf(this.seed, (x0 + x) >> 3, (z0 + z) >> 3, 57);
+        if (reef < 0.5) {
+          const kind = CORALS[Math.floor(h(x, z, 58) * CORALS.length)];
+          const lump = h(x, z, 59) < 0.45 ? 1 + Math.floor(h(x, z, 60) * 3) : 0;
+          for (let k = 1; k <= lump && top + k < SEA_LEVEL - 2; k++) blocks[cidx(x, top + k, z)] = kind[0];
+          const t2 = top + lump + 1;
+          if (t2 < SEA_LEVEL - 1 && blocks[cidx(x, t2, z)] === B.WATER && h(x, z, 61) < 0.7) blocks[cidx(x, t2, z)] = CORALS[Math.floor(h(x, z, 62) * CORALS.length)][1];
+          continue;
+        }
+      }
       // kelp forests and seagrass meadows on the sea floor (the top stays two blocks under the surface)
       if ((ground === B.SAND || ground === B.GRAVEL || ground === B.DIRT || ground === B.CLAY) && blocks[above] === B.WATER && top < SEA_LEVEL - 2 && biome !== BIOME.FROZEN_OCEAN) {
         const r2 = h(x, z, 55);

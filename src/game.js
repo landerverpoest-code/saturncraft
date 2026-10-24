@@ -1142,7 +1142,11 @@ export class Game {
     this.sky.uniforms.uCave.value = cd;
     if (this.world.dimension === 'overworld') this.clouds.visible = cd < 0.6;
     if (this.world.dimension === 'overworld' && this.sky.rings) for (const k of ['ring', 'particles']) if (this.sky.rings[k]) this.sky.rings[k].visible = cd < 0.6;
-    if (b.eyeInWater) { this.scene.fog.color.setRGB(0.03, 0.1, 0.3); this.scene.fog.near = 1; this.scene.fog.far = 18; }
+    if (b.eyeInWater) {
+      // clearer and brighter by day (Water Breathing or Night Vision see further)
+      const day = 0.25 + 0.75 * Math.min(1, st.combined) * (1 - cd), clear = p.effects.water_breathing || this.nightVision ? 1.5 : 1;
+      this.scene.fog.color.setRGB(0.05 * day, 0.17 * day, 0.4 * day); this.scene.fog.near = 2; this.scene.fog.far = 26 * clear;
+    }
     else if (b.eyeInLava) { this.scene.fog.color.setRGB(0.6, 0.15, 0.02); this.scene.fog.near = 0; this.scene.fog.far = 2; }
     else { this.scene.fog.near = R * (0.65 - cd * 0.45); this.scene.fog.far = R * (1 - cd * 0.25); this.dims.adjustFog(this.scene.fog, R); }
     this.sky.uniforms.uUnderwater.value = b.eyeInWater ? 1 : 0;

@@ -1141,6 +1141,20 @@ function paint(c, name) {
   else c.noiseFill(P.stone);
 }
 
+// coral blocks and corals
+for (const [key, base, hi] of [['tube', '#3050c8', '#6a8af0'], ['brain', '#d0508a', '#f08ab8'], ['bubble', '#a030b0', '#d070e0'], ['fire', '#c82a2a', '#f06a4a'], ['horn', '#d0b020', '#f0d860']]) {
+  GEN[key + '_coral_block'] = (c) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const n = c.h(x, y, 31); c.set(x, y, n < 0.2 ? hex(hi) : shade(hex(base), 0.8 + c.h(x >> 1, y >> 1, 32) * 0.35)); } };
+  GEN[key + '_coral'] = (c) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
+    // a few branching fingers from the base
+    for (const [x0, lean] of [[4, -1], [8, 0], [11, 1]]) {
+      let x = x0;
+      for (let y = 15; y > 3 + (x0 % 3); y--) { c.set(x, y, shade(hex(base), 0.85 + c.h(x, y, 33) * 0.3)); if (y % 4 === 0) { x += lean; c.set(x + lean, y - 1, hex(hi)); } }
+      c.set(x, 3 + (x0 % 3), hex(hi));
+    }
+  };
+}
+
 // doors and trapdoors of the other woods, in their planks' colours
 for (const [key, base] of [['spruce', '#6f4f2f'], ['birch', '#cdb987'], ['jungle', '#a07350'], ['acacia', '#b0603a'], ['dark_oak', '#4f3720'], ['blossom', '#e2b2a6']]) {
   const dark = '#' + hex(base).map((v) => Math.round(v * 0.55).toString(16).padStart(2, '0')).join('');

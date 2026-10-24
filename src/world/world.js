@@ -279,7 +279,7 @@ export class World {
     if (id === B.HUSHVINE) return hushvineSupported((a, b, c) => this.getBlock(a, b, c), x, y, z);
     if (id === B.HUSHVINE_FLOWER) return hushFlowerSupported((a, b, c) => this.getBlock(a, b, c), x, y, z);
     if (id === B.KELP) return below === B.KELP || (!!SOLID[below]);
-    if (id === B.SEAGRASS) return !!SOLID[below];
+    if (id === B.SEAGRASS || (BLOCKS[id].waterlogged && id !== B.KELP)) return !!SOLID[below];
     if (id === B.BAMBOO) return below === B.BAMBOO || below === B.GRASS || below === B.DIRT || below === B.SAND || below === B.GRAVEL || below === B.MYCELIUM;
     if (id === B.SUGAR_CANE) {
       if (below === B.SUGAR_CANE) return true;

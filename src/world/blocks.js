@@ -447,6 +447,14 @@ ext('BAMBOO_PLANKS'); def(B.BAMBOO_PLANKS, 'Bamboo Planks', { hardness: 2, resis
 ext('KELP'); def(B.KELP, 'Kelp', { ...plant, waterlogged: true, opacity: 1, sound: 'grass', drops: 'self' });
 ext('SEAGRASS'); def(B.SEAGRASS, 'Seagrass', { ...plant, waterlogged: true, opacity: 1, sound: 'grass', replaceable: true, drops: null });
 ext('DRIED_KELP_BLOCK'); def(B.DRIED_KELP_BLOCK, 'Dried Kelp Block', { hardness: 0.5, resistance: 2.5, tool: TOOL.HOE, sound: 'grass', flammable: true, tex: { top: 'dried_kelp_top', bottom: 'dried_kelp_top', side: 'dried_kelp_side' } });
+// Coral reefs in warm oceans: five colours of coral block and coral (a waterlogged plant)
+export const CORALS = [];
+for (const [name, key] of [['Tube', 'TUBE'], ['Brain', 'BRAIN'], ['Bubble', 'BUBBLE'], ['Fire', 'FIRE'], ['Horn', 'HORN']]) {
+  const block = ext(key + '_CORAL_BLOCK'), coral = ext(key + '_CORAL');
+  def(block, `${name} Coral Block`, { hardness: 1.5, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD, sound: 'stone' });
+  def(coral, `${name} Coral`, { ...plant, waterlogged: true, opacity: 1, sound: 'grass', drops: null });
+  CORALS.push([block, coral, key.toLowerCase()]);
+}
 // Jukebox: meta = the disc inside (DISCS index + 1), 0 when empty (see world/items.js DISCS)
 ext('JUKEBOX'); def(B.JUKEBOX, 'Jukebox', { hardness: 2, resistance: 6, tool: TOOL.AXE, sound: 'wood', flammable: true, drops: 'jukebox', tex: { top: 'jukebox_top', bottom: 'jukebox_side', side: 'jukebox_side' } });
 export const isDoor = (id) => !!BLOCKS[id] && BLOCKS[id].shape === SHAPE.DOOR;
