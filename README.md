@@ -165,6 +165,7 @@ tests/                     vitest suites (95 tests)
 ## The world
 
 * **Chunks** are 16×16 columns, 384 blocks tall (y = −64 … 319), sea level 63.
+* **Block ids** are 16 bits: the original blocks use 1–255, item ids use 256–1023, and newer blocks start at 1024 (`EXT_BASE` in `src/world/blocks.js`, numbered in the order they are listed, so only ever append). Old saves with 8-bit chunks still load.
   Generation and initial lighting run in a pool of Web Workers; light is then
   stitched across chunk borders on the main thread.
 * **Meshing** is face-culled per 16³ section (in workers), with vanilla-style
@@ -417,7 +418,8 @@ poison from eyes) follow the documented table.
 * **Charm of Undying** (reference: totem of undying; half of the Elder Deepeyes drop one, clerics sell them for 24 beryl): anywhere in the hotbar (the reference needs it in a hand) it saves you from a deadly hit once (not from the void or /kill): back to 1 HP with Regeneration II (45 s), Absorption II (5 s) and Fire Resistance (40 s), in a burst of green and gold
 * Tipped arrows: eight arrows round a splash elixir make eight Arrows of Swiftness, Poison, Healing and so on; a bow shoots them like plain arrows (the first arrows in the inventory), the hit lays an eighth of the elixir's effect (instant ones in full), and they are picked back up as themselves
 * Ambient particles: leaves drift down from tree canopies in the wind, fireflies glow over swamps, forests and jungles on dry nights, and dust hangs in the air of caves; sprinting kicks up dust of the ground under your feet and landing in water splashes
-* **Blossom Grove** biome (reference: cherry grove; mild, hilly ground, about 1–2 % of the land): **Blossom trees** with a slim dark trunk splitting into leaning branches under wide pink crowns that hang petals from their rim, Blossom Logs, Planks and Saplings, pink and blue flowers, and pink petals drifting down all the time. `/locate biome blossom_grove` finds the nearest one (any biome key works). These four blocks take the last free block ids (252–255)
+* Building blocks: slabs and stairs of every wood (spruce, birch, jungle, acacia, dark oak, blossom) and of bricks, mossy cobblestone, cobbled deepstone, granite, diorite, andesite, their polished forms, smooth stone and stone; fences of every wood; **Polished Granite / Diorite / Andesite** (4 raw → 4) and **Smooth Stone** (smelt stone)
+* **Blossom Grove** biome (reference: cherry grove; mild, hilly ground, about 1–2 % of the land): **Blossom trees** with a slim dark trunk splitting into leaning branches under wide pink crowns that hang petals from their rim, Blossom Logs, Planks and Saplings, pink and blue flowers, and pink petals drifting down all the time. `/locate biome blossom_grove` finds the nearest one (any biome key works). 
 * Death screen, item drop on death, respawn; pause menu with settings
 * Procedural sound effects with stereo panning; world saving
 * Generative music: every 5–10 minutes a calm piano piece is composed on the spot (major by day, minor at night, low and sparse underground) with reverb; distant rumbles in dark caves; music volume in the pause menu

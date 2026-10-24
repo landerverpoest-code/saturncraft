@@ -6,7 +6,7 @@ import { templesNear, wrecksNear, outpostsNear } from '../world/temples.js';
 import { ruinsNear } from '../world/ruinedPortals.js';
 import { hutsNear } from '../world/swampHuts.js';
 import { nearestMonument } from '../world/monuments.js';
-import { BLOCKS } from '../world/blocks.js';
+import { BLOCKS, isBlockId } from '../world/blocks.js';
 import { MOBS, MOB_KEYS } from '../mobs/mobTypes.js';
 import { skyState } from '../sky/suns.js';
 import { addXp } from '../player/experience.js';
@@ -22,7 +22,7 @@ export function itemByName(name) {
     ITEM_KEYS = new Map();
     for (const d of ITEMS) {
       if (!d || !d.id) continue;
-      const block = d.id < 256 ? BLOCKS[d.id] : null;
+      const block = isBlockId(d.id) ? BLOCKS[d.id] : null;
       const key = (block ? block.name : d.key || d.name).toLowerCase().replace(/[^a-z0-9]+/g, '_');
       ITEM_KEYS.set(key, d.id);
       ITEM_KEYS.set(d.name.toLowerCase().replace(/[^a-z0-9]+/g, '_'), d.id);

@@ -20,7 +20,7 @@
 // ticks and then drains the queue with a cap on the work per tick. Only the
 // authoritative world (single player or the multiplayer host) simulates:
 // guests set `enabled = false` and just apply the host's block edits.
-import { B, BLOCKS, SOLID } from './blocks.js';
+import { B, BLOCKS, SOLID, BLOCK_LIMIT } from './blocks.js';
 import { MIN_Y, MAX_Y } from './constants.js';
 import { SIDE_DIRS, DOOR_OPEN, DOOR_UPPER, TRAPDOOR_OPEN, GATE_OPEN } from './shapes.js';
 import {
@@ -42,11 +42,11 @@ const H4 = SIDE_DIRS;
 const key = (x, y, z) => `${x},${y},${z}`;
 
 /** Blocks the simulation reacts to when something next to them changes. */
-export const CIRCUIT_REACT = new Uint8Array(256);
+export const CIRCUIT_REACT = new Uint8Array(BLOCK_LIMIT);
 for (const id of [B.CINNABAR_WIRE, B.CINNABAR_TORCH, B.CINNABAR_TORCH_OFF, B.CINNABAR_LAMP, B.CINNABAR_LAMP_ON, B.REPEATER,
   B.PISTON, B.STICKY_PISTON, B.STONE_BUTTON, B.WOODEN_PRESSURE_PLATE, B.CHIME_BLOCK, B.DOOR, B.OAK_TRAPDOOR, B.OAK_FENCE_GATE, B.TNT]) CIRCUIT_REACT[id] = 1;
 /** Blocks re-evaluated when their chunk loads or on random ticks (state may be stale after a reload). */
-export const CIRCUIT_SETTLE = new Uint8Array(256);
+export const CIRCUIT_SETTLE = new Uint8Array(BLOCK_LIMIT);
 for (const id of [B.CINNABAR_WIRE, B.CINNABAR_TORCH, B.CINNABAR_TORCH_OFF, B.CINNABAR_LAMP, B.CINNABAR_LAMP_ON, B.REPEATER,
   B.PISTON, B.STICKY_PISTON, B.STONE_BUTTON, B.WOODEN_PRESSURE_PLATE]) CIRCUIT_SETTLE[id] = 1;
 export { CIRCUIT_BLOCK };

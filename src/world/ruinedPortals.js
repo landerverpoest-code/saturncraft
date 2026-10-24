@@ -4,7 +4,7 @@
 // obsidian missing, on a splash of Cinderstone, gravel and the odd patch of
 // lava and fire, next to a chest of gold. Gold blocks sometimes hide in the
 // rubble. Kept deterministic from the seed and stamped chunk by chunk.
-import { B, BLOCKS, SOLID } from './blocks.js';
+import { B, BLOCKS, SOLID, BLOCK_LIMIT } from './blocks.js';
 import { BIOME } from './biomes.js';
 import { MIN_Y, WORLD_HEIGHT, SEA_LEVEL, cidx } from './constants.js';
 import { mulberry32, hash4, hashf } from './noise.js';
@@ -12,7 +12,7 @@ import { mulberry32, hash4, hashf } from './noise.js';
 export const RUIN_REGION = 192;
 export const RUIN_LOOT = 7; // loot kind of the chest (mobs/spawnerBlocks.js)
 const cache = new Map();
-const TREE_PART = new Uint8Array(256);
+const TREE_PART = new Uint8Array(BLOCK_LIMIT);
 for (const d of BLOCKS) if (d && /( Log| Leaves|Mushroom Block|Mushroom Stem|Vines|Cocoa)/.test(d.name)) TREE_PART[d.id] = 1;
 
 export function ruinInRegion(gen, rx, rz) {

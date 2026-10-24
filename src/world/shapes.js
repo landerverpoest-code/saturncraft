@@ -3,7 +3,7 @@
 //
 // Side indices (used in meta) follow the furnace convention:
 // 0 = -z, 1 = +x, 2 = +z, 3 = -x.
-import { B, BLOCKS, SHAPE } from './blocks.js';
+import { B, BLOCKS, SHAPE, BLOCK_LIMIT } from './blocks.js';
 import { circuitSelection, circuitCollision } from './circuitShapes.js';
 import { crystalBox, rodBoxes } from './caves.js';
 
@@ -274,7 +274,7 @@ function boundsOf(boxes) {
 }
 
 /** Blocks whose collision is not a full cube. */
-export const SHAPED_COLLISION = new Uint8Array(256);
+export const SHAPED_COLLISION = new Uint8Array(BLOCK_LIMIT);
 SHAPED_COLLISION[B.DOOR] = 1;
 SHAPED_COLLISION[B.BED] = 1;
 SHAPED_COLLISION[B.GLASS_PANE] = 1;
@@ -287,6 +287,8 @@ for (const id of [B.OAK_FENCE, B.SPRUCE_FENCE, B.BIRCH_FENCE, B.OAK_FENCE_GATE])
 for (const id of [B.PISTON, B.STICKY_PISTON, B.PISTON_HEAD]) SHAPED_COLLISION[id] = 1;
 for (const id of [B.OAK_SLAB, B.COBBLESTONE_SLAB, B.STONE_BRICK_SLAB, B.SANDSTONE_SLAB, B.OAK_STAIRS, B.COBBLESTONE_STAIRS, B.STONE_BRICK_STAIRS, B.SANDSTONE_STAIRS]) SHAPED_COLLISION[id] = 1;
 for (const id of [B.HOLLOWBRICK_SLAB, B.HOLLOWBRICK_STAIRS, B.WYRM_HEAD]) SHAPED_COLLISION[id] = 1;
+// every slab, stair, fence and gate (the extended blocks too)
+for (const b of BLOCKS) if (b && (b.shape === SHAPE.SLAB || b.shape === SHAPE.STAIRS || b.shape === SHAPE.FENCE || b.shape === SHAPE.GATE)) SHAPED_COLLISION[b.id] = 1;
 
 /**
  * Collision boxes of a solid non-cube block, or null for an ordinary full

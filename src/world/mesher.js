@@ -1,7 +1,7 @@
 // Face-culled section mesher with smooth lighting and ambient occlusion.
 // Input is a 18x18x18 padded copy of a 16^3 section (1 block border from
 // neighbours) so it can run inside a worker without access to the world.
-import { B, BLOCKS, OPAQUE, SOLID, SHAPES, LAYERS, SHAPE, LAYER } from './blocks.js';
+import { B, BLOCKS, OPAQUE, SOLID, SHAPES, LAYERS, SHAPE, LAYER, BLOCK_LIMIT } from './blocks.js';
 import { LEAVES } from './trees.js';
 import { FACE_TILE, FRONT_TILE, texId } from './textures.js';
 import { WOOL_RGB } from './colors.js';
@@ -43,7 +43,7 @@ for (const f of FACES) {
 
 const FOLIAGE_FIXED = { [B.BIRCH_LEAVES]: [128, 167, 85], [B.SPRUCE_LEAVES]: [97, 153, 97] };
 // blocks tinted with the biome's foliage colour (leaves, vines)
-const FOLIAGE_BIOME = new Uint8Array(256);
+const FOLIAGE_BIOME = new Uint8Array(BLOCK_LIMIT);
 for (const d of BLOCKS) if (d && d.tint === 'foliage') FOLIAGE_BIOME[d.id] = 1;
 const FURNACE_FRONT_DIR = [5, 0, 4, 1];
 // double chests: does the partner on the + side of the chest's axis sit at the viewer's right (front faces -z, +x, +z, -x)?

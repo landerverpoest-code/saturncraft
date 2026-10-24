@@ -3,7 +3,7 @@
 // geodes and Seepstone caves (spikes on ceilings and floors, extra copper).
 // Everything is decided from the seed and world coordinates, never from the
 // chunk's shared random stream, so the rest of the terrain stays the same.
-import { B } from './blocks.js';
+import { B, BLOCK_LIMIT } from './blocks.js';
 import { Simplex, hash4, hashf, mulberry32 } from './noise.js';
 import { MIN_Y, WORLD_HEIGHT, cidx } from './constants.js';
 import { geodeIn, geodeLayer, GEODE_RADII, BUDDING_CHANCE, BUD_PLACE_CHANCE, BUD_STAGES, DIRS6, FACING_UP, FACING_DOWN, spikeMeta, spikeThickness } from './caves.js';
@@ -16,7 +16,7 @@ function noisesFor(seed) {
 }
 const cellHash = (seed, key, x, y, z) => hashf(seed ^ Math.imul(key, 0x2c1b3c6d), x, y, z);
 
-const ROCK = new Uint8Array(256);
+const ROCK = new Uint8Array(BLOCK_LIMIT);
 for (const id of [B.STONE, B.DEEPSTONE, B.GRANITE, B.DIORITE, B.ANDESITE, B.TUFF, B.SEEPSTONE]) ROCK[id] = 1;
 
 /** Region strength of Seepstone caves at a column (they occupy roughly a tenth of the underground). */

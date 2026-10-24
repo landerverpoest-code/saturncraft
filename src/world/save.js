@@ -9,6 +9,7 @@ const STORE = 'worlds';
 export const MAX_WORLDS = 3;
 const slotKey = (slot) => `slot${slot}`;
 
+/** Run-length encoding as [value, count] pairs (16-bit values, so block ids above 255 fit). */
 export function rleEncode(arr) {
   const out = [];
   let i = 0;
@@ -19,11 +20,11 @@ export function rleEncode(arr) {
     out.push(v, n);
     i += n;
   }
-  return Uint8Array.from(out);
+  return arr instanceof Uint16Array ? Uint16Array.from(out) : Uint8Array.from(out);
 }
 
-export function rleDecode(enc, length) {
-  const out = new Uint8Array(length);
+export function rleDecode(enc, length, Type = Uint8Array) {
+  const out = new Type(length);
   let o = 0;
   for (let i = 0; i < enc.length; i += 2) { out.fill(enc[i], o, o + enc[i + 1]); o += enc[i + 1]; }
   return out;
@@ -59,7 +60,7 @@ export function packChunk(c) {
 export function unpackChunk(p) {
   const V = 16 * 16 * 384;
   return {
-    blocks: rleDecode(p.blocks, V), meta: rleDecode(p.meta, V), light: rleDecode(p.light, V),
+    blocks: rleDecode(p.blocks, V, Uint16Array), meta: rleDecode(p.meta, V), light: rleDecode(p.light, V),
     biomes: p.biomes, colors: p.colors, heightmap: p.heightmap, modified: true,
   };
 }

@@ -30,7 +30,7 @@ export class CinderdeepGenerator {
   }
 
   generate(cx, cz) {
-    const blocks = new Uint8Array(CHUNK_VOLUME);
+    const blocks = new Uint16Array(CHUNK_VOLUME);
     const meta = new Uint8Array(CHUNK_VOLUME);
     const biomes = new Uint8Array(256).fill(8);
     const colors = new Uint8Array(256 * 6);

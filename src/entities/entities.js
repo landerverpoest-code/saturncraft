@@ -2,7 +2,7 @@
 // manager that ticks and renders every entity (mobs included).
 import * as THREE from 'three';
 import { Body } from '../physics/body.js';
-import { B, BLOCKS, SOLID, SHAPE, isFluid } from '../world/blocks.js';
+import { B, BLOCKS, SOLID, SHAPE, isFluid, isBlockId } from '../world/blocks.js';
 import { stalactiteDamage, crystalTex, FACING_DOWN } from '../world/caves.js';
 import { ITEMS, I, maxStack } from '../world/items.js';
 import { POTIONS } from '../world/potions.js';
@@ -43,7 +43,7 @@ export function blockFaceTexture(name) {
 
 /** Is this item drawn as a little 3-D cube when dropped (full-block shapes only)? */
 function droppedCube(id) {
-  const d = id > 0 && id < 256 ? BLOCKS[id] : null;
+  const d = isBlockId(id) ? BLOCKS[id] : null;
   return !!(d && d.tex && d.tex.side && (d.shape === SHAPE.CUBE || d.shape === SHAPE.CACTUS) && !d.flatIcon);
 }
 

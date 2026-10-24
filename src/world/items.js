@@ -1,7 +1,7 @@
 // Item registry. Item ids 0..255 are block items (id === block id); 256+ are
 // pure items. Tool stats, food values and fuel times mirror the documented
 // reference numbers.
-import { BLOCKS, B, TOOL, TIER } from './blocks.js';
+import { BLOCKS, B, TOOL, TIER, isBlockId, EXT_BASE } from './blocks.js';
 import { COLORS } from './colors.js';
 import { POTIONS, POTION_KEYS, potionColor } from './potions.js';
 
@@ -29,6 +29,7 @@ const TOOL_COMBAT = {
 let nextId = 256;
 function item(key, name, props = {}) {
   const id = nextId++;
+  if (id >= EXT_BASE) throw new Error('item ids ran into the extended block ids');
   const d = { id, key, name, stack: 64, icon: key, ...props };
   ITEMS[id] = d;
   I[key.toUpperCase()] = id;
@@ -224,7 +225,7 @@ ITEMS[B.COAL_BLOCK].fuel = 16000;
 
 export function itemDef(id) { return ITEMS[id]; }
 export function maxStack(id) { return ITEMS[id] ? ITEMS[id].stack : 64; }
-export function isBlockItem(id) { return id > 0 && id < 256; }
+export function isBlockItem(id) { return isBlockId(id); }
 
 export const HAND = { type: null, speed: 1, tier: -1, damage: 1, attackSpeed: 4 };
 export function toolOf(stack) {

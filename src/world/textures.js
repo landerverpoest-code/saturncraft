@@ -1,6 +1,6 @@
 // Procedural 16x16 pixel art for every block face. All art is generated at
 // runtime from seeded noise and hand-picked palettes; no external images.
-import { BLOCKS, B } from './blocks.js';
+import { BLOCKS, B, BLOCK_LIMIT } from './blocks.js';
 import { ARTS, paintingPart } from './paintings.js';
 import { mulberry32, hash4 } from './noise.js';
 import { DIM_TEX } from './dimensions/dimTextures.js';
@@ -46,7 +46,7 @@ for (let i = 0; i < 10; i++) addTex('destroy_' + i);
 export function texId(name) { return texIndex.get(name); }
 
 // Face order: +x, -x, +y, -y, +z, -z
-export const FACE_TILE = new Uint16Array(256 * 6);
+export const FACE_TILE = new Uint16Array(BLOCK_LIMIT * 6);
 for (const b of BLOCKS) {
   if (!b) continue;
   const t = b.tex;
@@ -54,7 +54,7 @@ for (const b of BLOCKS) {
   FACE_TILE.set([s, s, top, bot, s, s], b.id * 6);
 }
 // Blocks with a front texture show it on the side they were placed facing.
-export const FRONT_TILE = new Int16Array(256).fill(-1);
+export const FRONT_TILE = new Int16Array(BLOCK_LIMIT).fill(-1);
 for (const b of BLOCKS) if (b && b.tex.front) FRONT_TILE[b.id] = addTex(b.tex.front);
 // Furnaces show their front only on one side; the others use a plain side.
 for (const id of [B.FURNACE, B.FURNACE_LIT]) {
@@ -157,6 +157,15 @@ function logTop(c, bark, inner) {
     if (x === 0 || y === 0 || x === 15 || y === 15) { c.set(x, y, shade(b, 0.9 + c.h(x, y) * 0.15)); continue; }
     const ring = Math.floor(r + c.h(x, y, 2) * 0.6) % 3 === 0;
     c.set(x, y, shade(w, ring ? 0.8 : 0.98 + c.h(x, y) * 0.06));
+  }
+}
+
+/** Cut and polished stone: a smooth face with a faint frame. */
+function polished(c, base) {
+  const b = hex(base);
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    const edge = x === 0 || y === 0 || x === 15 || y === 15;
+    c.set(x, y, shade(b, edge ? (x === 15 || y === 15 ? 0.78 : 1.08) : 0.94 + c.h(x, y) * 0.08 + (c.h(x >> 2, y >> 2, 4) - 0.5) * 0.05));
   }
 }
 
@@ -340,6 +349,10 @@ const GEN = {
   granite: (c) => c.noiseFill(['#9a6b58', '#a87763', '#8c5f4e', '#b88672', '#7d5244'].map(hex), 0.3),
   diorite: (c) => c.noiseFill(['#c9c9c9', '#e0e0e0', '#a9a9ab', '#f0f0f0', '#8f8f92'].map(hex), 0.2),
   andesite: (c) => c.noiseFill(['#848486', '#8f8f91', '#7a7a7c', '#9a9a9c'].map(hex), 0.3),
+  polished_granite: (c) => polished(c, '#a5735e'),
+  polished_diorite: (c) => polished(c, '#d4d4d6'),
+  polished_andesite: (c) => polished(c, '#8a8c8c'),
+  smooth_stone: (c) => { polished(c, '#a2a2a2'); for (let i = 0; i < 16; i++) { c.set(i, 0, hex('#7a7a7a')); c.set(i, 15, hex('#7a7a7a')); } },
   tuff: (c) => c.noiseFill(['#5f6159', '#6c6e64', '#575951', '#787a6f'].map(hex), 0.5),
   dirt: (c) => c.noiseFill(P.dirt, 0.4),
   farmland: (c) => farmland(c, false),

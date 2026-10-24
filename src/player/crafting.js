@@ -1,5 +1,5 @@
 // Shaped/shapeless crafting and furnace smelting recipes.
-import { B } from '../world/blocks.js';
+import { B, WOOD_SETS, STONE_SETS } from '../world/blocks.js';
 import { I, DYES, WOOL_ITEMS, TIPPED_ARROW, SPLASH_ITEM } from '../world/items.js';
 import { COLOR } from '../world/colors.js';
 
@@ -7,6 +7,7 @@ const TAGS = {
   planks: [B.OAK_PLANKS, B.SPRUCE_PLANKS, B.BIRCH_PLANKS, B.JUNGLE_PLANKS, B.ACACIA_PLANKS, B.DARK_OAK_PLANKS, B.BLOSSOM_PLANKS],
   log: [B.OAK_LOG, B.SPRUCE_LOG, B.BIRCH_LOG, B.JUNGLE_LOG, B.ACACIA_LOG, B.DARK_OAK_LOG, B.BLOSSOM_LOG],
   stone_mat: [B.COBBLESTONE, B.COBBLED_DEEPSTONE],
+  wood_slab: WOOD_SETS.map(([, slab]) => slab),
 };
 
 function matches(ing, id) {
@@ -101,14 +102,14 @@ shaped(['PPP', 'PCP', 'PPP'], { P: 'planks', C: I.CINNABAR }, B.CHIME_BLOCK, 1);
 shaped(['CCC', 'CCC', 'CCC'], { C: I.CINNABAR }, B.CINNABAR_BLOCK, 1);
 shapeless([B.CINNABAR_BLOCK], I.CINNABAR, 9);
 shapeless([I.BOWL, I.BEETROOT, I.BEETROOT, I.BEETROOT, I.BEETROOT, I.BEETROOT, I.BEETROOT], I.BEETROOT_SOUP);
-for (const [planks, fence] of [[B.OAK_PLANKS, B.OAK_FENCE], [B.SPRUCE_PLANKS, B.SPRUCE_FENCE], [B.BIRCH_PLANKS, B.BIRCH_FENCE]]) shaped(['PSP', 'PSP'], { P: planks, S: I.STICK }, fence, 3);
+for (const [planks, , , fence] of WOOD_SETS) shaped(['PSP', 'PSP'], { P: planks, S: I.STICK }, fence, 3);
 shaped(['SPS', 'SPS'], { P: 'planks', S: I.STICK }, B.OAK_FENCE_GATE, 1);
-shaped(['PPP'], { P: 'planks' }, B.OAK_SLAB, 6);
-shaped(['PSP', 'P P', 'PSP'], { P: 'planks', S: B.OAK_SLAB }, B.BARREL, 1);
+for (const [planks, slab] of WOOD_SETS) shaped(['PPP'], { P: planks }, slab, 6);
+shaped(['PSP', 'P P', 'PSP'], { P: 'planks', S: 'wood_slab' }, B.BARREL, 1);
 shaped(['PPP', 'PCP', 'PPP'], { P: I.PAPER, C: I.COMPASS }, I.EMPTY_MAP, 1);
 shaped(['SSS', 'S S'], { S: I.SCUTE }, I.TURTLE_SHELL, 1);
 shaped(['I I', 'ICI', ' I '], { I: I.IRON_INGOT, C: B.CHEST }, B.HOPPER, 1);
-shaped(['S S', 'S S', 'SSS'], { S: B.OAK_SLAB }, B.COMPOSTER, 1);
+shaped(['S S', 'S S', 'SSS'], { S: 'wood_slab' }, B.COMPOSTER, 1);
 shaped(['GGG', 'GAG', 'GGG'], { G: I.GOLD_INGOT, A: I.APPLE }, I.GILDED_APPLE, 1);
 for (const [kind, id] of Object.entries(TIPPED_ARROW)) shaped(['AAA', 'APA', 'AAA'], { A: I.ARROW, P: SPLASH_ITEM[kind] }, id, 8);
 shaped(['PPP', 'HHH', 'PPP'], { P: 'planks', H: I.HONEYCOMB }, B.BEEHIVE, 1);
@@ -118,8 +119,8 @@ shaped(['SS', 'SS'], { S: I.TIDE_SHARD }, B.TIDESTONE, 1);
 shaped(['SSS', 'SSS', 'SSS'], { S: I.TIDE_SHARD }, B.TIDESTONE_BRICKS, 1);
 shaped(['SSS', 'SIS', 'SSS'], { S: I.TIDE_SHARD, I: I.INK_SAC }, B.DARK_TIDESTONE, 1);
 shaped(['SCS', 'CCC', 'SCS'], { S: I.TIDE_SHARD, C: I.TIDE_CRYSTAL }, B.TIDE_LANTERN, 1);
-shaped(['P  ', 'PP ', 'PPP'], { P: 'planks' }, B.OAK_STAIRS, 4);
-for (const [mat, slab, stairs] of [[B.COBBLESTONE, B.COBBLESTONE_SLAB, B.COBBLESTONE_STAIRS], [B.STONE_BRICKS, B.STONE_BRICK_SLAB, B.STONE_BRICK_STAIRS], [B.SANDSTONE, B.SANDSTONE_SLAB, B.SANDSTONE_STAIRS]]) {
+for (const [planks, , stairs] of WOOD_SETS) shaped(['P  ', 'PP ', 'PPP'], { P: planks }, stairs, 4);
+for (const [mat, slab, stairs] of [[B.COBBLESTONE, B.COBBLESTONE_SLAB, B.COBBLESTONE_STAIRS], [B.STONE_BRICKS, B.STONE_BRICK_SLAB, B.STONE_BRICK_STAIRS], [B.SANDSTONE, B.SANDSTONE_SLAB, B.SANDSTONE_STAIRS], ...STONE_SETS]) {
   shaped(['XXX'], { X: mat }, slab, 6);
   shaped(['X  ', 'XX ', 'XXX'], { X: mat }, stairs, 4);
 }
@@ -268,6 +269,7 @@ shaped(['SS', 'SS'], { S: I.VIOLITE_SHARD }, B.VIOLITE_BLOCK, 1);
 shaped([' S ', 'SGS', ' S '], { S: I.VIOLITE_SHARD, G: B.GLASS }, B.SHADED_GLASS, 2);
 shaped(['S', 'C', 'C'], { S: I.VIOLITE_SHARD, C: I.COPPER_INGOT }, I.FARGLASS, 1);
 shaped(['PP', 'PP'], { P: B.SEEPSTONE_SPIKE }, B.SEEPSTONE, 1);
+for (const [raw, polished] of [[B.GRANITE, B.POLISHED_GRANITE], [B.DIORITE, B.POLISHED_DIORITE], [B.ANDESITE, B.POLISHED_ANDESITE]]) shaped(['XX', 'XX'], { X: raw }, polished, 4);
 
 // Smelting: input -> output; 200 ticks per item (10 s)
 export const SMELT_TIME = 200;
@@ -278,5 +280,5 @@ export const SMELTING = {
   [I.RAW_PORK]: I.COOKED_PORK, [I.POTATO]: I.BAKED_POTATO, [I.RAW_RABBIT]: I.COOKED_RABBIT, [I.RAW_SILVERFIN]: I.COOKED_SILVERFIN, [I.RAW_REDFIN]: I.COOKED_REDFIN, [I.RAW_BEEF]: I.STEAK, [I.RAW_CHICKEN]: I.COOKED_CHICKEN,
   [I.RAW_MUTTON]: I.COOKED_MUTTON, [B.OAK_LOG]: I.COAL, [B.SPRUCE_LOG]: I.COAL, [B.BIRCH_LOG]: I.COAL,
   [B.JUNGLE_LOG]: I.COAL, [B.ACACIA_LOG]: I.COAL, [B.DARK_OAK_LOG]: I.COAL, [B.BLOSSOM_LOG]: I.COAL, [B.RED_SAND]: B.GLASS,
-  [B.WET_SOAKMOSS]: B.SOAKMOSS,
+  [B.WET_SOAKMOSS]: B.SOAKMOSS, [B.STONE]: B.SMOOTH_STONE,
 };

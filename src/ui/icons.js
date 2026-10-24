@@ -35,7 +35,11 @@ function blockIcon(b, forceTint = null) {
   const tint = (face) => (b.tint === 'grass' && face === 'top') || b.tint === 'foliage' ? (b.tint === 'grass' ? GRASS_TINT : LEAF_TINT)
     : b.tint === 'birch' ? [128, 167, 85] : b.tint === 'spruce' ? [97, 153, 97] : null;
   if (b.shape === SHAPE.FENCE || b.shape === SHAPE.GATE) {
-    const col = { 'Oak Fence': '#a7834e', 'Spruce Fence': '#6b4e2e', 'Birch Fence': '#c8b27a' }[b.name] || '#a7834e';
+    const px = texturePixels(b.tex.side); // the wood's average colour
+    let r = 0, gg = 0, bb = 0;
+    for (let i = 0; i < px.length; i += 4) { r += px[i]; gg += px[i + 1]; bb += px[i + 2]; }
+    const n = px.length / 4, hx = (v) => Math.round(v / n).toString(16).padStart(2, '0');
+    const col = '#' + hx(r) + hx(gg) + hx(bb);
     const tpl = b.shape === SHAPE.FENCE
       ? ['................', '..hh........hh..', '..hh........hh..', '..hhhhhhhhhhhh..', '..hhhhhhhhhhhh..', '..hh........hh..', '..hh........hh..', '..hhhhhhhhhhhh..', '..hhhhhhhhhhhh..', '..hh........hh..', '..hh........hh..', '..hh........hh..', '..hh........hh..', '................', '................', '................']
       : ['................', '.hh..........hh.', '.hh..........hh.', '.hhhhhhhhhhhhhh.', '.hhhhhhhhhhhhhh.', '.hh...hhhh...hh.', '.hh...hhhh...hh.', '.hhhhhhhhhhhhhh.', '.hhhhhhhhhhhhhh.', '.hh..........hh.', '.hh..........hh.', '................', '................', '................', '................', '................'];

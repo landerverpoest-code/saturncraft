@@ -78,6 +78,9 @@ const defaults = {
 };
 
 export const BLOCKS = [];
+/** Block ids: 1..255 and EXT_BASE..BLOCK_LIMIT-1 (ids in between belong to items). */
+export const EXT_BASE = 1024, BLOCK_LIMIT = 2048;
+export const isBlockId = (id) => id > 0 && (id < 256 || (id >= EXT_BASE && id < BLOCK_LIMIT)) && !!BLOCKS[id];
 
 function def(id, name, props) {
   const d = { ...defaults, ...props, id, name };
@@ -397,16 +400,53 @@ def(B.SHADED_GLASS, 'Shaded Glass', { hardness: 0.3, resistance: 0.3, opaque: fa
 def(B.SEEPSTONE, 'Seepstone', { hardness: 1.5, resistance: 1, tool: TOOL.PICKAXE, tier: TIER.WOOD });
 def(B.SEEPSTONE_SPIKE, 'Seepstone Spike', { hardness: 1.5, resistance: 3, tool: TOOL.PICKAXE, opaque: false, shape: SHAPE.CRYSTAL, layer: LAYER.CUTOUT, flatIcon: true, crystal: true, drops: B.SEEPSTONE_SPIKE, tex: { all: 'seepstone_spike_0' } });
 
+// ---- Extended blocks -----------------------------------------------------------------
+// Chunks store block ids as 16 bits. Ids 1..255 are the original blocks; 256..1023 are item
+// ids (an item's id is never a block's), so blocks added later start at EXT_BASE.
+// They are numbered in the order they are listed here: only ever append.
+let nextExt = EXT_BASE;
+const ext = (key) => { B[key] = nextExt++; return B[key]; };
+export const WOOD_SETS = []; // [planks, slab, stairs, fence or null, name] for every wood
+export const STONE_SETS = []; // [material, slab, stairs, name]
+// slabs and stairs of every other wood and of more stones, fences for the newer woods
+for (const [name, key, planks] of [['Spruce', 'SPRUCE', B.SPRUCE_PLANKS], ['Birch', 'BIRCH', B.BIRCH_PLANKS], ['Jungle', 'JUNGLE', B.JUNGLE_PLANKS],
+  ['Acacia', 'ACACIA', B.ACACIA_PLANKS], ['Dark Oak', 'DARK_OAK', B.DARK_OAK_PLANKS], ['Blossom', 'BLOSSOM', B.BLOSSOM_PLANKS]]) {
+  const m = BLOCKS[planks];
+  const common = { hardness: m.hardness, resistance: m.resistance, tool: m.tool, tier: m.tier, sound: m.sound, flammable: true, opaque: false, opacity: 15, tex: { ...m.tex }, base: planks };
+  const slab = ext(key + '_SLAB'), stairs = ext(key + '_STAIRS');
+  def(slab, `${name} Slab`, { ...common, shape: SHAPE.SLAB, drops: 'slab' });
+  def(stairs, `${name} Stairs`, { ...common, shape: SHAPE.STAIRS });
+  let fence = B[key + '_FENCE'] || null;
+  if (!fence) { fence = ext(key + '_FENCE'); def(fence, `${name} Fence`, { ...wood, shape: SHAPE.FENCE, tex: { ...m.tex } }); }
+  WOOD_SETS.push([planks, slab, stairs, fence, name]);
+}
+WOOD_SETS.unshift([B.OAK_PLANKS, B.OAK_SLAB, B.OAK_STAIRS, B.OAK_FENCE, 'Oak']);
+ext('POLISHED_GRANITE'); def(B.POLISHED_GRANITE, 'Polished Granite', { hardness: 1.5, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD });
+ext('POLISHED_DIORITE'); def(B.POLISHED_DIORITE, 'Polished Diorite', { hardness: 1.5, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD });
+ext('POLISHED_ANDESITE'); def(B.POLISHED_ANDESITE, 'Polished Andesite', { hardness: 1.5, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD });
+ext('SMOOTH_STONE'); def(B.SMOOTH_STONE, 'Smooth Stone', { hardness: 2, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD });
+for (const [name, key, mat] of [['Brick', 'BRICK', B.BRICKS], ['Mossy Cobblestone', 'MOSSY_COBBLESTONE', B.MOSSY_COBBLESTONE], ['Cobbled Deepstone', 'COBBLED_DEEPSTONE', B.COBBLED_DEEPSTONE],
+  ['Granite', 'GRANITE', B.GRANITE], ['Diorite', 'DIORITE', B.DIORITE], ['Andesite', 'ANDESITE', B.ANDESITE],
+  ['Polished Granite', 'POLISHED_GRANITE', B.POLISHED_GRANITE], ['Polished Diorite', 'POLISHED_DIORITE', B.POLISHED_DIORITE], ['Polished Andesite', 'POLISHED_ANDESITE', B.POLISHED_ANDESITE],
+  ['Smooth Stone', 'SMOOTH_STONE', B.SMOOTH_STONE], ['Stone', 'STONE', B.STONE]]) {
+  const m = BLOCKS[mat];
+  const common = { hardness: m.hardness, resistance: m.resistance, tool: m.tool, tier: m.tier, sound: m.sound, opaque: false, opacity: 15, tex: { ...m.tex }, base: mat };
+  const slab = ext(key + '_SLAB'), stairs = ext(key + '_STAIRS');
+  def(slab, `${name} Slab`, { ...common, shape: SHAPE.SLAB, drops: 'slab' });
+  def(stairs, `${name} Stairs`, { ...common, shape: SHAPE.STAIRS });
+  STONE_SETS.push([mat, slab, stairs, name]);
+}
+
 export const NUM_BLOCKS = BLOCKS.length;
 
 // Flat lookup tables used by hot loops (mesher, lighting, physics) and workers.
-export const SOLID = new Uint8Array(256);
-export const OPAQUE = new Uint8Array(256);
-export const OPACITY = new Uint8Array(256);
-export const EMIT = new Uint8Array(256);
-export const SHAPES = new Uint8Array(256);
-export const LAYERS = new Uint8Array(256);
-for (let i = 0; i < 256; i++) {
+export const SOLID = new Uint8Array(BLOCK_LIMIT);
+export const OPAQUE = new Uint8Array(BLOCK_LIMIT);
+export const OPACITY = new Uint8Array(BLOCK_LIMIT);
+export const EMIT = new Uint8Array(BLOCK_LIMIT);
+export const SHAPES = new Uint8Array(BLOCK_LIMIT);
+export const LAYERS = new Uint8Array(BLOCK_LIMIT);
+for (let i = 0; i < BLOCK_LIMIT; i++) {
   const d = BLOCKS[i];
   if (!d) { SOLID[i] = 1; OPAQUE[i] = 1; OPACITY[i] = 15; continue; }
   SOLID[i] = d.solid ? 1 : 0;

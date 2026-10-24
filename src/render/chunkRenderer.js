@@ -100,7 +100,7 @@ export class ChunkRenderer {
 
   /** Padded 18^3 copy of a section including neighbour borders. */
   extractSection(c, sy) {
-    const blocks = new Uint8Array(PAD_VOL), light = new Uint8Array(PAD_VOL), meta = new Uint8Array(PAD_VOL);
+    const blocks = new Uint16Array(PAD_VOL), light = new Uint8Array(PAD_VOL), meta = new Uint8Array(PAD_VOL);
     const w = this.world;
     const yBase = MIN_Y + sy * 16;
     for (let dz = -1; dz <= 16; dz++) for (let dx = -1; dx <= 16; dx++) {

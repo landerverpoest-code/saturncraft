@@ -2,7 +2,7 @@
 // section near the player get a chance to change, as in the reference game
 // (randomTickSpeed = 3). Handles grass spreading, farmland moisture and crop
 // growth.
-import { B, OPAQUE, SOLID, CROPS, STEM_FRUIT } from './blocks.js';
+import { B, OPAQUE, SOLID, CROPS, STEM_FRUIT, BLOCK_LIMIT } from './blocks.js';
 import { BIOMES } from './biomes.js';
 import { MIN_Y, SECTION_COUNT, cidx } from './constants.js';
 import { lavaIgnite, FIRE_DELAY } from './fire.js';
@@ -144,10 +144,10 @@ export function snowfall(world, px, pz, rng = Math.random, tries = 4) {
 function rawBlockLight(world, x, y, z) { return world.getLight(x, y, z) & 15; }
 
 /** Ids that react to random ticks (fast pre-filter). */
-export const RANDOM_TICKS = new Uint8Array(256);
+export const RANDOM_TICKS = new Uint8Array(BLOCK_LIMIT);
 for (const id of [B.HUSHVINE_FLOWER, B.CINDERROOT, B.GRASS, B.FARMLAND, B.SUGAR_CANE, B.LAVA, B.FIRE, B.SNOW_LAYER, B.ICE, B.COCOA, B.TURTLE_EGG, ...CROPS, ...LEAVES, ...Object.keys(SAPLING_TREE).map(Number)]) RANDOM_TICKS[id] = 1;
-for (let id = 0; id < 256; id++) if (CIRCUIT_SETTLE[id]) RANDOM_TICKS[id] = 1;
-const CAVE_TICK = new Uint8Array(256);
+for (let id = 0; id < BLOCK_LIMIT; id++) if (CIRCUIT_SETTLE[id]) RANDOM_TICKS[id] = 1;
+const CAVE_TICK = new Uint8Array(BLOCK_LIMIT);
 for (const id of CAVE_TICKING) { CAVE_TICK[id] = 1; RANDOM_TICKS[id] = 1; }
 
 /** Run one tick's worth of random ticks in all chunks within `radius` chunks of (cx, cz). */

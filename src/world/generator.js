@@ -8,7 +8,7 @@ import { stampSanctums } from './dimensions/sanctum.js';
 import { stampMonuments } from './monuments.js';
 import { stampCaveFeatures } from './caveGen.js';
 import { treeShape, LEAVES, LOGS, PLANTS } from './trees.js';
-import { B, DEEP_VARIANT } from './blocks.js';
+import { B, DEEP_VARIANT, BLOCK_LIMIT } from './blocks.js';
 import { Simplex, hash4, hashf, mulberry32 } from './noise.js';
 import { carveChunk } from './carvers.js';
 import { stampRuins } from './ruinedPortals.js';
@@ -86,7 +86,7 @@ const SHROOM_P = { [BIOME.DARK_FOREST]: 0.025, [BIOME.SWAMP]: 0.01, [BIOME.TAIGA
 const TERRACOTTAS = new Set([B.TERRACOTTA, B.ORANGE_TERRACOTTA, B.YELLOW_TERRACOTTA, B.WHITE_TERRACOTTA, B.BROWN_TERRACOTTA, B.RED_TERRACOTTA, B.LIGHT_GRAY_TERRACOTTA]);
 const MAX_TREE_DENSITY = 0.14;
 
-const REPLACEABLE_BY_ORE = new Uint8Array(256);
+const REPLACEABLE_BY_ORE = new Uint8Array(BLOCK_LIMIT);
 for (const id of [B.STONE, B.DEEPSTONE, B.GRANITE, B.DIORITE, B.ANDESITE, B.TUFF]) REPLACEABLE_BY_ORE[id] = 1;
 
 export class TerrainGenerator {
@@ -258,7 +258,7 @@ export class TerrainGenerator {
    * @returns {{blocks: Uint8Array, meta: Uint8Array, biomes: Uint8Array, colors: Uint8Array, heightmap: Int16Array}}
    */
   generate(cx, cz) {
-    const blocks = new Uint8Array(CHUNK_VOLUME);
+    const blocks = new Uint16Array(CHUNK_VOLUME);
     const meta = new Uint8Array(CHUNK_VOLUME);
     const biomes = new Uint8Array(256);
     const colors = new Uint8Array(256 * 6);

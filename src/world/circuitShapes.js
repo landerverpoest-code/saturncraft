@@ -5,7 +5,7 @@
 // a repeater sending its output towards -z), then turned a number of quarter
 // turns about y (`yaw`) and finally tipped over so that +y points along
 // `facing` (FACING6 index).
-import { B, BLOCKS, SOLID, OPAQUE } from './blocks.js';
+import { B, BLOCKS, SOLID, OPAQUE, BLOCK_LIMIT } from './blocks.js';
 // same as shapes.js SIDE_DIRS (not imported: shapes.js imports this module)
 const SIDE_DIRS = [[0, 0, -1], [1, 0, 0], [0, 0, 1], [-1, 0, 0]];
 
@@ -188,7 +188,7 @@ export function circuitCollision(id, meta) {
   return [];
 }
 
-export const CIRCUIT_BLOCK = new Uint8Array(256);
+export const CIRCUIT_BLOCK = new Uint8Array(BLOCK_LIMIT);
 for (const id of [B.CINNABAR_WIRE, B.LEVER, B.STONE_BUTTON, B.WOODEN_PRESSURE_PLATE, B.CINNABAR_TORCH, B.CINNABAR_TORCH_OFF,
   B.CINNABAR_LAMP, B.CINNABAR_LAMP_ON, B.REPEATER, B.PISTON, B.STICKY_PISTON, B.PISTON_HEAD, B.CHIME_BLOCK, B.CINNABAR_BLOCK]) CIRCUIT_BLOCK[id] = 1;
 export { BLOCKS };
