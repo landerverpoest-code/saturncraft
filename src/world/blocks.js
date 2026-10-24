@@ -540,6 +540,13 @@ for (const [key, name] of [[null, null], ...COLORS]) {
 // Scaffolding (world/scaffolding.js): meta = distance from a supported column (0-6)
 ext('SCAFFOLDING');
 def(B.SCAFFOLDING, 'Scaffolding', { hardness: 0, resistance: 0, sound: 'wood', flammable: true, opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, scaffold: true, tex: { top: 'scaffolding_top', bottom: 'scaffolding_top', side: 'scaffolding_side' } });
+// Croaklights: glowing blocks a Croaker leaves when it swallows a small Wobbler (one per Croaker colour)
+export const CROAKLIGHTS = [];
+for (const [key, name] of [['AMBER', 'Amber'], ['PEARL', 'Pearl'], ['MOSS', 'Moss']]) {
+  CROAKLIGHTS.push(ext(key + '_CROAKLIGHT'));
+  const t = key.toLowerCase() + '_croaklight';
+  def(B[key + '_CROAKLIGHT'], `${name} Croaklight`, { hardness: 0.3, resistance: 0.3, sound: 'wood', emit: 15, tex: { top: t + '_top', bottom: t + '_top', side: t + '_side' } });
+}
 
 export const NUM_BLOCKS = BLOCKS.length;
 

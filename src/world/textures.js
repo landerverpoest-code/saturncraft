@@ -1234,6 +1234,22 @@ GEN.candle_flame = (c) => {
   for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, y < 6 ? hex('#fff4c0') : y < 11 ? hex('#ffc040') : hex('#ff8020'));
 };
 
+// croaklights: a glowing core under a ribbed rind (amber, pearl, moss)
+for (const [key, core, rind] of [['amber', '#ffe090', '#d89a3a'], ['pearl', '#fff0f8', '#d8b0d8'], ['moss', '#f0ffd0', '#8ab060']]) {
+  GEN[key + '_croaklight_side'] = (c) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const rib = y % 5 === 0 || x === 0 || x === 15;
+      c.set(x, y, shade(hex(rib ? rind : core), rib ? 0.9 + c.h(x, y) * 0.1 : 0.92 + c.h(x >> 1, y >> 1) * 0.12));
+    }
+  };
+  GEN[key + '_croaklight_top'] = (c) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const r = Math.max(Math.abs(x - 7.5), Math.abs(y - 7.5));
+      c.set(x, y, shade(hex(r > 6 ? rind : core), r > 6 ? 0.9 : 1 - r * 0.02 + c.h(x, y) * 0.06));
+    }
+  };
+}
+
 /** Pixel data for all layers: Uint8Array(16*16*4*N) */
 export function generateTextureData() {
   const n = TEX_NAMES.length;

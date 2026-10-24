@@ -132,6 +132,20 @@ export const MOBS = {
       mesh.rotation.x = Math.max(-0.8, Math.min(0.8, -(m.body.vy || 0) * 2)); // nose up on the way out of a leap
     },
   },
+  // croakers hop about swamps (amber in temperate lands, pearl in warm ones, moss-green in the cold),
+  // swim, and swallow small Wobblers whole, leaving a Croaklight of their colour
+  croaker: {
+    name: 'Croaker', role: 'frog', category: CATEGORY.CREATURE, frog: true, sound: 'croak', noFallDamage: true,
+    health: 10, speed: 0.2, width: 0.5, height: 0.5, drops: [], food: [I.SLIMEBALL],
+    customRender: (m, mesh, alpha, sec) => {
+      const pa = mesh.userData.parts; if (!pa || !pa.tongue) return;
+      pa.tongue.visible = m.tongue > 0;
+      if (m.tongue > 0) pa.tongue.scale.z = 1 + Math.sin((m.tongue / 8) * Math.PI) * 5;
+      if (pa.throat) pa.throat.scale.y = 1 + Math.max(0, Math.sin(sec * 6 + m.id)) * 0.5 * (m.croakTicks > 0 ? 1 : 0);
+      const air = !m.body.onGround && !m.body.inWater;
+      for (const k of ['legBL', 'legBR']) if (pa[k]) pa[k].rotation.x = air ? 1.1 : 0;
+    },
+  },
   // gillnewts live in the pools of lush caves, hunt fish and hostile swimmers and play dead when hurt
   gillnewt: {
     name: 'Gillnewt', role: 'axolotl', category: CATEGORY.AMBIENT, fish: true, newt: true, breathesWater: true, sound: 'squeak', noFallDamage: true,

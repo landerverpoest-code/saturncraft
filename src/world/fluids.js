@@ -25,7 +25,7 @@ function canFlowInto(world, x, y, z, id, newLevel) {
   }
   if (b === B.WATER || b === B.LAVA) return true; // interaction handled after
   const d = BLOCKS[b];
-  if (d.solid) return false;
+  if (d.solid || d.waterlogged) return false; // kelp and seagrass already stand in water
   return d.replaceable || d.shape === SHAPE.CROSS || b === B.TORCH;
 }
 

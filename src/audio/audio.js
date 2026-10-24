@@ -160,6 +160,7 @@ export class Audio {
       case 'shield': this.noise(t, 0.1, 700, 1.5, 0.45 * gain, out, 'lowpass'); this.tone(t, 0.12, 180, 120, 0.2 * gain, out, 'triangle'); break;
       case 'fuse': this.noise(t, 1.2, 5000, 0.6, 0.25 * gain, out, 'highpass'); break;
       case 'rail': this.noise(t, 0.12, 2200, 3, 0.12 * gain, out); this.tone(t, 0.05, 900, 700, 0.04 * gain, out, 'square'); break;
+      case 'croak': this.tone(t, 0.09, 140 + Math.random() * 30, 110, 0.2 * gain, out, 'sawtooth'); this.tone(t + 0.12, 0.12, 160, 100, 0.18 * gain, out, 'sawtooth'); break;
       case 'squish': this.noise(t, 0.12, 500, 2, 0.3 * gain, out, 'lowpass'); this.tone(t, 0.1, 160, 90, 0.12 * gain, out, 'sine'); break;
       case 'clank': this.tone(t, 0.18, 220, 120, 0.25 * gain, out, 'square'); this.noise(t, 0.15, 1800, 2, 0.3 * gain, out); break;
       case 'howl': this.tone(t, 0.12, 380, 520, 0.2 * gain, out, 'sawtooth'); this.tone(t + 0.18, 0.1, 400, 300, 0.18 * gain, out, 'sawtooth'); break;

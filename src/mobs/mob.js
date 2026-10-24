@@ -4,7 +4,7 @@
 import { Body } from '../physics/body.js';
 import { fallDamage } from '../physics/constants.js';
 import { isStalagmiteTip, stalagmiteFallDamage } from '../world/caves.js';
-import { B, SOLID, CROPS, isWaterish } from '../world/blocks.js';
+import { B, SOLID, CROPS, isWaterish, CROAKLIGHTS } from '../world/blocks.js';
 import { I } from '../world/items.js';
 import { MOBS, CATEGORY } from './mobTypes.js';
 import { BIOMES } from '../world/biomes.js';
@@ -39,6 +39,8 @@ const BEE_FLOWERS = new Set([B.SUNPETAL, B.REDBLOOM, B.SKYBELL, B.ROSETTE]);
 
 /** Gillnewt colours: [body, gills and crest] (pink, wild brown, gold, cyan; the blue one is rare). */
 export const NEWT_COLORS = [['#f0a8c0', '#d0406a'], ['#7a5a3a', '#4a3020'], ['#e8c040', '#c88a20'], ['#d8f0f4', '#e870a0'], ['#4a5ad8', '#2a3aa8']];
+/** Croaker colours: [skin, legs and eyes] (amber, pearl, moss) and the Croaklight each leaves. */
+export const CROAKER_COLORS = [['#d89a4a', '#b87a30'], ['#e8dcd0', '#c8b0a0'], ['#6a9a4a', '#4a7a30']];
 /** Squawklet plumage: [body and head, wings and tail, crest] (red, blue, green, cyan, grey). */
 const PARROT_COLORS = [['#d8282a', '#2a5ad8', '#f0c020'], ['#2a4ad8', '#1a2a8a', '#f0d040'], ['#4ab82a', '#2a7a1a', '#d83a2a'], ['#3ac8d8', '#f0d040', '#2a6ad8'], ['#b8b8b8', '#7a7a7a', '#e8e8e8']];
 
@@ -566,6 +568,7 @@ export class Mob {
     if (this.def.neutralBeast) return this.bearAI(g, p, pdist);
     if (this.def.fox) return this.foxAI(g, p, pdist);
     if (this.def.newt) return this.newtAI(g, p, pdist);
+    if (this.def.frog) return this.croakerAI(g, p, pdist);
     if (this.def.dolphin) return this.dolphinAI(g, p, pdist);
     if (this.def.fish) return this.fishAI(g, p, pdist);
     if (this.def.aquatic) return this.inklingAI(g);
@@ -1097,6 +1100,50 @@ export class Mob {
   }
 
   /**
+   * Croakers: their colour comes from the climate they live in; they wander
+   * with long leaps now and then, croak, and catch small Wobblers within 10
+   * blocks with their tongue, leaving a Croaklight of their colour behind.
+   */
+  croakerAI(g, p, pdist) {
+    const b = this.body, w = g.world;
+    if (!this.colourSet) {
+      this.colourSet = true;
+      const bm = BIOMES[w.biomeAt(Math.floor(this.x), Math.floor(this.z))], t = bm ? bm.temp : 0.8;
+      this.woolColor = t >= 0.9 ? 1 : t < 0.3 ? 2 : 0;
+    }
+    if (this.tongue > 0) this.tongue--;
+    if (this.croakTicks > 0) this.croakTicks--;
+    else if (Math.random() < 1 / 300) { this.croakTicks = 30; g.audio.play('croak', [this.x, this.y, this.z], 0.6); }
+    if (this.attackCooldown > 0) this.attackCooldown--;
+    const prey = this.prey;
+    if (prey && (prey.dead || prey.removed || prey.deathTime > 0 || Math.hypot(prey.x - this.x, prey.y - this.y, prey.z - this.z) > 14)) this.prey = null;
+    if (!this.prey && this.age >= 0 && g.ticks % 30 === this.id % 30) {
+      for (const e of g.entities.list) if (e.kind === 'mob' && e.type === 'wobbler' && e.size === 1 && !e.dead && e.deathTime === 0 && Math.hypot(e.x - this.x, e.y - this.y, e.z - this.z) < 10) { this.prey = e; break; }
+    }
+    if (this.prey) {
+      const e = this.prey, d = Math.hypot(e.x - this.x, e.y - this.y, e.z - this.z);
+      this.yaw = Math.atan2(-(e.x - this.x), -(e.z - this.z));
+      if (d > 2.2) { this.chase(g, e, 1.2); return; }
+      this.move = null;
+      if (this.attackCooldown <= 0 && (!g.net || g.net.isHost)) {
+        // the tongue shoots out and the Wobbler is gone, leaving a Croaklight
+        this.attackCooldown = 40; this.tongue = 8;
+        e.removed = true; e.dead = true;
+        g.entities.spawnItem(e.x, e.y + 0.2, e.z, { id: CROAKLIGHTS[this.woolColor % CROAKLIGHTS.length], count: 1 });
+        g.audio.play('squish', [e.x, e.y, e.z]);
+        this.prey = null;
+      }
+      return;
+    }
+    this.passiveAI(g);
+    // now and then a long leap in the direction it is heading
+    if (b.onGround && this.move && this.move.forward > 0 && Math.random() < 0.04) {
+      b.vy = 0.5;
+      b.vx += -Math.sin(this.yaw) * 0.25; b.vz += -Math.cos(this.yaw) * 0.25;
+    }
+  }
+
+  /**
    * Gillnewts paddle about their pools and walk slowly on land (drying out
    * after five minutes there), hunt fish and hostile swimmers within 8 blocks
    * (2 damage a bite) and, after playing dead, heal up.
@@ -1516,6 +1563,13 @@ export class Mob {
       for (const k of ['body', 'head']) tint(k, main);
       for (const k of ['wingL', 'wingR', 'tail']) tint(k, wing);
       tint('crest', crest);
+    }
+    if (parts && this.type === 'croaker' && m.userData.coat !== this.woolColor) {
+      m.userData.coat = this.woolColor;
+      const [skin, legs] = CROAKER_COLORS[this.woolColor % CROAKER_COLORS.length];
+      const tint = (k, col) => { const mm = parts[k].children[0].material; for (const x of Array.isArray(mm) ? mm : [mm]) x.userData.base && x.userData.base.set(col); };
+      for (const k of ['body', 'head']) tint(k, skin);
+      for (const k of ['legFL', 'legFR', 'legBL', 'legBR']) tint(k, legs);
     }
     if (parts && this.type === 'gillnewt' && m.userData.coat !== this.woolColor) {
       m.userData.coat = this.woolColor;

@@ -27,3 +27,29 @@ describe('lush cave pools', () => {
     expect(MOBS.gillnewt.newt).toBe(true);
   });
 });
+
+describe('croakers', async () => {
+  const { SPAWN_TABLES } = await import('../src/mobs/spawnRules.js');
+  const { CROAKLIGHTS, EMIT } = await import('../src/world/blocks.js');
+  it('live in swamps (and a few in jungles and taiga) and leave glowing Croaklights', () => {
+    expect(SPAWN_TABLES.creature.swamp.some((e) => e.type === 'croaker')).toBe(true);
+    expect(SPAWN_TABLES.creature.jungle.some((e) => e.type === 'croaker')).toBe(true);
+    expect(CROAKLIGHTS.length).toBe(3);
+    for (const id of CROAKLIGHTS) expect(EMIT[id]).toBe(15);
+  });
+});
+
+describe('fluids and waterlogged plants', async () => {
+  const { tickFluid } = await import('../src/world/fluids.js');
+  it('flowing water leaves kelp standing', async () => {
+    const { MockWorld } = await import('./helpers.js');
+    class W extends MockWorld {
+      setBlock(x, y, z, id, meta = 0) { this.set(x, y, z, id, meta); return true; }
+      scheduleTick() {}
+    }
+    const w = new W(60);
+    w.set(0, 60, 0, B.WATER, 0); w.set(1, 60, 0, B.KELP, 0);
+    tickFluid(w, 0, 60, 0, B.WATER);
+    expect(w.getBlock(1, 60, 0)).toBe(B.KELP);
+  });
+});
