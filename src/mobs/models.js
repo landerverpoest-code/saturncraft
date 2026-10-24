@@ -360,6 +360,17 @@ MODELS.reeffin = {
     ['tail', [1, 4, 2], [0, 3, 3], [0, 0, 1], '#3a6ad8'],
   ],
 };
+MODELS.dolphin = {
+  parts: [
+    ['body', [6, 6, 14], [0, 4, 0], [0, 0, 0], '#6a7a8a'],
+    ['belly', [5, 2, 12], [0, 4, 0], [0, -2.5, 0], '#c8d0d8'],
+    ['snout', [2, 2, 4], [0, 4, -7], [0, -1, -2], '#7a8a9a'],
+    ['fin', [1, 4, 3], [0, 7, 0], [0, 2, 1], '#5a6a7a'],
+    ['flipL', [4, 1, 3], [3, 3, -3], [2, 0, 0], '#5a6a7a'],
+    ['flipR', [4, 1, 3], [-3, 3, -3], [-2, 0, 0], '#5a6a7a'],
+    ['tail', [7, 1, 4], [0, 4, 7], [0, 0, 2.5], '#5a6a7a'],
+  ],
+};
 // Inklings: a dark blue body with eight tentacles that sweep with each pulse.
 MODELS.inkling = {
   parts: [

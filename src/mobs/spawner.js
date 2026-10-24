@@ -159,8 +159,8 @@ export class MobSpawner {
         const y = SEA_LEVEL - 2 - Math.floor(Math.random() * 6);
         if (w.getBlock(x, y, z) === B.WATER && w.getBlock(x, y + 1, z) === B.WATER && w.getBlock(x, y - 1, z) === B.WATER) {
           const warm = w.gen && w.gen.column ? w.gen.column(x, z).temp > 0.95 : false;
-          const type = warm && Math.random() < 0.7 ? 'reeffin' : 'silverfin';
-          for (let i = 0, n = 3 + Math.floor(Math.random() * 4); i < n; i++) this.spawnMob(type, x + 0.5 + (Math.random() - 0.5) * 2, y, z + 0.5 + (Math.random() - 0.5) * 2);
+          const type = Math.random() < 0.12 ? 'dolphin' : warm && Math.random() < 0.7 ? 'reeffin' : 'silverfin';
+          for (let i = 0, n = type === 'dolphin' ? 2 + Math.floor(Math.random() * 2) : 3 + Math.floor(Math.random() * 4); i < n; i++) this.spawnMob(type, x + 0.5 + (Math.random() - 0.5) * 2, y, z + 0.5 + (Math.random() - 0.5) * 2);
         }
       }
     }

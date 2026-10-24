@@ -559,6 +559,7 @@ export class Mob {
     if (this.def.tameable) return this.howlerAI(g, p, pdist);
     if (this.def.neutralBeast) return this.bearAI(g, p, pdist);
     if (this.def.fox) return this.foxAI(g, p, pdist);
+    if (this.def.dolphin) return this.dolphinAI(g, p, pdist);
     if (this.def.fish) return this.fishAI(g, p, pdist);
     if (this.def.aquatic) return this.inklingAI(g);
     if (this.type === 'flitter') return this.flitterAI(g, p, pdist);
@@ -1067,6 +1068,27 @@ export class Mob {
   }
 
   /** Inklings drift through the water in pulses; out of water they flop and suffocate. Hurt, they squirt ink and dart away. */
+  /** Dolphins swim fast after nearby players (and ahead of their boats), leaping at the surface. */
+  dolphinAI(g, p, pdist) {
+    const b = this.body, w = g.world;
+    if (!b.inWater) { this.move = null; if (g.ticks % 40 === 0 && b.onGround) this.hurt(1, 'drown'); return; }
+    if (!this.swimDir || Math.random() < 0.01 || b.horizontalCollision) { const a = Math.random() * Math.PI * 2; this.swimDir = [Math.sin(a), 0, Math.cos(a)]; }
+    let k = 0.02;
+    if (pdist < 24 && pdist > 3 && !p.dead) {
+      const dx = p.x - this.x, dz = p.z - this.z, d = Math.hypot(dx, dz) || 1;
+      this.swimDir = [dx / d, (p.y - this.y) * 0.05, dz / d]; k = 0.045; // keep up with a swimmer or a boat
+    }
+    const surface = !isWaterish(w.getBlock(Math.floor(this.x), Math.floor(this.y + this.height + 0.5), Math.floor(this.z)));
+    if (surface) {
+      this.swimDir[1] = Math.min(this.swimDir[1], 0);
+      if (Math.hypot(b.vx, b.vz) > 0.18 && Math.random() < 0.04) { b.vy = 0.55; g.particles.splashAt && g.particles.splashAt(this.x, this.y + 0.5, this.z); } // a leap
+    } else this.swimDir[1] += 0.01; // back up towards the air
+    if (SOLID[w.getBlock(Math.floor(this.x), Math.floor(this.y - 0.5), Math.floor(this.z))]) this.swimDir[1] = Math.abs(this.swimDir[1]) + 0.1;
+    b.vx += this.swimDir[0] * k; b.vy += this.swimDir[1] * k * 0.6 + 0.005; b.vz += this.swimDir[2] * k;
+    this.yaw += wrap(Math.atan2(-b.vx, -b.vz) - this.yaw) * 0.2;
+    this.move = null;
+  }
+
   /** Fish swim steadily, keep together with their school, dart away from players and flop on land. */
   fishAI(g, p, pdist) {
     const b = this.body;

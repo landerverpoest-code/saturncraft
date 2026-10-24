@@ -70,6 +70,11 @@ export class Particles {
       lin(px[pi]) * light, lin(px[pi + 1]) * light, lin(px[pi + 2]) * light, 10 + Math.random() * 6, 0.02);
   }
 
+  /** Spray of water drops (a leaping dolphin, a splash). */
+  splashAt(x, y, z, n = 12) {
+    for (let k = 0; k < n; k++) this.emit(x + (Math.random() - 0.5) * 0.8, y, z + (Math.random() - 0.5) * 0.8, (Math.random() - 0.5) * 0.2, 0.1 + Math.random() * 0.2, (Math.random() - 0.5) * 0.2, 0.7, 0.8, 1, 18, 0.03);
+  }
+
   crit(x, y, z) {
     for (let k = 0; k < 12; k++) this.emit(x, y, z, (Math.random() - 0.5) * 0.4, Math.random() * 0.3, (Math.random() - 0.5) * 0.4, 1, 0.9, 0.5, 12, 0.02);
   }

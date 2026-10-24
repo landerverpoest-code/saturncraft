@@ -122,6 +122,16 @@ export const MOBS = {
     health: 3, speed: 0.1, width: 0.4, height: 0.35, drops: [{ id: I.GLIMMERFIN, min: 1, max: 1 }],
     customRender: (m, mesh, alpha, sec) => { const t = mesh.userData.parts && mesh.userData.parts.tail; if (t) t.rotation.y = Math.sin(sec * 18 + m.id) * 0.6; },
   },
+  // dolphins swim with players, leap out of the water and need to come up for air now and then
+  dolphin: {
+    name: 'Dolphin', role: 'dolphin', category: CATEGORY.AMBIENT, fish: true, dolphin: true, aquatic: true, sound: 'squish', noFallDamage: true,
+    health: 10, speed: 0.2, width: 0.9, height: 0.6, drops: [{ id: I.RAW_SILVERFIN, min: 0, max: 1 }],
+    customRender: (m, mesh, alpha, sec) => {
+      const pa = mesh.userData.parts; if (!pa || !pa.tail) return;
+      pa.tail.rotation.x = Math.sin(sec * 8 + m.id) * 0.35;
+      mesh.rotation.x = Math.max(-0.8, Math.min(0.8, -(m.body.vy || 0) * 2)); // nose up on the way out of a leap
+    },
+  },
   flitter: {
     name: 'Flitter', role: 'bat', category: CATEGORY.AMBIENT, flying: true, noFallDamage: true, sound: 'squeak',
     health: 6, speed: 0.3, width: 0.5, height: 0.9, drops: [],
