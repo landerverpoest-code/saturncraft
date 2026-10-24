@@ -1,6 +1,7 @@
 // Procedural 16x16 pixel art for every block face. All art is generated at
 // runtime from seeded noise and hand-picked palettes; no external images.
 import { BLOCKS, B, BLOCK_LIMIT } from './blocks.js';
+import { COLORS } from './colors.js';
 import { ARTS, paintingPart } from './paintings.js';
 import { mulberry32, hash4 } from './noise.js';
 import { DIM_TEX } from './dimensions/dimTextures.js';
@@ -1050,11 +1051,26 @@ function paint(c, name) {
   else if (name.startsWith('beetroots_')) rootCrop(c, +name.slice(10), '#3f8a2a', '#9a2a3a', '#8a1e2e', 2);
   else if (name.startsWith('bed_head_top_') || name.startsWith('bed_foot_top_')) bedTop(c, name.startsWith('bed_head'), +name.slice(-1));
   else if (GEN[name]) GEN[name](c);
+  else if (COLOR_TEX[name]) COLOR_TEX[name](c);
   else if (DIM_TEX[name]) DIM_TEX[name](c, { hex, mix, shade });
   else if (MONUMENT_TEX[name]) MONUMENT_TEX[name](c, { hex, mix, shade });
   else if (CIRCUIT_TEX[name]) CIRCUIT_TEX[name](c, { hex, mix, shade, gen: GEN, planks });
   else if (CAVE_TEX[name]) CAVE_TEX[name](c, { hex, mix, shade });
   else c.noiseFill(P.stone);
+}
+
+// stained glass, concrete and terracotta in the sixteen dye colours
+const TERRACOTTA_RGB = { magenta: '#95586c', light_blue: '#706c8a', lime: '#677535', pink: '#a14e4e', gray: '#392a23', cyan: '#575b5b', purple: '#764656', blue: '#4a3b5b', green: '#4c532a', black: '#251610' };
+const COLOR_TEX = {};
+for (const [key, , rgb] of COLORS) {
+  COLOR_TEX[key + '_stained_glass'] = (c) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const edge = x === 0 || y === 0 || x === 15 || y === 15, glint = (x - y === 3 || x - y === 4) && x > 4 && x < 12;
+      c.set(x, y, shade(rgb, edge ? 0.8 : glint ? 1.25 : 1), edge ? 220 : glint ? 170 : 120);
+    }
+  };
+  COLOR_TEX[key + '_concrete'] = (c) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, shade(rgb, 0.95 + c.h(x, y) * 0.06)); };
+  if (TERRACOTTA_RGB[key]) COLOR_TEX[key + '_terracotta'] = (c) => terracotta(c, TERRACOTTA_RGB[key]);
 }
 
 /** Pixel data for all layers: Uint8Array(16*16*4*N) */

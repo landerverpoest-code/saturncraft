@@ -17,6 +17,8 @@ export const SHAPE = { NONE: 0, CUBE: 1, CROSS: 2, LIQUID: 3, TORCH: 4, CACTUS: 
 // Render layers
 export const LAYER = { OPAQUE: 0, CUTOUT: 1, TRANSLUCENT: 2 };
 
+import { COLORS } from './colors.js';
+
 export const B = {
   AIR: 0, STONE: 1, GRASS: 2, DIRT: 3, COBBLESTONE: 4, OAK_PLANKS: 5, BEDROCK: 6,
   WATER: 7, LAVA: 8, SAND: 9, GRAVEL: 10, OAK_LOG: 11, OAK_LEAVES: 12, BIRCH_LOG: 13,
@@ -435,6 +437,17 @@ for (const [name, key, mat] of [['Brick', 'BRICK', B.BRICKS], ['Mossy Cobbleston
   def(slab, `${name} Slab`, { ...common, shape: SHAPE.SLAB, drops: 'slab' });
   def(stairs, `${name} Stairs`, { ...common, shape: SHAPE.STAIRS });
   STONE_SETS.push([mat, slab, stairs, name]);
+}
+// sixteen colours of stained glass, concrete and terracotta (the plain colours that were missing)
+export const COLOR_BLOCKS = { glass: [], concrete: [], terracotta: [] };
+for (const [key, name] of COLORS) {
+  const K = key.toUpperCase();
+  COLOR_BLOCKS.glass.push(ext(K + '_STAINED_GLASS'));
+  def(B[K + '_STAINED_GLASS'], `${name} Stained Glass`, { hardness: 0.3, resistance: 0.3, opaque: false, opacity: 0, layer: LAYER.TRANSLUCENT, drops: null, sound: 'glass' });
+  COLOR_BLOCKS.concrete.push(ext(K + '_CONCRETE'));
+  def(B[K + '_CONCRETE'], `${name} Concrete`, { hardness: 1.8, resistance: 1.8, tool: TOOL.PICKAXE, tier: TIER.WOOD });
+  if (!B[K + '_TERRACOTTA']) { ext(K + '_TERRACOTTA'); def(B[K + '_TERRACOTTA'], `${name} Terracotta`, clayStone); }
+  COLOR_BLOCKS.terracotta.push(B[K + '_TERRACOTTA']);
 }
 
 export const NUM_BLOCKS = BLOCKS.length;

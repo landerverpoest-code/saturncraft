@@ -143,7 +143,7 @@ float lightCurve(float f) {
       .replace('#include <color_fragment>', 'diffuseColor.rgb *= pow(vColor, vec3(2.2));')
       .replace('#include <map_fragment>', `
 vec2 tuv = vTuv;
-${water ? 'tuv += vec2(uTime * 0.02, uTime * 0.035);' : ''}
+${water ? 'if (abs(vTile - uWaterTiles.x) < 0.5) tuv += vec2(uTime * 0.02, uTime * 0.035); // still water drifts (not ice or glass)' : ''}
 float tile = vTile;
 if (abs(tile - uFire) < 0.5) tile = uFireFrames + mod(floor(uTime * 12.0), 8.0); // animated fire
 vec4 texel = texture(uAtlas, vec3(tuv, tile));

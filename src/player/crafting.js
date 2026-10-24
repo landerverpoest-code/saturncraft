@@ -1,5 +1,5 @@
 // Shaped/shapeless crafting and furnace smelting recipes.
-import { B, WOOD_SETS, STONE_SETS } from '../world/blocks.js';
+import { B, WOOD_SETS, STONE_SETS, COLOR_BLOCKS } from '../world/blocks.js';
 import { I, DYES, WOOL_ITEMS, TIPPED_ARROW, SPLASH_ITEM } from '../world/items.js';
 import { COLOR } from '../world/colors.js';
 
@@ -269,6 +269,9 @@ shaped(['SS', 'SS'], { S: I.VIOLITE_SHARD }, B.VIOLITE_BLOCK, 1);
 shaped([' S ', 'SGS', ' S '], { S: I.VIOLITE_SHARD, G: B.GLASS }, B.SHADED_GLASS, 2);
 shaped(['S', 'C', 'C'], { S: I.VIOLITE_SHARD, C: I.COPPER_INGOT }, I.FARGLASS, 1);
 shaped(['PP', 'PP'], { P: B.SEEPSTONE_SPIKE }, B.SEEPSTONE, 1);
+COLOR_BLOCKS.glass.forEach((id, c) => shaped(['GGG', 'GDG', 'GGG'], { G: B.GLASS, D: DYES[c] }, id, 8));
+COLOR_BLOCKS.terracotta.forEach((id, c) => shaped(['TTT', 'TDT', 'TTT'], { T: B.TERRACOTTA, D: DYES[c] }, id, 8));
+COLOR_BLOCKS.concrete.forEach((id, c) => shapeless([DYES[c], B.SAND, B.SAND, B.SAND, B.SAND, B.GRAVEL, B.GRAVEL, B.GRAVEL, B.GRAVEL], id, 8));
 for (const [raw, polished] of [[B.GRANITE, B.POLISHED_GRANITE], [B.DIORITE, B.POLISHED_DIORITE], [B.ANDESITE, B.POLISHED_ANDESITE]]) shaped(['XX', 'XX'], { X: raw }, polished, 4);
 
 // Smelting: input -> output; 200 ticks per item (10 s)
