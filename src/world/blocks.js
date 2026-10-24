@@ -432,6 +432,13 @@ for (const [name, key] of [['Spruce', 'spruce'], ['Birch', 'birch'], ['Jungle', 
   def(trap, `${name} Trapdoor`, { ...BLOCKS[B.OAK_TRAPDOOR], id: trap, name: `${name} Trapdoor`, tex: { all: key + '_trapdoor' } });
   DOOR_SETS.push([B[K + '_PLANKS'], door, trap, name, key]);
 }
+// fence gates of the other woods
+export const GATE_SETS = [[B.OAK_PLANKS, B.OAK_FENCE_GATE]];
+for (const [name, key] of [['Spruce', 'SPRUCE'], ['Birch', 'BIRCH'], ['Jungle', 'JUNGLE'], ['Acacia', 'ACACIA'], ['Dark Oak', 'DARK_OAK'], ['Blossom', 'BLOSSOM']]) {
+  const gate = ext(key + '_FENCE_GATE');
+  def(gate, `${name} Fence Gate`, { ...wood, shape: SHAPE.GATE, tex: { ...BLOCKS[B[key + '_PLANKS']].tex } });
+  GATE_SETS.push([B[key + '_PLANKS'], gate]);
+}
 export const isDoor = (id) => !!BLOCKS[id] && BLOCKS[id].shape === SHAPE.DOOR;
 export const isTrapdoor = (id) => !!BLOCKS[id] && BLOCKS[id].shape === SHAPE.TRAPDOOR;
 ext('POLISHED_GRANITE'); def(B.POLISHED_GRANITE, 'Polished Granite', { hardness: 1.5, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD });

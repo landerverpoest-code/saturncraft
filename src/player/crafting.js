@@ -1,5 +1,5 @@
 // Shaped/shapeless crafting and furnace smelting recipes.
-import { B, BLOCKS, WOOD_SETS, STONE_SETS, COLOR_BLOCKS, DOOR_SETS } from '../world/blocks.js';
+import { B, BLOCKS, WOOD_SETS, STONE_SETS, COLOR_BLOCKS, DOOR_SETS, GATE_SETS } from '../world/blocks.js';
 import { I, ITEMS, DYES, WOOL_ITEMS, TIPPED_ARROW, SPLASH_ITEM } from '../world/items.js';
 import { COLOR } from '../world/colors.js';
 
@@ -103,7 +103,7 @@ shaped(['CCC', 'CCC', 'CCC'], { C: I.CINNABAR }, B.CINNABAR_BLOCK, 1);
 shapeless([B.CINNABAR_BLOCK], I.CINNABAR, 9);
 shapeless([I.BOWL, I.BEETROOT, I.BEETROOT, I.BEETROOT, I.BEETROOT, I.BEETROOT, I.BEETROOT], I.BEETROOT_SOUP);
 for (const [planks, , , fence] of WOOD_SETS) shaped(['PSP', 'PSP'], { P: planks, S: I.STICK }, fence, 3);
-shaped(['SPS', 'SPS'], { P: 'planks', S: I.STICK }, B.OAK_FENCE_GATE, 1);
+for (const [planks, gate] of GATE_SETS) shaped(['SPS', 'SPS'], { P: planks, S: I.STICK }, gate, 1);
 for (const [planks, slab] of WOOD_SETS) shaped(['PPP'], { P: planks }, slab, 6);
 shaped(['PSP', 'P P', 'PSP'], { P: 'planks', S: 'wood_slab' }, B.BARREL, 1);
 shaped(['PPP', 'PCP', 'PPP'], { P: I.PAPER, C: I.COMPASS }, I.EMPTY_MAP, 1);
