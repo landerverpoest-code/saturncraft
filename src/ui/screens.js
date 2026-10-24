@@ -82,7 +82,7 @@ export class UI {
     this.fxRefresh = null;
     this.chest = null;
     this.enchTick = null;
-    this.refreshers = [];
+    this.refreshers = []; this.slotRefs = [];
     this.clear();
     g.onUIClosed();
   }
@@ -104,20 +104,52 @@ export class UI {
     s.className = 'slot';
     const refresh = () => { s.innerHTML = this.slotHTML(get()); };
     refresh();
+    const ref = { get, set, opts };
+    (this.slotRefs = this.slotRefs || []).push(ref);
     s.addEventListener('mousedown', (e) => {
       e.preventDefault();
       if (this.game.net && this.game.net.uiBefore) this.game.net.uiBefore(); // shared containers: remember the state before the click
-      if (opts.onClick) opts.onClick(e); else this.clickSlot(get, set, e.button === 2, e.shiftKey, opts);
+      const now = performance.now(), dbl = e.button === 0 && this.lastSlotClick && this.lastSlotClick.ref === ref && now - this.lastSlotClick.t < 300;
+      this.lastSlotClick = { ref, t: now };
+      if (dbl && this.cursor && !opts.onClick) this.gatherToCursor();
+      else if (opts.onClick) opts.onClick(e); else this.clickSlot(get, set, e.button === 2, e.shiftKey, opts);
+      this.dragPlaced = new Set([ref]);
       this.refreshAll();
     });
     s.addEventListener('contextmenu', (e) => e.preventDefault());
-    s.addEventListener('mouseenter', () => {
+    s.addEventListener('mouseenter', (e) => {
+      // dragging with the right button held drops one item in every slot passed over
+      if ((e.buttons & 2) && this.cursor && !opts.onClick && !opts.takeOnly && this.dragPlaced && !this.dragPlaced.has(ref)) {
+        const st = get(), c = this.cursor;
+        if ((!opts.filter || opts.filter(c)) && (!st || (canStack(st, c) && st.count < maxStack(st.id)))) {
+          if (this.game.net && this.game.net.uiBefore) this.game.net.uiBefore();
+          this.dragPlaced.add(ref);
+          if (!st) set({ ...c, count: 1 }); else { st.count++; set(st); }
+          c.count--;
+          if (c.count <= 0) this.cursor = null;
+          this.refreshAll();
+        }
+      }
       const st = get();
       if (st) this.showTooltip(tooltipHTML(st));
     });
     s.addEventListener('mouseleave', () => this.tooltipEl.classList.add('hidden'));
     this.refreshers.push(refresh);
     return s;
+  }
+
+  /** Double-click with a stack in hand: gather matching items from every slot on the screen into it. */
+  gatherToCursor() {
+    const c = this.cursor, max = maxStack(c.id);
+    for (const r of this.slotRefs || []) {
+      if (c.count >= max) break;
+      if (r.opts.onClick || r.opts.takeOnly) continue;
+      const st = r.get();
+      if (!st || !canStack(st, c)) continue;
+      const n = Math.min(st.count, max - c.count);
+      c.count += n; st.count -= n;
+      r.set(st.count > 0 ? st : null);
+    }
   }
 
   clickSlot(get, set, right, shift, opts) {
@@ -282,7 +314,7 @@ export class UI {
 
   showContainer(kind, title, inner) {
     this.clear();
-    this.refreshers = [];
+    this.refreshers = []; this.slotRefs = [];
     this.open = kind;
     const panel = el(`<div class="panel"><h3>${title}</h3></div>`);
     const screen = el('<div class="screen" style="background:rgba(0,0,0,.35)"></div>');
