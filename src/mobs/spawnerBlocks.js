@@ -3,7 +3,7 @@
 // their kind are already close. Mobs need light 11 or lower and room to stand.
 // Also rolls the loot of dungeon chests.
 import { B, SOLID } from '../world/blocks.js';
-import { I } from '../world/items.js';
+import { I, DISCS } from '../world/items.js';
 import { hollowCityLoot, LOOT_CITY, LOOT_SHIP } from '../world/dimensions/hollowCity.js';
 
 export const SPAWNER_TYPES = ['shambler', 'rattler', 'skitterer'];
@@ -59,7 +59,7 @@ export class SpawnerBlocks {
 // Dungeon chest loot: a few valuable rolls and three rolls of mob junk.
 const LOOT_A = [
   [I.IRON_INGOT, 1, 4, 10], [I.GOLD_INGOT, 1, 4, 5], [I.BREAD, 1, 1, 20], [I.WHEAT, 1, 4, 20], [I.COAL, 1, 4, 15],
-  [I.CINNABAR, 1, 4, 15], [I.BUCKET, 1, 1, 10], [I.CARROT, 1, 3, 10], [I.DIAMOND, 1, 2, 3], [I.IRON_CHESTPLATE, 1, 1, 2], [I.GILDED_APPLE, 1, 1, 15],
+  [I.CINNABAR, 1, 4, 15], [I.BUCKET, 1, 1, 10], [I.CARROT, 1, 3, 10], [I.DIAMOND, 1, 2, 3], [I.IRON_CHESTPLATE, 1, 1, 2], [I.GILDED_APPLE, 1, 1, 15], ...DISCS.map((id) => [id, 1, 1, 2]),
 ];
 const LOOT_B = [[I.BONE, 1, 8, 10], [I.GUNPOWDER, 1, 8, 10], [I.ROTTEN_FLESH, 1, 8, 10], [I.STRING, 1, 8, 10]];
 

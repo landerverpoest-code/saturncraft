@@ -4,6 +4,8 @@
 // by day, minor at night, low and sparse underground. Caves also get the odd
 // distant rumble.
 
+import { mulberry32 } from '../world/noise.js';
+
 const MODES = {
   major: [0, 2, 4, 5, 7, 9, 11],
   minor: [0, 2, 3, 5, 7, 8, 10],
@@ -48,7 +50,7 @@ export class Music {
   }
 
   /** A soft piano-like note: a few decaying partials through a velocity-dependent lowpass. */
-  note(t, freq, dur, vel, pan = 0) {
+  note(t, freq, dur, vel, pan = 0, dest = this.dry) {
     const ctx = this.audio.ctx;
     const g = ctx.createGain();
     const f = ctx.createBiquadFilter();
@@ -68,21 +70,21 @@ export class Music {
       o.start(t); o.stop(t + decay + 0.05);
     }
     f.connect(g);
-    if (p) { p.pan.value = pan; g.connect(p); p.connect(this.dry); } else g.connect(this.dry);
+    if (p) { p.pan.value = pan; g.connect(p); p.connect(dest); } else g.connect(dest);
   }
 
   /** Compose and schedule one piece; returns its length in seconds. */
-  play(mood) {
+  play(mood, rnd = Math.random, dest = this.dry, opts = {}) {
     const ctx = this.audio.ctx, t0 = ctx.currentTime + 0.3;
-    const rnd = Math.random;
+    const note = (t, f, d, v, pan) => this.note(t, f, d, v, pan, dest);
     const mode = mood === 'day' ? MODES.major : mood === 'night' ? (rnd() < 0.5 ? MODES.minor : MODES.dorian) : MODES.minor;
-    const rootMidi = (mood === 'cave' ? 45 : 50) + Math.floor(rnd() * 7); // A2..D#3 or D3..G#3
-    const bpm = mood === 'cave' ? 52 + rnd() * 10 : 62 + rnd() * 14;
+    const rootMidi = opts.root ?? (mood === 'cave' ? 45 : 50) + Math.floor(rnd() * 7); // A2..D#3 or D3..G#3
+    const bpm = opts.bpm ?? (mood === 'cave' ? 52 + rnd() * 10 : 62 + rnd() * 14);
     const beat = 60 / bpm;
     const prog = PROGRESSIONS[Math.floor(rnd() * PROGRESSIONS.length)];
     const midiOf = (deg, oct = 0) => rootMidi + 12 * (oct + Math.floor(deg / 7)) + mode[((deg % 7) + 7) % 7];
     const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
-    const rounds = mood === 'cave' ? 2 : 3 + Math.floor(rnd() * 2);
+    const rounds = opts.rounds ?? (mood === 'cave' ? 2 : 3 + Math.floor(rnd() * 2));
     let t = t0, lastMel = 7 + 2;
     const density = mood === 'cave' ? 0.25 : mood === 'night' ? 0.4 : 0.5;
     for (let r = 0; r < rounds; r++) {
@@ -92,9 +94,9 @@ export class Music {
         const pattern = rnd() < 0.5 ? [0, 1, 2, 1] : [0, 2, 1, 2];
         for (let b = 0; b < 8; b += 2) {
           const tone = chord[pattern[(b / 2) % 4]];
-          this.note(t + b * beat, hz(midiOf(tone, -1)), beat * 2, 0.35 + rnd() * 0.1, -0.3);
+          note(t + b * beat, hz(midiOf(tone, -1)), beat * 2, 0.35 + rnd() * 0.1, -0.3);
         }
-        if (r > 0 || rnd() < 0.5) this.note(t, hz(midiOf(deg, -2)), beat * 6, 0.3, -0.2); // bass
+        if (r > 0 || rnd() < 0.5) note(t, hz(midiOf(deg, -2)), beat * 6, 0.3, -0.2); // bass
         // right hand: sparse melody leaning on chord tones, stepping through the scale
         if (r > 0 || mood !== 'cave') {
           for (let h = 0; h < 16; h++) {
@@ -102,15 +104,36 @@ export class Music {
             const target = chord[Math.floor(rnd() * 3)] + 7 * (rnd() < 0.7 ? 1 : 2);
             lastMel += Math.sign(target - lastMel) * (rnd() < 0.6 ? 1 : 2);
             if (Math.abs(lastMel - target) > 4) lastMel = target;
-            this.note(t + h * beat / 2 + (rnd() - 0.5) * 0.03, hz(midiOf(lastMel, 0)), beat * (1 + rnd()), 0.45 + rnd() * 0.2, 0.25);
+            note(t + h * beat / 2 + (rnd() - 0.5) * 0.03, hz(midiOf(lastMel, 0)), beat * (1 + rnd()), 0.45 + rnd() * 0.2, 0.25);
           }
         }
         t += 8 * beat;
       }
     }
     // closing chord
-    for (const [k, d] of [[0, -1], [2, -1], [4, -1], [0, 0]].entries()) this.note(t + k * 0.06, hz(midiOf(d[0] + 0, d[1])), beat * 8, 0.35, (k - 1.5) * 0.2);
+    for (const [k, d] of [[0, -1], [2, -1], [4, -1], [0, 0]].entries()) note(t + k * 0.06, hz(midiOf(d[0] + 0, d[1])), beat * 8, 0.35, (k - 1.5) * 0.2);
     return t - t0 + beat * 8;
+  }
+
+  /**
+   * A music disc in a jukebox: the same piece every time (seeded), heard around x,y,z.
+   * Returns a handle whose gain follows the listener's distance; stop() silences it.
+   */
+  playDisc(disc, x, y, z) {
+    if (!this.ensureNodes()) return null;
+    const ctx = this.audio.ctx, g = ctx.createGain();
+    g.gain.value = 1; // placeDisc fades it with distance
+    g.connect(this.dry);
+    const len = this.play(disc.mood, mulberry32(disc.seed), g, { root: disc.root, bpm: disc.bpm, rounds: disc.rounds });
+    const h = { x, y, z, gain: g, ends: ctx.currentTime + len + 2, stop: () => { try { g.gain.setTargetAtTime(0, ctx.currentTime, 0.2); setTimeout(() => g.disconnect(), 1500); } catch { /* closed */ } h.stopped = true; } };
+    return h;
+  }
+
+  /** Jukebox volume by distance to the listener (fades out over 48 blocks). */
+  placeDisc(h, lx, ly, lz) {
+    if (!h || h.stopped) return;
+    const d = Math.hypot(h.x - lx, h.y - ly, h.z - lz);
+    h.gain.gain.setTargetAtTime(Math.max(0, 1 - d / 48) * 1.6, this.audio.ctx.currentTime, 0.3);
   }
 
   /** Distant cave rumble: a slow swell of filtered noise with a sliding low tone. */

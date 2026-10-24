@@ -110,6 +110,7 @@ shaped(['PPP', 'PCP', 'PPP'], { P: I.PAPER, C: I.COMPASS }, I.EMPTY_MAP, 1);
 shaped(['SSS', 'S S'], { S: I.SCUTE }, I.TURTLE_SHELL, 1);
 shaped(['I I', 'ICI', ' I '], { I: I.IRON_INGOT, C: B.CHEST }, B.HOPPER, 1);
 shaped(['S S', 'S S', 'SSS'], { S: 'wood_slab' }, B.COMPOSTER, 1);
+shaped(['PPP', 'PDP', 'PPP'], { P: 'planks', D: I.DIAMOND }, B.JUKEBOX, 1);
 shaped(['GGG', 'GAG', 'GGG'], { G: I.GOLD_INGOT, A: I.APPLE }, I.GILDED_APPLE, 1);
 for (const [kind, id] of Object.entries(TIPPED_ARROW)) shaped(['AAA', 'APA', 'AAA'], { A: I.ARROW, P: SPLASH_ITEM[kind] }, id, 8);
 shaped(['PPP', 'HHH', 'PPP'], { P: 'planks', H: I.HONEYCOMB }, B.BEEHIVE, 1);

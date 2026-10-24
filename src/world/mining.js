@@ -1,6 +1,6 @@
 // Block breaking speed and block drop rules (pure functions, unit tested).
 import { BLOCKS, B, TIER, TOOL } from './blocks.js';
-import { I, HAND, WOOL_ITEMS } from './items.js';
+import { I, HAND, WOOL_ITEMS, DISCS } from './items.js';
 import { LEAF_SAPLING } from './trees.js';
 import { swiftdigBonus, silkDropsSelf, bountyCount } from './enchantments.js';
 import { fatigueFactor } from '../player/effects.js';
@@ -104,6 +104,7 @@ function baseDrops(blockId, b, rng, meta, tool) {
     case 'melon': return [{ id: I.MELON_SLICE, count: 3 + Math.floor(rng() * 5) }];
     case 'bookshelf': return [{ id: I.BOOK, count: 3 }];
     case 'bed': return (meta & 8) ? [{ id: I.BED, count: 1 }] : []; // the head half drops the bed
+    case 'jukebox': return [{ id: B.JUKEBOX, count: 1 }, ...(meta > 0 && DISCS[meta - 1] ? [{ id: DISCS[meta - 1], count: 1 }] : [])]; // with the disc inside
     case 'door': return (meta & 8) ? [] : [{ id: BLOCKS[blockId].doorItem || I.OAK_DOOR, count: 1 }]; // the lower half drops the door
     case 'seeds': return rng() < 0.125 ? [{ id: I.WHEAT_SEEDS, count: 1 }] : [];
     case 'carrots': {

@@ -881,6 +881,16 @@ const GEN = {
     }
     c.set(5, 4, g); c.set(6, 3, g); c.set(10, 9, g); c.set(11, 8, d);
   },
+  jukebox_side: (c) => {
+    planks(c, '#6a4a30');
+    for (let i = 0; i < 16; i++) { c.set(i, 0, hex('#3a2818')); c.set(i, 15, hex('#3a2818')); c.set(0, i, hex('#3a2818')); c.set(15, i, hex('#3a2818')); }
+    for (let x = 3; x < 13; x++) c.set(x, 7, hex('#4a3420'));
+  },
+  jukebox_top: (c) => {
+    GEN.jukebox_side(c);
+    for (let y = 5; y < 11; y++) for (let x = 2; x < 14; x++) c.set(x, y, hex('#1e1612')); // the disc slot
+    for (let x = 3; x < 13; x++) c.set(x, 8, hex('#3a2a20'));
+  },
   bookshelf: (c) => {
     planks(c, '#a7834e');
     const cols = ['#8a2a2a', '#2a4a8a', '#2a6a3a', '#8a6a2a', '#5a2a6a', '#3a3a3a'].map(hex);

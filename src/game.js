@@ -7,7 +7,7 @@ import { KEEP_BITS, unpairAfterBreak } from './world/chests.js';
 import * as THREE from 'three';
 import { World } from './world/world.js';
 import { B, BLOCKS, SOLID, SHAPE, isFurnace, FURNACE_KIND } from './world/blocks.js';
-import { ITEMS, I, toolOf, heldLightLevel } from './world/items.js';
+import { ITEMS, I, toolOf, heldLightLevel, DISCS } from './world/items.js';
 import { heldLights } from './net/remotePlayer.js';
 import { blockDrops } from './world/mining.js';
 import { withExtras, cleanContents } from './world/enchantments.js';
@@ -846,6 +846,15 @@ export class Game {
     ci.entitiesOn = (x, y, z) => this.feetPositions().some(([ex, ey, ez]) => Math.floor(ex) === x && Math.floor(ey + 0.05) === y && Math.floor(ez) === z);
     // sounds of changes made by the circuits (here, or on the host when we are a guest)
     const OPENABLE = new Set(BLOCKS.filter((b) => b && (b.shape === SHAPE.DOOR || b.shape === SHAPE.TRAPDOOR || b.shape === SHAPE.GATE)).map((b) => b.id));
+    // jukeboxes: whoever sees a jukebox take a disc hears it (the disc lives in the block's meta)
+    this.jukeboxes = new Map();
+    w.on('blockChanged', (x, y, z, old, id) => {
+      if (old !== B.JUKEBOX && id !== B.JUKEBOX) return;
+      const k = `${x},${y},${z}`, h = this.jukeboxes.get(k);
+      if (h) { h.stop(); this.jukeboxes.delete(k); }
+      const m = id === B.JUKEBOX ? w.getMeta(x, y, z) : 0, disc = m > 0 && ITEMS[DISCS[m - 1]];
+      if (disc) { const nh = this.music.playDisc(disc.disc, x + 0.5, y + 0.5, z + 0.5); if (nh) this.jukeboxes.set(k, nh); }
+    });
     w.on('blockChanged', (x, y, z, old, id) => {
       if (!(CIRCUIT_BLOCK[old] || CIRCUIT_BLOCK[id] || OPENABLE.has(id))) return;
       if (!ci.acting && !(this.net && this.net.applyingRemote)) return;
@@ -946,6 +955,7 @@ export class Game {
       const sky = this.world.skyLight(px, py, pz), under = sky === 0 && py < this.world.heightAt(px, pz) - 4;
       const mood = under ? 'cave' : this.sky.state.aboveCount === 0 ? 'night' : 'day';
       this.music.update(1, mood, under && this.world.blockLight(px, py, pz) < 4);
+      for (const h of this.jukeboxes.values()) this.music.placeDisc(h, p.x, p.y + 1.6, p.z);
     }
     // footsteps
     const b = this.player.body;

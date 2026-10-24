@@ -279,6 +279,16 @@ for (const [planks, door, , name, key] of DOOR_SETS.slice(1)) {
   const d = item(key + '_door', `${name} Door`, { door: true, doorBlock: door, doorPlanks: planks });
   BLOCKS[door].doorItem = d.id;
 }
+// Music discs for the jukebox: each always plays the same composed piece (audio/music.js playDisc)
+const ICON_DISC = ['................', '.....kkkkkk.....', '...kkddddddkk...', '..kddddddddddk..', '..kdddllllddk...', '.kdddlllllldddk.', '.kddlllwwllldk..', '.kddllw..wlldk..', '.kddllw..wlldk..', '.kddlllwwllldk..', '.kdddlllllldddk.', '..kdddllllddk...', '..kddddddddddk..', '...kkddddddkk...', '.....kkkkkk.....', '................'];
+export const DISCS = [];
+for (const [key, name, label, mood, root, bpm, rounds] of [
+  ['three_suns', 'Three Suns', '#f2c23a', 'day', 52, 72, 3], ['ringfall', 'Ringfall', '#c8a878', 'day', 55, 66, 4], ['deepstone', 'Deepstone', '#6a6a7a', 'cave', 45, 54, 3],
+  ['embers', 'Embers', '#e85a1a', 'night', 50, 64, 3], ['tidecall', 'Tidecall', '#3aa8c8', 'night', 53, 60, 4], ['hollow', 'Hollow', '#8a5ad8', 'cave', 47, 50, 3],
+  ['blossom', 'Blossom', '#f0a2c0', 'day', 57, 76, 3], ['starlight', 'Starlight', '#d8e0ff', 'night', 48, 58, 4]]) {
+  const d = item('disc_' + key, 'Music Disc: ' + name, { stack: 1, disc: { index: DISCS.length, seed: 0x5eed + DISCS.length * 7919, mood, root, bpm, rounds, title: name }, iconStyle: [ICON_DISC, { k: '#1a1a1e', d: '#2e2e34', l: label, w: '#f4f0e4', h: '#2e2e34' }] });
+  DISCS.push(d.id);
+}
 ITEMS[B.GLOOMSHELL_BOX].stack = 1; // a box keeps its contents in the item (stack.contents), so it never stacks
 
 /** Light level (0-15) an item gives when held: a torch, lantern or other light block; 0 for the rest. */

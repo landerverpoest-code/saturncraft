@@ -439,6 +439,8 @@ for (const [name, key] of [['Spruce', 'SPRUCE'], ['Birch', 'BIRCH'], ['Jungle', 
   def(gate, `${name} Fence Gate`, { ...wood, shape: SHAPE.GATE, tex: { ...BLOCKS[B[key + '_PLANKS']].tex } });
   GATE_SETS.push([B[key + '_PLANKS'], gate]);
 }
+// Jukebox: meta = the disc inside (DISCS index + 1), 0 when empty (see world/items.js DISCS)
+ext('JUKEBOX'); def(B.JUKEBOX, 'Jukebox', { hardness: 2, resistance: 6, tool: TOOL.AXE, sound: 'wood', flammable: true, drops: 'jukebox', tex: { top: 'jukebox_top', bottom: 'jukebox_side', side: 'jukebox_side' } });
 export const isDoor = (id) => !!BLOCKS[id] && BLOCKS[id].shape === SHAPE.DOOR;
 export const isTrapdoor = (id) => !!BLOCKS[id] && BLOCKS[id].shape === SHAPE.TRAPDOOR;
 ext('POLISHED_GRANITE'); def(B.POLISHED_GRANITE, 'Polished Granite', { hardness: 1.5, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD });
