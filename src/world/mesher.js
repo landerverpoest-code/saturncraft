@@ -1,7 +1,7 @@
 // Face-culled section mesher with smooth lighting and ambient occlusion.
 // Input is a 18x18x18 padded copy of a 16^3 section (1 block border from
 // neighbours) so it can run inside a worker without access to the world.
-import { B, BLOCKS, OPAQUE, SOLID, SHAPES, LAYERS, SHAPE, LAYER, BLOCK_LIMIT, WATERLOGGED } from './blocks.js';
+import { B, BLOCKS, OPAQUE, SOLID, SHAPES, LAYERS, SHAPE, LAYER, BLOCK_LIMIT, WATERLOGGED, CANDLES } from './blocks.js';
 import { LEAVES } from './trees.js';
 import { FACE_TILE, FRONT_TILE, texId } from './textures.js';
 import { WOOL_RGB } from './colors.js';
@@ -9,7 +9,7 @@ import { railHeight } from './rails.js';
 import { ARTS, artOf, partOf } from './paintings.js';
 import { crystalTex, orientPoint } from './caves.js';
 import { circuitParts, partPoint, wireMask, wireColor } from './circuitShapes.js';
-import { doorBox, ladderBox, SIDE_DIRS, DOOR_UPPER, BED_HEAD, BED_BOX, slabBox, stairBoxes, fenceConnects, fenceRenderBoxes, gateRenderBoxes, paneConnects, paneBoxes, snowBox, wallConnects, wallBoxes, trapdoorBox, blockBoxes, compostBox } from './shapes.js';
+import { doorBox, ladderBox, SIDE_DIRS, DOOR_UPPER, BED_HEAD, BED_BOX, slabBox, stairBoxes, fenceConnects, fenceRenderBoxes, gateRenderBoxes, paneConnects, paneBoxes, snowBox, wallConnects, wallBoxes, trapdoorBox, blockBoxes, compostBox, CANDLE_SPOTS } from './shapes.js';
 
 export const PAD = 18;
 export const PAD_VOL = PAD * PAD * PAD;
@@ -66,6 +66,7 @@ const BED_SIDE = texId('bed_side'), BED_BOTTOM = texId('oak_planks');
 const WIRE_DOT = texId('cinnabar_wire_dot'), WIRE_LINE = texId('cinnabar_wire_line'), WIRE_HALF = texId('cinnabar_wire_half');
 const tileOf = (name) => texId(name) ?? 0;
 const COMPOST = texId('compost'), COMPOST_READY = texId('compost_ready');
+const WICK = texId('candle_wick'), CANDLE_FLAME = texId('candle_flame');
 const BERRY_TILES = [0, 1, 2, 3].map((i) => texId('sweet_berry_bush_' + i));
 
 class Buf {
@@ -323,6 +324,12 @@ export function meshSection(sec) {
       for (const b of blockBoxes(id, meta[i])) emitBox(buf, x, y, z, b[0], b[1], b[2], b[3], b[4], b[5], tiles, sk * 17, bk * 17, 'box');
       const cb = id === B.COMPOSTER && compostBox(meta[i] & 15);
       if (cb) emitBox(buf, x, y, z, cb[0], cb[1], cb[2], cb[3], cb[4], cb[5], (meta[i] & 15) >= 8 ? COMPOST_READY : COMPOST, sk * 17, bk * 17, 'box');
+      const cdl = CANDLES.get(id);
+      if (cdl) for (const [cx, cz, h] of CANDLE_SPOTS[meta[i] & 3]) {
+        // a wick on each candle, and a little flame (full bright) on lit ones
+        emitBox(buf, x, y, z, (cx + 0.75) / 16, h / 16, (cz + 0.75) / 16, (cx + 1.25) / 16, (h + 1) / 16, (cz + 1.25) / 16, WICK, sk * 17, bk * 17, 'box');
+        if (id === cdl.lit) emitBox(buf, x, y, z, (cx + 0.5) / 16, (h + 1) / 16, (cz + 0.5) / 16, (cx + 1.5) / 16, (h + 2.5) / 16, (cz + 1.5) / 16, CANDLE_FLAME, sk * 17, 255, 'box');
+      }
       if (id === B.CAMPFIRE) {
         // the flames: two crossed planes of animated fire, full bright
         const tile = FACE_TILE[B.FIRE * 6 + 2], sky = sk * 17, h = 0.9, y0 = y + 0.1;

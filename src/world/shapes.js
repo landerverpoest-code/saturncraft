@@ -227,6 +227,9 @@ const CAMPFIRE_BOXES = [[0, 0, 1 / 16, 1, 4 / 16, 5 / 16], [0, 0, 11 / 16, 1, 4 
   [1 / 16, 3 / 16, 0, 5 / 16, 7 / 16, 1], [11 / 16, 3 / 16, 0, 15 / 16, 7 / 16, 1], [5 / 16, 0, 5 / 16, 11 / 16, 1 / 16, 11 / 16]];
 const LANTERN_STANDING = [[5 / 16, 0, 5 / 16, 11 / 16, 7 / 16, 11 / 16], [6 / 16, 7 / 16, 6 / 16, 10 / 16, 9 / 16, 10 / 16]];
 const LANTERN_HANGING = [[5 / 16, 1 / 16, 5 / 16, 11 / 16, 8 / 16, 11 / 16], [6 / 16, 8 / 16, 6 / 16, 10 / 16, 10 / 16, 10 / 16], [7.5 / 16, 10 / 16, 7.5 / 16, 8.5 / 16, 1, 8.5 / 16]];
+// candles: 1-4 thin sticks of wax ([x, z, height] in pixels)
+export const CANDLE_SPOTS = [[[7, 7, 6]], [[5, 7, 6], [9, 6, 5]], [[7, 5, 6], [5, 9, 5], [9, 8, 4]], [[5, 5, 6], [9, 5, 5], [5, 9, 5], [9, 9, 4]]];
+const CANDLE_BOXES = CANDLE_SPOTS.map((spots) => spots.map(([x, z, h]) => [x / 16, 0, z / 16, (x + 2) / 16, h / 16, (z + 2) / 16]));
 /** Render / collision boxes of a SHAPE.BOXES block. */
 // Brewing Alembic: base plate, ember rod and a cross-shaped arm near the top
 const ALEMBIC_BOXES = [[2 / 16, 0, 2 / 16, 14 / 16, 2 / 16, 14 / 16], [7 / 16, 2 / 16, 7 / 16, 9 / 16, 14 / 16, 9 / 16],
@@ -264,6 +267,7 @@ export function blockBoxes(id, meta) {
   if (id === B.HOPPER) return HOPPER_BOXES[meta & 7] || HOPPER_BOXES[0];
   if (id === B.WYRM_HEAD) return WYRM_HEAD_BOXES;
   if (id === B.STORM_ROD) return rodBoxes(meta);
+  if (BLOCKS[id].candle) return CANDLE_BOXES[meta & 3];
   return TABLE_BOXES;
 }
 /** One box enclosing all of a SHAPE.BOXES block (selection outline). */

@@ -43,6 +43,7 @@ ARTS.forEach(([, w, h], art) => { for (let p = 0; p < w * h; p++) addTex(`painti
 for (let i = 0; i < 8; i++) addTex('fire_' + i);
 addTex('lava_flow');
 addTex('compost'); addTex('compost_ready');
+addTex('candle_wick'); addTex('candle_flame');
 for (let i = 0; i < 4; i++) addTex('sweet_berry_bush_' + i);
 for (let i = 0; i < 10; i++) addTex('destroy_' + i);
 
@@ -1205,6 +1206,20 @@ for (const [key, , rgb] of COLORS) {
   if (TERRACOTTA_RGB[key]) COLOR_TEX[key + '_terracotta'] = (c) => terracotta(c, TERRACOTTA_RGB[key]);
   COLOR_TEX[key + '_carpet'] = (c) => { GEN.wool(c); for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const p = c.get(x, y); c.set(x, y, [p[0] * rgb[0] / 255, p[1] * rgb[1] / 255, p[2] * rgb[2] / 255]); } };
 }
+
+// candles: soft wax with a lighter rim of melted wax at the top and a drip or two down the sides
+function candleTex(c, rgb) {
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    const drip = (x % 5 === 1 && y > 9 && y < 12 + (x % 3)) || y >= 10 && y <= 11;
+    c.set(x, y, shade(rgb, drip ? 1.12 : 0.9 + c.h(x, y) * 0.08 - (x % 2) * 0.04));
+  }
+}
+GEN.candle = (c) => candleTex(c, hex('#e8d8b0'));
+for (const [key, , rgb] of COLORS) COLOR_TEX[key + '_candle'] = (c) => candleTex(c, rgb);
+GEN.candle_wick = (c) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, shade(hex('#2a2420'), 0.9 + c.h(x, y) * 0.2)); };
+GEN.candle_flame = (c) => {
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, y < 6 ? hex('#fff4c0') : y < 11 ? hex('#ffc040') : hex('#ff8020'));
+};
 
 /** Pixel data for all layers: Uint8Array(16*16*4*N) */
 export function generateTextureData() {

@@ -1,5 +1,5 @@
 // Block breaking speed and block drop rules (pure functions, unit tested).
-import { BLOCKS, B, TIER, TOOL } from './blocks.js';
+import { BLOCKS, B, TIER, TOOL, CANDLES } from './blocks.js';
 import { I, HAND, WOOL_ITEMS, DISCS } from './items.js';
 import { LEAF_SAPLING } from './trees.js';
 import { swiftdigBonus, silkDropsSelf, bountyCount } from './enchantments.js';
@@ -96,6 +96,7 @@ function baseDrops(blockId, b, rng, meta, tool) {
     case 'item_frame': return [{ id: I.ITEM_FRAME, count: 1 }];
     case 'sign': return [{ id: I.SIGN, count: 1 }];
     case 'painting': return ((meta >> 2) & 15) === 0 ? [{ id: I.PAINTING, count: 1 }] : []; // one item per picture (from its first part)
+    case 'candle': { const c = CANDLES.get(blockId); return [{ id: c ? c.unlit : blockId, count: (meta & 3) + 1 }]; }
     case 'campfire': return [{ id: I.COAL, count: 2 }];
     case 'snowballs': return [{ id: I.SNOWBALL, count: 4 }];
     case 'snow_layer': return [{ id: I.SNOWBALL, count: (meta & 7) + 1 }];

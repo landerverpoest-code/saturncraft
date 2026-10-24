@@ -51,3 +51,21 @@ describe('smoker and blast furnace', () => {
     expect(craft([null, L, null, L, F, L, null, L, null], 3)).toEqual({ id: B.SMOKER, count: 1 });
   });
 });
+
+describe('candles', async () => {
+  const { CANDLES, CANDLE_IDS, EMIT } = await import('../src/world/blocks.js');
+  const { I, DYES } = await import('../src/world/items.js');
+  const { blockDrops } = await import('../src/world/mining.js');
+  it('are crafted from string over honeycomb and dyed in sixteen colours', () => {
+    expect(CANDLE_IDS.length).toBe(17);
+    const st = (id) => id && { id, count: 1 };
+    expect(craft([I.STRING, null, null, I.HONEYCOMB, null, null, null, null, null].map(st), 3)).toEqual({ id: CANDLE_IDS[0], count: 1 });
+    expect(craft([CANDLE_IDS[0], DYES[14], null, null].map(st), 2)).toEqual({ id: CANDLE_IDS[15], count: 1 });
+  });
+  it('glow only when lit and drop one candle per stick', () => {
+    const c = CANDLES.get(CANDLE_IDS[3]);
+    expect(EMIT[c.unlit]).toBe(0);
+    expect(EMIT[c.lit]).toBe(12);
+    expect(blockDrops(c.lit, undefined, () => 0, 3)).toEqual([{ id: c.unlit, count: 4 }]);
+  });
+});

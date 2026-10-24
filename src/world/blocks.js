@@ -524,6 +524,19 @@ for (const [key, name] of COLORS) {
   COLOR_BLOCKS.pane.push(ext(K + '_STAINED_GLASS_PANE'));
   def(B[K + '_STAINED_GLASS_PANE'], `${name} Stained Glass Pane`, { hardness: 0.3, resistance: 0.3, opaque: false, opacity: 0, shape: SHAPE.PANE, layer: LAYER.TRANSLUCENT, drops: null, sound: 'glass', tex: { all: key + '_stained_glass' } });
 }
+// Candles (plain and in every colour): meta 0-3 = 1-4 candles in the block; flint and steel lights
+// them (the lit forms glow), a click with the hand snuffs them out
+export const CANDLES = new Map(); // id -> { unlit, lit }
+export const CANDLE_IDS = []; // the unlit candles: plain, then the sixteen colours
+for (const [key, name] of [[null, null], ...COLORS]) {
+  const K = key ? key.toUpperCase() + '_CANDLE' : 'CANDLE', tex = key ? key + '_candle' : 'candle';
+  const common = { hardness: 0.1, resistance: 0.1, sound: 'wool', solid: false, opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, needsSupport: true, candle: true, drops: 'candle', tex: { all: tex } };
+  ext(K); ext(K + '_LIT');
+  def(B[K], name ? `${name} Candle` : 'Candle', common);
+  def(B[K + '_LIT'], name ? `Lit ${name} Candle` : 'Lit Candle', { ...common, emit: 12, hidden: true });
+  const c = { unlit: B[K], lit: B[K + '_LIT'] };
+  CANDLES.set(c.unlit, c); CANDLES.set(c.lit, c); CANDLE_IDS.push(c.unlit);
+}
 
 export const NUM_BLOCKS = BLOCKS.length;
 

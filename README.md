@@ -379,6 +379,7 @@ poison from eyes) follow the documented table.
 * Item frames (8 sticks + leather): hang on a wall, right-click to put the held item in and again to turn it in 45° steps, hit to take it out; saved and shared in multiplayer
 * Paintings (8 sticks + wool): eight original procedurally painted pictures from 1 × 1 to 4 × 3 (three suns, a ringed moon, dunes, a harbour, peaks, a forest, a shoreline, a city in the sky); right-click a wall to hang the largest that fits; breaking any part takes the whole picture down
 * Campfires (3 sticks, coal, 3 logs: light 15, animated flames, rising smoke, burn whoever stands on them, drop 2 coal) and lanterns (iron + torch: light 15, standing, or hanging when placed under a block); torches smoke and lava throws embers
+* **Candles** (string over honeycomb; dye them in any of sixteen colours): place up to four of the same colour in one block, light them with flint and steel (light 12, a little flame on each wick) and snuff them out with a click
 * Shields (6 planks + iron ingot, 336 uses): hold right-click to raise one (after a quarter second); it stops melee hits and arrows from in front, wears with the damage it takes, pushes attackers back and slows you to a fifth
 * Flitters (bats): up to 15 flutter about in dark caves near you (light ≤ 3), squeak, and hang upside down from ceilings until you come close
 * Inklings (squid) in deep ocean water: they drift in pulses with sweeping tentacles, squirt ink and dart away when hit, and drop 1–3 ink sacs (black dye)

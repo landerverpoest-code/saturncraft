@@ -4,7 +4,7 @@ import { Mob } from '../mobs/mob.js';
 import { pairOnPlace } from '../world/chests.js';
 import { hopperPlaceMeta } from '../world/hoppers.js';
 import { compost, READY, SETTLE_TICKS } from '../world/composter.js';
-import { B, BLOCKS, SOLID, SHAPE, isFluid, CROPS, isFurnace, DOOR_SETS } from '../world/blocks.js';
+import { B, BLOCKS, SOLID, SHAPE, isFluid, CROPS, isFurnace, DOOR_SETS, CANDLES } from '../world/blocks.js';
 import { ITEMS, I, toolOf, isBlockItem, WOOL_ITEMS, POTION_ITEM, isArrow, DISCS } from '../world/items.js';
 import { POTIONS } from '../world/potions.js';
 import { breakProgressPerTick, blockDrops, canHarvest } from '../world/mining.js';
@@ -674,6 +674,24 @@ export class Interaction {
       this.swing = SWING_TICKS;
       return true;
     }
+    if (t && CANDLES.has(t.id)) {
+      // flint and steel lights candles; a click with anything but another candle (or something to light them) snuffs them out
+      const c = CANDLES.get(t.id), m = w.getMeta(t.x, t.y, t.z), at = [t.x + 0.5, t.y + 0.4, t.z + 0.5];
+      if (t.id === c.unlit && d && d.igniter) {
+        w.setBlockUrgent(t.x, t.y, t.z, c.lit, m);
+        g.audio.play('ignite', at);
+        if (!p.creative) p.inventory.damageSelected(1);
+        this.swing = SWING_TICKS;
+        return true;
+      }
+      if (t.id === c.lit && !(d && CANDLES.has(d.block ?? d.id))) {
+        w.setBlockUrgent(t.x, t.y, t.z, c.unlit, m);
+        g.particles.smoke && g.particles.smoke(at[0], at[1], at[2], 4, 0.3);
+        g.audio.play('fizz', at, 0.3);
+        this.swing = SWING_TICKS;
+        return true;
+      }
+    }
     if (t && t.id === B.JUKEBOX && !p.sneaking) {
       // eject the disc that is playing, or put the held disc in
       const m = w.getMeta(t.x, t.y, t.z);
@@ -733,6 +751,9 @@ export class Interaction {
       const m = w.getMeta(t.x, t.y, t.z);
       if ((m === 0 && t.face[1] === 1) || (m === 1 && t.face[1] === -1)) return this.finishPlace(t.x, t.y, t.z, placeId, SLAB_DOUBLE);
     }
+    // a candle on a candle of the same colour adds one (up to four)
+    const tc = CANDLES.get(t.id);
+    if (tc && tc.unlit === placeId && (w.getMeta(t.x, t.y, t.z) & 3) < 3) return this.finishPlace(t.x, t.y, t.z, t.id, (w.getMeta(t.x, t.y, t.z) & 3) + 1);
     // placing snow on snow adds a layer (up to a full block of 8)
     if (placeId === B.SNOW_LAYER && t.id === B.SNOW_LAYER && (w.getMeta(t.x, t.y, t.z) & 7) < 7) return this.finishPlace(t.x, t.y, t.z, B.SNOW_LAYER, (w.getMeta(t.x, t.y, t.z) & 7) + 1);
     // Place location: replace soft blocks, else the adjacent cell

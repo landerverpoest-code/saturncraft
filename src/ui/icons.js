@@ -46,6 +46,13 @@ function blockIcon(b, forceTint = null) {
     for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) if (tpl[y][x] === 'h') { ctx.fillStyle = (x + y) % 5 ? col : lighten(col, 0.8); ctx.fillRect(x * 2, y * 2, 2, 2); }
     return c;
   }
+  if (b.candle) {
+    // a single candle stick with its wick
+    ctx.drawImage(texCanvas(b.tex.side), 4, 0, 8, 16, 12, 8, 8, 22);
+    ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(17, 8, 3, 22);
+    ctx.fillStyle = '#2a2420'; ctx.fillRect(15, 4, 2, 4);
+    return c;
+  }
   if (b.shape === SHAPE.TRAPDOOR) { ctx.drawImage(texCanvas(b.tex.side), 0, 0, 32, 32); return c; }
   if (b.shape === SHAPE.CIRCUIT && b.tex.top !== 'piston_top' && b.tex.top !== 'piston_top_sticky') return circuitIcon(ctx, c, b);
   if (b.shape === SHAPE.CROSS || b.shape === SHAPE.TORCH || b.shape === SHAPE.LADDER || b.shape === SHAPE.PANE || b.shape === SHAPE.PAD || b.flatIcon) {
