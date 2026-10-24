@@ -439,6 +439,9 @@ for (const [name, key] of [['Spruce', 'SPRUCE'], ['Birch', 'BIRCH'], ['Jungle', 
   def(gate, `${name} Fence Gate`, { ...wood, shape: SHAPE.GATE, tex: { ...BLOCKS[B[key + '_PLANKS']].tex } });
   GATE_SETS.push([B[key + '_PLANKS'], gate]);
 }
+// Bamboo (jungles): grows quickly up to 12 tall on soil; meta = growth age like sugar cane
+ext('BAMBOO'); def(B.BAMBOO, 'Bamboo', { ...plant, hardness: 1, resistance: 1, tool: TOOL.AXE, sound: 'wood', flammable: true });
+ext('BAMBOO_PLANKS'); def(B.BAMBOO_PLANKS, 'Bamboo Planks', { hardness: 2, resistance: 3, tool: TOOL.AXE, sound: 'wood', flammable: true });
 // Jukebox: meta = the disc inside (DISCS index + 1), 0 when empty (see world/items.js DISCS)
 ext('JUKEBOX'); def(B.JUKEBOX, 'Jukebox', { hardness: 2, resistance: 6, tool: TOOL.AXE, sound: 'wood', flammable: true, drops: 'jukebox', tex: { top: 'jukebox_top', bottom: 'jukebox_side', side: 'jukebox_side' } });
 export const isDoor = (id) => !!BLOCKS[id] && BLOCKS[id].shape === SHAPE.DOOR;

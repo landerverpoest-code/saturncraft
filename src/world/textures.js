@@ -872,6 +872,19 @@ const GEN = {
       for (const k of [4, 8, 11]) { c.set(k, i, i % 3 ? bar : hi); c.set(i, k, i % 3 ? bar : hi); }
     }
   },
+  bamboo: (c) => {
+    // one thick green stalk with joints and a leaf or two
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
+    const g = hex('#6a9a2a'), d = hex('#4a7a1a'), j = hex('#a8c870');
+    for (let y = 0; y < 16; y++) { const joint = y % 8 === 0; c.set(6, y, joint ? j : d); c.set(7, y, joint ? j : g); c.set(8, y, joint ? j : g); c.set(9, y, joint ? j : d); }
+    for (let k = 0; k < 4; k++) { c.set(10 + k, 3 - (k >> 1), g); c.set(5 - k, 11 - (k >> 1), g); }
+  },
+  bamboo_planks: (c) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const seam = x % 4 === 3, node = y % 8 === 0;
+      c.set(x, y, shade(hex('#c8b84a'), seam ? 0.7 : node ? 0.85 : 0.95 + c.h(x, y) * 0.08));
+    }
+  },
   sugar_cane: (c) => {
     for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
     const g = hex('#8ac85a'), d = hex('#5f9a3a'), j = hex('#c8e8a0');

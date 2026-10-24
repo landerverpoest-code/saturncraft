@@ -643,6 +643,11 @@ export class TerrainGenerator {
         if (biome === BIOME.PLAINS || biome === BIOME.TAIGA) { blocks[above] = B.PUMPKIN; meta[above] = Math.floor(h(x, z, 48) * 4); }
         else if (biome === BIOME.FOREST || biome === BIOME.BIRCH_FOREST || biome === BIOME.JUNGLE) blocks[above] = B.MELON;
       }
+      // bamboo groves in jungles
+      if (biome === BIOME.JUNGLE && ground === B.GRASS && !blocks[above] && hashf(this.seed, (x0 + x) >> 4, (z0 + z) >> 4, 52) < 0.25 && h(x, z, 53) < 0.18) {
+        const n = 4 + Math.floor(h(x, z, 54) * 9);
+        for (let k = 1; k <= n && top + k < 318; k++) blocks[cidx(x, top + k, z)] = B.BAMBOO;
+      }
       // sugar cane on the shore: grass, dirt or sand next to water
       if ((ground === B.GRASS || ground === B.SAND || ground === B.DIRT || ground === B.RED_SAND) && top === SEA_LEVEL && h(x, z, 44) < 0.12) {
         const wet = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => { const xx = x + dx, zz = z + dz; return xx >= 0 && zz >= 0 && xx < 16 && zz < 16 && blocks[cidx(xx, top, zz)] === B.WATER; });
