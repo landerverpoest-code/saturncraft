@@ -1,7 +1,7 @@
 // Face-culled section mesher with smooth lighting and ambient occlusion.
 // Input is a 18x18x18 padded copy of a 16^3 section (1 block border from
 // neighbours) so it can run inside a worker without access to the world.
-import { B, BLOCKS, OPAQUE, SOLID, SHAPES, LAYERS, SHAPE, LAYER, BLOCK_LIMIT, WATERLOGGED, CANDLES } from './blocks.js';
+import { B, BLOCKS, OPAQUE, SOLID, SHAPES, LAYERS, SHAPE, LAYER, BLOCK_LIMIT, WATERLOGGED, CANDLES, POTTED } from './blocks.js';
 import { LEAVES } from './trees.js';
 import { FACE_TILE, FRONT_TILE, texId } from './textures.js';
 import { WOOL_RGB } from './colors.js';
@@ -329,6 +329,23 @@ export function meshSection(sec) {
         // a wick on each candle, and a little flame (full bright) on lit ones
         emitBox(buf, x, y, z, (cx + 0.75) / 16, h / 16, (cz + 0.75) / 16, (cx + 1.25) / 16, (h + 1) / 16, (cz + 1.25) / 16, WICK, sk * 17, bk * 17, 'box');
         if (id === cdl.lit) emitBox(buf, x, y, z, (cx + 0.5) / 16, (h + 1) / 16, (cz + 0.5) / 16, (cx + 1.5) / 16, (h + 2.5) / 16, (cz + 1.5) / 16, CANDLE_FLAME, sk * 17, 255, 'box');
+      }
+      const potted = id === B.FLOWER_POT && meta[i] ? POTTED[meta[i] - 1] : 0;
+      if (potted === B.CACTUS) emitBox(buf, x, y, z, 6 / 16, 6 / 16, 6 / 16, 10 / 16, 1, 10 / 16, FACE_TILE[B.CACTUS * 6 + 2], sk * 17, bk * 17, 'box');
+      else if (potted) {
+        // the plant in the pot: two crossed planes standing on the soil
+        const tile = FACE_TILE[potted * 6 + 2], sky = sk * 17, blk = bk * 17, h = 0.75, y0 = y + 6 / 16;
+        buf.ensure(16);
+        for (const [x1, z1, x2, z2] of [[x + 0.2, z + 0.2, x + 0.8, z + 0.8], [x + 0.2, z + 0.8, x + 0.8, z + 0.2]]) {
+          for (let side = 0; side < 2; side++) {
+            buf.vert(x1, y0, z1, 0, 1, 0, 0, 1, 255, 255, 255, sky, blk, 0, tile);
+            buf.vert(x2, y0, z2, 0, 1, 0, 1, 1, 255, 255, 255, sky, blk, 0, tile);
+            buf.vert(x2, y0 + h, z2, 0, 1, 0, 1, 0, 255, 255, 255, sky, blk, 0, tile);
+            buf.vert(x1, y0 + h, z1, 0, 1, 0, 0, 0, 255, 255, 255, sky, blk, 0, tile);
+            buf.quad(false);
+            if (side === 0) { const n = buf.n; for (let k = 0; k < 2; k++) swapVert(buf, n - 4 + k, n - 1 - k); }
+          }
+        }
       }
       if (id === B.CAMPFIRE) {
         // the flames: two crossed planes of animated fire, full bright

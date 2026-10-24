@@ -926,6 +926,22 @@ const GEN = {
       c.set(x, y, shade(hex(rim ? '#c8b04a' : '#b89a3a'), (slat ? 0.7 : rim && (x + y) % 4 === 0 ? 0.85 : 0.95) + c.h(x, y) * 0.08));
     }
   },
+  flower_pot: (c) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, shade(hex('#9a5a3a'), (y === 10 ? 1.15 : 0.9) + c.h(x, y) * 0.12)); },
+  flower_pot_top: (c) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const rim = x < 6 || x > 9 || y < 6 || y > 9;
+      c.set(x, y, rim ? shade(hex('#9a5a3a'), 1.05 + c.h(x, y) * 0.1) : shade(hex('#5a3a22'), 0.8 + c.h(x, y) * 0.3));
+    }
+  },
+  chain: (c) => {
+    // links down the middle columns (box UVs put the chain's sides there); the rest stays clear
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
+    for (let y = 0; y < 16; y++) {
+      const ring = y % 8 < 5, edge = y % 8 === 0 || y % 8 === 4;
+      if (ring) { for (const x of [6, 9]) c.set(x, y, shade(hex('#4a5058'), 0.9)); if (edge) for (const x of [7, 8]) c.set(x, y, shade(hex('#6a7078'), 1)); }
+      else for (const x of [7, 8]) c.set(x, y, shade(hex('#5a6068'), 1.05));
+    }
+  },
   bamboo_planks: (c) => {
     for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
       const seam = x % 4 === 3, node = y % 8 === 0;

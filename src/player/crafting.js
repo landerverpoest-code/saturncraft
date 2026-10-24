@@ -282,6 +282,10 @@ COLOR_BLOCKS.glass.forEach((id, c) => shaped(['GGG', 'GDG', 'GGG'], { G: B.GLASS
 COLOR_BLOCKS.pane.forEach((id, c) => shaped(['GGG', 'GGG'], { G: COLOR_BLOCKS.glass[c] }, id, 16));
 COLOR_BLOCKS.carpet.forEach((id, c) => shaped(['WW'], { W: WOOL_ITEMS[c] }, id, 3));
 shaped(['S', 'H'], { S: I.STRING, H: I.HONEYCOMB }, CANDLE_IDS[0], 1);
+shaped(['B B', ' B '], { B: I.BRICK }, B.FLOWER_POT, 1);
+shapeless([I.IRON_INGOT], I.IRON_NUGGET, 9);
+shaped(['NNN', 'NNN', 'NNN'], { N: I.IRON_NUGGET }, I.IRON_INGOT, 1);
+shaped(['N', 'I', 'N'], { N: I.IRON_NUGGET, I: I.IRON_INGOT }, B.CHAIN, 1);
 shaped(['BSB', 'B B', 'B B'], { B: B.BAMBOO, S: I.STRING }, B.SCAFFOLDING, 6);
 CANDLE_IDS.slice(1).forEach((id, c) => shapeless([CANDLE_IDS[0], DYES[c] || I.BONE_MEAL], id, 1));
 shapeless([B.STONE_BRICKS, B.VINES], B.MOSSY_STONE_BRICKS, 1);

@@ -1,6 +1,6 @@
 // Inventory icons: isometric mini-cubes for blocks (from the block textures)
 // and hand-drawn pixel templates for items.
-import { BLOCKS, SHAPE } from '../world/blocks.js';
+import { B, BLOCKS, SHAPE } from '../world/blocks.js';
 import { ITEMS, MATERIALS, ARMOR_MATERIALS } from '../world/items.js';
 import { texturePixels } from '../world/textures.js';
 import { COLORS, WOOL_RGB } from '../world/colors.js';
@@ -44,6 +44,14 @@ function blockIcon(b, forceTint = null) {
       ? ['................', '..hh........hh..', '..hh........hh..', '..hhhhhhhhhhhh..', '..hhhhhhhhhhhh..', '..hh........hh..', '..hh........hh..', '..hhhhhhhhhhhh..', '..hhhhhhhhhhhh..', '..hh........hh..', '..hh........hh..', '..hh........hh..', '..hh........hh..', '................', '................', '................']
       : ['................', '.hh..........hh.', '.hh..........hh.', '.hhhhhhhhhhhhhh.', '.hhhhhhhhhhhhhh.', '.hh...hhhh...hh.', '.hh...hhhh...hh.', '.hhhhhhhhhhhhhh.', '.hhhhhhhhhhhhhh.', '.hh..........hh.', '.hh..........hh.', '................', '................', '................', '................', '................'];
     for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) if (tpl[y][x] === 'h') { ctx.fillStyle = (x + y) % 5 ? col : lighten(col, 0.8); ctx.fillRect(x * 2, y * 2, 2, 2); }
+    return c;
+  }
+  if (b.id === B.FLOWER_POT) {
+    // a little clay pot seen from the side
+    const side = texCanvas(b.tex.side);
+    ctx.drawImage(side, 0, 0, 16, 16, 9, 14, 14, 14);
+    ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.fillRect(18, 14, 5, 14);
+    ctx.fillStyle = '#5a3a22'; ctx.fillRect(10, 14, 12, 2);
     return c;
   }
   if (b.candle) {

@@ -547,6 +547,13 @@ for (const [key, name] of [['AMBER', 'Amber'], ['PEARL', 'Pearl'], ['MOSS', 'Mos
   const t = key.toLowerCase() + '_croaklight';
   def(B[key + '_CROAKLIGHT'], `${name} Croaklight`, { hardness: 0.3, resistance: 0.3, sound: 'wood', emit: 15, tex: { top: t + '_top', bottom: t + '_top', side: t + '_side' } });
 }
+// Flower Pot: meta 0 empty, else 1 + the index of the plant in POTTED; Chain: a thin hanging link of iron
+ext('FLOWER_POT');
+def(B.FLOWER_POT, 'Flower Pot', { hardness: 0, resistance: 0, sound: 'stone', opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, drops: 'flower_pot', tex: { top: 'flower_pot_top', bottom: 'flower_pot', side: 'flower_pot' } });
+export const POTTED = [B.OAK_SAPLING, B.BIRCH_SAPLING, B.SPRUCE_SAPLING, B.JUNGLE_SAPLING, B.ACACIA_SAPLING, B.DARK_OAK_SAPLING, B.BLOSSOM_SAPLING,
+  B.SUNPETAL, B.REDBLOOM, B.SKYBELL, B.ROSETTE, B.BROWN_MUSHROOM, B.RED_MUSHROOM, B.DEAD_BUSH, B.CACTUS, B.AZALEA, B.FLOWERING_AZALEA, B.BAMBOO];
+ext('CHAIN');
+def(B.CHAIN, 'Chain', { hardness: 5, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD, sound: 'metal', opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, flatIcon: true, tex: { all: 'chain' } });
 
 export const NUM_BLOCKS = BLOCKS.length;
 

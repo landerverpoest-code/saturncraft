@@ -4,7 +4,7 @@ import { Mob } from '../mobs/mob.js';
 import { pairOnPlace } from '../world/chests.js';
 import { hopperPlaceMeta } from '../world/hoppers.js';
 import { compost, READY, SETTLE_TICKS } from '../world/composter.js';
-import { B, BLOCKS, SOLID, SHAPE, isFluid, CROPS, isFurnace, DOOR_SETS, CANDLES } from '../world/blocks.js';
+import { B, BLOCKS, SOLID, SHAPE, isFluid, CROPS, isFurnace, DOOR_SETS, CANDLES, POTTED } from '../world/blocks.js';
 import { ITEMS, I, toolOf, isBlockItem, WOOL_ITEMS, POTION_ITEM, isArrow, DISCS } from '../world/items.js';
 import { POTIONS } from '../world/potions.js';
 import { breakProgressPerTick, blockDrops, canHarvest } from '../world/mining.js';
@@ -43,7 +43,7 @@ const ORE_XP = {
 };
 const BREAK_DELAY = 5;
 /** Blocks that right-click opens / toggles instead of using the held item. */
-const USABLE_BLOCKS = new Set([B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.CHEST, B.BARREL, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL, B.BREWING_STAND, B.GLOOMSHELL_BOX, B.HOPPER, B.COMPOSTER, B.SWEET_BERRY_BUSH, B.JUKEBOX, B.CAVE_VINES_LIT]);
+const USABLE_BLOCKS = new Set([B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.CHEST, B.BARREL, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL, B.BREWING_STAND, B.GLOOMSHELL_BOX, B.HOPPER, B.COMPOSTER, B.SWEET_BERRY_BUSH, B.JUKEBOX, B.CAVE_VINES_LIT, B.FLOWER_POT]);
 const CIRCUIT_USE = new Set([B.LEVER, B.STONE_BUTTON, B.REPEATER, B.CHIME_BLOCK]);
 const CIRCUIT_PLACE = new Set([B.LEVER, B.STONE_BUTTON, B.CINNABAR_WIRE, B.REPEATER, B.WOODEN_PRESSURE_PLATE, B.PISTON, B.STICKY_PISTON]);
 const USE_DELAY = 4;
@@ -674,6 +674,24 @@ export class Interaction {
       g.audio.play('pop', [t.x + 0.5, t.y + 0.5, t.z + 0.5]);
       this.swing = SWING_TICKS;
       return true;
+    }
+    if (t && t.id === B.FLOWER_POT && !p.sneaking) {
+      // plant a flower, sapling, mushroom or cactus in an empty pot, or take back what grows in it
+      const m = w.getMeta(t.x, t.y, t.z), k = d ? POTTED.indexOf(d.block ?? d.places ?? d.id) : -1;
+      if (!m && k >= 0) {
+        w.setBlockUrgent(t.x, t.y, t.z, B.FLOWER_POT, k + 1);
+        if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
+        g.audio.play('place_grass', [t.x + 0.5, t.y + 0.5, t.z + 0.5]);
+        this.swing = SWING_TICKS;
+        return true;
+      }
+      if (m && !st) {
+        const back = { id: POTTED[m - 1], count: 1 };
+        if (p.inventory.add(back)) g.entities.spawnItem(t.x + 0.5, t.y + 0.6, t.z + 0.5, back);
+        w.setBlockUrgent(t.x, t.y, t.z, B.FLOWER_POT, 0);
+        this.swing = SWING_TICKS;
+        return true;
+      }
     }
     if (t && CANDLES.has(t.id)) {
       // flint and steel lights candles; a click with anything but another candle (or something to light them) snuffs them out
