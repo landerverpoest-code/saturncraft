@@ -906,6 +906,8 @@ const GEN = {
     }
     c.set(5, 4, g); c.set(6, 3, g); c.set(10, 9, g); c.set(11, 8, d);
   },
+  bone_block_side: (c) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, shade(hex('#e4ddc4'), (x % 5 === 0 ? 0.85 : 1) * (0.94 + c.h(x, y) * 0.08))); },
+  bone_block_top: (c) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const r = Math.hypot(x - 7.5, y - 7.5); c.set(x, y, shade(hex('#e4ddc4'), r < 3 ? 0.75 : r > 7 ? 0.85 : 0.97 + c.h(x, y) * 0.05)); } },
   jukebox_side: (c) => {
     planks(c, '#6a4a30');
     for (let i = 0; i < 16; i++) { c.set(i, 0, hex('#3a2818')); c.set(i, 15, hex('#3a2818')); c.set(0, i, hex('#3a2818')); c.set(15, i, hex('#3a2818')); }

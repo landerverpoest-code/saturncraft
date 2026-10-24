@@ -31,6 +31,8 @@ shapeless([B.BLOSSOM_LOG], B.BLOSSOM_PLANKS, 4);
 shapeless([B.DARK_OAK_LOG], B.DARK_OAK_PLANKS, 4);
 shaped(['BB', 'BB'], { B: B.BAMBOO }, B.BAMBOO_PLANKS, 1);
 shaped(['B', 'B'], { B: B.BAMBOO }, I.STICK, 1);
+shaped(['MMM', 'MMM', 'MMM'], { M: I.BONE_MEAL }, B.BONE_BLOCK, 1);
+shapeless([B.BONE_BLOCK], I.BONE_MEAL, 9);
 shaped(['KKK', 'KKK', 'KKK'], { K: I.DRIED_KELP }, B.DRIED_KELP_BLOCK, 1);
 shapeless([B.DRIED_KELP_BLOCK], I.DRIED_KELP, 9);
 shapeless([B.RED_MUSHROOM, B.BROWN_MUSHROOM, I.BOWL], I.MUSHROOM_STEW);

@@ -12,6 +12,7 @@ import { B, DEEP_VARIANT, BLOCK_LIMIT, CORALS } from './blocks.js';
 import { Simplex, hash4, hashf, mulberry32 } from './noise.js';
 import { carveChunk } from './carvers.js';
 import { stampRuins } from './ruinedPortals.js';
+import { stampSmallFeatures } from './smallFeatures.js';
 import { BIOME, BIOMES } from './biomes.js';
 import { MIN_Y, WORLD_HEIGHT, SEA_LEVEL, CHUNK_VOLUME, cidx } from './constants.js';
 import { grassColor, foliageColor } from './textures.js';
@@ -399,6 +400,7 @@ export class TerrainGenerator {
     stampMonuments(this, blocks, meta, cx, cz); // Tide Citadels (world/monuments.js)
     stampOutposts(this, blocks, meta, cx, cz);
     stampRuins(this, blocks, meta, cx, cz); // Ruined Rifts (world/ruinedPortals.js)
+    stampSmallFeatures(this, blocks, meta, cx, cz, heightmap, biomes); // desert wells, fossils
     stampSanctums(this, blocks, meta, cx, cz); // Hollow Sanctums (world/dimensions/sanctum.js)
 
     // Final heightmap: highest non-air block

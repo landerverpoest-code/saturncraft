@@ -455,6 +455,7 @@ for (const [name, key] of [['Tube', 'TUBE'], ['Brain', 'BRAIN'], ['Bubble', 'BUB
   def(coral, `${name} Coral`, { ...plant, waterlogged: true, opacity: 1, sound: 'grass', drops: null });
   CORALS.push([block, coral, key.toLowerCase()]);
 }
+ext('BONE_BLOCK'); def(B.BONE_BLOCK, 'Bone Block', { hardness: 2, resistance: 2, tool: TOOL.PICKAXE, tier: TIER.WOOD, tex: { top: 'bone_block_top', bottom: 'bone_block_top', side: 'bone_block_side' } });
 // Jukebox: meta = the disc inside (DISCS index + 1), 0 when empty (see world/items.js DISCS)
 ext('JUKEBOX'); def(B.JUKEBOX, 'Jukebox', { hardness: 2, resistance: 6, tool: TOOL.AXE, sound: 'wood', flammable: true, drops: 'jukebox', tex: { top: 'jukebox_top', bottom: 'jukebox_side', side: 'jukebox_side' } });
 export const isDoor = (id) => !!BLOCKS[id] && BLOCKS[id].shape === SHAPE.DOOR;
