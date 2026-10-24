@@ -111,6 +111,17 @@ export const MOBS = {
     health: 10, speed: 0.1, width: 0.8, height: 0.8, noFallDamage: true,
     drops: [{ id: I.INK_SAC, min: 1, max: 3 }],
   },
+  // fish swim in schools in the sea (reference: cod and tropical fish)
+  silverfin: {
+    name: 'Silverfin', role: 'cod', category: CATEGORY.AMBIENT, fish: true, aquatic: true, sound: 'squish', noFallDamage: true,
+    health: 3, speed: 0.1, width: 0.5, height: 0.35, drops: [{ id: I.RAW_SILVERFIN, min: 1, max: 1 }, { id: I.BONE_MEAL, min: 0, max: 1, chance: 0.05 }],
+    customRender: (m, mesh, alpha, sec) => { const t = mesh.userData.parts && mesh.userData.parts.tail; if (t) t.rotation.y = Math.sin(sec * 14 + m.id) * 0.5; },
+  },
+  reeffin: {
+    name: 'Reeffin', role: 'tropical fish', category: CATEGORY.AMBIENT, fish: true, aquatic: true, sound: 'squish', noFallDamage: true,
+    health: 3, speed: 0.1, width: 0.4, height: 0.35, drops: [{ id: I.GLIMMERFIN, min: 1, max: 1 }],
+    customRender: (m, mesh, alpha, sec) => { const t = mesh.userData.parts && mesh.userData.parts.tail; if (t) t.rotation.y = Math.sin(sec * 18 + m.id) * 0.6; },
+  },
   flitter: {
     name: 'Flitter', role: 'bat', category: CATEGORY.AMBIENT, flying: true, noFallDamage: true, sound: 'squeak',
     health: 6, speed: 0.3, width: 0.5, height: 0.9, drops: [],

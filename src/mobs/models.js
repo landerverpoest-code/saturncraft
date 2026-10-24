@@ -344,6 +344,22 @@ MODELS.vixling = {
   ],
 };
 
+// Fish: a slim body with a tail fin that wags (mobTypes customRender)
+MODELS.silverfin = {
+  parts: [
+    ['body', [3, 4, 8], [0, 3, 0], [0, 0, 0], '#9aa8b0'],
+    ['fin', [1, 2, 3], [0, 5, 0], [0, 1.5, 0], '#7a8890'],
+    ['tail', [1, 4, 3], [0, 3, 4], [0, 0, 1.5], '#7a8890'],
+  ],
+};
+MODELS.reeffin = {
+  parts: [
+    ['body', [2, 5, 6], [0, 3, 0], [0, 0, 0], '#f08a1a'],
+    ['stripe', [2.2, 5.2, 1.2], [0, 3, 0], [0, 0, 0], '#f4f4f0'],
+    ['fin', [1, 2, 2], [0, 5.5, 0], [0, 1, 0], '#3a6ad8'],
+    ['tail', [1, 4, 2], [0, 3, 3], [0, 0, 1], '#3a6ad8'],
+  ],
+};
 // Inklings: a dark blue body with eight tentacles that sweep with each pulse.
 MODELS.inkling = {
   parts: [

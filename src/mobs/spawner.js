@@ -141,15 +141,29 @@ export class MobSpawner {
     const pcx = Math.floor(p.x / 16), pcz = Math.floor(p.z / 16);
     const chunks = [];
     for (let dx = -R; dx <= R; dx++) for (let dz = -R; dz <= R; dz++) if (w.isChunkLoaded(pcx + dx, pcz + dz)) chunks.push([pcx + dx, pcz + dz]);
-    let monsters = 0, creatures = 0, surface = 0, ambient = 0;
+    let monsters = 0, creatures = 0, surface = 0, ambient = 0, fish = 0;
     for (const e of g.entities.list) {
       if (e.kind !== 'mob' || e.dead) continue;
+      if (e.def.fish) { fish++; continue; }
       if (e.def.category === CATEGORY.AMBIENT) { ambient++; continue; }
       if (e.def.category !== CATEGORY.MONSTER) { creatures++; continue; }
       monsters++;
       if (e.y >= w.heightAt(Math.floor(e.x), Math.floor(e.z)) - 1) surface++;
     }
     const cap = scaledCap(CATEGORY.MONSTER, chunks.length);
+    // schools of fish in the sea around the player (Reeffins in warm water), at most 24
+    if (g.ticks % 40 === 0 && fish < 24 && w.dimension === 'overworld') {
+      const a = Math.random() * Math.PI * 2, r = 16 + Math.random() * 24;
+      const x = Math.floor(p.x + Math.cos(a) * r), z = Math.floor(p.z + Math.sin(a) * r);
+      if (w.isLoaded(x, z)) {
+        const y = SEA_LEVEL - 2 - Math.floor(Math.random() * 6);
+        if (w.getBlock(x, y, z) === B.WATER && w.getBlock(x, y + 1, z) === B.WATER && w.getBlock(x, y - 1, z) === B.WATER) {
+          const warm = w.gen && w.gen.column ? w.gen.column(x, z).temp > 0.95 : false;
+          const type = warm && Math.random() < 0.7 ? 'reeffin' : 'silverfin';
+          for (let i = 0, n = 3 + Math.floor(Math.random() * 4); i < n; i++) this.spawnMob(type, x + 0.5 + (Math.random() - 0.5) * 2, y, z + 0.5 + (Math.random() - 0.5) * 2);
+        }
+      }
+    }
     // Flitters (bats) in dark caves near the player, at most 15 (reference ambient cap)
     if (g.ticks % 20 === 0 && ambient < 15 && w.dimension !== 'cinderdeep' && w.dimension !== 'hollow') {
       const x = Math.floor(p.x + (Math.random() - 0.5) * 48), z = Math.floor(p.z + (Math.random() - 0.5) * 48);

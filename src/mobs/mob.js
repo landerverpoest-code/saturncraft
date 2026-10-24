@@ -4,7 +4,7 @@
 import { Body } from '../physics/body.js';
 import { fallDamage } from '../physics/constants.js';
 import { isStalagmiteTip, stalagmiteFallDamage } from '../world/caves.js';
-import { B, SOLID, CROPS } from '../world/blocks.js';
+import { B, SOLID, CROPS, isWaterish } from '../world/blocks.js';
 import { I } from '../world/items.js';
 import { MOBS, CATEGORY } from './mobTypes.js';
 import { BIOMES } from '../world/biomes.js';
@@ -559,6 +559,7 @@ export class Mob {
     if (this.def.tameable) return this.howlerAI(g, p, pdist);
     if (this.def.neutralBeast) return this.bearAI(g, p, pdist);
     if (this.def.fox) return this.foxAI(g, p, pdist);
+    if (this.def.fish) return this.fishAI(g, p, pdist);
     if (this.def.aquatic) return this.inklingAI(g);
     if (this.type === 'flitter') return this.flitterAI(g, p, pdist);
     if (this.def.bee) return this.beeAI(g, p, pdist);
@@ -1066,6 +1067,50 @@ export class Mob {
   }
 
   /** Inklings drift through the water in pulses; out of water they flop and suffocate. Hurt, they squirt ink and dart away. */
+  /** Fish swim steadily, keep together with their school, dart away from players and flop on land. */
+  fishAI(g, p, pdist) {
+    const b = this.body;
+    if (!b.inWater) {
+      this.move = null;
+      if (b.onGround && Math.random() < 0.08) { b.vy = 0.25; b.vx += (Math.random() - 0.5) * 0.2; b.vz += (Math.random() - 0.5) * 0.2; }
+      if (g.ticks % 20 === 0) this.hurt(1, 'drown');
+      return;
+    }
+    if (!this.swimDir || Math.random() < 0.015 || b.horizontalCollision) {
+      const a = Math.random() * Math.PI * 2;
+      this.swimDir = [Math.sin(a), (Math.random() - 0.5) * 0.3, Math.cos(a)];
+    }
+    if (g.ticks % 10 === this.id % 10) {
+      // school: steer towards the middle and heading of the others nearby
+      let n = 0, cx = 0, cy = 0, cz = 0, hx = 0, hz = 0;
+      for (const e of g.entities.list) {
+        if (e === this || e.kind !== 'mob' || e.type !== this.type || !e.swimDir) continue;
+        const d = Math.hypot(e.x - this.x, e.y - this.y, e.z - this.z);
+        if (d > 6) continue;
+        n++; cx += e.x; cy += e.y; cz += e.z; hx += e.swimDir[0]; hz += e.swimDir[2];
+      }
+      if (n) {
+        const tx = cx / n - this.x, ty = cy / n - this.y, tz = cz / n - this.z;
+        this.swimDir[0] = this.swimDir[0] * 0.5 + hx / n * 0.3 + tx * 0.08;
+        this.swimDir[1] = this.swimDir[1] * 0.5 + ty * 0.08;
+        this.swimDir[2] = this.swimDir[2] * 0.5 + hz / n * 0.3 + tz * 0.08;
+        const l = Math.hypot(this.swimDir[0], this.swimDir[2]) || 1;
+        this.swimDir[0] /= l; this.swimDir[2] /= l;
+      }
+    }
+    let k = 0.012;
+    if (pdist < 4 && !p.dead) { // dart away
+      const dx = this.x - p.x, dz = this.z - p.z, d = Math.hypot(dx, dz) || 1;
+      this.swimDir = [dx / d, 0.1, dz / d]; k = 0.035;
+    }
+    const w = g.world;
+    if (!isWaterish(w.getBlock(Math.floor(this.x), Math.floor(this.y + this.height + 0.4), Math.floor(this.z)))) this.swimDir[1] = -Math.abs(this.swimDir[1]) - 0.15;
+    if (SOLID[w.getBlock(Math.floor(this.x), Math.floor(this.y - 0.4), Math.floor(this.z))]) this.swimDir[1] = Math.abs(this.swimDir[1]) + 0.1;
+    b.vx += this.swimDir[0] * k; b.vy += this.swimDir[1] * k * 0.6 + 0.004; b.vz += this.swimDir[2] * k;
+    this.yaw += wrap(Math.atan2(-this.swimDir[0], -this.swimDir[2]) - this.yaw) * 0.15;
+    this.move = null;
+  }
+
   inklingAI(g) {
     const b = this.body;
     this.pulse = (this.pulse || 0) + 1;
