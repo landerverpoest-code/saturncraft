@@ -15,6 +15,7 @@ import { spongeUpdate } from './sponge.js';
 import { paintingIntact } from './paintings.js';
 import { Circuits, CIRCUIT_BLOCK, CIRCUIT_REACT, CIRCUIT_SETTLE, supported as circuitSupported } from './circuits.js';
 import { updateSpike, crystalSupported } from './caves.js';
+import { scaffoldTick } from './scaffolding.js';
 import { SIDE_DIRS, selectionBox, collisionBoxes, SHAPED_COLLISION, DOOR_UPPER, BED_HEAD } from './shapes.js';
 
 export function chunkKey(cx, cz) { return (cx + 32768) * 65536 + (cz + 32768); }
@@ -213,7 +214,8 @@ export class World {
     } else if (d.gravity) {
       const below = this.getBlock(x, y - 1, z);
       if (!SOLID[below] || isFluid(below)) this.scheduleTick(x, y, z, 2);
-    } else if (d.needsSupport) {
+    } else if (d.scaffold) this.scheduleTick(x, y, z, 1); // (world/scaffolding.js)
+    else if (d.needsSupport) {
       if (!this.hasSupport(x, y, z, id)) this.breakBlock(x, y, z, true);
     } else if (id === B.GRASS && OPAQUE[this.getBlock(x, y + 1, z)]) {
       this.setBlock(x, y, z, B.DIRT, 0, false);
@@ -323,6 +325,7 @@ export class World {
           this.emit('fallingBlock', t.x, t.y, t.z, id);
         }
       } else if (CIRCUIT_BLOCK[id]) this.circuits.tick(t.x, t.y, t.z, id);
+      else if (d.scaffold) scaffoldTick(this, t.x, t.y, t.z);
       else if (id === B.COMPOSTER && (this.getMeta(t.x, t.y, t.z) & 15) === 7) this.setBlock(t.x, t.y, t.z, B.COMPOSTER, 8); // the compost settles
     }
     this.circuits.drain();

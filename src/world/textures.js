@@ -913,6 +913,19 @@ const GEN = {
     for (let y = 0; y < 16; y++) { const joint = y % 8 === 0; c.set(6, y, joint ? j : d); c.set(7, y, joint ? j : g); c.set(8, y, joint ? j : g); c.set(9, y, joint ? j : d); }
     for (let k = 0; k < 4; k++) { c.set(10 + k, 3 - (k >> 1), g); c.set(5 - k, 11 - (k >> 1), g); }
   },
+  // scaffolding: a bamboo frame (box UVs: the posts sit in the side's outer columns, the plate in its top rows)
+  scaffolding_side: (c) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const post = x < 2 || x > 13, plate = y < 2, tie = (y === 2 || y === 13) && post;
+      c.set(x, y, shade(hex(tie ? '#8a6a2a' : '#c8b04a'), (plate ? (x % 4 === 0 ? 0.8 : 0.95) : x % 2 ? 0.85 : 1) + c.h(x, y) * 0.08));
+    }
+  },
+  scaffolding_top: (c) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const rim = x < 2 || x > 13 || y < 2 || y > 13, slat = !rim && (y % 3 === 0);
+      c.set(x, y, shade(hex(rim ? '#c8b04a' : '#b89a3a'), (slat ? 0.7 : rim && (x + y) % 4 === 0 ? 0.85 : 0.95) + c.h(x, y) * 0.08));
+    }
+  },
   bamboo_planks: (c) => {
     for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
       const seam = x % 4 === 3, node = y % 8 === 0;

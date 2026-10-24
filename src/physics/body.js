@@ -4,7 +4,7 @@
 import { PHYS, groundAccel } from './constants.js';
 import { BLOCKS, SOLID, B, WATERLOGGED, isWaterish } from '../world/blocks.js';
 import { liquidHeight } from '../world/mesher.js';
-import { collisionBoxes, SHAPED_COLLISION } from '../world/shapes.js';
+import { collisionBoxes, SHAPED_COLLISION, SCAFFOLD_CTX } from '../world/shapes.js';
 
 const EPS = 1e-7;
 
@@ -69,8 +69,13 @@ export class Body {
     return [dx, dy, dz];
   }
 
-  /** Move with collisions and step-up. */
+  /** Move with collisions and step-up (scaffolding holds up whoever is above its top and not sneaking). */
   move(world, dx, dy, dz, sneakEdge = false) {
+    SCAFFOLD_CTX.feetY = this.y; SCAFFOLD_CTX.sneak = sneakEdge;
+    try { this.moveInner(world, dx, dy, dz, sneakEdge); } finally { SCAFFOLD_CTX.feetY = -Infinity; SCAFFOLD_CTX.sneak = false; }
+  }
+
+  moveInner(world, dx, dy, dz, sneakEdge) {
     if (this.noclip) { this.setPos(this.x + dx, this.y + dy, this.z + dz); this.onGround = false; this.horizontalCollision = false; return; }
     if (sneakEdge && this.onGround && dy <= 0) [dx, dz] = this.backOffFromEdge(world, dx, dz);
     const box = this.box();
@@ -231,7 +236,7 @@ export class Body {
       this.vx = Math.max(-0.15, Math.min(0.15, this.vx));
       this.vz = Math.max(-0.15, Math.min(0.15, this.vz));
       this.vy = Math.max(this.vy, -0.15);
-      if (input.sneak && this.vy < 0) this.vy = 0;
+      if (input.sneak && this.vy < 0 && ladder !== 2) this.vy = 0; // (sneaking lets you down through scaffolding)
       this.fallDistance = 0;
     }
     this.move(world, this.vx, this.vy, this.vz, input.sneak);
@@ -250,11 +255,15 @@ export class Body {
     this.vx *= fr; this.vz *= fr;
   }
 
-  /** Is the body inside a ladder block (feet or anywhere along its height)? */
+  /** Is the body inside a ladder block (feet or anywhere along its height)? 1 for ladders and vines, 2 for scaffolding, else 0. */
   onLadder(world) {
     const x = Math.floor(this.x), z = Math.floor(this.z);
-    for (let y = Math.floor(this.y); y <= Math.floor(this.y + this.height - 0.01); y++) { const id = world.getBlock(x, y, z); if (id === B.LADDER || id === B.VINES) return true; }
-    return false;
+    for (let y = Math.floor(this.y); y <= Math.floor(this.y + this.height - 0.01); y++) {
+      const id = world.getBlock(x, y, z);
+      if (id === B.LADDER || id === B.VINES) return 1;
+      if (id === B.SCAFFOLDING) return 2;
+    }
+    return 0;
   }
 
   /** Add input-relative acceleration (moveRelative). yaw 0 faces -Z. */

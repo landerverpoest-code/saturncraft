@@ -230,6 +230,11 @@ const LANTERN_HANGING = [[5 / 16, 1 / 16, 5 / 16, 11 / 16, 8 / 16, 11 / 16], [6 
 // candles: 1-4 thin sticks of wax ([x, z, height] in pixels)
 export const CANDLE_SPOTS = [[[7, 7, 6]], [[5, 7, 6], [9, 6, 5]], [[7, 5, 6], [5, 9, 5], [9, 8, 4]], [[5, 5, 6], [9, 5, 5], [5, 9, 5], [9, 9, 4]]];
 const CANDLE_BOXES = CANDLE_SPOTS.map((spots) => spots.map(([x, z, h]) => [x / 16, 0, z / 16, (x + 2) / 16, h / 16, (z + 2) / 16]));
+// scaffolding: a top plate on four corner posts; for collision only the plate, and only to
+// whoever is above it and not sneaking (Body.move fills SCAFFOLD_CTX for the move it makes)
+const SCAFFOLD_BOXES = [[0, 14 / 16, 0, 1, 1, 1], [0, 0, 0, 2 / 16, 14 / 16, 2 / 16], [14 / 16, 0, 0, 1, 14 / 16, 2 / 16], [0, 0, 14 / 16, 2 / 16, 14 / 16, 1], [14 / 16, 0, 14 / 16, 1, 14 / 16, 1]];
+const SCAFFOLD_TOP = [SCAFFOLD_BOXES[0]], NO_BOXES = [];
+export const SCAFFOLD_CTX = { feetY: -Infinity, sneak: false };
 /** Render / collision boxes of a SHAPE.BOXES block. */
 // Brewing Alembic: base plate, ember rod and a cross-shaped arm near the top
 const ALEMBIC_BOXES = [[2 / 16, 0, 2 / 16, 14 / 16, 2 / 16, 14 / 16], [7 / 16, 2 / 16, 7 / 16, 9 / 16, 14 / 16, 9 / 16],
@@ -268,6 +273,7 @@ export function blockBoxes(id, meta) {
   if (id === B.WYRM_HEAD) return WYRM_HEAD_BOXES;
   if (id === B.STORM_ROD) return rodBoxes(meta);
   if (BLOCKS[id].candle) return CANDLE_BOXES[meta & 3];
+  if (id === B.SCAFFOLDING) return SCAFFOLD_BOXES;
   return TABLE_BOXES;
 }
 /** One box enclosing all of a SHAPE.BOXES block (selection outline). */
@@ -284,7 +290,7 @@ SHAPED_COLLISION[B.BED] = 1;
 SHAPED_COLLISION[B.GLASS_PANE] = 1;
 SHAPED_COLLISION[B.SNOW_LAYER] = 1;
 SHAPED_COLLISION[B.SEEPSTONE_SPIKE] = 1;
-for (const id of [B.COBBLESTONE_WALL, B.MOSSY_COBBLESTONE_WALL, B.OAK_TRAPDOOR, B.ENCHANTING_TABLE, B.ANVIL, B.CAMPFIRE, B.LANTERN, B.BREWING_STAND, B.TURTLE_EGG, B.HOPPER, B.COMPOSTER]) SHAPED_COLLISION[id] = 1;
+for (const id of [B.COBBLESTONE_WALL, B.MOSSY_COBBLESTONE_WALL, B.OAK_TRAPDOOR, B.ENCHANTING_TABLE, B.ANVIL, B.CAMPFIRE, B.LANTERN, B.BREWING_STAND, B.TURTLE_EGG, B.HOPPER, B.COMPOSTER, B.SCAFFOLDING]) SHAPED_COLLISION[id] = 1;
 /** Snow layer box (n = meta + 1 layers); collision is one layer lower, so a single layer has none. */
 export const snowBox = (meta, collide = false) => [0, 0, 0, 1, ((meta & 7) + (collide ? 0 : 1)) * 2 / 16, 1];
 for (const id of [B.OAK_FENCE, B.SPRUCE_FENCE, B.BIRCH_FENCE, B.OAK_FENCE_GATE]) SHAPED_COLLISION[id] = 1;
@@ -299,6 +305,7 @@ for (const b of BLOCKS) if (b && (b.shape === SHAPE.SLAB || b.shape === SHAPE.ST
  * cube. (Ladders and torches are not solid and never collide.)
  */
 export function collisionBoxes(id, meta, world, x, y, z) {
+  if (id === B.SCAFFOLDING) return !SCAFFOLD_CTX.sneak && SCAFFOLD_CTX.feetY >= y + 1 - 1e-4 ? SCAFFOLD_TOP : NO_BOXES;
   if (BLOCKS[id].shape === SHAPE.DOOR) return [doorBox(meta)];
   const shp = BLOCKS[id].shape;
   if (shp === SHAPE.FENCE) return fenceBoxes(world ? fenceMask((a, b, c) => world.getBlock(a, b, c), x, y, z) : 0, 1.5);

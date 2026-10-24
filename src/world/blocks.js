@@ -537,6 +537,9 @@ for (const [key, name] of [[null, null], ...COLORS]) {
   const c = { unlit: B[K], lit: B[K + '_LIT'] };
   CANDLES.set(c.unlit, c); CANDLES.set(c.lit, c); CANDLE_IDS.push(c.unlit);
 }
+// Scaffolding (world/scaffolding.js): meta = distance from a supported column (0-6)
+ext('SCAFFOLDING');
+def(B.SCAFFOLDING, 'Scaffolding', { hardness: 0, resistance: 0, sound: 'wood', flammable: true, opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, scaffold: true, tex: { top: 'scaffolding_top', bottom: 'scaffolding_top', side: 'scaffolding_side' } });
 
 export const NUM_BLOCKS = BLOCKS.length;
 

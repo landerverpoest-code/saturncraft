@@ -17,6 +17,7 @@ import { lightAt } from '../entities/entities.js';
 import { canLight, FIRE_DELAY } from '../world/fire.js';
 import { Bobber } from '../entities/bobber.js';
 import { igniteTNT } from '../entities/tnt.js';
+import { scaffoldDistance, scaffoldColumnTop, SCAFFOLD_MAX } from '../world/scaffolding.js';
 import { updateRails } from '../world/rails.js';
 import { placeMeta as circuitPlaceMeta, useMeta as circuitUseMeta } from '../world/circuits.js';
 import { choosePainting, placePainting } from '../world/paintings.js';
@@ -751,6 +752,25 @@ export class Interaction {
       const m = w.getMeta(t.x, t.y, t.z);
       if ((m === 0 && t.face[1] === 1) || (m === 1 && t.face[1] === -1)) return this.finishPlace(t.x, t.y, t.z, placeId, SLAB_DOUBLE);
     }
+    // scaffolding against scaffolding: a side click (not sneaking) builds onto the top of that column; a click on
+    // the top that the player stands in the way of reaches out sideways in the direction they look
+    if (placeId === B.SCAFFOLDING && t.id === B.SCAFFOLDING) {
+      let cell = null;
+      if (t.face[1] === 0 && !p.sneaking) cell = scaffoldColumnTop(w, t.x, t.y, t.z);
+      else if (t.face[1] === 1 && p.intersectsBlock(t.x, t.y + 1, t.z)) {
+        const sx = Math.abs(ldx) > Math.abs(ldz) ? Math.sign(ldx) : 0, sz = sx ? 0 : Math.sign(ldz);
+        for (let k = 1; k <= SCAFFOLD_MAX && !cell; k++) {
+          const id = w.getBlock(t.x + sx * k, t.y, t.z + sz * k);
+          if (id === B.SCAFFOLDING) continue;
+          if (id === 0 || BLOCKS[id].replaceable) cell = [t.x + sx * k, t.y, t.z + sz * k]; else break;
+        }
+      }
+      if (cell) {
+        const dist = scaffoldDistance(w, cell[0], cell[1], cell[2]);
+        if (dist > SCAFFOLD_MAX || p.intersectsBlock(cell[0], cell[1], cell[2]) || g.entities.blockOccupied(cell[0], cell[1], cell[2])) return false;
+        return this.finishPlace(cell[0], cell[1], cell[2], B.SCAFFOLDING, dist);
+      }
+    }
     // a candle on a candle of the same colour adds one (up to four)
     const tc = CANDLES.get(t.id);
     if (tc && tc.unlit === placeId && (w.getMeta(t.x, t.y, t.z) & 3) < 3) return this.finishPlace(t.x, t.y, t.z, t.id, (w.getMeta(t.x, t.y, t.z) & 3) + 1);
@@ -795,6 +815,7 @@ export class Interaction {
       if (meta < 0) return false;
     }
     if (placeId === B.HOPPER) meta = hopperPlaceMeta(t.face);
+    if (placeId === B.SCAFFOLDING) { meta = scaffoldDistance(w, px, py, pz); if (meta > SCAFFOLD_MAX) return false; }
     if (placeId === B.ANVIL) meta = Math.abs(ldx) > Math.abs(ldz) ? 1 : 0; // the long side faces across the player's view
     if (BLOCKS[placeId].crystal || placeId === B.STORM_ROD) {
       // buds point away from the clicked face, spikes up or down, rods stand or hang
