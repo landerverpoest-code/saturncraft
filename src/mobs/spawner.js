@@ -144,7 +144,7 @@ export class MobSpawner {
     let monsters = 0, creatures = 0, surface = 0, ambient = 0, fish = 0;
     for (const e of g.entities.list) {
       if (e.kind !== 'mob' || e.dead) continue;
-      if (e.def.fish) { fish++; continue; }
+      if (e.def.fish) { if (!e.def.newt) fish++; continue; }
       if (e.def.category === CATEGORY.AMBIENT) { ambient++; continue; }
       if (e.def.category !== CATEGORY.MONSTER) { creatures++; continue; }
       monsters++;
@@ -161,6 +161,22 @@ export class MobSpawner {
           const warm = w.gen && w.gen.column ? w.gen.column(x, z).temp > 0.95 : false;
           const type = Math.random() < 0.12 ? 'dolphin' : warm && Math.random() < 0.7 ? 'reeffin' : 'silverfin';
           for (let i = 0, n = type === 'dolphin' ? 2 + Math.floor(Math.random() * 2) : 3 + Math.floor(Math.random() * 4); i < n; i++) this.spawnMob(type, x + 0.5 + (Math.random() - 0.5) * 2, y, z + 0.5 + (Math.random() - 0.5) * 2);
+        }
+      }
+    }
+    // Gillnewts in the clay-bottomed pools of lush caves, at most 6 around the player
+    if (g.ticks % 40 === 20 && w.dimension === 'overworld' && p.y < SEA_LEVEL - 10) {
+      let newts = 0;
+      for (const e of g.entities.list) if (e.type === 'gillnewt' && !e.dead) newts++;
+      if (newts < 6) {
+        const x = Math.floor(p.x + (Math.random() - 0.5) * 40), z = Math.floor(p.z + (Math.random() - 0.5) * 40);
+        if (w.isLoaded(x, z) && Math.hypot(x - p.x, z - p.z) > 6) {
+          for (let y = Math.floor(p.y) - 10; y <= Math.floor(p.y) + 10; y++) {
+            if (w.getBlock(x, y, z) === B.WATER && w.getBlock(x, y - 1, z) === B.CLAY && w.getBlock(x, y + 1, z) !== B.WATER) {
+              for (let i = 0, n = 1 + Math.floor(Math.random() * 3); i < n; i++) this.spawnMob('gillnewt', x + 0.5, y + 0.05, z + 0.5);
+              break;
+            }
+          }
         }
       }
     }

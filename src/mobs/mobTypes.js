@@ -132,6 +132,18 @@ export const MOBS = {
       mesh.rotation.x = Math.max(-0.8, Math.min(0.8, -(m.body.vy || 0) * 2)); // nose up on the way out of a leap
     },
   },
+  // gillnewts live in the pools of lush caves, hunt fish and hostile swimmers and play dead when hurt
+  gillnewt: {
+    name: 'Gillnewt', role: 'axolotl', category: CATEGORY.AMBIENT, fish: true, newt: true, breathesWater: true, sound: 'squeak', noFallDamage: true,
+    health: 14, speed: 0.15, width: 0.75, height: 0.42, attack: 2, drops: [],
+    customRender: (m, mesh, alpha, sec) => {
+      const pa = mesh.userData.parts; if (!pa || !pa.tail) return;
+      const swim = m.body.inWater ? 1 : 0.3;
+      pa.tail.rotation.y = Math.sin(sec * 9 * swim + m.id) * 0.45;
+      for (const k of ['gillL', 'gillR']) if (pa[k]) pa[k].rotation.z = (k === 'gillL' ? 1 : -1) * (0.15 + Math.sin(sec * 3 + m.id) * 0.12);
+      if (m.playDead > 0) mesh.rotation.z = Math.PI / 2; // lying on its side
+    },
+  },
   flitter: {
     name: 'Flitter', role: 'bat', category: CATEGORY.AMBIENT, flying: true, noFallDamage: true, sound: 'squeak',
     health: 6, speed: 0.3, width: 0.5, height: 0.9, drops: [],

@@ -37,6 +37,8 @@ const HORN_BREAKERS = new Set([B.STONE, B.COBBLESTONE, B.OAK_LOG, B.BIRCH_LOG, B
 const HIVES = new Set([B.BEE_NEST, B.BEEHIVE]);
 const BEE_FLOWERS = new Set([B.SUNPETAL, B.REDBLOOM, B.SKYBELL, B.ROSETTE]);
 
+/** Gillnewt colours: [body, gills and crest] (pink, wild brown, gold, cyan; the blue one is rare). */
+export const NEWT_COLORS = [['#f0a8c0', '#d0406a'], ['#7a5a3a', '#4a3020'], ['#e8c040', '#c88a20'], ['#d8f0f4', '#e870a0'], ['#4a5ad8', '#2a3aa8']];
 /** Squawklet plumage: [body and head, wings and tail, crest] (red, blue, green, cyan, grey). */
 const PARROT_COLORS = [['#d8282a', '#2a5ad8', '#f0c020'], ['#2a4ad8', '#1a2a8a', '#f0d040'], ['#4ab82a', '#2a7a1a', '#d83a2a'], ['#3ac8d8', '#f0d040', '#2a6ad8'], ['#b8b8b8', '#7a7a7a', '#e8e8e8']];
 
@@ -69,7 +71,7 @@ export class Mob {
     // breeding: age < 0 is a baby growing up, age > 0 a breeding cooldown
     this.age = 0; this.loveTicks = 0; this.breedTime = 0;
     this.sheared = false; this.eatTimer = 0;
-    this.woolColor = type === 'fleecer' ? randomSheepColor() : type === 'purrling' ? Math.floor(Math.random() * CAT_COATS.length) : type === 'squawklet' ? Math.floor(Math.random() * PARROT_COLORS.length) : 0; // (Purrlings keep their coat here)
+    this.woolColor = type === 'fleecer' ? randomSheepColor() : type === 'purrling' ? Math.floor(Math.random() * CAT_COATS.length) : type === 'squawklet' ? Math.floor(Math.random() * PARROT_COLORS.length) : type === 'gillnewt' ? (Math.random() < 1 / 120 ? 4 : Math.floor(Math.random() * 4)) : 0; // (Purrlings keep their coat here)
     // settlers: profession, trade offers and the house they live in
     this.profession = null; this.trades = []; this.home = null; this.lastRestock = 0;
     // Howlers: tamed by the player (owner), sitting, current enemy
@@ -285,6 +287,10 @@ export class Mob {
       if (g) for (let k = 0; k < 20; k++) g.particles.emit(this.x, this.y + 0.4, this.z, (Math.random() - 0.5) * 0.3, (Math.random() - 0.5) * 0.3, (Math.random() - 0.5) * 0.3, 0.05, 0.05, 0.08, 40, 0);
       this.panicTicks = 40;
       if (attacker) { const dx = this.x - attacker.x, dz = this.z - attacker.z, d = Math.hypot(dx, dz) || 1; this.swimDir = [dx / d, 0.2, dz / d]; }
+    } else if (this.def.newt) {
+      // a hurt Gillnewt may play dead for a while (hunters lose interest) and goes after what hit it, unless that was a player
+      if (this.health > 0 && this.health <= 8 && !this.playDead && Math.random() < 0.33) this.playDead = 200;
+      if (attacker && !attacker.isPlayer && attacker !== this) this.enemy = this.grudge = attacker;
     } else if (this.def.parrot) {
       this.sitting = false; this.perched = 0; this.panicTicks = 60;
     } else if (this.def.bee) {
@@ -559,6 +565,7 @@ export class Mob {
     if (this.def.tameable) return this.howlerAI(g, p, pdist);
     if (this.def.neutralBeast) return this.bearAI(g, p, pdist);
     if (this.def.fox) return this.foxAI(g, p, pdist);
+    if (this.def.newt) return this.newtAI(g, p, pdist);
     if (this.def.dolphin) return this.dolphinAI(g, p, pdist);
     if (this.def.fish) return this.fishAI(g, p, pdist);
     if (this.def.aquatic) return this.inklingAI(g);
@@ -1089,6 +1096,51 @@ export class Mob {
     this.move = null;
   }
 
+  /**
+   * Gillnewts paddle about their pools and walk slowly on land (drying out
+   * after five minutes there), hunt fish and hostile swimmers within 8 blocks
+   * (2 damage a bite) and, after playing dead, heal up.
+   */
+  newtAI(g, p, pdist) {
+    const b = this.body, w = g.world;
+    if (b.inWater) this.dry = 0;
+    else if ((this.dry = (this.dry || 0) + 1) > 6000 && g.ticks % 20 === 0) this.hurt(1, 'drown');
+    if (this.playDead > 0) {
+      this.playDead--; this.move = null; b.vx *= 0.5; b.vz *= 0.5;
+      if (g.ticks % 20 === 0 && this.health < this.maxHealth) this.health = Math.min(this.maxHealth, this.health + 1);
+      return;
+    }
+    if (this.attackCooldown > 0) this.attackCooldown--;
+    const prey = (e) => e && e.kind === 'mob' && !e.dead && e.deathTime === 0 && (e.def.fish && !e.def.newt && !e.def.dolphin || e.def.deepeye || e.type === 'sodden_shambler' || e === this.grudge);
+    if (this.enemy && (!prey(this.enemy) || Math.hypot(this.enemy.x - this.x, this.enemy.y - this.y, this.enemy.z - this.z) > 12 || this.enemy.playDead > 0)) this.enemy = null;
+    if (!this.enemy && g.ticks % 40 === this.id % 40 && b.inWater) {
+      for (const e of g.entities.list) if (e !== this && prey(e) && isWaterish(w.getBlock(Math.floor(e.x), Math.floor(e.y + 0.2), Math.floor(e.z))) && Math.hypot(e.x - this.x, e.y - this.y, e.z - this.z) < 8) { this.enemy = e; break; }
+    }
+    if (!b.inWater) {
+      // on land: a slow waddle, back towards water if any is near
+      this.wanderAI(g, 0.6);
+      return;
+    }
+    let k = 0.012;
+    if (this.enemy) {
+      const t = this.enemy, dx = t.x - this.x, dy = t.y + t.height / 2 - (this.y + 0.2), dz = t.z - this.z, d = Math.hypot(dx, dy, dz) || 1;
+      this.swimDir = [dx / d, dy / d, dz / d]; k = 0.03;
+      if (d < this.width / 2 + t.width / 2 + 0.5 && this.attackCooldown <= 0) {
+        this.attackCooldown = 20;
+        t.hurt(this.def.attack, 'mob:' + this.def.name, this, 0.2);
+      }
+    } else if (!this.swimDir || Math.random() < 0.012 || b.horizontalCollision) {
+      const a = Math.random() * Math.PI * 2;
+      this.swimDir = [Math.sin(a), (Math.random() - 0.6) * 0.4, Math.cos(a)];
+    }
+    if (!this.enemy && !isWaterish(w.getBlock(Math.floor(this.x), Math.floor(this.y + this.height + 0.3), Math.floor(this.z)))) this.swimDir[1] = -Math.abs(this.swimDir[1]) - 0.1;
+    // climb out over the rim now and then
+    if (b.horizontalCollision && !this.enemy && Math.random() < 0.05) b.vy = 0.3;
+    b.vx += this.swimDir[0] * k; b.vy += this.swimDir[1] * k * 0.6 + 0.002; b.vz += this.swimDir[2] * k;
+    this.yaw += wrap(Math.atan2(-this.swimDir[0], -this.swimDir[2]) - this.yaw) * 0.15;
+    this.move = null;
+  }
+
   /** Fish swim steadily, keep together with their school, dart away from players and flop on land. */
   fishAI(g, p, pdist) {
     const b = this.body;
@@ -1464,6 +1516,13 @@ export class Mob {
       for (const k of ['body', 'head']) tint(k, main);
       for (const k of ['wingL', 'wingR', 'tail']) tint(k, wing);
       tint('crest', crest);
+    }
+    if (parts && this.type === 'gillnewt' && m.userData.coat !== this.woolColor) {
+      m.userData.coat = this.woolColor;
+      const [main, frill] = NEWT_COLORS[this.woolColor % NEWT_COLORS.length];
+      const tint = (k, col) => { const mm = parts[k].children[0].material; for (const x of Array.isArray(mm) ? mm : [mm]) x.userData.base && x.userData.base.set(col); };
+      for (const k of ['body', 'head', 'tail', 'legFL', 'legFR', 'legBL', 'legBR']) tint(k, main);
+      for (const k of ['gillL', 'gillR', 'crest']) tint(k, frill);
     }
     if (parts && this.type === 'cragbuck') {
       for (const k of ['beard', 'hornL', 'hornR', 'earL', 'earR']) parts[k].rotation.x = parts.head.rotation.x;

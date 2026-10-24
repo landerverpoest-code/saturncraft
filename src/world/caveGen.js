@@ -19,6 +19,11 @@ const cellHash = (seed, key, x, y, z) => hashf(seed ^ Math.imul(key, 0x2c1b3c6d)
 const ROCK = new Uint8Array(BLOCK_LIMIT);
 for (const id of [B.STONE, B.DEEPSTONE, B.GRANITE, B.DIORITE, B.ANDESITE, B.TUFF, B.SEEPSTONE]) ROCK[id] = 1;
 
+const POOL_RIM = new Uint8Array(BLOCK_LIMIT), SOLID_BELOW = new Uint8Array(BLOCK_LIMIT);
+for (let id = 0; id < BLOCK_LIMIT; id++) if (ROCK[id]) POOL_RIM[id] = SOLID_BELOW[id] = 1;
+POOL_RIM[B.MOSS_BLOCK] = POOL_RIM[B.WATER] = POOL_RIM[B.CLAY] = 1;
+SOLID_BELOW[B.MOSS_BLOCK] = SOLID_BELOW[B.CLAY] = 1;
+
 /** Lush caves: a region of the underground (about a tenth) where cave floors grow moss and azaleas. */
 export function lushRegion(seed, x, z) { return noisesFor(seed).lush.fbm2(x / 340, z / 340, 2); }
 export const LUSH_THRESHOLD = 0.3;
@@ -37,6 +42,12 @@ function stampLush(gen, blocks, meta, cx, cz, heightmap) {
       const above = cidx(x, y + 1, z), below = cidx(x, y - 1, z);
       if (blocks[above] === B.AIR) {
         // a mossy floor with carpets, azaleas and the odd tuft of grass
+        // clumps of floor sink into small clay-bottomed pools (where the rim all round holds the water)
+        if (x > 0 && x < 15 && z > 0 && z < 15 && cellHash(seed, 27, wx >> 2, y, wz >> 2) < 0.22 && cellHash(seed, 28, wx, y, wz) < 0.8) {
+          let held = SOLID_BELOW[blocks[below]];
+          for (const n of [cidx(x + 1, y, z), cidx(x - 1, y, z), cidx(x, y, z + 1), cidx(x, y, z - 1)]) if (!POOL_RIM[blocks[n]]) held = false;
+          if (held) { blocks[i] = B.WATER; blocks[below] = B.CLAY; continue; }
+        }
         if (cellHash(seed, 20, wx, y, wz) < 0.85) blocks[i] = B.MOSS_BLOCK;
         const r = cellHash(seed, 21, wx, y, wz);
         if (blocks[i] === B.MOSS_BLOCK) {
