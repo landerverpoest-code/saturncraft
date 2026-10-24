@@ -5,7 +5,7 @@ import { isStalagmiteTip, stalagmiteFallDamage } from '../world/caves.js';
 import { HungerManager, EXHAUSTION, MAX_HEALTH, MAX_AIR, SPRINT_MIN_FOOD } from './survival.js';
 import { Inventory } from './inventory.js';
 import { B, SOLID } from '../world/blocks.js';
-import { I } from '../world/items.js';
+import { I, ITEMS } from '../world/items.js';
 import { MIN_Y } from '../world/constants.js';
 import { armorReduce, armorTotals, wearArmor, BYPASSES_ARMOR } from './armor.js';
 import { newXp } from './experience.js';
@@ -128,7 +128,26 @@ export class Player {
       if (this.body.onGround) this.body.vy = Math.min(0.4, this.body.vy / 2 + 0.4);
     }
     for (const f of this.listeners.hurt) f(amount, source);
+    if (this.health <= 0 && source !== 'void' && source !== 'kill' && this.useCharm()) return true;
     if (this.health <= 0) this.die(source);
+    return true;
+  }
+
+  /**
+   * A Charm of Undying anywhere in the hotbar (reference: a totem in the hand) saves its holder
+   * from death once: back to 1 HP with Regeneration II, Absorption II and Fire Resistance.
+   */
+  useCharm() {
+    const inv = this.inventory, i = inv.slots.slice(0, 9).findIndex((s) => s && ITEMS[s.id] && ITEMS[s.id].undying);
+    if (i < 0) return false;
+    inv.removeFromSlot(i, 1);
+    inv.changed();
+    this.health = 1;
+    this.effects = {};
+    this.addEffect('regeneration', 900, 1);
+    this.addEffect('absorption', 100, 1);
+    this.addEffect('fire_resistance', 800, 0);
+    for (const f of this.listeners.charm || []) f();
     return true;
   }
 

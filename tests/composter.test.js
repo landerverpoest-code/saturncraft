@@ -49,3 +49,19 @@ describe('gilded apple and absorption', () => {
     expect(p.health).toBe(18);
   });
 });
+
+describe('charm of undying', () => {
+  it('saves its holder from a deadly hit once', async () => {
+    const { Player } = await import('../src/player/player.js');
+    const p = new Player();
+    p.inventory.slots[3] = { id: I.CHARM_OF_UNDYING, count: 1 };
+    p.hurt(50, 'generic');
+    expect(p.dead).toBe(false);
+    expect(p.health).toBe(1);
+    expect(p.effects.regeneration.amp).toBe(1);
+    expect(p.inventory.slots[3]).toBe(null);
+    p.invulnerable = 0; p.absorption = 0;
+    p.hurt(50, 'generic');
+    expect(p.dead).toBe(true);
+  });
+});

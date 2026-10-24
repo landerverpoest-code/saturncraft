@@ -206,6 +206,16 @@ export class Game {
       }
     }];
     this.player.listeners.death.push((cause) => this.onDeath(cause));
+    this.player.listeners.charm = [() => {
+      // the charm bursts in a shower of green and gold
+      const p = this.player;
+      for (let k = 0; k < 60; k++) {
+        const gold = Math.random() < 0.5;
+        this.particles.emit(p.x, p.y + 1, p.z, (Math.random() - 0.5) * 0.5, Math.random() * 0.5, (Math.random() - 0.5) * 0.5, gold ? 1.4 : 0.4, gold ? 1.1 : 1.3, gold ? 0.2 : 0.5, 30 + Math.random() * 20, 0.01);
+      }
+      this.audio.play('levelup');
+      this.hud.toast('The Charm of Undying saved you!');
+    }];
 
     if (this.saveData) {
       applySave(this, this.saveData);
