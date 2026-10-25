@@ -1,6 +1,7 @@
 // Shaped/shapeless crafting and furnace smelting recipes.
 import { B, BLOCKS, WOOD_SETS, STONE_SETS, COLOR_BLOCKS, DOOR_SETS, GATE_SETS, CANDLE_IDS } from '../world/blocks.js';
-import { I, ITEMS, DYES, WOOL_ITEMS, TIPPED_ARROW, SPLASH_ITEM } from '../world/items.js';
+import { I, ITEMS, DYES, WOOL_ITEMS, TIPPED_ARROW, SPLASH_ITEM, SHERD_ITEMS } from '../world/items.js';
+import { potFacesFromGrid } from '../world/archaeology.js';
 import { COLOR } from '../world/colors.js';
 
 const TAGS = {
@@ -9,6 +10,7 @@ const TAGS = {
   stone_mat: [B.COBBLESTONE, B.COBBLED_DEEPSTONE],
   wood_slab: WOOD_SETS.map(([, slab]) => slab),
   stand_base: [B.SMOOTH_STONE_SLAB, B.STONE_SLAB, B.SMOOTH_STONE],
+  pot_side: [I.BRICK, ...SHERD_ITEMS], // a Decorated Pot's sides: bricks or Pottery Sherds
 };
 
 function matches(ing, id) {
@@ -225,10 +227,18 @@ export function craft(grid, w) {
         const ing = ch === ' ' ? null : r.key[ch];
         if (!matches(ing, cells[y * bw + x])) ok = false;
       }
-      if (ok) return { id: r.result, count: r.count };
+      if (ok) return withPotFaces({ id: r.result, count: r.count }, cells, bw);
     }
   }
   return null;
+}
+
+/** A Decorated Pot made with sherds remembers which sherd went on which side (stack.sherds). */
+function withPotFaces(out, cells, bw) {
+  if (out.id !== B.DECORATED_POT || bw !== 3 || cells.length !== 9) return out;
+  const faces = potFacesFromGrid(cells);
+  if (faces) out.sherds = faces;
+  return out;
 }
 
 // ---- recipe book helpers ----------------------------------------------------
@@ -289,6 +299,9 @@ COLOR_BLOCKS.pane.forEach((id, c) => shaped(['GGG', 'GGG'], { G: COLOR_BLOCKS.gl
 COLOR_BLOCKS.carpet.forEach((id, c) => shaped(['WW'], { W: WOOL_ITEMS[c] }, id, 3));
 shaped(['S', 'H'], { S: I.STRING, H: I.HONEYCOMB }, CANDLE_IDS[0], 1);
 shaped(['B B', ' B '], { B: I.BRICK }, B.FLOWER_POT, 1);
+// archaeology: the Brush, and Decorated Pots of four bricks or sherds round an empty middle
+shaped(['F', 'C', 'S'], { F: I.FEATHER, C: I.COPPER_INGOT, S: I.STICK }, I.BRUSH, 1);
+shaped([' X ', 'X X', ' X '], { X: 'pot_side' }, B.DECORATED_POT, 1);
 shaped(['BBB', 'BBB', 'BBB'], { B: I.BERYL }, B.BERYL_BLOCK, 1);
 shapeless([B.BERYL_BLOCK], I.BERYL, 9);
 shaped(['GGG', 'GSG', 'OOO'], { G: B.GLASS, S: I.SUNCORE, O: B.OBSIDIAN }, B.BEACON, 1);

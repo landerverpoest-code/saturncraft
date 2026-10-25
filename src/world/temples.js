@@ -6,7 +6,8 @@
 import { B } from './blocks.js';
 import { BIOME } from './biomes.js';
 import { MIN_Y, WORLD_HEIGHT, SEA_LEVEL, cidx } from './constants.js';
-import { mulberry32, hash4 } from './noise.js';
+import { mulberry32, hash4, hashf } from './noise.js';
+import { SITE, susMeta } from './archaeology.js';
 
 export const TEMPLE_REGION = 256;
 const cache = new Map();
@@ -91,7 +92,26 @@ export function stampTemples(gen, blocks, meta, cx, cz) {
     for (const [ax, az, face] of [[0, -3, 2], [3, 0, 3], [0, 3, 0], [-3, 0, 1]]) set(tx + ax, cy, tz + az, B.CHEST, face | 8 | (2 << 4));
     // the way down: a one-block shaft under the floor centre
     for (let yy = cy + 4; yy < y - 1; yy++) set(tx, yy, tz, B.AIR);
+    // Suspicious Sand for a Brush (world/archaeology.js): a few tiles of the hall floor outside the
+    // star, and two in the corners of the hidden chamber's floor
+    for (const [dx, dz, yy] of templeDigSpots(gen.seed, t)) set(tx + dx, yy, tz + dz, B.SUSPICIOUS_SAND, susMeta(SITE.TEMPLE));
   }
+}
+
+/** Where a desert temple's Suspicious Sand lies: [dx, y, dz] from its centre (hall floor and chamber floor). */
+export function templeDigSpots(seed, t) {
+  const out = [], h = (k, j) => hashf(seed, t.cx * 31 + k, t.cz, 6100 + j);
+  for (let k = 0; k < 4; k++) {
+    // a ring 6-8 blocks out from the centre, clear of the terracotta star
+    const ring = 6 + Math.floor(h(k, 0) * 3), along = Math.floor(h(k, 1) * (2 * ring + 1)) - ring, side = Math.floor(h(k, 2) * 4);
+    const [dx, dz] = [[along, -ring], [ring, along], [-along, ring], [-ring, -along]][side];
+    out.push([dx, dz, t.y - 1]);
+  }
+  for (let k = 0; k < 2; k++) {
+    const [dx, dz] = [[-3, -3], [3, -3], [-3, 3], [3, 3]][Math.floor(h(k + 4, 3) * 4) ^ k];
+    out.push([dx, dz, t.y - 14]);
+  }
+  return out;
 }
 
 /** Jungle temple: a 12 x 15 mossy cobblestone building on two floors with vines, a stair to the roof and a loot chest. */

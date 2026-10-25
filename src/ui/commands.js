@@ -4,6 +4,7 @@ import { ITEMS, I, maxStack } from '../world/items.js';
 import { mineshaftsNear } from '../world/mineshafts.js';
 import { templesNear, outpostsNear } from '../world/temples.js';
 import { wrecksNear } from '../world/shipwrecks.js';
+import { buriedRuinsNear } from '../world/buriedRuins.js';
 import { igloosNear } from '../world/igloos.js';
 import { ruinsNear } from '../world/ruinedPortals.js';
 import { hutsNear } from '../world/swampHuts.js';
@@ -68,7 +69,7 @@ export const HELP = [
   '/enchant <name> [level]  (the held item; names: ' + ENCH_KEYS.join(', ') + ')',
   '/summon <mob> [x y z]',
   '/xp <amount> [levels]',
-  '/locate <village|temple|igloo|outpost|shipwreck|monument|mineshaft|sanctum|bastion|hut|ruin|city|gate> or /locate biome <name>',
+  '/locate <village|temple|igloo|outpost|shipwreck|monument|mineshaft|sanctum|bastion|hut|ruin|buried|city|gate> or /locate biome <name>',
   '/dimension <overworld|cinderdeep|hollow>',
   '/effect give <effect> [seconds] [level],  /effect clear  (effects: ' + EFFECT_KEYS.join(', ') + ')',
   '/raid <patrol|start [level]|stop|status>',
@@ -270,6 +271,13 @@ export function runCommand(game, text) {
         if (!list.length) return 'No ruined rift found nearby';
         const t = list.reduce((a, c) => (Math.hypot(c.cx - p.x, c.cz - p.z) < Math.hypot(a.cx - p.x, a.cz - p.z) ? c : a));
         return `The nearest ruined rift is at ${t.cx}, ${t.y}, ${t.cz} (${Math.round(Math.hypot(t.cx - p.x, t.cz - p.z))} blocks away)`;
+      }
+      if (what === 'buried' || what === 'buried_ruin') {
+        if (game.world.dimension !== 'overworld') return 'Buried Ruins are only found in the overworld';
+        const list = buriedRuinsNear(game.world.gen, p.x - 2000, p.z - 2000, p.x + 2000, p.z + 2000);
+        if (!list.length) return 'No buried ruin found nearby';
+        const t = list.reduce((a, c) => (Math.hypot(c.cx - p.x, c.cz - p.z) < Math.hypot(a.cx - p.x, a.cz - p.z) ? c : a));
+        return `The nearest buried ruin is at ${t.cx}, ${t.y}, ${t.cz} (${Math.round(Math.hypot(t.cx - p.x, t.cz - p.z))} blocks away)`;
       }
       if (what === 'outpost') {
         const list = outpostsNear(game.world.gen, p.x - 2500, p.z - 2500, p.x + 2500, p.z + 2500);

@@ -236,6 +236,9 @@ const SCAFFOLD_BOXES = [[0, 14 / 16, 0, 1, 1, 1], [0, 0, 0, 2 / 16, 14 / 16, 2 /
 const SCAFFOLD_TOP = [SCAFFOLD_BOXES[0]], NO_BOXES = [];
 export const SCAFFOLD_CTX = { feetY: -Infinity, sneak: false };
 const POT_BOXES = [[5 / 16, 0, 5 / 16, 11 / 16, 6 / 16, 11 / 16]];
+// Decorated Pot: a wide body, a narrow neck and a lip (render/pots.js lays the sherd pictures on the body)
+export const DECO_POT_BODY = [1 / 16, 0, 1 / 16, 15 / 16, 13 / 16, 15 / 16];
+const DECO_POT_BOXES = [DECO_POT_BODY, [4 / 16, 13 / 16, 4 / 16, 12 / 16, 14 / 16, 12 / 16], [3 / 16, 14 / 16, 3 / 16, 13 / 16, 1, 13 / 16]];
 const CHAIN_BOXES = [[6.5 / 16, 0, 6.5 / 16, 9.5 / 16, 1, 9.5 / 16]];
 const swapXZ = (boxes) => boxes.map(([x0, y0, z0, x1, y1, z1]) => [z0, y0, x0, z1, y1, x1]);
 const px16 = (...a) => a.map((v) => v / 16);
@@ -290,6 +293,7 @@ export function blockBoxes(id, meta) {
   if (BLOCKS[id].candle) return CANDLE_BOXES[meta & 3];
   if (id === B.SCAFFOLDING) return SCAFFOLD_BOXES;
   if (id === B.FLOWER_POT) return POT_BOXES;
+  if (id === B.DECORATED_POT) return DECO_POT_BOXES;
   if (id === B.CHAIN) return CHAIN_BOXES;
   if (id === B.GRINDSTONE) return meta & 1 ? GRIND_Z : GRIND_X;
   if (id === B.STONECUTTER) return meta & 1 ? CUTTER_Z : CUTTER_X;
@@ -313,7 +317,7 @@ SHAPED_COLLISION[B.SNOW_LAYER] = 1;
 SHAPED_COLLISION[B.SEEPSTONE_SPIKE] = 1;
 SHAPED_COLLISION[B.MUD] = 1; // you sink into mud a little
 const MUD_BOX = [[0, 0, 0, 1, 14 / 16, 1]];
-for (const id of [B.COBBLESTONE_WALL, B.MOSSY_COBBLESTONE_WALL, B.OAK_TRAPDOOR, B.ENCHANTING_TABLE, B.ANVIL, B.CAMPFIRE, B.LANTERN, B.BREWING_STAND, B.TURTLE_EGG, B.HOPPER, B.COMPOSTER, B.SCAFFOLDING, B.FLOWER_POT, B.CHAIN, B.GRINDSTONE, B.STONECUTTER, B.HUSH_SENSOR, B.HUSH_SHRIEKER]) SHAPED_COLLISION[id] = 1;
+for (const id of [B.COBBLESTONE_WALL, B.MOSSY_COBBLESTONE_WALL, B.OAK_TRAPDOOR, B.ENCHANTING_TABLE, B.ANVIL, B.CAMPFIRE, B.LANTERN, B.BREWING_STAND, B.TURTLE_EGG, B.HOPPER, B.COMPOSTER, B.SCAFFOLDING, B.FLOWER_POT, B.DECORATED_POT, B.CHAIN, B.GRINDSTONE, B.STONECUTTER, B.HUSH_SENSOR, B.HUSH_SHRIEKER]) SHAPED_COLLISION[id] = 1;
 /** Snow layer box (n = meta + 1 layers); collision is one layer lower, so a single layer has none. */
 export const snowBox = (meta, collide = false) => [0, 0, 0, 1, ((meta & 7) + (collide ? 0 : 1)) * 2 / 16, 1];
 for (const id of [B.OAK_FENCE, B.SPRUCE_FENCE, B.BIRCH_FENCE, B.OAK_FENCE_GATE]) SHAPED_COLLISION[id] = 1;

@@ -7,6 +7,7 @@
 import { ITEMS, I } from './items.js';
 import { B, BLOCKS, SHAPE } from './blocks.js';
 import { mulberry32 } from './noise.js';
+import { cleanPotFaces } from './archaeology.js';
 
 const lin = (base, per) => (l) => base + (l - 1) * per;
 
@@ -109,7 +110,7 @@ export function sameEnch(a, b) {
 
 /** Can two stacks be merged into one? Never for durability items, nor enchanted with plain. */
 export function canStack(a, b) {
-  return !!a && !!b && a.id === b.id && !(ITEMS[a.id] && ITEMS[a.id].durability) && sameEnch(a.ench, b.ench) && (a.rw | 0) === (b.rw | 0) && a.map === b.map;
+  return !!a && !!b && a.id === b.id && !(ITEMS[a.id] && ITEMS[a.id].durability) && sameEnch(a.ench, b.ench) && (a.rw | 0) === (b.rw | 0) && a.map === b.map && String(a.sherds || '') === String(b.sherds || '');
 }
 
 /** A cleaned copy of an enchantment map from untrusted data (network, saves). */
@@ -131,6 +132,8 @@ export function withExtras(dst, src) {
   if (src && Number.isInteger(src.map)) { dst.map = src.map; dst.mapX = src.mapX | 0; dst.mapZ = src.mapZ | 0; } // filled maps
   const c = src && src.contents && cleanContents(src.contents);
   if (c) dst.contents = c;
+  const f = src && src.sherds && cleanPotFaces(src.sherds); // a Decorated Pot's sides (world/archaeology.js)
+  if (f) dst.sherds = f;
   return dst;
 }
 

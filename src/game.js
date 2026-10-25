@@ -29,6 +29,8 @@ import { Clouds, CLOUD_CELL } from './sky/clouds.js';
 import { Weather, WeatherRenderer } from './sky/weather.js';
 import { SignRenderer } from './render/signs.js';
 import { FrameRenderer } from './render/frames.js';
+import { PotRenderer } from './render/pots.js';
+import { BrushSites, isSuspicious, cleanPotFaces } from './world/archaeology.js';
 import { Lightning } from './sky/lightning.js';
 import { snowfall } from './world/randomTicks.js';
 import { igniteTNT, PrimedTNT } from './entities/tnt.js';
@@ -103,6 +105,8 @@ export class Game {
     this.chests = new Map();      // "x,y,z" -> { x, y, z, slots: 27 stacks }
     this.signs = new Map();       // "x,y,z" -> four lines of text
     this.frames = new Map();      // "x,y,z" -> the item stack in an item frame
+    this.pots = new Map();        // "x,y,z" -> a Decorated Pot's four sides (world/archaeology.js)
+    this.archaeology = new BrushSites(); // digs being brushed (world/archaeology.js)
     this.maps = new Map();        // map id -> filled map (world/maps.js)
     this.brewingStands = new Map(); // "x,y,z" -> Brewing Alembic state (see world/brewing.js)
     this.hoppers = new Map();     // "x,y,z" -> hopper slots (see world/hoppers.js)
@@ -158,6 +162,7 @@ export class Game {
     this.particles = new Particles(this.scene);
     this.signRenderer = new SignRenderer(this);
     this.frameRenderer = new FrameRenderer(this);
+    this.potRenderer = new PotRenderer(this);
     this.playerModel = new PlayerModel(this.scene);
     this.perspective = 0; // 0 first person, 1 behind, 2 in front (F5)
     this.player = new Player();
@@ -185,7 +190,12 @@ export class Game {
     this.dims = new DimensionManager(this); // the Cinderdeep and the Hollow (world/dimensions/)
     this.dims.applyLook();
 
-    this.world.on('fallingBlock', (x, y, z, id) => this.entities.spawnFallingBlock(x, y, z, id));
+    this.world.on('fallingBlock', (x, y, z, id) => {
+      if (!isSuspicious(id)) { this.entities.spawnFallingBlock(x, y, z, id); return; }
+      // Suspicious Sand or Gravel that loses its footing crumbles, and its find is lost
+      this.particles.blockBreak(x, y, z, id);
+      this.audio.play('break_' + BLOCKS[id].sound, [x + 0.5, y + 0.5, z + 0.5]);
+    });
     // caves content (world/caves.js): Storm Rods are looked up per chunk; hanging spikes fall as one, the tip hurts
     this.world.on('blockChanged', (x, y, z, old, id) => {
       if (old !== B.STORM_ROD && id !== B.STORM_ROD) return;
@@ -771,6 +781,13 @@ export class Game {
     if (!fromNet && this.net && this.net.sendFrame) this.net.sendFrame(x, y, z, st ? this.frames.get(k) : null);
   }
 
+  /** Set (or clear, with null) the sherds on a Decorated Pot's sides; shared in multiplayer. */
+  setPot(x, y, z, faces, fromNet = false) {
+    const k = `${x},${y},${z}`, f = cleanPotFaces(faces);
+    if (f) this.pots.set(k, f); else this.pots.delete(k);
+    if (!fromNet && this.net && this.net.sendPot) this.net.sendPot(x, y, z, f);
+  }
+
   /** Write on a sign (shared with everyone in multiplayer). */
   setSignText(x, y, z, lines, fromNet = false) {
     const clean = [0, 1, 2, 3].map((i) => String((lines && lines[i]) || '').slice(0, 15));
@@ -1032,6 +1049,7 @@ export class Game {
       if (id) this.audio.play('step_' + BLOCKS[id].sound);
     }
     this.hush.tick(); // footsteps and landings shake the Deep Hush awake
+    this.archaeology.tick(this.world, this.ticks); // digs nobody brushes fill back in
     if (this.player.landedFrom > 1.5) { this.audio.play('land'); }
     // landing on farmland can trample it back to dirt (chance = fall distance - 0.5)
     if (this.player.landedFrom > 0.5) {
@@ -1204,6 +1222,7 @@ export class Game {
     this.clouds.update(this.camera, smoothTime, this.sky, Math.max(192, R * 1.8));
     if (this.signRenderer) this.signRenderer.update();
     if (this.frameRenderer) this.frameRenderer.update();
+    if (this.potRenderer) this.potRenderer.update();
     const fogCol = this.sky.horizon;
     this.scene.fog.color.copy(fogCol);
     // deep in caves the fog and the sky fade to black, so holes into unloaded land look like dark depths

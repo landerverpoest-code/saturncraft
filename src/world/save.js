@@ -1,5 +1,6 @@
 // World persistence in IndexedDB: modified chunks (run-length encoded),
 // player state, world time, furnaces and persistent passive mobs.
+import { cleanPotFaces } from './archaeology.js';
 import { encodeMap, decodeMap } from './maps.js';
 import { chunkKey } from './world.js';
 import { cleanEffects } from '../player/effects.js';
@@ -99,6 +100,7 @@ export async function saveGame(game) {
     chests: [...game.chests.values()],
     signs: [...game.signs],
     frames: [...game.frames],
+    pots: [...(game.pots || new Map())], // Decorated Pots' sherds (world/archaeology.js)
     maps: [...game.maps.values()].map(encodeMap),
     brewingStands: [...(game.brewingStands || new Map()).values()],
     hoppers: [...(game.hoppers || new Map()).values()].map((h) => ({ x: h.x, y: h.y, z: h.z, slots: h.slots })),
@@ -196,6 +198,7 @@ export function applySave(game, data) {
   for (const c of data.chests || []) game.chests.set(`${c.x},${c.y},${c.z}`, c);
   for (const [k, l] of data.signs || []) game.signs.set(k, l);
   for (const [k, st] of data.frames || []) game.frames.set(k, st);
+  for (const [k, f] of data.pots || []) { const c = cleanPotFaces(f); if (c && game.pots) game.pots.set(k, c); }
   for (const d of data.maps || []) { const m = decodeMap(d); if (m) game.maps.set(m.id, m); }
   for (const s of data.brewingStands || []) if (s && Array.isArray(s.slots)) game.brewingStands.set(`${s.x},${s.y},${s.z}`, s);
   for (const h of data.hoppers || []) if (h && Array.isArray(h.slots)) game.hoppers.set(`${h.x},${h.y},${h.z}`, { ...h, cooldown: 0 });

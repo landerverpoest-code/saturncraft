@@ -15,6 +15,7 @@ import { Simplex, hash4, hashf, mulberry32 } from './noise.js';
 import { carveChunk } from './carvers.js';
 import { stampRuins } from './ruinedPortals.js';
 import { stampSmallFeatures } from './smallFeatures.js';
+import { stampBuriedRuins } from './buriedRuins.js';
 import { BIOME, BIOMES } from './biomes.js';
 import { MIN_Y, WORLD_HEIGHT, SEA_LEVEL, CHUNK_VOLUME, cidx } from './constants.js';
 import { grassColor, foliageColor } from './textures.js';
@@ -409,6 +410,7 @@ export class TerrainGenerator {
     stampRuins(this, blocks, meta, cx, cz); // Ruined Rifts (world/ruinedPortals.js)
     stampIgloos(this, blocks, meta, cx, cz);   // igloos (world/igloos.js), clear of the structures above
     stampSmallFeatures(this, blocks, meta, cx, cz, heightmap, biomes); // desert wells, fossils
+    stampBuriedRuins(this, blocks, meta, cx, cz); // Buried Ruins for brushing (world/buriedRuins.js)
     stampSanctums(this, blocks, meta, cx, cz); // Hollow Sanctums (world/dimensions/sanctum.js)
 
     // Final heightmap: highest non-air block

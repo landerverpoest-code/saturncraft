@@ -259,6 +259,12 @@ export class HostSession extends Session {
         this.broadcast({ t: 'frame', x: m.x | 0, y: m.y | 0, z: m.z | 0, st }, c);
         break;
       }
+      case 'pot': {
+        if (!finite(m.x, m.y, m.z) || !this.near(c, m.x, m.y, m.z, 12)) break;
+        g.setPot(m.x | 0, m.y | 0, m.z | 0, m.f, true);
+        this.broadcast({ t: 'pot', x: m.x | 0, y: m.y | 0, z: m.z | 0, f: g.pots.get(`${m.x | 0},${m.y | 0},${m.z | 0}`) || null }, c);
+        break;
+      }
       case 'sign': {
         if (!finite(m.x, m.y, m.z) || !this.near(c, m.x, m.y, m.z, 12) || !Array.isArray(m.l)) break;
         g.setSignText(m.x | 0, m.y | 0, m.z | 0, m.l, true);
@@ -332,7 +338,7 @@ export class HostSession extends Session {
       dl: g.daylightCycle, df: g.difficulty, pvp: this.pvp, gc: this.guestCommands,
       worldSpawn: g.worldSpawn, pos: { x: p.x, y: p.y, z: p.z, yaw: p.yaw },
       player: g.netPlayers[name] || null,
-      signs: [...g.signs], frames: [...g.frames],
+      signs: [...g.signs], frames: [...g.frames], pots: [...g.pots],
       players: [{ id: 0, name: this.name }, ...this.joined().map((o) => ({ id: o.id, name: o.name }))],
       chunks: chunks.length,
     });
@@ -709,6 +715,7 @@ export class HostSession extends Session {
   sendChat(text) { this.broadcast({ t: 'chat', from: this.name, m: text }); }
   sendSign(x, y, z, l) { this.broadcast({ t: 'sign', x, y, z, l }); }
   sendFrame(x, y, z, st) { this.broadcast({ t: 'frame', x, y, z, st }); }
+  sendPot(x, y, z, f) { this.broadcast({ t: 'pot', x, y, z, f }); }
 
   tick() {
     if (this.closed) return;
@@ -840,6 +847,7 @@ export class ClientSession extends Session {
     game.weather.load(w.weather);
     for (const [k, l] of w.signs || []) game.signs.set(k, l);
     for (const [k, st] of w.frames || []) game.frames.set(k, st);
+    for (const [k, f] of w.pots || []) { const [x, y, z] = String(k).split(',').map(Number); if (finite(x, y, z)) game.setPot(x, y, z, f, true); }
     if (typeof w.dl === 'boolean') game.settings.daylightCycle = w.dl;
     if (typeof w.df === 'string') game.settings.difficulty = w.df;
     game.spawner.enabled = false;
@@ -879,6 +887,7 @@ export class ClientSession extends Session {
       case 'chat': g.chat.add(`<${m.from}> ${m.m}`); break;
       case 'sign': if (Array.isArray(m.l)) g.setSignText(m.x | 0, m.y | 0, m.z | 0, m.l, true); break;
       case 'frame': g.setFrameItem(m.x | 0, m.y | 0, m.z | 0, m.st || null, true); break;
+      case 'pot': g.setPot(m.x | 0, m.y | 0, m.z | 0, m.f || null, true); break;
       case 'cmdout': for (const l of m.lines || []) g.chat.add(String(l)); break;
       case 'env':
         if (Math.abs(g.time - m.time) > 2) g.time = m.time;
@@ -1083,6 +1092,7 @@ export class ClientSession extends Session {
   sendChat(text) { this.send({ t: 'chat', m: text }); }
   sendSign(x, y, z, l) { this.send({ t: 'sign', x, y, z, l }); }
   sendFrame(x, y, z, st) { this.send({ t: 'frame', x, y, z, st }); }
+  sendPot(x, y, z, f) { this.send({ t: 'pot', x, y, z, f }); }
 
   /** We stepped through a portal: the host takes the whole group there. */
   requestTravel(dim, arrival) {
