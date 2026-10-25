@@ -88,6 +88,8 @@ const FLOWER_P = { [BIOME.BLOSSOM_GROVE]: 0.05, [BIOME.FLOWER_FOREST]: 0.2, [BIO
 const SHROOM_P = { [BIOME.DARK_FOREST]: 0.025, [BIOME.SWAMP]: 0.01, [BIOME.TAIGA]: 0.003 };
 const TERRACOTTAS = new Set([B.TERRACOTTA, B.ORANGE_TERRACOTTA, B.YELLOW_TERRACOTTA, B.WHITE_TERRACOTTA, B.BROWN_TERRACOTTA, B.RED_TERRACOTTA, B.LIGHT_GRAY_TERRACOTTA]);
 const MAX_TREE_DENSITY = 0.14;
+const RIVER_SCALE = 560; // horizontal scale of the river noise (river spacing of several hundred blocks)
+const RIVER_TMP = {};
 
 const REPLACEABLE_BY_ORE = new Uint8Array(BLOCK_LIMIT);
 for (const id of [B.STONE, B.DEEPSTONE, B.GRANITE, B.DIORITE, B.ANDESITE, B.TUFF]) REPLACEABLE_BY_ORE[id] = 1;
@@ -100,6 +102,7 @@ export class TerrainGenerator {
     this.nDetail = s(6); this.nDensity = s(7); this.nCheese = s(8); this.nSpagA = s(9); this.nSpagB = s(10);
     this.nSurface = s(11); this.nClay = s(12);
     this.nVariant = s(13); this.nIsland = s(14); this.nHill = s(15); this.nMesa = s(16);
+    this.nRiver = s(17); this.nRiverWarp = s(18); this.nRiverWidth = s(19);
     // Badlands colour bands: plain terracotta with thin coloured stripes, fixed per seed
     const br = mulberry32(hash4(this.seed, 77, 13, 5));
     const STRIPES = [B.ORANGE_TERRACOTTA, B.ORANGE_TERRACOTTA, B.YELLOW_TERRACOTTA, B.WHITE_TERRACOTTA, B.BROWN_TERRACOTTA, B.RED_TERRACOTTA, B.RED_TERRACOTTA, B.LIGHT_GRAY_TERRACOTTA];
@@ -158,16 +161,86 @@ export class TerrainGenerator {
     // mushroom islands rise out of the deep ocean
     const wIsland = smoothstep(-0.4, -0.52, cont) * smoothstep(0.42, 0.58, this.nIsland.fbm2(x / 260, z / 260, 2));
     if (wIsland > 0) h += (SEA_LEVEL + 3 + detail * 4 - h) * wIsland;
+    // rivers: a winding channel cut down to a few blocks under sea level, with sloped banks
+    // that widen into valleys through hills; they stay out of high mountains and mushroom
+    // islands and simply run out into the sea (the ocean floor is already lower)
+    let river = 0, bank = 0, riverFade = 0;
+    const fade = smoothstep(0.5, 0.25, mountain) * smoothstep(SEA_LEVEL + 48, SEA_LEVEL + 30, h) * (1 - wIsland);
+    if (fade > 0 && this.riverField(x, z, RIVER_TMP)) {
+      const d = RIVER_TMP.dist, w = RIVER_TMP.half;
+      riverFade = fade;
+      const lift = Math.max(0, h - SEA_LEVEL);
+      const bankW = 5 + Math.min(lift, 40) * 0.9; // steeper ground gets a wider valley
+      if (d < w + bankW) {
+        let target;
+        if (d < w) {
+          const t = d / w;
+          target = SEA_LEVEL - 0.5 - RIVER_TMP.depth * (1 - t * t);
+        } else target = SEA_LEVEL - 0.5 + (h - SEA_LEVEL + 0.5) * smoothstep(0, 1, (d - w) / bankW);
+        const nh = h + (target - h) * fade;
+        if (nh < h) h = nh;
+        bank = fade * (1 - smoothstep(w, w + bankW, d));
+        if (d < w + 1) river = fade;
+      }
+    }
     out.height = h;
     out.cont = cont;
     out.mountain = mountain;
-    out.amp = (1.5 + mountain * mountain * 14) * (1 - wMesa * 0.75);
+    // river beds and banks are smooth (little density noise)
+    out.amp = (1.5 + mountain * mountain * 14) * (1 - wMesa * 0.75) * (1 - 0.8 * bank);
+    out.river = river; out.riverBank = bank; out.riverFade = riverFade;
     out.temp = t0 - Math.max(0, h - 90) / 140;
     out.humid = humid;
     out.variant = variant;
     out.swamp = wSwamp; out.mangrove = wMangrove; out.mesa = wMesa; out.island = wIsland;
     if (wMesa <= 0) out.mesaFloor = true;
     return out;
+  }
+
+  /**
+   * River centre lines are where a domain-warped noise crosses zero (|n| small).
+   * Distance to the line in blocks is estimated as |n| / |grad n|, so every river
+   * has a steady width (half-width 3-6 blocks) wherever it runs. Fills `out` with
+   * dist, half and depth and returns true when a river or its banks may be near.
+   */
+  riverField(x, z, out) {
+    const wx = x + this.nRiverWarp.fbm2(x / 190, z / 190, 2) * 40;
+    const wz = z + this.nRiverWarp.fbm2(x / 190 + 71.3, z / 190 - 33.1, 2) * 40;
+    const S = RIVER_SCALE;
+    const n = this.nRiver.fbm2(wx / S, wz / S, 2);
+    if (Math.abs(n) > 0.16) return false; // far from any river (saves the gradient)
+    const e = 1.5;
+    const gx = (this.nRiver.fbm2((wx + e) / S, wz / S, 2) - n) / e;
+    const gz = (this.nRiver.fbm2(wx / S, (wz + e) / S, 2) - n) / e;
+    const g = Math.max(Math.hypot(gx, gz), 0.25 / S);
+    out.dist = Math.abs(n) / g;
+    const wn = this.nRiverWidth.noise2(x / 700, z / 700);
+    out.half = 3 + 1.5 * (wn + 1);
+    out.depth = 3 + (wn + 1);
+    return true;
+  }
+
+  /** Is (x, z) in a river or on its banks (`margin` blocks past the water's edge)? */
+  nearRiver(x, z, margin = 4) {
+    const col = this.column(x, z, this._riverCol || (this._riverCol = {}));
+    if (col.riverFade < 0.3) return false; // no river here, or only a shallow dry dip
+    return this.riverField(x, z, RIVER_TMP) && RIVER_TMP.dist < RIVER_TMP.half + margin;
+  }
+
+  /**
+   * Does a river (or its near bank) cross the box [x0, x1] x [z0, z1]? Sampled
+   * every `step` blocks, which is finer than the narrowest river plus its margin,
+   * so structures can keep off the water.
+   */
+  riverInBox(x0, z0, x1, z1, step = 6, margin = 4) {
+    for (let x = x0; ; x = Math.min(x + step, x1)) {
+      for (let z = z0; ; z = Math.min(z + step, z1)) {
+        if (this.nearRiver(x, z, margin)) return true;
+        if (z >= z1) break;
+      }
+      if (x >= x1) break;
+    }
+    return false;
   }
 
   densityGridNoise(gx, gy, gz) {
@@ -240,6 +313,8 @@ export class TerrainGenerator {
     const t = col.temp, h = col.humid;
     if (col.island > 0.5 && top >= SEA_LEVEL - 4) return BIOME.MUSHROOM_FIELDS;
     if (col.cont < -0.18 && top < SEA_LEVEL) return t < 0.15 ? BIOME.FROZEN_OCEAN : BIOME.OCEAN;
+    // river water (frozen over where the land around it is snowy)
+    if (col.river > 0.5 && top <= SEA_LEVEL) return t < 0.15 ? BIOME.FROZEN_RIVER : BIOME.RIVER;
     // the warmest swamps, and warm wet coasts, grow mangroves
     if (col.swamp > 0.5 && top <= SEA_LEVEL + 3) return t > 0.98 ? BIOME.MANGROVE_SWAMP : BIOME.SWAMP;
     if (col.mangrove > 0.5 && top <= SEA_LEVEL + 3) return BIOME.MANGROVE_SWAMP;
@@ -392,7 +467,7 @@ export class TerrainGenerator {
       const biome = biomes[x + z * 16];
       for (let y = top + 1; y <= SEA_LEVEL; y++) {
         const i = cidx(x, y, z);
-        if (!blocks[i]) blocks[i] = (y === SEA_LEVEL && biome === BIOME.FROZEN_OCEAN) ? B.ICE : B.WATER;
+        if (!blocks[i]) blocks[i] = (y === SEA_LEVEL && (biome === BIOME.FROZEN_OCEAN || biome === BIOME.FROZEN_RIVER)) ? B.ICE : B.WATER;
       }
     }
 
@@ -469,6 +544,15 @@ export class TerrainGenerator {
         for (let d = 0; d < 4; d++) set(top - d, B.SAND);
         for (let d = 4; d < 6; d++) set(top - d, B.SANDSTONE);
         break;
+      case BIOME.RIVER:
+      case BIOME.FROZEN_RIVER: {
+        // a bed of sand with gravel bars and clay patches
+        const n = this.nClay.noise2(wx / 11, wz / 11);
+        const mat = n > 0.45 ? B.CLAY : n < -0.3 || (biome === BIOME.FROZEN_RIVER && n < 0.1) ? B.GRAVEL : B.SAND;
+        for (let d = 0; d < 3; d++) set(top - d, mat);
+        set(top - 3, B.DIRT);
+        break;
+      }
       case BIOME.OCEAN:
       case BIOME.FROZEN_OCEAN: {
         const clay = this.nClay.noise2(wx / 20, wz / 20) > 0.55;
@@ -651,9 +735,13 @@ export class TerrainGenerator {
         }
       }
       // kelp forests and seagrass meadows on the sea floor (the top stays two blocks under the surface)
-      if ((ground === B.SAND || ground === B.GRAVEL || ground === B.DIRT || ground === B.CLAY) && blocks[above] === B.WATER && top < SEA_LEVEL - 2 && biome !== BIOME.FROZEN_OCEAN) {
+      if ((ground === B.SAND || ground === B.GRAVEL || ground === B.DIRT || ground === B.CLAY) && blocks[above] === B.WATER && top < SEA_LEVEL - 2 && biome !== BIOME.FROZEN_OCEAN && biome !== BIOME.FROZEN_RIVER) {
         const r2 = h(x, z, 55);
-        if (r2 < 0.06 && top < SEA_LEVEL - 5) {
+        if (biome === BIOME.RIVER) {
+          // rivers: a little seagrass and the odd kelp in the deepest part of the channel
+          if (r2 < 0.015 && top < SEA_LEVEL - 3) { for (let k = 1; k <= 2 + Math.floor(h(x, z, 56) * 2) && top + k < SEA_LEVEL - 1; k++) blocks[cidx(x, top + k, z)] = B.KELP; }
+          else if (r2 < 0.1) blocks[above] = B.SEAGRASS;
+        } else if (r2 < 0.06 && top < SEA_LEVEL - 5) {
           const n = 2 + Math.floor(h(x, z, 56) * (SEA_LEVEL - 3 - top));
           for (let k = 1; k <= n && top + k < SEA_LEVEL - 1; k++) blocks[cidx(x, top + k, z)] = B.KELP;
         } else if (r2 < 0.25) blocks[above] = B.SEAGRASS;
@@ -688,7 +776,7 @@ export class TerrainGenerator {
         for (let k = 1; k <= n && top + k < 318; k++) blocks[cidx(x, top + k, z)] = B.BAMBOO;
       }
       // sugar cane on the shore: grass, dirt or sand next to water
-      if ((ground === B.GRASS || ground === B.SAND || ground === B.DIRT || ground === B.RED_SAND) && top === SEA_LEVEL && h(x, z, 44) < 0.12) {
+      if ((ground === B.GRASS || ground === B.SAND || ground === B.DIRT || ground === B.RED_SAND) && top === SEA_LEVEL && h(x, z, 44) < (cols[ci].riverBank > 0 ? 0.3 : 0.12)) {
         const wet = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => { const xx = x + dx, zz = z + dz; return xx >= 0 && zz >= 0 && xx < 16 && zz < 16 && blocks[cidx(xx, top, zz)] === B.WATER; });
         if (wet && !blocks[above]) {
           const n = 1 + Math.floor(h(x, z, 45) * 3);
@@ -755,7 +843,7 @@ export class TerrainGenerator {
     // A layer of snow on the ground and treetops of cold biomes (not on peaks that are already snow blocks)
     for (let z = 0; z < 16; z++) for (let x = 0; x < 16; x++) {
       const ci = x + z * 16, bd = BIOMES[biomes[ci]];
-      if (!bd || bd.temp >= 0.15 || bd.key === 'frozen_ocean' || bd.key === 'ocean') continue;
+      if (!bd || bd.temp >= 0.15 || bd.key === 'frozen_ocean' || bd.key === 'ocean' || bd.key === 'frozen_river') continue;
       let y = Math.min(MIN_Y + WORLD_HEIGHT - 2, heightmap[ci] + 40);
       while (y > heightmap[ci] && !blocks[cidx(x, y, z)]) y--;
       const b = blocks[cidx(x, y, z)];
@@ -818,7 +906,8 @@ export class TerrainGenerator {
         const col = this.column(x, z);
         const top = this.surfaceAt(x, z, col);
         const biome = this.biomeFor(col, top);
-        if (top > SEA_LEVEL + 1 && top < 100 && biome !== BIOME.BEACH && biome !== BIOME.DESERT && biome !== BIOME.BADLANDS && biome !== BIOME.SWAMP && biome !== BIOME.MANGROVE_SWAMP) return { x: x + 0.5, y: top + 1, z: z + 0.5 };
+        if (top > SEA_LEVEL + 1 && top < 100 && biome !== BIOME.BEACH && biome !== BIOME.DESERT && biome !== BIOME.BADLANDS && biome !== BIOME.SWAMP && biome !== BIOME.MANGROVE_SWAMP
+          && biome !== BIOME.RIVER && biome !== BIOME.FROZEN_RIVER && !this.nearRiver(x, z, 6)) return { x: x + 0.5, y: top + 1, z: z + 0.5 };
       }
     }
     return { x: 0.5, y: 100, z: 0.5 };

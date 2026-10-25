@@ -118,7 +118,7 @@ export class ChunkRenderer {
         blocks[p] = ch.blocks[i]; light[p] = ch.light[i]; meta[p] = ch.meta[i];
       }
     }
-    return { blocks, light, meta, colors: c.colors, yBase };
+    return { blocks, light, meta, colors: c.colors, biomes: c.biomes, yBase };
   }
 
   neighboursLoaded(c) {

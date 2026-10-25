@@ -22,6 +22,7 @@ export function hutInRegion(gen, rx, rz) {
     const cx = rx * R + M + Math.floor(rng() * (R - 2 * M)), cz = rz * R + M + Math.floor(rng() * (R - 2 * M));
     const col = gen.column(cx, cz), top = gen.surfaceAt(cx, cz, col);
     if (gen.biomeFor(col, top) !== BIOME.SWAMP) continue;
+    if (gen.riverInBox && gen.riverInBox(cx - 4, cz - 5, cx + 4, cz + 5)) continue; // rivers wind through some swamps
     const y = Math.max(top, SEA_LEVEL) + 3; // the floor, on stilts above the water
     h = { cx, cz, y, x0: cx - 3, x1: cx + 3, z0: cz - 4, z1: cz + 4, y0: y, y1: y + 5 };
   }

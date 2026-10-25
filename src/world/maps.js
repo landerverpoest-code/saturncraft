@@ -37,6 +37,7 @@ const FIXED = { [B.WATER]: [52, 84, 200], [B.LAVA]: [230, 90, 20], [B.BIRCH_LEAV
 
 /** Base map colour of a block in a biome. */
 export function blockMapColor(id, biomeId) {
+  if (id === B.WATER && BIOMES[biomeId] && BIOMES[biomeId].water) { const t = BIOMES[biomeId].water; return FIXED[id].map((v, k) => (v * t[k]) / 255); } // river water
   if (FIXED[id]) return FIXED[id];
   const base = topColor(id), bi = BIOMES[biomeId] || BIOMES[1];
   const tint = BLOCKS[id] && BLOCKS[id].tint;

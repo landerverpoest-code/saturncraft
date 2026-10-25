@@ -3,6 +3,7 @@
 // neighbours) so it can run inside a worker without access to the world.
 import { B, BLOCKS, OPAQUE, SOLID, SHAPES, LAYERS, SHAPE, LAYER, BLOCK_LIMIT, WATERLOGGED, CANDLES, POTTED, PROPAGULE_HANGING } from './blocks.js';
 import { LEAVES } from './trees.js';
+import { waterTint } from './biomes.js';
 import { FACE_TILE, FRONT_TILE, texId } from './textures.js';
 import { WOOL_RGB } from './colors.js';
 import { railHeight } from './rails.js';
@@ -152,6 +153,7 @@ export function liquidHeight(meta) {
  */
 export function meshSection(sec) {
   const { blocks, light, meta, colors } = sec;
+  const wb = sec.biomes; // per-column biome ids (water tint), when the caller passes them
   opaqueBuf.reset(); cutoutBuf.reset(); transBuf.reset();
   opaqueBuf.yBase = cutoutBuf.yBase = transBuf.yBase = sec.yBase || 0;
   const ao = [0, 0, 0, 0], sk = [0, 0, 0, 0], bl = [0, 0, 0, 0];
@@ -160,6 +162,7 @@ export function meshSection(sec) {
     const id = blocks[i];
     if (!id) continue;
     const shape = SHAPES[id];
+    if (WATERLOGGED[id] || id === B.WATER || id === B.LAVA) WT = wb && id !== B.LAVA ? waterTint(wb[x + z * 16]) : NO_TINT;
     if (WATERLOGGED[id]) waterloggedTop(blocks, light, i, x, y, z); // the water's surface over roots standing in it
     const buf = LAYERS[id] === LAYER.TRANSLUCENT ? transBuf : LAYERS[id] === LAYER.CUTOUT ? cutoutBuf : opaqueBuf;
     const ci = (x + z * 16) * 6;
@@ -591,15 +594,19 @@ function cornerHeight(blocks, meta, i, id, cx, cz) {
 const UP = off(0, 1, 0);
 
 /** Still water's surface over a waterlogged block (mangrove roots, propagules) open to the air above. */
+// water colour of the column being meshed (rivers tint their water, see biomes.js)
+const NO_TINT = [255, 255, 255];
+let WT = NO_TINT;
+
 function waterloggedTop(blocks, light, i, x, y, z) {
   const above = blocks[i + UP];
   if (above === B.WATER || WATERLOGGED[above] || OPAQUE[above]) return;
   const l = light[i + UP] || light[i], sky = (l >> 4) * 17, blk = (l & 15) * 17, yy = y + 8 / 9;
   transBuf.ensure(8);
   const c = [[0, 1], [1, 1], [1, 0], [0, 0]];
-  for (const [vx, vz] of c) transBuf.vert(x + vx, yy, z + vz, 0, 1, 0, vx, 1 - vz, 255, 255, 255, sky, blk, 0, WATER_STILL);
+  for (const [vx, vz] of c) transBuf.vert(x + vx, yy, z + vz, 0, 1, 0, vx, 1 - vz, WT[0], WT[1], WT[2], sky, blk, 0, WATER_STILL);
   transBuf.quad(false);
-  for (let k = 3; k >= 0; k--) { const [vx, vz] = c[k]; transBuf.vert(x + vx, yy, z + vz, 0, -1, 0, vx, 1 - vz, 255, 255, 255, sky, blk, 0, WATER_STILL); }
+  for (let k = 3; k >= 0; k--) { const [vx, vz] = c[k]; transBuf.vert(x + vx, yy, z + vz, 0, -1, 0, vx, 1 - vz, WT[0], WT[1], WT[2], sky, blk, 0, WATER_STILL); }
   transBuf.quad(false);
 }
 
@@ -642,7 +649,7 @@ function meshLiquid(buf, blocks, light, meta, i, id, x, y, z) {
       else if (d === 3) v = 1 - t;
       else { const top = hAt(vx, vz); if (vy > 0) vy = top; v = 1 - vy; } // sides follow the sloped edge
       const tile = d === 2 ? (flowing ? flow : still) : d === 3 ? still : flow;
-      buf.vert(x + vx, y + vy, z + vz, f.n[0], f.n[1], f.n[2], u, v, 255, 255, 255, sky, blk, 0, tile);
+      buf.vert(x + vx, y + vy, z + vz, f.n[0], f.n[1], f.n[2], u, v, WT[0], WT[1], WT[2], sky, blk, 0, tile);
     }
     buf.quad(false);
     // Inner side of the surface so it is visible from below the water
@@ -652,7 +659,7 @@ function meshLiquid(buf, blocks, light, meta, i, id, x, y, z) {
         const [s, t] = CORNERS[k];
         const vx = f.o[0] + s * f.u[0] + t * f.v[0], vz = f.o[2] + s * f.u[2] + t * f.v[2];
         const [u, v] = topUV(vx, vz);
-        buf.vert(x + vx, y + hAt(vx, vz), z + vz, 0, -1, 0, u, v, 255, 255, 255, sky, blk, 0, flowing ? flow : still);
+        buf.vert(x + vx, y + hAt(vx, vz), z + vz, 0, -1, 0, u, v, WT[0], WT[1], WT[2], sky, blk, 0, flowing ? flow : still);
       }
       buf.quad(false);
     }
