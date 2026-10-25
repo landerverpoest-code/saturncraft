@@ -31,7 +31,8 @@ export function buriedRuinInRegion(gen, rx, rz) {
     const flat = [[-hw, -hd], [hw, -hd], [-hw, hd], [hw, hd]].every(([dx, dz]) => Math.abs(gen.surfaceAt(cx + dx, cz + dz) - top) <= 2);
     const R2 = BURIED_REACH + 4;
     const clear = !villagesNear(gen, cx - R2, cz - R2, cx + R2, cz + R2).length && !outpostsNear(gen, cx - R2, cz - R2, cx + R2, cz + R2).length;
-    if (flat && clear && top > SEA_LEVEL && BURIED_BIOMES.includes(biome)) r = { cx, cz, y: top, hw, hd, seed };
+    const dry = !(gen.riverInBox && gen.riverInBox(cx - hw - 2, cz - hd - 2, cx + hw + 2, cz + hd + 2)); // not on a river bank
+    if (flat && clear && dry && top > SEA_LEVEL && BURIED_BIOMES.includes(biome)) r = { cx, cz, y: top, hw, hd, seed };
   }
   if (cache.size > 64) cache.clear();
   cache.set(key, r);
