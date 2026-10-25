@@ -12,6 +12,7 @@ import { B, BLOCKS } from '../world/blocks.js';
 import { canTrade, doTrade, MAX_USES } from '../mobs/trades.js';
 import { MILESTONES } from '../player/milestones.js';
 import { loadPlayerName } from '../net/protocol.js';
+import { grindstoneAccepts, grindstoneResult, grindstoneXp, stonecutterOutputs, stonecutterAccepts } from '../world/workstations.js';
 import { BEACON_POWERS, POWER_LEVEL, SECONDARY, BEACON_PAYMENT, beaconLevel, beamColor, beaconMeta, beaconRange } from '../world/beacons.js';
 
 function el(html) { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstChild; }
@@ -779,6 +780,115 @@ export class UI {
       });
       panel.appendChild(this.inventoryGrid({
         accept: (st) => { if (!this.work[0] && BEACON_PAYMENT.has(st.id)) { this.work[0] = { ...st, count: 1 }; st.count--; return st.count <= 0 ? true : 'partial'; } return false; },
+      }));
+    });
+    this.refreshAll();
+  }
+
+  /** Grindstone: two of a kind merge (with a 5 % bonus); enchantments other than curses come off for some experience. */
+  openGrindstone(x, y, z) {
+    this.game.input.unlock();
+    this.work = [null, null];
+    const result = () => (this.work ? grindstoneResult(this.work[0], this.work[1]) : null);
+    this.showContainer('grindstone', 'Repair &amp; Disenchant', (panel) => {
+      const top = el('<div class="inv-top grind-top"></div>');
+      const ins = el('<div class="grind-ins"></div>');
+      for (const i of [0, 1]) ins.appendChild(this.workSlot(i, { single: true, filter: grindstoneAccepts }));
+      top.append(ins, el('<div class="arrow">➜</div>'));
+      const out = this.makeSlot(() => { const r = result(); return r ? r.result : null; }, () => {}, { onClick: (e) => this.grindstoneTake(x, y, z, e.shiftKey) });
+      top.appendChild(out);
+      panel.appendChild(top);
+      const hint = el('<div class="recipes-hint grind-hint"></div>');
+      panel.appendChild(hint);
+      this.refreshers.push(() => {
+        const r = result(), w = this.work || [];
+        hint.textContent = r ? (r.xp[1] > 0 ? `Removes enchantments · ${r.xp[0]}–${r.xp[1]} experience` : 'Repairs the pair (+5 %)')
+          : w[0] || w[1] ? 'These cannot be ground' : 'Two of the same item to repair them, or one enchanted item to strip it';
+      });
+      panel.appendChild(this.inventoryGrid({
+        accept: (st) => {
+          if (!grindstoneAccepts(st)) return false;
+          const i = !this.work[0] ? 0 : !this.work[1] ? 1 : -1;
+          if (i < 0) return false;
+          this.work[i] = { ...st, count: 1 }; st.count--;
+          return st.count <= 0 ? true : 'partial';
+        },
+      }));
+    });
+    this.refreshAll();
+  }
+
+  grindstoneTake(x, y, z, shift) {
+    const g = this.game, inv = g.player.inventory;
+    const r = this.work && grindstoneResult(this.work[0], this.work[1]);
+    if (!r) return;
+    if (shift) { if (inv.add({ ...r.result })) return; } // no room: nothing happens
+    else if (this.cursor) return;
+    else this.cursor = r.result;
+    this.work[0] = this.work[1] = null;
+    const xp = grindstoneXp(r);
+    if (xp > 0) g.entities.spawnXp(x + 0.5, y + 1.1, z + 0.5, xp);
+    g.audio.play('grind', [x + 0.5, y + 0.5, z + 0.5]);
+  }
+
+  /** Stonecutter: one stone block in, pick one of the shapes it cuts into. */
+  openStonecutter(x, y, z) {
+    this.game.input.unlock();
+    const g = this.game, inv = g.player.inventory;
+    this.work = [null];
+    let sel = -1, selFor = null;
+    const options = () => (this.work && this.work[0] ? stonecutterOutputs(this.work[0].id) : []);
+    const chosen = () => { const o = options(); return this.work && this.work[0] && selFor === this.work[0].id && o[sel] ? o[sel] : null; };
+    this.showContainer('stonecutter', 'Stonecutter', (panel) => {
+      const top = el('<div class="inv-top cutter-top"></div>');
+      top.appendChild(this.workSlot(0, { filter: stonecutterAccepts }));
+      const list = el('<div class="cutter-list"></div>');
+      top.append(list, el('<div class="arrow">➜</div>'));
+      const take = (shift) => {
+        const o = chosen();
+        if (!o) return;
+        for (let n = 0; n < (shift ? 64 : 1) && this.work[0]; n++) {
+          const st = { id: o.id, count: o.count, damage: 0 };
+          if (shift) { const left = inv.add(st); if (left) { g.entities.spawnItem(g.player.x, g.player.y + 1, g.player.z, { ...st, count: left }); n = 64; } }
+          else if (!this.cursor) this.cursor = st;
+          else if (this.cursor.id === o.id && !this.cursor.ench && this.cursor.count + o.count <= maxStack(o.id)) this.cursor.count += o.count;
+          else return;
+          if (--this.work[0].count <= 0) this.work[0] = null;
+        }
+        g.audio.play('saw', [x + 0.5, y + 0.5, z + 0.5]);
+      };
+      top.appendChild(this.makeSlot(() => { const o = chosen(); return o ? { id: o.id, count: o.count, damage: 0 } : null; }, () => {}, { onClick: (e) => take(e.shiftKey) }));
+      panel.appendChild(top);
+      const hint = el('<div class="recipes-hint cutter-hint"></div>');
+      panel.appendChild(hint);
+      let key = '';
+      this.refreshers.push(() => {
+        const st = this.work && this.work[0], o = options();
+        if (st && selFor !== st.id) { selFor = st.id; sel = -1; }
+        hint.textContent = !st ? 'Put in a stone block to cut' : sel < 0 ? 'Pick what to cut it into' : `${ITEMS[o[sel].id].name}${o[sel].count > 1 ? ' ×' + o[sel].count : ''}`;
+        const k = `${st ? st.id : -1}:${sel}`;
+        if (k === key) return;
+        key = k;
+        list.innerHTML = '';
+        o.forEach((r, i) => {
+          const b = el(`<div class="slot cutter-opt${i === sel ? ' on' : ''}">${this.slotHTML({ id: r.id, count: r.count })}</div>`);
+          b.addEventListener('mouseenter', () => this.showTooltip(ITEMS[r.id].name + (r.count > 1 ? ' ×' + r.count : '')));
+          b.addEventListener('mouseleave', () => this.tooltipEl.classList.add('hidden'));
+          b.addEventListener('mousedown', (e) => { e.preventDefault(); sel = i; g.audio.play('click'); this.refreshAll(); });
+          list.appendChild(b);
+        });
+      });
+      panel.appendChild(this.inventoryGrid({
+        accept: (st) => {
+          if (!stonecutterAccepts(st)) return false;
+          if (!this.work[0]) { this.work[0] = st; return true; }
+          if (canStack(this.work[0], st)) {
+            const n = Math.min(st.count, maxStack(st.id) - this.work[0].count);
+            this.work[0].count += n; st.count -= n;
+            return st.count <= 0 ? true : n ? 'partial' : false;
+          }
+          return false;
+        },
       }));
     });
     this.refreshAll();

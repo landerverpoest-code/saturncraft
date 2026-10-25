@@ -237,6 +237,15 @@ const SCAFFOLD_TOP = [SCAFFOLD_BOXES[0]], NO_BOXES = [];
 export const SCAFFOLD_CTX = { feetY: -Infinity, sneak: false };
 const POT_BOXES = [[5 / 16, 0, 5 / 16, 11 / 16, 6 / 16, 11 / 16]];
 const CHAIN_BOXES = [[6.5 / 16, 0, 6.5 / 16, 9.5 / 16, 1, 9.5 / 16]];
+const swapXZ = (boxes) => boxes.map(([x0, y0, z0, x1, y1, z1]) => [z0, y0, x0, z1, y1, x1]);
+const px16 = (...a) => a.map((v) => v / 16);
+// Grindstone (meta bit 0 = axis; 0: the wheel's faces look along x): the wheel, then each leg and its pivot
+const GRIND_X = [px16(4, 4, 2, 12, 16, 14), px16(2, 0, 6, 4, 7, 10), px16(2, 7, 5, 4, 13, 11), px16(12, 0, 6, 14, 7, 10), px16(12, 7, 5, 14, 13, 11)];
+const GRIND_Z = swapXZ(GRIND_X);
+// Stonecutter: a stone base and the saw blade standing up out of it (axis 0: the blade runs along x); it collides as its base only
+const CUTTER_BASE = [px16(0, 0, 0, 16, 9, 16)];
+const CUTTER_X = [CUTTER_BASE[0], px16(1, 9, 7.5, 15, 16, 8.5)];
+const CUTTER_Z = swapXZ(CUTTER_X);
 /** Render / collision boxes of a SHAPE.BOXES block. */
 // Brewing Alembic: base plate, ember rod and a cross-shaped arm near the top
 const ALEMBIC_BOXES = [[2 / 16, 0, 2 / 16, 14 / 16, 2 / 16, 14 / 16], [7 / 16, 2 / 16, 7 / 16, 9 / 16, 14 / 16, 9 / 16],
@@ -278,6 +287,8 @@ export function blockBoxes(id, meta) {
   if (id === B.SCAFFOLDING) return SCAFFOLD_BOXES;
   if (id === B.FLOWER_POT) return POT_BOXES;
   if (id === B.CHAIN) return CHAIN_BOXES;
+  if (id === B.GRINDSTONE) return meta & 1 ? GRIND_Z : GRIND_X;
+  if (id === B.STONECUTTER) return meta & 1 ? CUTTER_Z : CUTTER_X;
   return TABLE_BOXES;
 }
 /** One box enclosing all of a SHAPE.BOXES block (selection outline). */
@@ -294,7 +305,7 @@ SHAPED_COLLISION[B.BED] = 1;
 SHAPED_COLLISION[B.GLASS_PANE] = 1;
 SHAPED_COLLISION[B.SNOW_LAYER] = 1;
 SHAPED_COLLISION[B.SEEPSTONE_SPIKE] = 1;
-for (const id of [B.COBBLESTONE_WALL, B.MOSSY_COBBLESTONE_WALL, B.OAK_TRAPDOOR, B.ENCHANTING_TABLE, B.ANVIL, B.CAMPFIRE, B.LANTERN, B.BREWING_STAND, B.TURTLE_EGG, B.HOPPER, B.COMPOSTER, B.SCAFFOLDING, B.FLOWER_POT, B.CHAIN]) SHAPED_COLLISION[id] = 1;
+for (const id of [B.COBBLESTONE_WALL, B.MOSSY_COBBLESTONE_WALL, B.OAK_TRAPDOOR, B.ENCHANTING_TABLE, B.ANVIL, B.CAMPFIRE, B.LANTERN, B.BREWING_STAND, B.TURTLE_EGG, B.HOPPER, B.COMPOSTER, B.SCAFFOLDING, B.FLOWER_POT, B.CHAIN, B.GRINDSTONE, B.STONECUTTER]) SHAPED_COLLISION[id] = 1;
 /** Snow layer box (n = meta + 1 layers); collision is one layer lower, so a single layer has none. */
 export const snowBox = (meta, collide = false) => [0, 0, 0, 1, ((meta & 7) + (collide ? 0 : 1)) * 2 / 16, 1];
 for (const id of [B.OAK_FENCE, B.SPRUCE_FENCE, B.BIRCH_FENCE, B.OAK_FENCE_GATE]) SHAPED_COLLISION[id] = 1;
@@ -322,7 +333,7 @@ export function collisionBoxes(id, meta, world, x, y, z) {
   if (sh === SHAPE.TRAPDOOR) return [trapdoorBox(meta)];
   if (sh === SHAPE.WALL) return wallBoxes(world ? wallMask((a, b, c) => world.getBlock(a, b, c), x, y, z) : 0, 1.5);
   if (sh === SHAPE.STAIRS) return world ? stairBoxes(meta, (dx, dz) => [world.getBlock(x + dx, y, z + dz), world.getMeta(x + dx, y, z + dz)], (n) => BLOCKS[n] && BLOCKS[n].shape === SHAPE.STAIRS) : stairBoxes(meta);
-  if (sh === SHAPE.BOXES) return id === B.ANVIL ? [boundsOf(blockBoxes(id, meta))] : id === B.BREWING_STAND ? ALEMBIC_COLLISION : blockBoxes(id, meta);
+  if (sh === SHAPE.BOXES) return id === B.STONECUTTER ? CUTTER_BASE : id === B.ANVIL ? [boundsOf(blockBoxes(id, meta))] : id === B.BREWING_STAND ? ALEMBIC_COLLISION : blockBoxes(id, meta);
   if (sh === SHAPE.CIRCUIT) return circuitCollision(id, meta);
   if (sh === SHAPE.CRYSTAL) return [crystalBox(id, meta)];
   return null;

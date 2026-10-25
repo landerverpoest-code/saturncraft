@@ -164,6 +164,8 @@ export class Audio {
       case 'squish': this.noise(t, 0.12, 500, 2, 0.3 * gain, out, 'lowpass'); this.tone(t, 0.1, 160, 90, 0.12 * gain, out, 'sine'); break;
       case 'clank': this.tone(t, 0.18, 220, 120, 0.25 * gain, out, 'square'); this.noise(t, 0.15, 1800, 2, 0.3 * gain, out); break;
       case 'howl': this.tone(t, 0.12, 380, 520, 0.2 * gain, out, 'sawtooth'); this.tone(t + 0.18, 0.1, 400, 300, 0.18 * gain, out, 'sawtooth'); break;
+      case 'grind': for (let k = 0; k < 5; k++) this.noise(t + k * 0.07, 0.09, 1600 + k * 120, 2.5, 0.22 * gain, out); break; // a wheel grinding the gear
+      case 'saw': this.noise(t, 0.25, 4200, 5, 0.25 * gain, out); this.tone(t, 0.25, 1800, 2200, 0.04 * gain, out, 'sawtooth'); break; // the stonecutter's blade biting
       case 'shear': this.noise(t, 0.06, 4000, 3, 0.25 * gain, out); this.noise(t + 0.08, 0.06, 3500, 3, 0.25 * gain, out); break;
       case 'hmm': this.tone(t, 0.12, 180, 210, 0.2 * gain, out, 'sawtooth'); this.tone(t + 0.13, 0.22, 210, 150, 0.2 * gain, out, 'sawtooth'); break;
       case 'page': this.noise(t, 0.12, 2400, 1.5, 0.12 * gain, out); this.noise(t + 0.1, 0.1, 3000, 1.5, 0.08 * gain, out); break;

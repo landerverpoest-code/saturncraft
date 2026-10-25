@@ -564,6 +564,12 @@ ext('DISPENSER'); ext('DROPPER');
 for (const [key, name, tex] of [['DISPENSER', 'Dispenser', 'dispenser'], ['DROPPER', 'Dropper', 'dropper']]) {
   def(B[key], name, { hardness: 3.5, resistance: 3.5, tool: TOOL.PICKAXE, tier: TIER.WOOD, container: true, tex: { top: 'dispenser_top', bottom: 'dispenser_top', side: 'furnace_side', front: tex + '_front' } });
 }
+// Workstations (world/workstations.js): the Grindstone (wheel between two legs) and the Stonecutter
+// (a saw blade in a stone base); meta bit 0 = axis, like the anvil
+ext('GRINDSTONE');
+def(B.GRINDSTONE, 'Grindstone', { hardness: 2, resistance: 6, tool: TOOL.PICKAXE, sound: 'stone', opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, tex: { top: 'grindstone_round', bottom: 'grindstone_round', side: 'grindstone_round' } });
+ext('STONECUTTER');
+def(B.STONECUTTER, 'Stonecutter', { hardness: 3.5, resistance: 3.5, tool: TOOL.PICKAXE, tier: TIER.WOOD, opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, tex: { top: 'stonecutter_top', bottom: 'stonecutter_bottom', side: 'stonecutter_side' } });
 
 export const NUM_BLOCKS = BLOCKS.length;
 

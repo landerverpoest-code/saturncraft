@@ -287,6 +287,8 @@ shaped(['B B', ' B '], { B: I.BRICK }, B.FLOWER_POT, 1);
 shaped(['BBB', 'BBB', 'BBB'], { B: I.BERYL }, B.BERYL_BLOCK, 1);
 shapeless([B.BERYL_BLOCK], I.BERYL, 9);
 shaped(['GGG', 'GSG', 'OOO'], { G: B.GLASS, S: I.SUNCORE, O: B.OBSIDIAN }, B.BEACON, 1);
+shaped(['SLS', 'P P'], { S: I.STICK, L: B.STONE_SLAB, P: 'planks' }, B.GRINDSTONE, 1);
+shaped([' I ', 'SSS'], { I: I.IRON_INGOT, S: B.STONE }, B.STONECUTTER, 1);
 shapeless([I.IRON_INGOT], I.IRON_NUGGET, 9);
 shaped(['NNN', 'NNN', 'NNN'], { N: I.IRON_NUGGET }, I.IRON_INGOT, 1);
 shaped(['N', 'I', 'N'], { N: I.IRON_NUGGET, I: I.IRON_INGOT }, B.CHAIN, 1);
