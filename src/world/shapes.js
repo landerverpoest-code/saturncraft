@@ -305,6 +305,8 @@ SHAPED_COLLISION[B.BED] = 1;
 SHAPED_COLLISION[B.GLASS_PANE] = 1;
 SHAPED_COLLISION[B.SNOW_LAYER] = 1;
 SHAPED_COLLISION[B.SEEPSTONE_SPIKE] = 1;
+SHAPED_COLLISION[B.MUD] = 1; // you sink into mud a little
+const MUD_BOX = [[0, 0, 0, 1, 14 / 16, 1]];
 for (const id of [B.COBBLESTONE_WALL, B.MOSSY_COBBLESTONE_WALL, B.OAK_TRAPDOOR, B.ENCHANTING_TABLE, B.ANVIL, B.CAMPFIRE, B.LANTERN, B.BREWING_STAND, B.TURTLE_EGG, B.HOPPER, B.COMPOSTER, B.SCAFFOLDING, B.FLOWER_POT, B.CHAIN, B.GRINDSTONE, B.STONECUTTER]) SHAPED_COLLISION[id] = 1;
 /** Snow layer box (n = meta + 1 layers); collision is one layer lower, so a single layer has none. */
 export const snowBox = (meta, collide = false) => [0, 0, 0, 1, ((meta & 7) + (collide ? 0 : 1)) * 2 / 16, 1];
@@ -320,6 +322,7 @@ for (const b of BLOCKS) if (b && (b.shape === SHAPE.SLAB || b.shape === SHAPE.ST
  * cube. (Ladders and torches are not solid and never collide.)
  */
 export function collisionBoxes(id, meta, world, x, y, z) {
+  if (id === B.MUD) return MUD_BOX;
   if (id === B.SCAFFOLDING) return !SCAFFOLD_CTX.sneak && SCAFFOLD_CTX.feetY >= y + 1 - 1e-4 ? SCAFFOLD_TOP : NO_BOXES;
   if (BLOCKS[id].shape === SHAPE.DOOR) return [doorBox(meta)];
   const shp = BLOCKS[id].shape;

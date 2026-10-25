@@ -570,6 +570,53 @@ ext('GRINDSTONE');
 def(B.GRINDSTONE, 'Grindstone', { hardness: 2, resistance: 6, tool: TOOL.PICKAXE, sound: 'stone', opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, tex: { top: 'grindstone_round', bottom: 'grindstone_round', side: 'grindstone_round' } });
 ext('STONECUTTER');
 def(B.STONECUTTER, 'Stonecutter', { hardness: 3.5, resistance: 3.5, tool: TOOL.PICKAXE, tier: TIER.WOOD, opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, tex: { top: 'stonecutter_top', bottom: 'stonecutter_bottom', side: 'stonecutter_side' } });
+// Mangrove Swamps (world/trees.js mangrove, generator.js). Mud: you sink in a little (shapes.js
+// collisionBoxes); a Water Vial makes it from dirt; with wheat it packs into Packed Mud for Mud Bricks.
+ext('MUD'); def(B.MUD, 'Mud', { hardness: 0.5, resistance: 0.5, tool: TOOL.SHOVEL, sound: 'mud' });
+ext('PACKED_MUD'); def(B.PACKED_MUD, 'Packed Mud', { hardness: 1, resistance: 3, tool: TOOL.PICKAXE, sound: 'gravel' });
+ext('MUD_BRICKS'); def(B.MUD_BRICKS, 'Mud Bricks', { hardness: 1.5, resistance: 3, tool: TOOL.PICKAXE, tier: TIER.WOOD });
+{
+  const m = BLOCKS[B.MUD_BRICKS];
+  const common = { hardness: m.hardness, resistance: m.resistance, tool: m.tool, tier: m.tier, sound: m.sound, opaque: false, opacity: 15, tex: { ...m.tex }, base: B.MUD_BRICKS };
+  ext('MUD_BRICK_SLAB'); def(B.MUD_BRICK_SLAB, 'Mud Brick Slab', { ...common, shape: SHAPE.SLAB, drops: 'slab' });
+  ext('MUD_BRICK_STAIRS'); def(B.MUD_BRICK_STAIRS, 'Mud Brick Stairs', { ...common, shape: SHAPE.STAIRS });
+  STONE_SETS.push([B.MUD_BRICKS, B.MUD_BRICK_SLAB, B.MUD_BRICK_STAIRS, 'Mud Brick']);
+}
+// Mangrove wood: red planks, leaves in their own green, Propagules (the sapling: meta bit 3 = hanging
+// under leaves with its age in bits 0-1, else planted with the sapling's growth stage), see-through
+// prop roots. Roots and planted propagules can stand in water: their waterlogged forms
+// (WATERLOGGED_FORM) work like kelp and leave the water behind when broken.
+ext('MANGROVE_LOG'); def(B.MANGROVE_LOG, 'Mangrove Log', logDef('Mangrove', 'mangrove'));
+ext('MANGROVE_LEAVES'); def(B.MANGROVE_LEAVES, 'Mangrove Leaves', { ...leaves, tint: null, drops: 'leaves' });
+ext('MANGROVE_PLANKS'); def(B.MANGROVE_PLANKS, 'Mangrove Planks', plankDef);
+ext('MANGROVE_PROPAGULE'); def(B.MANGROVE_PROPAGULE, 'Mangrove Propagule', { ...plant });
+const rootDef = { hardness: 0.7, resistance: 0.7, tool: TOOL.AXE, sound: 'wood', flammable: true, opaque: false, opacity: 1, layer: LAYER.CUTOUT, lattice: true, tex: { all: 'mangrove_roots' } };
+ext('MANGROVE_ROOTS'); def(B.MANGROVE_ROOTS, 'Mangrove Roots', rootDef);
+ext('WATERLOGGED_MANGROVE_ROOTS'); def(B.WATERLOGGED_MANGROVE_ROOTS, 'Mangrove Roots', { ...rootDef, waterlogged: true, hidden: true, drops: B.MANGROVE_ROOTS });
+ext('WATERLOGGED_MANGROVE_PROPAGULE'); def(B.WATERLOGGED_MANGROVE_PROPAGULE, 'Mangrove Propagule', { ...plant, waterlogged: true, opacity: 1, hidden: true, drops: B.MANGROVE_PROPAGULE, tex: { all: 'mangrove_propagule' } });
+ext('MUDDY_MANGROVE_ROOTS'); def(B.MUDDY_MANGROVE_ROOTS, 'Muddy Mangrove Roots', { hardness: 0.7, resistance: 0.7, tool: TOOL.SHOVEL, sound: 'mud', tex: { top: 'muddy_mangrove_roots_top', bottom: 'muddy_mangrove_roots_top', side: 'muddy_mangrove_roots' } });
+/** Dry block -> its form standing in water, and back. */
+export const WATERLOGGED_FORM = { [B.MANGROVE_ROOTS]: B.WATERLOGGED_MANGROVE_ROOTS, [B.MANGROVE_PROPAGULE]: B.WATERLOGGED_MANGROVE_PROPAGULE };
+export const DRY_FORM = Object.fromEntries(Object.entries(WATERLOGGED_FORM).map(([d, w]) => [w, +d]));
+export const PROPAGULE_HANGING = 8;
+export const isPropagule = (id) => id === B.MANGROVE_PROPAGULE || id === B.WATERLOGGED_MANGROVE_PROPAGULE;
+// slabs, stairs, fence, door, trapdoor and gate of mangrove wood, joining the other woods' sets
+{
+  const m = BLOCKS[B.MANGROVE_PLANKS];
+  const common = { hardness: m.hardness, resistance: m.resistance, tool: m.tool, tier: m.tier, sound: m.sound, flammable: true, opaque: false, opacity: 15, tex: { ...m.tex }, base: B.MANGROVE_PLANKS };
+  ext('MANGROVE_SLAB'); def(B.MANGROVE_SLAB, 'Mangrove Slab', { ...common, shape: SHAPE.SLAB, drops: 'slab' });
+  ext('MANGROVE_STAIRS'); def(B.MANGROVE_STAIRS, 'Mangrove Stairs', { ...common, shape: SHAPE.STAIRS });
+  ext('MANGROVE_FENCE'); def(B.MANGROVE_FENCE, 'Mangrove Fence', { ...wood, shape: SHAPE.FENCE, tex: { ...m.tex } });
+  WOOD_SETS.push([B.MANGROVE_PLANKS, B.MANGROVE_SLAB, B.MANGROVE_STAIRS, B.MANGROVE_FENCE, 'Mangrove']);
+  ext('MANGROVE_DOOR'); ext('MANGROVE_TRAPDOOR');
+  // lateItem: the door item is appended at the end of world/items.js so earlier item ids stay put
+  def(B.MANGROVE_DOOR, 'Mangrove Door', { ...BLOCKS[B.DOOR], id: B.MANGROVE_DOOR, name: 'Mangrove Door', tex: { all: 'mangrove_door_lower' }, doorTex: ['mangrove_door_lower', 'mangrove_door_upper'], lateItem: true });
+  def(B.MANGROVE_TRAPDOOR, 'Mangrove Trapdoor', { ...BLOCKS[B.OAK_TRAPDOOR], id: B.MANGROVE_TRAPDOOR, name: 'Mangrove Trapdoor', tex: { all: 'mangrove_trapdoor' } });
+  DOOR_SETS.push([B.MANGROVE_PLANKS, B.MANGROVE_DOOR, B.MANGROVE_TRAPDOOR, 'Mangrove', 'mangrove']);
+  ext('MANGROVE_FENCE_GATE'); def(B.MANGROVE_FENCE_GATE, 'Mangrove Fence Gate', { ...wood, shape: SHAPE.GATE, tex: { ...m.tex } });
+  GATE_SETS.push([B.MANGROVE_PLANKS, B.MANGROVE_FENCE_GATE]);
+}
+POTTED.push(B.MANGROVE_PROPAGULE); // appended: pot metas index this list
 
 export const NUM_BLOCKS = BLOCKS.length;
 

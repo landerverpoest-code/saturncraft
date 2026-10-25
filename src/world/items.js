@@ -219,8 +219,8 @@ item('violite_shard', 'Violite Shard', { iconStyle: ['gem', { h: '#9a6ae0', H: '
 item('farglass', 'Farglass', { stack: 1, spyglass: true, iconStyle: ['horn', { h: '#d47a4c', H: '#f0a070', s: '#5a2e8a' }] });
 
 // Fuel for block items
-for (const id of [B.BLOSSOM_PLANKS, B.BLOSSOM_LOG, B.OAK_PLANKS, B.SPRUCE_PLANKS, B.BIRCH_PLANKS, B.JUNGLE_PLANKS, B.ACACIA_PLANKS, B.DARK_OAK_PLANKS, B.OAK_LOG, B.BIRCH_LOG, B.SPRUCE_LOG, B.JUNGLE_LOG, B.ACACIA_LOG, B.DARK_OAK_LOG, B.WORKBENCH]) ITEMS[id].fuel = 300;
-for (const id of [B.OAK_SAPLING, B.BIRCH_SAPLING, B.SPRUCE_SAPLING, B.JUNGLE_SAPLING, B.ACACIA_SAPLING, B.DARK_OAK_SAPLING, B.BLOSSOM_SAPLING]) ITEMS[id].fuel = 100;
+for (const id of [B.MANGROVE_PLANKS, B.MANGROVE_LOG, B.MANGROVE_ROOTS, B.BLOSSOM_PLANKS, B.BLOSSOM_LOG, B.OAK_PLANKS, B.SPRUCE_PLANKS, B.BIRCH_PLANKS, B.JUNGLE_PLANKS, B.ACACIA_PLANKS, B.DARK_OAK_PLANKS, B.OAK_LOG, B.BIRCH_LOG, B.SPRUCE_LOG, B.JUNGLE_LOG, B.ACACIA_LOG, B.DARK_OAK_LOG, B.WORKBENCH]) ITEMS[id].fuel = 300;
+for (const id of [B.OAK_SAPLING, B.BIRCH_SAPLING, B.SPRUCE_SAPLING, B.JUNGLE_SAPLING, B.ACACIA_SAPLING, B.DARK_OAK_SAPLING, B.BLOSSOM_SAPLING, B.MANGROVE_PROPAGULE]) ITEMS[id].fuel = 100;
 ITEMS[B.COAL_BLOCK].fuel = 16000;
 ITEMS[B.DRIED_KELP_BLOCK].fuel = 4000;
 
@@ -277,6 +277,7 @@ item('sweet_berries', 'Sweet Berries', { food: { hunger: 2, saturation: 0.4 }, p
 // doors of the other woods (the oak door item came first)
 BLOCKS[B.DOOR].doorItem = I.OAK_DOOR;
 for (const [planks, door, , name, key] of DOOR_SETS.slice(1)) {
+  if (BLOCKS[door].lateItem) continue; // (appended at the end, below)
   const d = item(key + '_door', `${name} Door`, { door: true, doorBlock: door, doorPlanks: planks });
   BLOCKS[door].doorItem = d.id;
 }
@@ -301,6 +302,11 @@ const ICON_STAND = ['................', '.......ww.......', '.......ww.......', 
 item('armor_stand', 'Armor Stand', { stack: 16, armorStand: true, iconStyle: [ICON_STAND, { w: '#b08850', s: '#b4b4b4', S: '#7a7a7a' }] });
 // Fire Charge: lights a fire where it is used (used up); a Dispenser shoots it as a small fireball
 item('fire_charge', 'Fire Charge', { igniter: true, charge: true, iconStyle: ['pearl', { h: '#4a2a14', H: '#ff8a20' }] });
+// doors of woods added after the item list was laid out (blocks marked lateItem)
+for (const [planks, door, , name, key] of DOOR_SETS) {
+  if (!BLOCKS[door].lateItem) continue;
+  BLOCKS[door].doorItem = item(key + '_door', `${name} Door`, { door: true, doorBlock: door, doorPlanks: planks }).id;
+}
 ITEMS[B.GLOOMSHELL_BOX].stack = 1; // a box keeps its contents in the item (stack.contents), so it never stacks
 
 /** Light level (0-15) an item gives when held: a torch, lantern or other light block; 0 for the rest. */

@@ -1,17 +1,17 @@
 // Tree shapes shared by world generation and saplings: a list of
 // [dx, dy, dz, block, force] relative to the trunk base, in placement order.
 // Leaves never replace other blocks; logs (force) replace anything soft.
-import { B } from './blocks.js';
+import { B, WATERLOGGED_FORM, isWaterish, PROPAGULE_HANGING } from './blocks.js';
 import { hashf, mulberry32 } from './noise.js';
 import { SIDE_DIRS } from './shapes.js';
 
-export const LEAVES = new Set([B.OAK_LEAVES, B.BIRCH_LEAVES, B.SPRUCE_LEAVES, B.JUNGLE_LEAVES, B.ACACIA_LEAVES, B.DARK_OAK_LEAVES, B.BLOSSOM_LEAVES]);
-export const LOGS = new Set([B.OAK_LOG, B.BIRCH_LOG, B.SPRUCE_LOG, B.JUNGLE_LOG, B.ACACIA_LOG, B.DARK_OAK_LOG, B.BLOSSOM_LOG]);
+export const LEAVES = new Set([B.OAK_LEAVES, B.BIRCH_LEAVES, B.SPRUCE_LEAVES, B.JUNGLE_LEAVES, B.ACACIA_LEAVES, B.DARK_OAK_LEAVES, B.BLOSSOM_LEAVES, B.MANGROVE_LEAVES]);
+export const LOGS = new Set([B.OAK_LOG, B.BIRCH_LOG, B.SPRUCE_LOG, B.JUNGLE_LOG, B.ACACIA_LOG, B.DARK_OAK_LOG, B.BLOSSOM_LOG, B.MANGROVE_LOG]);
 
 /**
  * Blocks of a tree of `kind`; r in [0,1) picks the variation. Kinds: 'oak',
  * 'birch', 'spruce', 'swamp_oak', 'jungle', 'jungle_big', 'jungle_bush',
- * 'acacia', 'dark_oak', 'brown_mushroom', 'red_mushroom'. Entries are
+ * 'acacia', 'dark_oak', 'blossom', 'mangrove', 'brown_mushroom', 'red_mushroom'. Entries are
  * [dx, dy, dz, block, force, meta?] (meta: the side a vine hangs on).
  */
 export function treeShape(kind, r) {
@@ -228,6 +228,51 @@ const BIG_SHAPES = {
     }
     return finish(out);
   },
+  // Mangrove: a trunk raised on its roots, arching prop roots curving out and down into the mud
+  // (Muddy Mangrove Roots where they go in), a round crown with Propagules hanging under it
+  mangrove(rng) {
+    const out = [];
+    const rise = 2 + Math.floor(rng() * 2), h = rise + 4 + Math.floor(rng() * 3);
+    for (let k = 0; k < rise; k++) out.push([0, k, 0, B.MANGROVE_ROOTS, true]);
+    out.push([0, -1, 0, B.MUDDY_MANGROVE_ROOTS, true]);
+    for (let k = rise; k < h; k++) out.push([0, k, 0, B.MANGROVE_LOG, true]);
+    const dirs = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]];
+    const n = 4 + Math.floor(rng() * 3), first = Math.floor(rng() * 8);
+    for (let i = 0; i < n; i++) {
+      const [dx, dz] = dirs[(first + Math.round(i * 8 / n)) % 8];
+      const reach = 2 + Math.floor(rng() * 3), y0 = rise - 1 + Math.floor(rng() * 2);
+      let x = 0, z = 0, y = y0;
+      for (let s = 1; s <= reach; s++) {
+        // a quarter arch: nearly level by the trunk, steep where it reaches the ground
+        const ny = Math.round(y0 - (y0 + 1) * (s / reach) ** 2);
+        if (dx && dz) out.push([x + dx, y, z, B.MANGROVE_ROOTS, true]); // diagonal steps stay joined face to face
+        x += dx; z += dz;
+        for (let yy = y; yy >= ny; yy--) out.push([x, yy, z, yy < 0 ? B.MUDDY_MANGROVE_ROOTS : B.MANGROVE_ROOTS, true]);
+        y = ny;
+      }
+    }
+    // the crown, and a side branch with its own tuft now and then
+    disc(out, 0, h - 2, 0, 2.6, B.MANGROVE_LEAVES, 0.4);
+    disc(out, 0, h - 1, 0, 3.0, B.MANGROVE_LEAVES, 0.3);
+    disc(out, 0, h, 0, 2.4, B.MANGROVE_LEAVES, 0.3);
+    disc(out, 0, h + 1, 0, 1.3, B.MANGROVE_LEAVES, 0);
+    if (rng() < 0.6) {
+      const [bx, bz] = dirs[Math.floor(rng() * 4) * 2];
+      out.push([bx, h - 1, bz, B.MANGROVE_LOG, true], [bx * 2, h, bz * 2, B.MANGROVE_LOG, true]);
+      disc(out, bx * 2, h, bz * 2, 2.0, B.MANGROVE_LEAVES, 0.3);
+      disc(out, bx * 2, h + 1, bz * 2, 1.2, B.MANGROVE_LEAVES, 0);
+    }
+    // keep leaves near real logs (finish() would also count the roots), then hang propagules under the lowest
+    const logs = out.filter((e) => e[3] === B.MANGROVE_LOG);
+    const kept = out.filter((e) => e[3] !== B.MANGROVE_LEAVES || logs.some((l) => Math.abs(l[0] - e[0]) + Math.abs(l[1] - e[1]) + Math.abs(l[2] - e[2]) <= 4));
+    const occ = new Set(kept.map((e) => `${e[0]},${e[1]},${e[2]}`));
+    for (const e of kept.slice()) {
+      if (e[3] !== B.MANGROVE_LEAVES || occ.has(`${e[0]},${e[1] - 1},${e[2]}`) || rng() >= 0.22) continue;
+      occ.add(`${e[0]},${e[1] - 1},${e[2]}`);
+      kept.push([e[0], e[1] - 1, e[2], B.MANGROVE_PROPAGULE, false, PROPAGULE_HANGING | Math.floor(rng() * 4)]);
+    }
+    return finish(kept);
+  },
   // Dark oak: thick 2x2 trunk with stubby branches under a broad, dense crown
   dark_oak(rng) {
     const out = [], h = 6 + Math.floor(rng() * 3);
@@ -265,7 +310,7 @@ const BIG_SHAPES = {
 
 export const PLANTS = new Set([B.TALL_GRASS, B.SUNPETAL, B.REDBLOOM, B.SKYBELL, B.ROSETTE, B.BROWN_MUSHROOM, B.RED_MUSHROOM, B.DEAD_BUSH, B.VINES]);
 const SOFT = new Set([B.AIR, ...PLANTS,
-  B.OAK_SAPLING, B.BIRCH_SAPLING, B.SPRUCE_SAPLING, B.JUNGLE_SAPLING, B.ACACIA_SAPLING, B.DARK_OAK_SAPLING, B.BLOSSOM_SAPLING]);
+  B.OAK_SAPLING, B.BIRCH_SAPLING, B.SPRUCE_SAPLING, B.JUNGLE_SAPLING, B.ACACIA_SAPLING, B.DARK_OAK_SAPLING, B.BLOSSOM_SAPLING, B.MANGROVE_PROPAGULE, B.WATERLOGGED_MANGROVE_PROPAGULE]);
 
 /**
  * Grow a tree from a sapling at x,y,z in a live world. Fails (returns false)
@@ -273,30 +318,37 @@ const SOFT = new Set([B.AIR, ...PLANTS,
  */
 export function growTree(world, x, y, z, kind, rng = Math.random) {
   const shape = treeShape(kind, rng());
+  // mangroves grow up out of shallow water
+  const soft = kind === 'mangrove' ? (id) => SOFT.has(id) || isWaterish(id) : (id) => SOFT.has(id);
   for (let k = 1; k < shape.height; k++) {
     const id = world.getBlock(x, y + k, z);
-    if (!SOFT.has(id) && !LEAVES.has(id)) return false;
+    if (!soft(id) && !LEAVES.has(id)) return false;
   }
-  // wide trunks and leaning or branching logs need room as well
-  for (const [dx, dy, dz, , force] of shape) {
-    if (!force || dy < 0 || (!dx && !dz)) continue;
-    const id = world.getBlock(x + dx, y + dy, z + dz);
-    if (!SOFT.has(id) && !LEAVES.has(id)) return false;
+  // wide trunks and leaning or branching logs need room as well (roots just stop where the ground is)
+  for (const [dx, dy, dz, id, force] of shape) {
+    if (!force || dy < 0 || (!dx && !dz) || id === B.MANGROVE_ROOTS) continue;
+    const cur = world.getBlock(x + dx, y + dy, z + dz);
+    if (!soft(cur) && !LEAVES.has(cur)) return false;
   }
   for (const [dx, dy, dz, id, force, meta] of shape) {
-    if (dy < 0) continue; // keep the ground as it is
     const cur = world.getBlock(x + dx, y + dy, z + dz);
-    if (force ? (SOFT.has(cur) || LEAVES.has(cur)) : SOFT.has(cur)) {
-      world.setBlock(x + dx, y + dy, z + dz, id, meta || 0);
+    if (dy < 0) { // keep the ground as it is (but roots go into mud)
+      if (id === B.MUDDY_MANGROVE_ROOTS && cur === B.MUD) world.setBlock(x + dx, y + dy, z + dz, id, 0);
+      continue;
+    }
+    if (force ? (soft(cur) || LEAVES.has(cur)) : SOFT.has(cur)) {
+      world.setBlock(x + dx, y + dy, z + dz, isWaterish(cur) && WATERLOGGED_FORM[id] ? WATERLOGGED_FORM[id] : id, meta || 0);
     }
   }
   return true;
 }
 
 export const SAPLING_TREE = { [B.OAK_SAPLING]: 'oak', [B.BIRCH_SAPLING]: 'birch', [B.SPRUCE_SAPLING]: 'spruce',
-  [B.JUNGLE_SAPLING]: 'jungle', [B.ACACIA_SAPLING]: 'acacia', [B.DARK_OAK_SAPLING]: 'dark_oak', [B.BLOSSOM_SAPLING]: 'blossom' };
+  [B.JUNGLE_SAPLING]: 'jungle', [B.ACACIA_SAPLING]: 'acacia', [B.DARK_OAK_SAPLING]: 'dark_oak', [B.BLOSSOM_SAPLING]: 'blossom',
+  [B.MANGROVE_PROPAGULE]: 'mangrove', [B.WATERLOGGED_MANGROVE_PROPAGULE]: 'mangrove' };
 export const LEAF_SAPLING = { [B.OAK_LEAVES]: B.OAK_SAPLING, [B.BIRCH_LEAVES]: B.BIRCH_SAPLING, [B.SPRUCE_LEAVES]: B.SPRUCE_SAPLING,
-  [B.JUNGLE_LEAVES]: B.JUNGLE_SAPLING, [B.ACACIA_LEAVES]: B.ACACIA_SAPLING, [B.DARK_OAK_LEAVES]: B.DARK_OAK_SAPLING, [B.BLOSSOM_LEAVES]: B.BLOSSOM_SAPLING };
+  [B.JUNGLE_LEAVES]: B.JUNGLE_SAPLING, [B.ACACIA_LEAVES]: B.ACACIA_SAPLING, [B.DARK_OAK_LEAVES]: B.DARK_OAK_SAPLING, [B.BLOSSOM_LEAVES]: B.BLOSSOM_SAPLING,
+  [B.MANGROVE_LEAVES]: B.MANGROVE_PROPAGULE };
 
 /**
  * Leaf decay: natural leaves (meta 0) with no log within 4 steps through

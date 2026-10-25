@@ -32,7 +32,7 @@ function gaussian() { let u = 0, v = 0; while (!u) u = Math.random(); while (!v)
 const CAT_COATS = [['#c8883a', '#a86a2a'], ['#8a8a86', '#5a5a56'], ['#2a2626', '#141212'], ['#ecebe6', '#c8c6c0'], ['#8a6040', '#3a2a1e'], ['#e8dcc0', '#5a4636']];
 
 /** Blocks that knock a horn off a charging Cragbuck. */
-const HORN_BREAKERS = new Set([B.STONE, B.COBBLESTONE, B.OAK_LOG, B.BIRCH_LOG, B.SPRUCE_LOG, B.JUNGLE_LOG, B.ACACIA_LOG, B.DARK_OAK_LOG, B.BLOSSOM_LOG, B.COAL_ORE, B.IRON_ORE, B.GOLD_ORE, B.DIAMOND_ORE, B.ICE, B.GRANITE].filter((id) => id !== undefined));
+const HORN_BREAKERS = new Set([B.STONE, B.COBBLESTONE, B.OAK_LOG, B.BIRCH_LOG, B.SPRUCE_LOG, B.JUNGLE_LOG, B.ACACIA_LOG, B.DARK_OAK_LOG, B.BLOSSOM_LOG, B.MANGROVE_LOG, B.COAL_ORE, B.IRON_ORE, B.GOLD_ORE, B.DIAMOND_ORE, B.ICE, B.GRANITE].filter((id) => id !== undefined));
 
 const HIVES = new Set([B.BEE_NEST, B.BEEHIVE]);
 const BEE_FLOWERS = new Set([B.SUNPETAL, B.REDBLOOM, B.SKYBELL, B.ROSETTE]);

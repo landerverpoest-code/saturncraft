@@ -1,7 +1,7 @@
 // Face-culled section mesher with smooth lighting and ambient occlusion.
 // Input is a 18x18x18 padded copy of a 16^3 section (1 block border from
 // neighbours) so it can run inside a worker without access to the world.
-import { B, BLOCKS, OPAQUE, SOLID, SHAPES, LAYERS, SHAPE, LAYER, BLOCK_LIMIT, WATERLOGGED, CANDLES, POTTED } from './blocks.js';
+import { B, BLOCKS, OPAQUE, SOLID, SHAPES, LAYERS, SHAPE, LAYER, BLOCK_LIMIT, WATERLOGGED, CANDLES, POTTED, PROPAGULE_HANGING } from './blocks.js';
 import { LEAVES } from './trees.js';
 import { FACE_TILE, FRONT_TILE, texId } from './textures.js';
 import { WOOL_RGB } from './colors.js';
@@ -58,6 +58,11 @@ const CROP_TILES = { [B.WHEAT]: [0, 1, 2, 3, 4, 5, 6, 7].map((i) => texId('wheat
   [B.POTATOES]: [0, 0, 1, 1, 2, 2, 2, 3].map((i) => texId('potatoes_' + i)), [B.BEETROOTS]: [0, 0, 1, 1, 2, 2, 2, 3].map((i) => texId('beetroots_' + i)),
   [B.CINDERROOT]: [0, 1, 2, 3, 3, 3, 3, 3].map((i) => texId('cinderroot_' + i)) };
 const FARMLAND_MOIST = texId('farmland_moist');
+const PROPAGULE_HANG_TILE = texId('mangrove_propagule_hanging');
+const WATER_STILL = texId('water');
+/** See-through blocks whose faces between neighbours of the same kind stay (mangrove roots). */
+const LATTICE = new Uint8Array(BLOCK_LIMIT);
+for (const d of BLOCKS) if (d && d.lattice) LATTICE[d.id] = 1;
 const RAIL_CORNER = texId('rail_corner');
 const PAINT_TILES = ARTS.map(([, w, h], art) => Array.from({ length: w * h }, (_, p) => texId(`painting_${art}_${p}`)));
 const DOOR_LOWER = texId('door_lower'), DOOR_UPPER_TILE = texId('door_upper');
@@ -146,6 +151,7 @@ export function meshSection(sec) {
     const id = blocks[i];
     if (!id) continue;
     const shape = SHAPES[id];
+    if (WATERLOGGED[id]) waterloggedTop(blocks, light, i, x, y, z); // the water's surface over roots standing in it
     const buf = LAYERS[id] === LAYER.TRANSLUCENT ? transBuf : LAYERS[id] === LAYER.CUTOUT ? cutoutBuf : opaqueBuf;
     const ci = (x + z * 16) * 6;
     if (shape === SHAPE.CUBE) {
@@ -155,7 +161,7 @@ export function meshSection(sec) {
         const ni = i + FACE_N[d];
         const nb = blocks[ni];
         if (OPAQUE[nb]) continue;
-        if (translucent && nb === id && !LEAVES.has(id)) continue;
+        if (translucent && nb === id && !LEAVES.has(id) && !LATTICE[id]) continue;
         // smooth light + AO
         const corners = FACE_AO[d];
         const fl = light[ni];
@@ -201,7 +207,7 @@ export function meshSection(sec) {
       meshLiquid(buf, blocks, light, meta, i, id, x, y, z);
     } else if (shape === SHAPE.CROSS) {
       const l = light[i];
-      const tile = id === B.SWEET_BERRY_BUSH ? BERRY_TILES[meta[i] & 3] : FACE_TILE[id * 6 + 2];
+      const tile = id === B.SWEET_BERRY_BUSH ? BERRY_TILES[meta[i] & 3] : id === B.MANGROVE_PROPAGULE && (meta[i] & PROPAGULE_HANGING) ? PROPAGULE_HANG_TILE : FACE_TILE[id * 6 + 2];
       let r = 255, g = 255, b2 = 255;
       if (id === B.TALL_GRASS) { r = colors[ci]; g = colors[ci + 1]; b2 = colors[ci + 2]; }
       const sky = (l >> 4) * 17, blk = (l & 15) * 17;
@@ -574,6 +580,19 @@ function cornerHeight(blocks, meta, i, id, cx, cz) {
   return w ? sum / w : 1;
 }
 const UP = off(0, 1, 0);
+
+/** Still water's surface over a waterlogged block (mangrove roots, propagules) open to the air above. */
+function waterloggedTop(blocks, light, i, x, y, z) {
+  const above = blocks[i + UP];
+  if (above === B.WATER || WATERLOGGED[above] || OPAQUE[above]) return;
+  const l = light[i + UP] || light[i], sky = (l >> 4) * 17, blk = (l & 15) * 17, yy = y + 8 / 9;
+  transBuf.ensure(8);
+  const c = [[0, 1], [1, 1], [1, 0], [0, 0]];
+  for (const [vx, vz] of c) transBuf.vert(x + vx, yy, z + vz, 0, 1, 0, vx, 1 - vz, 255, 255, 255, sky, blk, 0, WATER_STILL);
+  transBuf.quad(false);
+  for (let k = 3; k >= 0; k--) { const [vx, vz] = c[k]; transBuf.vert(x + vx, yy, z + vz, 0, -1, 0, vx, 1 - vz, 255, 255, 255, sky, blk, 0, WATER_STILL); }
+  transBuf.quad(false);
+}
 
 function meshLiquid(buf, blocks, light, meta, i, id, x, y, z) {
   const above = blocks[i + FACE_N[2]];

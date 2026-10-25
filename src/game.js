@@ -79,7 +79,7 @@ THREE.ShaderChunk.fog_vertex = `#ifdef USE_FOG
 
 const CAVE_FOG = new THREE.Color(0.012, 0.012, 0.018);
 export const DIFFICULTIES = ['peaceful', 'easy', 'normal', 'hard'];
-const FIREFLY_BIOMES = new Set(['swamp', 'forest', 'flower_forest', 'blossom_grove', 'dark_forest', 'jungle', 'birch_forest']);
+const FIREFLY_BIOMES = new Set(['swamp', 'forest', 'flower_forest', 'blossom_grove', 'mangrove_swamp', 'dark_forest', 'jungle', 'birch_forest']);
 
 export const DEFAULT_SETTINGS = { renderDistance: 8, fov: 75, sensitivity: 100, volume: 0.5, music: 0.5, shadows: true, shaders: true, shadowMapSize: 1024, pixelRatioCap: 1.25, daylightCycle: true, hostileMobs: true, difficulty: 'normal', showCoords: false };
 
@@ -840,6 +840,7 @@ export class Game {
     const lin = (v) => Math.pow(v / 255, 2.2);
     if (id === B.BIRCH_LEAVES) return [lin(128), lin(167), lin(85)];
     if (id === B.SPRUCE_LEAVES) return [lin(97), lin(153), lin(97)];
+    if (id === B.MANGROVE_LEAVES) return [lin(84), lin(128), lin(46)];
     if (id === B.BLOSSOM_LEAVES) return Math.random() < 0.2 ? [lin(253), lin(230), lin(238)] : [lin(240), lin(162), lin(192)]; // petals
     const b = BIOMES[this.world.biomeAt(x, z)] || BIOMES[3], c = b.foliage || foliageColor(b.temp, b.humid);
     return [lin(c[0] * 0.8), lin(c[1] * 0.8), lin(c[2] * 0.8)];

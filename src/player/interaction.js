@@ -5,7 +5,7 @@ import { pairOnPlace } from '../world/chests.js';
 import { hopperPlaceMeta } from '../world/hoppers.js';
 import { dispenserPlaceMeta } from '../world/dispensers.js';
 import { compost, READY, SETTLE_TICKS } from '../world/composter.js';
-import { B, BLOCKS, SOLID, SHAPE, isFluid, CROPS, isFurnace, DOOR_SETS, CANDLES, POTTED } from '../world/blocks.js';
+import { B, BLOCKS, SOLID, SHAPE, isFluid, CROPS, isFurnace, DOOR_SETS, CANDLES, POTTED, WATERLOGGED_FORM, isPropagule, PROPAGULE_HANGING } from '../world/blocks.js';
 import { ITEMS, I, toolOf, isBlockItem, WOOL_ITEMS, POTION_ITEM, isArrow, DISCS } from '../world/items.js';
 import { POTIONS } from '../world/potions.js';
 import { breakProgressPerTick, blockDrops, canHarvest } from '../world/mining.js';
@@ -49,6 +49,8 @@ const USABLE_BLOCKS = new Set([B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.SMOKER, 
 const CIRCUIT_USE = new Set([B.LEVER, B.STONE_BUTTON, B.REPEATER, B.CHIME_BLOCK]);
 const CIRCUIT_PLACE = new Set([B.LEVER, B.STONE_BUTTON, B.CINNABAR_WIRE, B.REPEATER, B.WOODEN_PRESSURE_PLATE, B.PISTON, B.STICKY_PISTON]);
 const USE_DELAY = 4;
+/** Blocks a Water Vial turns to mud. */
+const MUDDABLE = new Set([B.DIRT, B.DIRT_PATH]);
 
 export class Interaction {
   constructor(game) {
@@ -142,7 +144,8 @@ export class Interaction {
     // right-clicking an animal feeds, breeds or shears it
     if (input.rightPressed && this.mobTarget && this.interactMob(this.mobTarget.mob)) { this.useDelay = USE_DELAY; return; }
     // elixirs and milk are drunk like food is eaten (32 ticks), unless aiming at a block to use
-    const drinkable = d && (d.drink || d.milk) && !(this.target && USABLE_BLOCKS.has(this.target.id) && !p.sneaking);
+    const drinkable = d && (d.drink || d.milk) && !(this.target && USABLE_BLOCKS.has(this.target.id) && !p.sneaking)
+      && !(st.id === POTION_ITEM.water && this.target && MUDDABLE.has(this.target.id)); // a water vial on dirt makes mud instead
     if (input.right && drinkable) {
       this.eating++;
       if (this.eating % 4 === 0) g.audio.play('drink');
@@ -518,6 +521,15 @@ export class Interaction {
         return true;
       }
     }
+    // a Water Vial poured on dirt turns it to mud (the vial is kept)
+    if (st && st.id === POTION_ITEM.water && ct && MUDDABLE.has(ct.id)) {
+      w.setBlockUrgent(ct.x, ct.y, ct.z, B.MUD, 0);
+      if (!p.creative) { p.inventory.slots[p.inventory.selected] = { id: I.GLASS_VIAL, count: 1, damage: 0 }; p.inventory.changed(); }
+      for (let k = 0; k < 10; k++) g.particles.emit(ct.x + Math.random(), ct.y + 1.02, ct.z + Math.random(), 0, 0.03, 0, 0.25, 0.4, 0.8, 18, -0.002);
+      g.audio.play('place_mud', [ct.x + 0.5, ct.y + 0.5, ct.z + 0.5]);
+      this.swing = SWING_TICKS;
+      return true;
+    }
     // Glass vials fill at a water source (which stays)
     if (st && st.id === I.GLASS_VIAL && !(usable && !p.sneaking)) {
       const [ex, ey, ez] = p.eyePos();
@@ -848,6 +860,8 @@ export class Interaction {
     const cur = w.getBlock(px, py, pz);
     if (pshape === SHAPE.SLAB && cur === placeId && w.getMeta(px, py, pz) !== SLAB_DOUBLE) return this.finishPlace(px, py, pz, placeId, SLAB_DOUBLE);
     if (cur && !BLOCKS[cur].replaceable) return false;
+    // roots and propagules set into a water source stand in it (their waterlogged form)
+    if (cur === B.WATER && w.getMeta(px, py, pz) === 0 && WATERLOGGED_FORM[placeId]) placeId = WATERLOGGED_FORM[placeId];
     // pillaring: mid-jump with the feet still dipping into the cell below, place it anyway and lift the player on top
     let lift = false;
     if (SOLID[placeId] && p.intersectsBlock(px, py, pz)) {
@@ -862,7 +876,8 @@ export class Interaction {
       const s = Math.abs(ldx) > Math.abs(ldz) ? (ldx > 0 ? 1 : 3) : (ldz > 0 ? 2 : 0);
       meta = s | (upper && pshape === SHAPE.STAIRS ? STAIRS_UPSIDE : 0);
     }
-    if (placeId === B.LANTERN) meta = t.face[1] === -1 ? 1 : 0; // hangs when placed under a block
+    if (placeId === B.LANTERN) meta = t.face[1] === -1 ? 1 : 0;
+    if (placeId === B.MANGROVE_PROPAGULE && t.face[1] === -1) meta = PROPAGULE_HANGING | 3; // hung back under leaves (ripe) // hangs when placed under a block
     if (pshape === SHAPE.TRAPDOOR) {
       // hinged on the clicked wall, or on the far side from the player on floors and ceilings; upper half when placed high
       const s = t.face[1] === 0 ? sideOf(-t.face[0], -t.face[2]) : (Math.abs(ldx) > Math.abs(ldz) ? (ldx > 0 ? 1 : 3) : (ldz > 0 ? 2 : 0));
@@ -962,6 +977,14 @@ export class Interaction {
       const m = w.getMeta(t.x, t.y, t.z);
       if (m >= 7) return false;
       w.setBlockUrgent(t.x, t.y, t.z, t.id, Math.min(7, m + 2 + Math.floor(Math.random() * 4)));
+      burst(t.x, t.y, t.z);
+      return true;
+    }
+    if (isPropagule(t.id) && (w.getMeta(t.x, t.y, t.z) & PROPAGULE_HANGING)) {
+      // a hanging propagule ripens a stage (ripe ones fall on their own)
+      const m = w.getMeta(t.x, t.y, t.z);
+      if ((m & 3) === 3) return false;
+      w.setBlockUrgent(t.x, t.y, t.z, t.id, m + 1);
       burst(t.x, t.y, t.z);
       return true;
     }

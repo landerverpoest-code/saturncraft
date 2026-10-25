@@ -3,6 +3,7 @@
 // algorithm. Light uses the combined darkening of all three suns.
 import { BIOMES } from '../world/biomes.js';
 import { CATEGORY } from './mobTypes.js';
+import { B } from '../world/blocks.js';
 
 export const MOB_CAPS = { [CATEGORY.MONSTER]: 70, [CATEGORY.CREATURE]: 10 };
 export const CAP_REFERENCE_CHUNKS = 289;      // 17x17 chunks
@@ -54,6 +55,8 @@ export const SPAWN_TABLES = {
     swamp: [...FARM_ANIMALS, { type: 'croaker', weight: 12, min: 2, max: 5 }], savanna: [...FARM_ANIMALS, { type: 'galloper', weight: 6, min: 2, max: 6 }],
     // jungles: mostly pigs and chickens
     jungle: [{ type: 'cluckling', weight: 10, min: 4, max: 4 }, { type: 'bristleback', weight: 10, min: 4, max: 4 }, { type: 'mooxen', weight: 4, min: 4, max: 4 }, { type: 'squawklet', weight: 8, min: 1, max: 2 }, { type: 'croaker', weight: 3, min: 2, max: 3 }],
+    // mangrove swamps: Croakers hopping over the mud and roots
+    mangrove_swamp: [{ type: 'croaker', weight: 10, min: 2, max: 5 }],
     // the mushroom islands keep only their cattle
     mushroom_fields: [{ type: 'mooxen', weight: 8, min: 4, max: 8 }],
     // packs of Howlers (wolves) in forests and taiga
@@ -69,6 +72,11 @@ export const SPAWN_TABLES = {
     default: [],
   },
 };
+
+/** Gillnewts settle in pools over clay (lush caves), or over mud too in a mangrove swamp. */
+export function isNewtPoolFloor(below, mangrove = false) {
+  return below === B.CLAY || (mangrove && (below === B.MUD || below === B.MUDDY_MANGROVE_ROOTS));
+}
 
 /** One chunk in ten lets Wobblers (slimes) spawn below y 40, fixed per world seed. */
 export function isSlimeChunk(seed, cx, cz) {

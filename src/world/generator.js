@@ -10,7 +10,7 @@ import { stampSanctums } from './dimensions/sanctum.js';
 import { stampMonuments } from './monuments.js';
 import { stampCaveFeatures } from './caveGen.js';
 import { treeShape, LEAVES, LOGS, PLANTS } from './trees.js';
-import { B, DEEP_VARIANT, BLOCK_LIMIT, CORALS } from './blocks.js';
+import { B, DEEP_VARIANT, BLOCK_LIMIT, CORALS, WATERLOGGED_FORM } from './blocks.js';
 import { Simplex, hash4, hashf, mulberry32 } from './noise.js';
 import { carveChunk } from './carvers.js';
 import { stampRuins } from './ruinedPortals.js';
@@ -143,6 +143,9 @@ export class TerrainGenerator {
     // swamps: warm, wet lowland flattened to just around sea level (shallow pools)
     const wSwamp = smoothstep(0.66, 0.76, humid) * smoothstep(0.4, 0.55, t0) * smoothstep(1.2, 1.05, t0) * smoothstep(0.3, 0.1, cont) * smoothstep(-0.16, -0.06, cont) * flat;
     if (wSwamp > 0) h += (SEA_LEVEL + 0.2 + detail * 1.4 - h) * wSwamp;
+    // mangrove swamps: warm, wet coasts flattened to a hand's depth of water over mud
+    const wMangrove = smoothstep(0.6, 0.7, humid) * smoothstep(1.0, 1.08, t0) * smoothstep(1.45, 1.32, t0) * smoothstep(-0.2, -0.13, cont) * smoothstep(0.06, -0.01, cont) * flat;
+    if (wMangrove > 0) h += (SEA_LEVEL - 0.3 + detail * 1.2 - h) * wMangrove;
     // badlands: hot, dry and inland, raised into terraced mesas
     const wMesa = smoothstep(1.05, 1.2, t0) * smoothstep(0.4, 0.3, humid) * smoothstep(0.05, 0.22, variant) * smoothstep(-0.02, 0.12, cont) * flat;
     if (wMesa > 0) {
@@ -162,7 +165,7 @@ export class TerrainGenerator {
     out.temp = t0 - Math.max(0, h - 90) / 140;
     out.humid = humid;
     out.variant = variant;
-    out.swamp = wSwamp; out.mesa = wMesa; out.island = wIsland;
+    out.swamp = wSwamp; out.mangrove = wMangrove; out.mesa = wMesa; out.island = wIsland;
     if (wMesa <= 0) out.mesaFloor = true;
     return out;
   }
@@ -237,7 +240,9 @@ export class TerrainGenerator {
     const t = col.temp, h = col.humid;
     if (col.island > 0.5 && top >= SEA_LEVEL - 4) return BIOME.MUSHROOM_FIELDS;
     if (col.cont < -0.18 && top < SEA_LEVEL) return t < 0.15 ? BIOME.FROZEN_OCEAN : BIOME.OCEAN;
-    if (col.swamp > 0.5 && top <= SEA_LEVEL + 3) return BIOME.SWAMP;
+    // the warmest swamps, and warm wet coasts, grow mangroves
+    if (col.swamp > 0.5 && top <= SEA_LEVEL + 3) return t > 0.98 ? BIOME.MANGROVE_SWAMP : BIOME.SWAMP;
+    if (col.mangrove > 0.5 && top <= SEA_LEVEL + 3) return BIOME.MANGROVE_SWAMP;
     if (col.cont < -0.07 && top <= SEA_LEVEL + 3) return t < 0.15 ? BIOME.SNOWY_PLAINS : BIOME.BEACH;
     if (col.mountain > 0.3 && top > 105) return (t < 0.5 || top > 170) ? BIOME.SNOWY_PEAKS : BIOME.STONY_PEAKS;
     if (col.mesa > 0.5) return BIOME.BADLANDS;
@@ -441,6 +446,13 @@ export class TerrainGenerator {
         set(top, top < SEA_LEVEL ? (this.nClay.noise2(wx / 9, wz / 9) > 0.35 ? B.CLAY : B.DIRT) : B.GRASS);
         for (let d = 1; d < dirtDepth; d++) set(top - d, B.DIRT);
         break;
+      case BIOME.MANGROVE_SWAMP: {
+        // mud all over (a few grassy hummocks above the water), clay patches under it
+        const grassy = top > SEA_LEVEL && this.nClay.noise2(wx / 7, wz / 7) > 0.25;
+        set(top, grassy ? B.GRASS : top < SEA_LEVEL && this.nClay.noise2(wx / 9, wz / 9) > 0.5 ? B.CLAY : B.MUD);
+        for (let d = 1; d < dirtDepth; d++) set(top - d, d < dirtDepth - 1 ? B.MUD : B.DIRT);
+        break;
+      }
       case BIOME.MUSHROOM_FIELDS:
         if (top < SEA_LEVEL - 1) { for (let d = 0; d < 3; d++) set(top - d, B.SAND); break; }
         set(top, B.MYCELIUM); for (let d = 1; d < dirtDepth; d++) set(top - d, B.DIRT);
@@ -582,6 +594,7 @@ export class TerrainGenerator {
       case BIOME.FLOWER_FOREST: return 0.022;
       case BIOME.BLOSSOM_GROVE: return 0.007;
       case BIOME.SWAMP: return 0.012;
+      case BIOME.MANGROVE_SWAMP: return 0.03;
       case BIOME.SAVANNA: return 0.005;
       case BIOME.MUSHROOM_FIELDS: return 0.004;
       case BIOME.SNOWY_PLAINS: return 0.004;
@@ -601,6 +614,7 @@ export class TerrainGenerator {
       case BIOME.FLOWER_FOREST: return tr < 0.3 ? 'birch' : 'oak';
       case BIOME.BLOSSOM_GROVE: return 'blossom';
       case BIOME.SWAMP: return 'swamp_oak';
+      case BIOME.MANGROVE_SWAMP: return 'mangrove';
       case BIOME.JUNGLE: return tr < 0.11 ? 'jungle_big' : tr < 0.5 ? 'jungle' : 'jungle_bush';
       case BIOME.SAVANNA: return tr < 0.85 ? 'acacia' : 'oak';
       case BIOME.DARK_FOREST: return tr < 0.04 ? 'brown_mushroom' : tr < 0.08 ? 'red_mushroom' : tr < 0.14 ? 'oak' : tr < 0.18 ? 'birch' : 'dark_oak';
@@ -619,7 +633,7 @@ export class TerrainGenerator {
       if (top < MIN_Y + 1 || top >= MIN_Y + WORLD_HEIGHT - 3) continue;
       const biome = biomes[ci];
       // lily pads float on shallow swamp water
-      if (biome === BIOME.SWAMP && top < SEA_LEVEL && top >= SEA_LEVEL - 3 && blocks[cidx(x, SEA_LEVEL, z)] === B.WATER && !blocks[cidx(x, SEA_LEVEL + 1, z)] && h(x, z, 49) < 0.09) {
+      if ((biome === BIOME.SWAMP || biome === BIOME.MANGROVE_SWAMP) && top < SEA_LEVEL && top >= SEA_LEVEL - 3 && blocks[cidx(x, SEA_LEVEL, z)] === B.WATER && !blocks[cidx(x, SEA_LEVEL + 1, z)] && h(x, z, 49) < (biome === BIOME.SWAMP ? 0.09 : 0.03)) {
         blocks[cidx(x, SEA_LEVEL + 1, z)] = B.LILY_PAD;
       }
       const ground = blocks[cidx(x, top, z)];
@@ -709,7 +723,7 @@ export class TerrainGenerator {
         col = cols[(wx - x0) + (wz - z0) * 16];
         top = heightmap[(wx - x0) + (wz - z0) * 16];
         const g = blocks[cidx(wx - x0, top, wz - z0)];
-        if (g !== B.GRASS && g !== B.SNOWY_GRASS && g !== B.DIRT && g !== B.MYCELIUM && g !== B.CLAY) continue;
+        if (g !== B.GRASS && g !== B.SNOWY_GRASS && g !== B.DIRT && g !== B.MYCELIUM && g !== B.CLAY && g !== B.MUD) continue;
       } else {
         col = this.column(wx, wz, tmpCol);
         // only dense forests have candidates past the common threshold
@@ -719,8 +733,8 @@ export class TerrainGenerator {
       if (top < SEA_LEVEL - 3) continue;
       const biome = this.biomeFor(col, top);
       if (r > this.treeDensity(biome)) continue;
-      // swamp trees may stand in shallow water; others need dry land
-      if (top < SEA_LEVEL && biome !== BIOME.SWAMP) continue;
+      // swamp and mangrove trees may stand in shallow water; others need dry land
+      if (top < SEA_LEVEL && biome !== BIOME.SWAMP && biome !== BIOME.MANGROVE_SWAMP) continue;
       if (biome === BIOME.STONY_PEAKS || biome === BIOME.SNOWY_PEAKS) { if (top >= 118) continue; }
       if (!inside && this.isSteep(wx, wz, top, biome)) continue;
       if (!inside) {
@@ -791,7 +805,7 @@ export class TerrainGenerator {
       if (x < 0 || z < 0 || x > 15 || z > 15 || yy <= MIN_Y || yy >= MIN_Y + WORLD_HEIGHT) continue;
       const i = cidx(x, yy, z);
       const cur = blocks[i];
-      if (force || cur === B.AIR || PLANTS.has(cur)) { blocks[i] = b; meta[i] = m || 0; }
+      if (force || cur === B.AIR || PLANTS.has(cur)) { blocks[i] = cur === B.WATER && WATERLOGGED_FORM[b] ? WATERLOGGED_FORM[b] : b; meta[i] = m || 0; } // mangrove roots stand in the water
       else if (LEAVES.has(cur) && (LOGS.has(b) || b === B.MUSHROOM_STEM)) { blocks[i] = b; meta[i] = 0; }
     }
   }
@@ -804,7 +818,7 @@ export class TerrainGenerator {
         const col = this.column(x, z);
         const top = this.surfaceAt(x, z, col);
         const biome = this.biomeFor(col, top);
-        if (top > SEA_LEVEL + 1 && top < 100 && biome !== BIOME.BEACH && biome !== BIOME.DESERT && biome !== BIOME.BADLANDS && biome !== BIOME.SWAMP) return { x: x + 0.5, y: top + 1, z: z + 0.5 };
+        if (top > SEA_LEVEL + 1 && top < 100 && biome !== BIOME.BEACH && biome !== BIOME.DESERT && biome !== BIOME.BADLANDS && biome !== BIOME.SWAMP && biome !== BIOME.MANGROVE_SWAMP) return { x: x + 0.5, y: top + 1, z: z + 0.5 };
       }
     }
     return { x: 0.5, y: 100, z: 0.5 };

@@ -17,7 +17,7 @@ import { BIOMES } from '../world/biomes.js';
 import { outpostsNear } from '../world/temples.js';
 import { hutsNear, hutAt } from '../world/swampHuts.js';
 import { igloosNear, basementLayout } from '../world/igloos.js';
-import { HUT_MONSTERS } from './spawnRules.js';
+import { HUT_MONSTERS, isNewtPoolFloor } from './spawnRules.js';
 import { soddenSpawnChance } from './hostileVariants.js';
 import { SEA_LEVEL } from '../world/constants.js';
 import { tickMonumentSpawns, spawnElders } from './oceanMobs.js';
@@ -93,7 +93,7 @@ export class MobSpawner {
       }
       return isDarkEnoughToSpawn(raw, blk, this.game.sky.state.skyDarken);
     }
-    return (below === B.GRASS || below === B.MYCELIUM) && isBrightEnoughForAnimal(raw, blk);
+    return (below === B.GRASS || below === B.MYCELIUM || below === B.MUD) && isBrightEnoughForAnimal(raw, blk); // (Croakers on mangrove mud)
   }
 
   /** One spawn attempt in a chunk; `surface` starts the pack on top of the terrain instead of a random height. */
@@ -165,15 +165,17 @@ export class MobSpawner {
         }
       }
     }
-    // Gillnewts in the clay-bottomed pools of lush caves, at most 6 around the player
-    if (g.ticks % 40 === 20 && w.dimension === 'overworld' && p.y < SEA_LEVEL - 10) {
+    // Gillnewts in the clay-bottomed pools of lush caves, and in the shallow mud-bottomed water of
+    // mangrove swamps; at most 6 around the player
+    const mangrove = w.dimension === 'overworld' && p.y >= SEA_LEVEL - 10 && BIOMES[w.biomeAt(Math.floor(p.x), Math.floor(p.z))]?.key === 'mangrove_swamp';
+    if (g.ticks % 40 === 20 && w.dimension === 'overworld' && (p.y < SEA_LEVEL - 10 || mangrove)) {
       let newts = 0;
       for (const e of g.entities.list) if (e.type === 'gillnewt' && !e.dead) newts++;
       if (newts < 6) {
         const x = Math.floor(p.x + (Math.random() - 0.5) * 40), z = Math.floor(p.z + (Math.random() - 0.5) * 40);
         if (w.isLoaded(x, z) && Math.hypot(x - p.x, z - p.z) > 6) {
           for (let y = Math.floor(p.y) - 10; y <= Math.floor(p.y) + 10; y++) {
-            if (w.getBlock(x, y, z) === B.WATER && w.getBlock(x, y - 1, z) === B.CLAY && w.getBlock(x, y + 1, z) !== B.WATER) {
+            if (w.getBlock(x, y, z) === B.WATER && isNewtPoolFloor(w.getBlock(x, y - 1, z), mangrove) && w.getBlock(x, y + 1, z) !== B.WATER) {
               for (let i = 0, n = 1 + Math.floor(Math.random() * 3); i < n; i++) this.spawnMob('gillnewt', x + 0.5, y + 0.05, z + 0.5);
               break;
             }
