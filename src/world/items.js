@@ -309,6 +309,15 @@ for (const [planks, door, , name, key] of DOOR_SETS) {
 }
 // Hush Shard: a sliver of a Hushkeeper's heart, found in the chests of the Deep Hush ruins
 item('hush_shard', 'Hush Shard', { iconStyle: ['gem', { h: '#1a6a70', H: '#5ff8ec' }] });
+// Utility items (appended so earlier ids stay stable): Lead (leashes animals, ties them to fence
+// posts; entities/leash.js), Name Tag (stack.label; a named mob keeps its name and never despawns)
+// and Bundle (stack.bundle: up to 64 weight of mixed items; world/bundles.js)
+const ICON_LEAD = ['................', '.....hhhhh......', '....hH...Hh.....', '...hH.....hh....', '...h.......h....', '...h.......h....', '...hh.....hh....', '....hhhhhhh.....', '......k.........', '......h.........', '......hh........', '.......hh.......', '........hh......', '.........hh.....', '..........hk....', '................'];
+const ICON_TAG = ['................', '................', '..........kk....', '.........k..k...', '........hhkkh...', '.......hHHHHHh..', '......hHHHHHh...', '.....hHHwwHh....', '....hHHwwHh.....', '...hHHHHHh......', '..hHHHHHh.......', '..hhHHHh........', '...hhHh.........', '....hh..........', '................', '................'];
+const ICON_BUNDLE = ['................', '................', '......kkkk......', '.....k....k.....', '......kkkk......', '......hssh......', '.....hHHHHh.....', '....hHHHHHHh....', '...hHHHHHHHHh...', '...hHHHHHHHhh...', '...hHHHHHHhhh...', '...hhHHHHhhhh...', '....hhhhhhhh....', '.....hhhhhh.....', '................', '................'];
+item('lead', 'Lead', { lead: true, iconStyle: [ICON_LEAD, { h: '#b08a5a', H: '#d8b88a', k: '#7a5a32' }] });
+item('name_tag', 'Name Tag', { nameTag: true, iconStyle: [ICON_TAG, { h: '#8a6a3a', H: '#d8c8a0', w: '#f4ecd8', k: '#9a9aa0' }] });
+item('bundle', 'Bundle', { stack: 1, bundle: true, iconStyle: [ICON_BUNDLE, { h: '#7a4a2a', H: '#a8683a', s: '#c8a068', k: '#e8dcc0' }] });
 ITEMS[B.GLOOMSHELL_BOX].stack = 1; // a box keeps its contents in the item (stack.contents), so it never stacks
 
 /** Light level (0-15) an item gives when held: a torch, lantern or other light block; 0 for the rest. */

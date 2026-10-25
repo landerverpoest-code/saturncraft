@@ -6,6 +6,7 @@ import { texturePixels } from '../world/textures.js';
 import { COLORS, WOOL_RGB } from '../world/colors.js';
 import { hasEnch, enchLines } from '../world/enchantments.js';
 import { POTIONS } from '../world/potions.js';
+import { bundleFill, bundleWeight, BUNDLE_CAPACITY } from '../world/bundles.js';
 import { EFFECTS, effectLabel, formatTicks } from '../player/effects.js';
 import { TOOL_TEMPLATES, GEAR_TEMPLATES, paintTemplate, materialRamp, ramp, WOOD_HANDLE } from './toolArt.js';
 
@@ -355,6 +356,10 @@ export function stackHTML(st) {
     const f = 1 - st.damage / d.durability;
     h += `<div class="dura"><div style="width:${f * 100}%;background:hsl(${f * 120},90%,50%)"></div></div>`;
   }
+  if (d && d.bundle && Array.isArray(st.bundle) && st.bundle.length) {
+    const f = bundleFill(st);
+    h += `<div class="dura"><div style="width:${f * 100}%;background:${f >= 1 ? '#e05050' : '#7a8ae8'}"></div></div>`;
+  }
   return h;
 }
 
@@ -365,6 +370,17 @@ export function tooltipHTML(st, extra = '') {
   if (!d) return '';
   const lines = enchLines(st);
   let h = `<div class="tt-name${lines.length ? ' ench' : ''}">${esc(d.name)}${esc(extra)}</div>`;
+  if (st.label) h += `<div class="tt-label">"${esc(st.label)}"</div>`; // a Name Tag's name
+  if (d.bundle) {
+    // a Bundle shows what it carries as a little grid of icons, and how full it is
+    const list = Array.isArray(st.bundle) ? st.bundle : [];
+    if (list.length) {
+      h += '<div class="tt-bundle">';
+      for (const s of list.slice().reverse()) h += `<div class="tt-bslot"><img src="${stackIconURL(s)}">${s.count > 1 ? `<span>${s.count}</span>` : ''}</div>`;
+      h += '</div>';
+    }
+    h += `<div class="tt-dura">${Math.round(bundleWeight(list))}/${BUNDLE_CAPACITY}</div>`;
+  }
   for (const l of lines) h += `<div class="tt-ench">${esc(l)}</div>`;
   const dur = d.durability;
   if (dur && st.damage > 0) h += `<div class="tt-dura">Durability: ${dur - st.damage} / ${dur}</div>`;

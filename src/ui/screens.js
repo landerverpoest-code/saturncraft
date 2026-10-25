@@ -4,7 +4,8 @@ import { iconURL, stackHTML, stackIconURL, tooltipHTML, effectIconURL } from './
 import { EFFECTS, effectLabel, formatTicks } from '../player/effects.js';
 import { isIngredient, isVial, VIAL_SLOTS, INGREDIENT_SLOT, FUEL_SLOT, BREW_TICKS, BREWS_PER_POWDER } from '../world/brewing.js';
 import { ITEMS, I, maxStack } from '../world/items.js';
-import { canStack, hasEnch, isEnchantable, countBookshelves, tableOffers, rollOffer, applyOffer, enchName, anvilCombine, ANVIL_MAX_COST } from '../world/enchantments.js';
+import { canStack, hasEnch, isEnchantable, countBookshelves, tableOffers, rollOffer, applyOffer, enchName, anvilCombine, ANVIL_MAX_COST, cleanLabel, LABEL_MAX } from '../world/enchantments.js';
+import { bundleInsert, bundleTakeLast } from '../world/bundles.js';
 import { spendLevels } from '../player/experience.js';
 import { mulberry32 } from '../world/noise.js';
 import { craft, RECIPES, recipeLayout, chooseIngredients } from '../player/crafting.js';
@@ -166,6 +167,24 @@ export class UI {
       if (!st) { set({ ...c, count: 1 }); c.count--; if (c.count <= 0) this.cursor = null; }
       else if (c.count === 1) { set(c); this.cursor = st; }
       return;
+    }
+    // Bundles (world/bundles.js): right-click a bundle with a stack to put it in, or with an empty
+    // hand to take out the last thing put in; right-click a stack while carrying a bundle to scoop it up
+    if (right) {
+      const isB = (x) => !!(x && ITEMS[x.id] && ITEMS[x.id].bundle);
+      if (isB(st) && c && (!isB(c) || (c !== st && !(c.bundle && c.bundle.length)))) {
+        if (bundleInsert(st, c) > 0) { if (c.count <= 0) this.cursor = null; set(st); this.game.audio.play('pop'); }
+        return;
+      }
+      if (isB(st) && !c) {
+        const out = bundleTakeLast(st);
+        if (out) { this.cursor = out; set(st); this.game.audio.play('pop'); }
+        return;
+      }
+      if (isB(c) && st && !isB(st)) {
+        if (bundleInsert(c, st) > 0) { set(st.count > 0 ? st : null); this.game.audio.play('pop'); }
+        return;
+      }
     }
     if (!right) {
       if (!c) { this.cursor = st; set(null); }
@@ -1119,6 +1138,38 @@ export class UI {
       box.append(info);
     }
     box.append(players);
+  }
+
+  /** Name Tag: type the name the tag (in hotbar slot `slot`) gives the mob it is used on. */
+  openNameTag(slot) {
+    this.clear();
+    this.open = 'nametag';
+    const g = this.game, inv = g.player.inventory;
+    g.input.unlock();
+    const st = inv.slots[slot];
+    if (!st) return;
+    const s = el(`<div class="screen"><h2>Name Tag</h2><p class="sub">Write a name, then use the tag on a mob</p><input class="nametag-input" maxlength="${LABEL_MAX}" spellcheck="false"><button class="btn">Done</button></div>`);
+    const inp = s.querySelector('input');
+    inp.value = st.label || '';
+    const done = () => {
+      const cur = inv.slots[slot];
+      if (cur && cur.id === st.id) {
+        const label = cleanLabel(inp.value);
+        if (cur.count > 1 && label !== (cur.label || null)) {
+          // only one tag of a stack gets the name; the rest stay as they were
+          const one = { ...cur, count: 1 };
+          if (label) one.label = label; else delete one.label;
+          cur.count--;
+          if (inv.add(one)) g.entities.spawnItem(g.player.x, g.player.y + 1, g.player.z, one);
+        } else if (label) cur.label = label; else delete cur.label;
+        inv.changed();
+      }
+      this.open = null; this.clear(); g.onUIClosed();
+    };
+    inp.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter' || e.key === 'Escape') done(); };
+    s.querySelector('button').onclick = done;
+    this.layer.appendChild(s);
+    setTimeout(() => inp.focus(), 0);
   }
 
   /** Write on a sign: four lines of up to 15 characters, saved as you type. */
