@@ -16,6 +16,7 @@ import { attemptDimensionSpawn } from './dimensionMobs.js';
 import { BIOMES } from '../world/biomes.js';
 import { outpostsNear } from '../world/temples.js';
 import { hutsNear, hutAt } from '../world/swampHuts.js';
+import { igloosNear, basementLayout } from '../world/igloos.js';
 import { HUT_MONSTERS } from './spawnRules.js';
 import { soddenSpawnChance } from './hostileVariants.js';
 import { SEA_LEVEL } from '../world/constants.js';
@@ -236,6 +237,14 @@ export class MobSpawner {
       if (Math.floor(h.cx / 16) !== cx || Math.floor(h.cz / 16) !== cz || !this.hostileEnabled()) continue;
       const m = this.spawnMob('hexwife', h.cx + 0.5, h.y, h.cz + 2.5);
       if (m) m.persistent = true;
+    }
+    // a settler is kept in the cell of every igloo basement
+    for (const g of igloosNear(this.game.world.gen, cx * 16, cz * 16, cx * 16 + 15, cz * 16 + 15)) {
+      if (!g.basement) continue;
+      const c = basementLayout(g).cell;
+      if (Math.floor(c.x / 16) !== cx || Math.floor(c.z / 16) !== cz) continue;
+      const m = this.spawnMob('settler', c.x + 0.5, c.y, c.z + 0.5);
+      if (m) { m.profession = 'cleric'; m.home = { x: c.x + 0.5, y: c.y, z: c.z + 0.5 }; m.trades = makeTrades('cleric'); m.lastRestock = this.game.time; m.persistent = true; }
     }
     // three Elder Deepeyes in every Tide Citadel
     if (this.hostileEnabled()) spawnElders(this, cx, cz);
