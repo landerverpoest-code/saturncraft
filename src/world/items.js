@@ -296,6 +296,9 @@ item('iron_nugget', 'Iron Nugget', { iconStyle: ['nugget', { h: '#d8d8d8' }] });
 // Suncore (the beacon's heart): from Elder Deepeyes and the Void Wyrm
 const ICON_STAR = ['................', '.......hh.......', '.......hh.......', '......hHHh......', '..hh..hHHh..hh..', '...hhhHwwHhhh...', '....hHwwwwHh....', '..hhHwwwwwwHhh..', '..hhHwwwwwwHhh..', '....hHwwwwHh....', '...hhhHwwHhhh...', '..hh..hHHh..hh..', '......hHHh......', '.......hh.......', '.......hh.......', '................'];
 item('suncore', 'Suncore', { iconStyle: [ICON_STAR, { h: '#e8a020', H: '#ffe070', w: '#fffbe8' }] });
+// Armour Stand (entities/armorStand.js): wears armour and holds an item
+const ICON_STAND = ['................', '.......ww.......', '.......ww.......', '...wwwwwwwwww...', '...w..w..w..w...', '...w..w..w..w...', '...w..w..w..w...', '......wwww......', '......w..w......', '......w..w......', '......w..w......', '......w..w......', '......w..w......', '..ssssssssssss..', '..SSSSSSSSSSSS..', '................'];
+item('armor_stand', 'Armor Stand', { stack: 16, armorStand: true, iconStyle: [ICON_STAND, { w: '#b08850', s: '#b4b4b4', S: '#7a7a7a' }] });
 ITEMS[B.GLOOMSHELL_BOX].stack = 1; // a box keeps its contents in the item (stack.contents), so it never stacks
 
 /** Light level (0-15) an item gives when held: a torch, lantern or other light block; 0 for the rest. */

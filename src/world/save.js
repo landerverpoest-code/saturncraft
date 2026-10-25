@@ -3,6 +3,7 @@
 import { encodeMap, decodeMap } from './maps.js';
 import { chunkKey } from './world.js';
 import { cleanEffects } from '../player/effects.js';
+import { liveStands, loadStands } from '../entities/armorStand.js';
 
 const DB_NAME = 'saturncraft';
 const STORE = 'worlds';
@@ -105,6 +106,7 @@ export async function saveGame(game) {
     weather: game.weather.save(),
     milestones: game.milestones.save(),
     boats: game.entities.list.filter((e) => e.kind === 'boat' && !e.dead).map((e) => ({ x: e.x, y: e.y, z: e.z, yaw: e.yaw, cart: !!e.cart })),
+    armorStands: liveStands(game),
     generated: [...game.spawner.generated],
     savedMobs, liveMobs, chunks,
     // which dimension the player (and the fields above) are in, plus the other dimensions' state
@@ -186,6 +188,7 @@ export function applySave(game, data) {
   game.weather.load(data.weather);
   game.milestones.load(data.milestones);
   for (const b of data.boats || []) game.entities.spawnBoat(b.x, b.y, b.z, b.yaw, !!b.cart);
+  loadStands(game, data.armorStands);
   for (const f of data.furnaces) game.furnaces.set(`${f.x},${f.y},${f.z}`, f);
   for (const c of data.chests || []) game.chests.set(`${c.x},${c.y},${c.z}`, c);
   for (const [k, l] of data.signs || []) game.signs.set(k, l);

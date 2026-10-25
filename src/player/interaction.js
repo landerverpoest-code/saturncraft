@@ -21,6 +21,7 @@ import { scaffoldDistance, scaffoldColumnTop, SCAFFOLD_MAX } from '../world/scaf
 import { updateRails } from '../world/rails.js';
 import { placeMeta as circuitPlaceMeta, useMeta as circuitUseMeta } from '../world/circuits.js';
 import { choosePainting, placePainting } from '../world/paintings.js';
+import { standYaw, standAt, useStand, punchStand } from '../entities/armorStand.js';
 import { tryLightRift, findHollowRing, fillHollowGate } from '../world/dimensions/portal.js';
 import { LEAVES, SAPLING_TREE, growTree } from '../world/trees.js';
 import { useSkyRocket } from '../entities/skyRocket.js';
@@ -84,18 +85,30 @@ export class Interaction {
     }
     this.boatTarget = g.entities ? g.entities.raycastBoat(ex, ey, ez, dx, dy, dz, 3.0) : null;
     if (this.boatTarget && ((this.target && this.target.dist < this.boatTarget.dist) || this.boatTarget.boat === p.riding)) this.boatTarget = null;
+    // armour stands: in front of whatever is behind them
+    const sd = g.entities && g.entities.raycastStand ? g.entities.raycastStand(ex, ey, ez, dx, dy, dz, 3.0) : null;
+    const nearer = (o) => o && o.dist < sd.dist;
+    this.standTarget = sd && !nearer(this.target) && !nearer(this.mobTarget) && !nearer(this.boatTarget) ? sd : null;
+    if (this.standTarget) { this.mobTarget = null; this.boatTarget = null; }
   }
 
   tick(input) {
     const g = this.game, p = g.player;
     if (p.dead) return;
-    if (p.gamemode === 'spectator') { this.target = null; this.mobTarget = null; this.boatTarget = null; this.eating = 0; return; } // spectators only watch
+    if (p.gamemode === 'spectator') { this.target = null; this.mobTarget = null; this.boatTarget = null; this.standTarget = null; this.eating = 0; return; } // spectators only watch
     this.updateTarget();
     if (this.breakDelay > 0) this.breakDelay--;
     if (this.useDelay > 0) this.useDelay--;
     if (this.swing > 0) this.swing--;
 
     // Attack / mine
+    // armour stands: left-click hits (two quick hits knock it down), right-click dresses or undresses it
+    if (this.standTarget) {
+      const { stand, relY } = this.standTarget;
+      if (input.leftPressed) { this.swing = SWING_TICKS; p.attackTicks = 0; this.hitStand(stand); return; }
+      if (input.rightPressed) { this.useStand(stand, relY); this.useDelay = USE_DELAY; return; }
+      if (input.left || input.right) { this.breaking = null; return; }
+    }
     // boats: left-click hits (three hits break it), right-click gets in
     if (this.boatTarget && !this.mobTarget) {
       const boat = this.boatTarget.boat;
@@ -232,6 +245,24 @@ export class Interaction {
       if (this.use()) this.useDelay = USE_DELAY;
     }
     if (input.middlePressed && this.target) this.pickBlock(this.target.id);
+  }
+
+  hitStand(stand) {
+    const g = this.game, p = g.player;
+    if (stand.netProxy) { g.net.hitStand(stand); return; } // a shared stand: the host counts the hits
+    punchStand(g, stand, p.creative);
+  }
+
+  /** Right-click on a stand: armour goes on, another item into its hand, an empty hand takes the clicked piece. */
+  useStand(stand, relY) {
+    const g = this.game, inv = g.player.inventory, held = inv.selectedStack;
+    this.swing = SWING_TICKS;
+    if (stand.netProxy) { g.net.useStand(stand, held, relY); return; } // the host swaps and answers
+    const r = useStand(stand, held, relY);
+    if (!r.ok) return;
+    inv.slots[inv.selected] = r.give;
+    inv.changed();
+    g.audio.play('equip', [stand.x, stand.y + 1, stand.z]);
   }
 
   mine() {
@@ -564,6 +595,18 @@ export class Interaction {
       if (!pick) return false;
       placePainting(w, side, pick, (x, y, z, id, m) => w.setBlockUrgent(x, y, z, id, m, false));
       g.audio.play('place_wood', [t.x + 0.5, t.y + 0.5, t.z + 0.5]);
+      if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
+      this.swing = SWING_TICKS;
+      return true;
+    }
+    if (d && d.armorStand) {
+      // stands go on top of a block, facing the player
+      const t = this.target;
+      if (!t || t.face[1] !== 1) return false;
+      const x = t.x, y = t.y + 1, z = t.z;
+      if (SOLID[w.getBlock(x, y, z)] || SOLID[w.getBlock(x, y + 1, z)] || standAt(g.entities.list, x, y, z)) return false;
+      g.entities.spawnStand(x + 0.5, y, z + 0.5, standYaw(p.yaw));
+      g.audio.play('place_wood', [x + 0.5, y, z + 0.5]);
       if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
       this.swing = SWING_TICKS;
       return true;

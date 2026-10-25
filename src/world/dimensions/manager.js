@@ -12,6 +12,7 @@ import { nearestSanctum } from './sanctum.js';
 import { DimensionSky } from '../../sky/dimensionSky.js';
 import { terrainUniforms } from '../../render/terrainMaterial.js';
 import { VoidEye } from '../../entities/voidEye.js';
+import { liveStands, loadStands } from '../../entities/armorStand.js';
 import { canLight, FIRE_DELAY } from '../fire.js';
 import { SIDE_DIRS, BED_HEAD } from '../shapes.js';
 import './register.js';
@@ -96,9 +97,10 @@ export class DimensionManager {
       w.removeChunk(c.cx, c.cz);
       g.spawner.onChunkUnloaded(c.cx, c.cz);
     }
+    const stands = liveStands(g); // armour stands stay where they were put
     for (const e of g.entities.list) g.entities.removeMesh(e);
     g.entities.list = [];
-    this.stores[old] = { saved: w.saved, furnaces: g.furnaces, chests: g.chests, brewingStands: g.brewingStands, hoppers: g.hoppers, savedMobs: g.spawner.savedMobs, generated: g.spawner.generated, spawnerState: g.spawnerBlocks.state };
+    this.stores[old] = { stands, saved: w.saved, furnaces: g.furnaces, chests: g.chests, brewingStands: g.brewingStands, hoppers: g.hoppers, savedMobs: g.spawner.savedMobs, generated: g.spawner.generated, spawnerState: g.spawnerBlocks.state };
     const s = this.stores[dim] || {};
     delete this.stores[dim];
     w.setDimension(dim, s.saved || new Map());
@@ -109,6 +111,7 @@ export class DimensionManager {
     g.spawner.savedMobs = s.savedMobs || new Map();
     g.spawner.generated = s.generated || new Set();
     g.spawnerBlocks.state = s.spawnerState || new Map();
+    loadStands(g, s.stands);
     g.chunks.resetDimension(dim);
     g.interaction.breaking = null;
     if (g.ui && g.ui.open && g.ui.open !== 'death' && g.ui.close) g.ui.close();
@@ -450,7 +453,7 @@ export class DimensionManager {
       for (const [k, c] of s.saved) chunks[k] = pack(c);
       const savedMobs = {};
       for (const [k, v] of s.savedMobs) savedMobs[k] = v;
-      dims[dim] = { chunks, furnaces: [...s.furnaces.values()], chests: [...s.chests.values()], brewingStands: [...(s.brewingStands || new Map()).values()], hoppers: [...(s.hoppers || new Map()).values()].map((h) => ({ x: h.x, y: h.y, z: h.z, slots: h.slots })), savedMobs, generated: [...s.generated] };
+      dims[dim] = { chunks, armorStands: s.stands || [], furnaces: [...s.furnaces.values()], chests: [...s.chests.values()], brewingStands: [...(s.brewingStands || new Map()).values()], hoppers: [...(s.hoppers || new Map()).values()].map((h) => ({ x: h.x, y: h.y, z: h.z, slots: h.slots })), savedMobs, generated: [...s.generated] };
     }
     return { dimension: this.current, dimensions: dims, dimState: { hollow: { ...this.hollow, crystals: [...this.hollow.crystals] }, links: this.links } };
   }
@@ -465,7 +468,7 @@ export class DimensionManager {
       const savedMobs = new Map();
       for (const [k, v] of Object.entries(d.savedMobs || {})) savedMobs.set(+k, v);
       this.stores[dim] = {
-        saved, savedMobs,
+        saved, savedMobs, stands: d.armorStands || [],
         furnaces: new Map((d.furnaces || []).map((f) => [`${f.x},${f.y},${f.z}`, f])),
         chests: new Map((d.chests || []).map((c) => [`${c.x},${c.y},${c.z}`, c])),
         brewingStands: new Map((d.brewingStands || []).map((c) => [`${c.x},${c.y},${c.z}`, c])),

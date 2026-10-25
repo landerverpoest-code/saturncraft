@@ -6,6 +6,7 @@ import { splashParticles } from '../entities/splash.js';
 import { Mob } from '../mobs/mob.js';
 import { MOBS } from '../mobs/mobTypes.js';
 import { ItemEntity, XPOrb, Arrow, Boat, Minecart, FallingBlock } from '../entities/entities.js';
+import { ArmorStand } from '../entities/armorStand.js';
 import { I, ITEMS, maxStack } from '../world/items.js';
 import { unpackEntity, roomFor } from './protocol.js';
 
@@ -70,6 +71,7 @@ export class EntityMirror {
       case 'arrow': e = new Arrow(s.x, s.y, s.z, s.vx, s.vy, s.vz, null, false, s.thrown, s.potion); break;
       case 'boat': e = s.cart ? new Minecart(s.x, s.y, s.z, s.yaw) : new Boat(s.x, s.y, s.z, s.yaw); break;
       case 'falling': e = new FallingBlock(0, 0, 0, s.blockId); break;
+      case 'stand': e = new ArmorStand(s.x, s.y, s.z, s.yaw); break;
       default: return null;
     }
     if (e.body) { e.body.vx = e.body.vy = e.body.vz = 0; }
@@ -99,6 +101,12 @@ export class EntityMirror {
       e.stack.count = s.stack.count; e.stack.damage = s.stack.damage;
       e.pickupDelay = s.delayed ? 10 : 0;
     } else if (e.kind === 'xp') e.value = s.value;
+    else if (e.kind === 'stand') {
+      // only the ids matter here (what it looks like); the host keeps the real stacks
+      const st = (id) => (id && ITEMS[id] ? { id, count: 1, damage: 0 } : null);
+      e.yaw = s.yaw; e.hitTime = s.hitTime;
+      e.armor = s.armor.map(st); e.hand = st(s.hand);
+    }
     else if (e.kind === 'arrow') {
       e.vx = s.vx; e.vy = s.vy; e.vz = s.vz; e.stuck = s.stuck; e.pickup = s.pickup;
     } else if (e.kind === 'boat') {

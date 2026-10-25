@@ -8,6 +8,7 @@ const TAGS = {
   log: [B.OAK_LOG, B.SPRUCE_LOG, B.BIRCH_LOG, B.JUNGLE_LOG, B.ACACIA_LOG, B.DARK_OAK_LOG, B.BLOSSOM_LOG],
   stone_mat: [B.COBBLESTONE, B.COBBLED_DEEPSTONE],
   wood_slab: WOOD_SETS.map(([, slab]) => slab),
+  stand_base: [B.SMOOTH_STONE_SLAB, B.STONE_SLAB, B.SMOOTH_STONE],
 };
 
 function matches(ing, id) {
@@ -290,6 +291,7 @@ shapeless([I.IRON_INGOT], I.IRON_NUGGET, 9);
 shaped(['NNN', 'NNN', 'NNN'], { N: I.IRON_NUGGET }, I.IRON_INGOT, 1);
 shaped(['N', 'I', 'N'], { N: I.IRON_NUGGET, I: I.IRON_INGOT }, B.CHAIN, 1);
 shaped(['BSB', 'B B', 'B B'], { B: B.BAMBOO, S: I.STRING }, B.SCAFFOLDING, 6);
+shaped(['SSS', ' S ', 'SBS'], { S: I.STICK, B: 'stand_base' }, I.ARMOR_STAND, 1);
 CANDLE_IDS.slice(1).forEach((id, c) => shapeless([CANDLE_IDS[0], DYES[c] || I.BONE_MEAL], id, 1));
 shapeless([B.STONE_BRICKS, B.VINES], B.MOSSY_STONE_BRICKS, 1);
 shaped(['S', 'S'], { S: B.STONE_BRICK_SLAB }, B.CHISELED_STONE_BRICKS, 1);

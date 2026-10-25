@@ -19,6 +19,7 @@
 //   onSwitchDimension(dim, pos), onArrived(x, y, z), respawnNearHost()
 import { doubleChestHalves, doubleChestView } from '../world/chests.js';
 import { igniteTNT, PrimedTNT } from '../entities/tnt.js';
+import { useStand, punchStand } from '../entities/armorStand.js';
 import {
   PROTOCOL_VERSION, MAX_PLAYERS, encodeMessage, Reassembler, makeRoomCode, cleanName,
   packPlayerState, unpackPlayerState, packEntity, encodePackedChunk, decodePackedChunk,
@@ -297,6 +298,8 @@ export class HostSession extends Session {
         break;
       }
       case 'bhit': this.remoteBoatHit(c, m); break;
+      case 'sthit': this.remoteStandHit(c, m); break;
+      case 'stuse': this.remoteStandUse(c, m); break;
       case 'cmd': this.remoteCommand(c, m); break;
       case 'travel': {
         const s = c.rp.state;
@@ -460,6 +463,8 @@ export class HostSession extends Session {
       ents.spawnArrow(m.x, m.y, m.z, v[0], v[1], v[2], c.rp.target, !!m.crit, m.thrown === 'egg' || m.thrown === 'snowball' || pot || spear ? m.thrown : null, Math.max(0, Math.min(5, m.power | 0)), pot, spear || tip);
     } else if (m.k === 'boat') {
       ents.spawnBoat(m.x, m.y, m.z, +m.yaw || 0, !!m.cart);
+    } else if (m.k === 'stand') {
+      ents.spawnStand(m.x, m.y, m.z, +m.yaw || 0);
     } else if (m.k === 'tnt') {
       // a guest lit TNT: it burns (and blows up) here, so the blast reaches everyone
       const x = Math.floor(m.x), y = Math.floor(m.y), z = Math.floor(m.z);
@@ -535,6 +540,25 @@ export class HostSession extends Session {
       if (b.rider) g.dismount();
       if (!s.creative) g.entities.spawnItem(b.x, b.y + 0.5, b.z, { id: b.dropId || I.OAK_BOAT, count: 1 });
     }
+  }
+
+  /** A guest punched an armour stand. */
+  remoteStandHit(c, m) {
+    const e = this.entity(m.id), s = c.rp.state;
+    if (!e || e.kind !== 'stand' || !s || Math.hypot(e.x - s.x, e.z - s.z) > 6) return;
+    punchStand(this.game, e, !!s.creative);
+  }
+
+  /** A guest right-clicked an armour stand holding `st`: swap and tell them what their hand now holds. */
+  remoteStandUse(c, m) {
+    const e = this.entity(m.id), s = c.rp.state;
+    if (!e || e.kind !== 'stand' || !s || s.dead || Math.hypot(e.x - s.x, e.z - s.z) > 6) return;
+    const st = m.st;
+    if (st && (!ITEMS[st.id] || !Number.isInteger(st.count) || st.count <= 0 || st.count > 64)) return;
+    const r = useStand(e, st ? copyStack(st) : null, +m.y || 0);
+    if (!r.ok) return;
+    this.game.audio.play('equip', [e.x, e.y + 1, e.z]);
+    c.ch.send({ t: 'stgot', item: st ? st.id : -1, give: copyStack(r.give) });
   }
 
   /** Remote players that projectiles can hit (mob arrows always, player arrows with PvP). */
@@ -888,6 +912,15 @@ export class ClientSession extends Session {
         break;
       }
       case 'gotxp': { const lv = addXp(p.xp, m.v); g.audio.play(lv && p.xp.level % 5 === 0 ? 'levelup' : 'orb'); break; }
+      case 'stgot': {
+        // the host put our item on its stand: our hand holds what came off it
+        const inv = p.inventory, st = inv.selectedStack;
+        if ((st ? st.id : -1) === m.item) inv.slots[inv.selected] = m.give && ITEMS[m.give.id] ? copyStack(m.give) : null;
+        else if (m.give && ITEMS[m.give.id]) { const left = inv.add(copyStack(m.give)); if (left > 0) g.entities.spawnItem(p.x, p.y + 1, p.z, { ...copyStack(m.give), count: left }); }
+        inv.changed();
+        g.audio.play('equip');
+        break;
+      }
       case 'used': {
         const st = p.inventory.selectedStack;
         if (st && st.id === m.item) {
@@ -943,6 +976,8 @@ export class ClientSession extends Session {
   }
 
   hitBoat(boat) { this.send({ t: 'bhit', id: boat.netId }); }
+  hitStand(stand) { this.send({ t: 'sthit', id: stand.netId }); }
+  useStand(stand, st, relY) { this.send({ t: 'stuse', id: stand.netId, st: st ? copyStack(st) : null, y: Math.round(relY * 100) / 100 }); }
   ride(boat, on) { this.send({ t: 'ride', id: boat.netId, on: on ? 1 : 0 }); }
 
   /** Another player hit by us (PvP). */

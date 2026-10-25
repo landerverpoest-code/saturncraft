@@ -173,7 +173,7 @@ export function savePlayerName(name) {
   try { localStorage.setItem(NAME_KEY, cleanName(name)); } catch { /* storage unavailable */ }
 }
 
-// ---- shared entities (items, orbs, arrows, boats, falling blocks, mobs) ---------------
+// ---- shared entities (items, orbs, arrows, boats, falling blocks, armour stands, mobs) ---
 /**
  * Compact snapshot of any host entity: [kind, id, x, y, z, ...kind specific].
  * `riderOf(boat)` gives the boat rider's player id (0 = host) or -1.
@@ -186,10 +186,11 @@ export function packEntity(e, riderOf = () => -1) {
     case 'arrow': return ['a', e.id, r2(e.x), r2(e.y), r2(e.z), r2(e.vx), r2(e.vy), r2(e.vz), e.stuck ? 1 : 0, e.pickup ? 1 : 0, e.thrown === 'spear' ? 4 : e.thrown === 'potion' ? 3 : e.thrown === 'egg' ? 2 : e.thrown ? 1 : 0, e.potion | 0];
     case 'boat': return ['b', e.id, r2(e.x), r2(e.y), r2(e.z), r2(e.yaw), e.hitTime | 0, riderOf(e), e.cart ? 1 : 0, r2(e.pitch || 0)];
     case 'falling': return ['f', e.id, r2(e.x), r2(e.y), r2(e.z), e.blockId];
+    case 'stand': return ['s', e.id, r2(e.x), r2(e.y), r2(e.z), r2(e.yaw), e.hitTime | 0, e.armor.map((st) => (st ? st.id : 0)), e.hand ? e.hand.id : 0];
     default: return null;
   }
 }
-const ENTITY_KINDS = { m: 'mob', i: 'item', x: 'xp', a: 'arrow', b: 'boat', f: 'falling' };
+const ENTITY_KINDS = { m: 'mob', i: 'item', x: 'xp', a: 'arrow', b: 'boat', f: 'falling', s: 'stand' };
 export function unpackEntity(a) {
   if (!Array.isArray(a) || !ENTITY_KINDS[a[0]]) return null;
   if (a[0] === 'm') { const m = unpackMob(a.slice(1)); return m && { ...m, kind: 'mob' }; }
@@ -201,6 +202,10 @@ export function unpackEntity(a) {
   else if (k === 'a') Object.assign(o, { vx: a[5], vy: a[6], vz: a[7], stuck: !!a[8], pickup: !!a[9], thrown: a[10] === 4 ? 'spear' : a[10] === 3 ? 'potion' : a[10] === 2 ? 'egg' : a[10] === 1 ? 'snowball' : null, potion: a[11] | 0 });
   else if (k === 'b') Object.assign(o, { yaw: a[5], hitTime: a[6] | 0, rider: a[7], cart: !!a[8], pitch: +a[9] || 0 });
   else if (k === 'f') o.blockId = a[5] | 0;
+  else if (k === 's') {
+    const ids = Array.isArray(a[7]) ? a[7] : [];
+    Object.assign(o, { yaw: +a[5] || 0, hitTime: a[6] | 0, armor: [0, 1, 2, 3].map((i) => (ids[i] | 0) || null), hand: (a[8] | 0) || null });
+  }
   return o;
 }
 

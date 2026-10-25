@@ -13,6 +13,7 @@ import { addXp, splitOrbs } from '../player/experience.js';
 import { RAIL_EXITS, RAIL_UP, railHeight } from '../world/rails.js';
 import { withExtras, canStack, isGlinting, arrowDamage } from '../world/enchantments.js';
 import { splashPotion } from './splash.js';
+import { ArmorStand, STAND_WIDTH, STAND_HEIGHT } from './armorStand.js';
 
 let nextEntityId = 1;
 export const ENTITY_RENDER_DIST = 64;
@@ -466,6 +467,8 @@ export class EntityManager {
     for (const v of splitOrbs(Math.round(amount))) this.add(new XPOrb(x, y, z, v));
   }
   spawnBoat(x, y, z, yaw, cart = false) { return this.netSpawn('boat', { x, y, z, yaw, cart }) ? null : this.add(cart ? new Minecart(x, y, z, yaw) : new Boat(x, y, z, yaw)); }
+  /** An armour stand (entities/armorStand.js) facing `yaw`; a guest asks the host for it. */
+  spawnStand(x, y, z, yaw) { return this.netSpawn('stand', { x, y, z, yaw }) ? null : this.add(new ArmorStand(x, y, z, yaw)); }
   spawnFallingBlock(x, y, z, id) { return this.netSpawn('falling', {}) ? null : this.add(new FallingBlock(x, y, z, id)); }
   spawnArrow(x, y, z, vx, vy, vz, shooter, crit, thrown = null, power = 0, potion = 0, item = null) {
     if (this.netSpawn('arrow', { x, y, z, v: [vx, vy, vz], crit, thrown, power: power || undefined, potion: potion || undefined, item: item || undefined })) return null;
@@ -500,6 +503,18 @@ export class EntityManager {
       if (e.kind !== 'boat' || e.dead) continue;
       const t = rayAABB(ox, oy, oz, dx, dy, dz, e.x - 0.7, e.y, e.z - 0.7, e.x + 0.7, e.y + 0.6, e.z + 0.7);
       if (t !== null && t <= maxDist && (!best || t < best.dist)) best = { boat: e, dist: t };
+    }
+    return best;
+  }
+
+  /** First armour stand hit by a ray: { stand, dist, relY } (relY: height of the hit above its feet). */
+  raycastStand(ox, oy, oz, dx, dy, dz, maxDist) {
+    let best = null;
+    const hw = STAND_WIDTH / 2;
+    for (const e of this.list) {
+      if (e.kind !== 'stand' || e.dead) continue;
+      const t = rayAABB(ox, oy, oz, dx, dy, dz, e.x - hw, e.y, e.z - hw, e.x + hw, e.y + STAND_HEIGHT, e.z + hw);
+      if (t !== null && t <= maxDist && (!best || t < best.dist)) best = { stand: e, dist: t, relY: oy + dy * t - e.y };
     }
     return best;
   }
