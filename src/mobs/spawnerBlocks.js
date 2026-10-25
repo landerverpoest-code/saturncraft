@@ -74,7 +74,7 @@ function pick(table, rng) {
 /** 27 chest slots filled with dungeon loot at random positions. */
 // Structure loot (chest meta bits 4-7): [table, rolls min, rolls max, always?] per structure
 // (`always`: [id, min, max] stacks every such chest holds besides its rolls)
-export const LOOT = { DUNGEON: 0, MINESHAFT: 1, DESERT: 2, JUNGLE: 3, IGLOO: 4, WRECK: 5, OUTPOST: 6, RUIN: 7, WRECK_TREASURE: 8, WRECK_MAP: 9, HOLLOW_CITY: LOOT_CITY, HOLLOW_SHIP: LOOT_SHIP };
+export const LOOT = { DEEP_HUSH: 12, DUNGEON: 0, MINESHAFT: 1, DESERT: 2, JUNGLE: 3, IGLOO: 4, WRECK: 5, OUTPOST: 6, RUIN: 7, WRECK_TREASURE: 8, WRECK_MAP: 9, HOLLOW_CITY: LOOT_CITY, HOLLOW_SHIP: LOOT_SHIP };
 const STRUCTURE_LOOT = {
   [LOOT.MINESHAFT]: [[[I.GILDED_APPLE, 1, 1, 20], [I.IRON_INGOT, 1, 5, 10], [I.GOLD_INGOT, 1, 3, 5], [I.CINNABAR, 4, 9, 5], [I.AZURITE, 4, 9, 5], [I.DIAMOND, 1, 2, 3], [I.COAL, 3, 8, 10], [I.BREAD, 1, 3, 15], [B.RAIL, 4, 8, 20], [I.MELON_SLICE, 2, 4, 10], [I.PUMPKIN_PIE, 1, 2, 5], [I.IRON_PICKAXE, 1, 1, 2]], 3, 6],
   [LOOT.DESERT]: [[[I.GILDED_APPLE, 1, 1, 20], [I.DIAMOND, 1, 3, 5], [I.IRON_INGOT, 1, 5, 15], [I.GOLD_INGOT, 2, 7, 15], [I.BERYL, 1, 3, 15], [I.BONE, 4, 6, 25], [I.SPIDER_EYE, 1, 3, 25], [I.ROTTEN_FLESH, 3, 7, 25], [I.SADDLE, 1, 1, 20], [I.GOLD_CHESTPLATE, 1, 1, 3]], 2, 5],
@@ -86,6 +86,8 @@ const STRUCTURE_LOOT = {
   [LOOT.WRECK]: [[[I.PAPER, 1, 12, 8], [I.COAL, 2, 8, 6], [I.WHEAT, 8, 21, 7], [I.CARROT, 4, 8, 7], [I.POTATO, 2, 6, 7], [I.BREAD, 1, 4, 7], [I.DRIED_KELP, 2, 8, 5], [I.PUMPKIN_PIE, 1, 2, 3], [I.ROTTEN_FLESH, 5, 24, 5], [I.LEATHER_HELMET, 1, 1, 3], [I.LEATHER_CHESTPLATE, 1, 1, 3], [B.TNT, 1, 2, 1]], 3, 8],
   [LOOT.WRECK_TREASURE]: [[[I.IRON_INGOT, 1, 5, 90], [I.GOLD_INGOT, 1, 5, 10], [I.IRON_NUGGET, 1, 10, 50], [I.GOLD_NUGGET, 1, 10, 50], [I.BERYL, 1, 5, 40], [I.DIAMOND, 1, 1, 5], [I.AZURITE, 1, 10, 20]], 3, 6, [[I.BERYL, 1, 3]]],
   [LOOT.WRECK_MAP]: [[[I.PAPER, 1, 10, 20], [I.FEATHER, 1, 5, 10], [I.BOOK, 1, 5, 5], [I.CLOCK, 1, 1, 1], [I.COMPASS, 1, 1, 1], [I.EMPTY_MAP, 1, 1, 10]], 3, 6, [[I.EMPTY_MAP, 1, 1]]],
+  // the ruins of the Deep Hush (world/deepHush.js HUSH_LOOT)
+  [LOOT.DEEP_HUSH]: [[[I.HUSH_SHARD, 1, 3, 12], [B.CANDLE, 1, 4, 15], [I.BONE, 2, 6, 15], [I.IRON_INGOT, 1, 4, 10], [I.AZURITE, 2, 6, 8], [I.DIAMOND, 1, 2, 4], [I.GILDED_APPLE, 1, 1, 3], [I.GOLD_INGOT, 1, 3, 6], [B.HUSHMOSS, 4, 10, 8], [I.DISC_HOLLOW, 1, 1, 2]], 3, 7],
 };
 
 export function dungeonLoot(rng = Math.random, kind = LOOT.DUNGEON) {

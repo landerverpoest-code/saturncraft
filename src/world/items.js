@@ -307,6 +307,8 @@ for (const [planks, door, , name, key] of DOOR_SETS) {
   if (!BLOCKS[door].lateItem) continue;
   BLOCKS[door].doorItem = item(key + '_door', `${name} Door`, { door: true, doorBlock: door, doorPlanks: planks }).id;
 }
+// Hush Shard: a sliver of a Hushkeeper's heart, found in the chests of the Deep Hush ruins
+item('hush_shard', 'Hush Shard', { iconStyle: ['gem', { h: '#1a6a70', H: '#5ff8ec' }] });
 ITEMS[B.GLOOMSHELL_BOX].stack = 1; // a box keeps its contents in the item (stack.contents), so it never stacks
 
 /** Light level (0-15) an item gives when held: a torch, lantern or other light block; 0 for the rest. */

@@ -28,6 +28,7 @@ export const EFFECTS = {
   // raids (mobs/raids.js): from slaying a Marauder Captain / from saving a village
   dark_omen:        { name: 'Dark Omen', color: '#3a2a4a', good: false, glyph: 'omen' },
   village_champion: { name: 'Village Champion', color: '#44b04a', good: true, glyph: 'laurel' },
+  darkness:        { name: 'Darkness', color: '#292721', good: false, glyph: 'eye' }, // from Hush Shriekers: the view darkens in waves
 };
 export const EFFECT_KEYS = Object.keys(EFFECTS);
 

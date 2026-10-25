@@ -82,6 +82,15 @@ const WS_TILES = (() => {
   return {
     [B.GRINDSTONE]: [[t(f, f, r, r, r, r), leg, piv, leg, piv], [t(r, r, r, r, f, f), leg, piv, leg, piv]],
     [B.STONECUTTER]: [[base, t(o, o, o, o, w, w)], [base, t(w, w, o, o, o, o)]], // only the blade's flat faces show
+    // Deep Hush sensors (tendrils light up while the sensor pulses) and shriekers (a jaw of bone on a mossy base)
+    [B.HUSH_SENSOR]: [0, 1].map((on) => {
+      const ss = 'hush_sensor_side', td = all(on ? 'hush_tendril_active' : 'hush_tendril');
+      return [t(ss, ss, 'hush_sensor_top', 'hushmoss', ss, ss), td, td, td, td];
+    }),
+    [B.HUSH_SHRIEKER]: [0, 1].map(() => {
+      const ss = 'hush_shrieker_side', bn = all('hush_shrieker_bone');
+      return [t(ss, ss, 'hush_shrieker_top', 'hushmoss', ss, ss), bn, bn, bn, bn];
+    }),
   };
 })();
 const BERRY_TILES = [0, 1, 2, 3].map((i) => texId('sweet_berry_bush_' + i));
@@ -341,7 +350,7 @@ export function meshSection(sec) {
       for (let d = 0; d < 6; d++) { const l = light[i + FACE_N[d]]; sk = Math.max(sk, l >> 4); bk = Math.max(bk, l & 15); }
       const tiles = [0, 1, 2, 3, 4, 5].map((d) => FACE_TILE[id * 6 + d]);
       if (FRONT_TILE[id] >= 0) tiles[FURNACE_FRONT_DIR[meta[i] & 3]] = FRONT_TILE[id]; // the Wyrm Head's face
-      const ws = WS_TILES[id] && WS_TILES[id][meta[i] & 1];
+      const ws = WS_TILES[id] && WS_TILES[id][id === B.HUSH_SENSOR ? ((meta[i] & 15) ? 1 : 0) : meta[i] & 1];
       blockBoxes(id, meta[i]).forEach((b, k) => emitBox(buf, x, y, z, b[0], b[1], b[2], b[3], b[4], b[5], ws ? ws[k] : tiles, sk * 17, bk * 17, 'box'));
       const cb = id === B.COMPOSTER && compostBox(meta[i] & 15);
       if (cb) emitBox(buf, x, y, z, cb[0], cb[1], cb[2], cb[3], cb[4], cb[5], (meta[i] & 15) >= 8 ? COMPOST_READY : COMPOST, sk * 17, bk * 17, 'box');

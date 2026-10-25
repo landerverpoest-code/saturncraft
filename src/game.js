@@ -64,6 +64,8 @@ import { findStormRod, lightningCleanCopper } from './world/caves.js';
 import { BeaconBeams } from './render/beaconBeams.js';
 import { beaconLevel, beamColor, beaconEffects, beaconRange, beaconDuration, BEACON_PERIOD } from './world/beacons.js';
 import { PostFX } from './render/postfx.js';
+import { HushSystem } from './world/hushSystem.js';
+import { darknessFactor } from './world/deepHush.js';
 
 // Spherical (radial distance) fog instead of view-depth fog, so chunk edges never show at screen corners
 THREE.ShaderChunk.fog_vertex = `#ifdef USE_FOG
@@ -80,6 +82,7 @@ THREE.ShaderChunk.fog_vertex = `#ifdef USE_FOG
 }
 
 const CAVE_FOG = new THREE.Color(0.012, 0.012, 0.018);
+const DARK_FOG = new THREE.Color(0, 0, 0);
 export const DIFFICULTIES = ['peaceful', 'easy', 'normal', 'hard'];
 const FIREFLY_BIOMES = new Set(['swamp', 'forest', 'flower_forest', 'blossom_grove', 'mangrove_swamp', 'dark_forest', 'jungle', 'birch_forest']);
 
@@ -178,6 +181,7 @@ export class Game {
     this.held = new HeldItem(this);
     this.overlay = new BlockOverlay(this.scene);
     this.enchantBooks = new EnchantBooks(this.scene); // floating books over enchanting tables
+    this.hush = new HushSystem(this); // the Deep Hush: sensors, shriekers, catalysts and the Hushkeeper (world/hushSystem.js)
     this.dims = new DimensionManager(this); // the Cinderdeep and the Hollow (world/dimensions/)
     this.dims.applyLook();
 
@@ -1027,6 +1031,7 @@ export class Game {
       const id = this.world.getBlock(Math.floor(b.x), Math.floor(b.y - 0.2), Math.floor(b.z));
       if (id) this.audio.play('step_' + BLOCKS[id].sound);
     }
+    this.hush.tick(); // footsteps and landings shake the Deep Hush awake
     if (this.player.landedFrom > 1.5) { this.audio.play('land'); }
     // landing on farmland can trample it back to dirt (chance = fall distance - 0.5)
     if (this.player.landedFrom > 0.5) {
@@ -1166,6 +1171,10 @@ export class Game {
     const nv = p.effects.night_vision;
     this.nightVision = !nv ? 0 : nv.ticks > 200 ? 1 : 0.7 + Math.sin((nv.ticks - alpha) * Math.PI * 0.2) * 0.3;
     terrainUniforms.uMinLight.value = Math.max(this.dims.baseLight(), this.nightVision * 0.75);
+    // Darkness (from Hush Shriekers): the world dims and the fog closes in, in slow waves
+    const dk = p.effects.darkness;
+    this.darkness = dk && !p.dead ? darknessFactor(dk.ticks - alpha, sec) : 0;
+    if (this.darkness > 0) terrainUniforms.uMinLight.value *= 1 - this.darkness;
     // a torch (or any light-giving block) in the hand lights up the area around the player
     const held = p.dead ? null : p.inventory.selectedStack;
     this.handLight = held ? heldLightLevel(held.id) : 0;
@@ -1213,6 +1222,10 @@ export class Game {
     }
     else if (b.eyeInLava) { this.scene.fog.color.setRGB(0.6, 0.15, 0.02); this.scene.fog.near = 0; this.scene.fog.far = 2; }
     else { this.scene.fog.near = R * (0.65 - cd * 0.45); this.scene.fog.far = R * (1 - cd * 0.25); this.dims.adjustFog(this.scene.fog, R); }
+    if (this.darkness > 0) {
+      const f = this.scene.fog, k = this.darkness;
+      f.color.lerp(DARK_FOG, k); f.near *= 1 - k; f.far = f.far + (Math.min(f.far, 14) - f.far) * k;
+    }
     this.sky.uniforms.uUnderwater.value = b.eyeInWater ? 1 : 0;
     this.audio.setListener(x, y + eye, z, p.yaw);
 

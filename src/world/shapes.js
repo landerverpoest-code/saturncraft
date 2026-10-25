@@ -246,6 +246,10 @@ const GRIND_Z = swapXZ(GRIND_X);
 const CUTTER_BASE = [px16(0, 0, 0, 16, 9, 16)];
 const CUTTER_X = [CUTTER_BASE[0], px16(1, 9, 7.5, 15, 16, 8.5)];
 const CUTTER_Z = swapXZ(CUTTER_X);
+// Deep Hush: a sensor is a half slab with four tendrils; a shrieker a half slab under a jaw of bone (world/deepHush.js)
+export const SENSOR_BOXES = [px16(0, 0, 0, 16, 8, 16), px16(3, 8, 3, 5, 15, 5), px16(11, 8, 3, 13, 15, 5), px16(3, 8, 11, 5, 15, 13), px16(11, 8, 11, 13, 15, 13)];
+export const SHRIEKER_BOXES = [px16(0, 0, 0, 16, 8, 16), px16(1, 8, 1, 15, 15, 3), px16(1, 8, 13, 15, 15, 15), px16(1, 8, 3, 3, 15, 13), px16(13, 8, 3, 15, 15, 13)];
+const SENSOR_COLLISION = [SENSOR_BOXES[0]], SHRIEKER_COLLISION = [px16(0, 0, 0, 16, 15, 16)];
 /** Render / collision boxes of a SHAPE.BOXES block. */
 // Brewing Alembic: base plate, ember rod and a cross-shaped arm near the top
 const ALEMBIC_BOXES = [[2 / 16, 0, 2 / 16, 14 / 16, 2 / 16, 14 / 16], [7 / 16, 2 / 16, 7 / 16, 9 / 16, 14 / 16, 9 / 16],
@@ -289,6 +293,8 @@ export function blockBoxes(id, meta) {
   if (id === B.CHAIN) return CHAIN_BOXES;
   if (id === B.GRINDSTONE) return meta & 1 ? GRIND_Z : GRIND_X;
   if (id === B.STONECUTTER) return meta & 1 ? CUTTER_Z : CUTTER_X;
+  if (id === B.HUSH_SENSOR) return SENSOR_BOXES;
+  if (id === B.HUSH_SHRIEKER) return SHRIEKER_BOXES;
   return TABLE_BOXES;
 }
 /** One box enclosing all of a SHAPE.BOXES block (selection outline). */
@@ -307,7 +313,7 @@ SHAPED_COLLISION[B.SNOW_LAYER] = 1;
 SHAPED_COLLISION[B.SEEPSTONE_SPIKE] = 1;
 SHAPED_COLLISION[B.MUD] = 1; // you sink into mud a little
 const MUD_BOX = [[0, 0, 0, 1, 14 / 16, 1]];
-for (const id of [B.COBBLESTONE_WALL, B.MOSSY_COBBLESTONE_WALL, B.OAK_TRAPDOOR, B.ENCHANTING_TABLE, B.ANVIL, B.CAMPFIRE, B.LANTERN, B.BREWING_STAND, B.TURTLE_EGG, B.HOPPER, B.COMPOSTER, B.SCAFFOLDING, B.FLOWER_POT, B.CHAIN, B.GRINDSTONE, B.STONECUTTER]) SHAPED_COLLISION[id] = 1;
+for (const id of [B.COBBLESTONE_WALL, B.MOSSY_COBBLESTONE_WALL, B.OAK_TRAPDOOR, B.ENCHANTING_TABLE, B.ANVIL, B.CAMPFIRE, B.LANTERN, B.BREWING_STAND, B.TURTLE_EGG, B.HOPPER, B.COMPOSTER, B.SCAFFOLDING, B.FLOWER_POT, B.CHAIN, B.GRINDSTONE, B.STONECUTTER, B.HUSH_SENSOR, B.HUSH_SHRIEKER]) SHAPED_COLLISION[id] = 1;
 /** Snow layer box (n = meta + 1 layers); collision is one layer lower, so a single layer has none. */
 export const snowBox = (meta, collide = false) => [0, 0, 0, 1, ((meta & 7) + (collide ? 0 : 1)) * 2 / 16, 1];
 for (const id of [B.OAK_FENCE, B.SPRUCE_FENCE, B.BIRCH_FENCE, B.OAK_FENCE_GATE]) SHAPED_COLLISION[id] = 1;
@@ -316,6 +322,8 @@ for (const id of [B.OAK_SLAB, B.COBBLESTONE_SLAB, B.STONE_BRICK_SLAB, B.SANDSTON
 for (const id of [B.HOLLOWBRICK_SLAB, B.HOLLOWBRICK_STAIRS, B.WYRM_HEAD]) SHAPED_COLLISION[id] = 1;
 // every slab, stair, fence and gate (the extended blocks too)
 for (const b of BLOCKS) if (b && (b.shape === SHAPE.SLAB || b.shape === SHAPE.STAIRS || b.shape === SHAPE.FENCE || b.shape === SHAPE.GATE)) SHAPED_COLLISION[b.id] = 1;
+// carpets and Hush Veins (thin sheets) have no collision, like one layer of snow
+for (const b of BLOCKS) if (b && b.carpet) SHAPED_COLLISION[b.id] = 1;
 
 /**
  * Collision boxes of a solid non-cube block, or null for an ordinary full
@@ -336,6 +344,8 @@ export function collisionBoxes(id, meta, world, x, y, z) {
   if (sh === SHAPE.TRAPDOOR) return [trapdoorBox(meta)];
   if (sh === SHAPE.WALL) return wallBoxes(world ? wallMask((a, b, c) => world.getBlock(a, b, c), x, y, z) : 0, 1.5);
   if (sh === SHAPE.STAIRS) return world ? stairBoxes(meta, (dx, dz) => [world.getBlock(x + dx, y, z + dz), world.getMeta(x + dx, y, z + dz)], (n) => BLOCKS[n] && BLOCKS[n].shape === SHAPE.STAIRS) : stairBoxes(meta);
+  if (id === B.HUSH_SENSOR) return SENSOR_COLLISION;
+  if (id === B.HUSH_SHRIEKER) return SHRIEKER_COLLISION;
   if (sh === SHAPE.BOXES) return id === B.STONECUTTER ? CUTTER_BASE : id === B.ANVIL ? [boundsOf(blockBoxes(id, meta))] : id === B.BREWING_STAND ? ALEMBIC_COLLISION : blockBoxes(id, meta);
   if (sh === SHAPE.CIRCUIT) return circuitCollision(id, meta);
   if (sh === SHAPE.CRYSTAL) return [crystalBox(id, meta)];

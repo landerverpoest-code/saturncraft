@@ -53,13 +53,13 @@ const OPENABLE_SHAPE = (id) => !!BLOCKS[id] && (BLOCKS[id].shape === SHAPE.DOOR 
 export const CIRCUIT_REACT = new Uint8Array(BLOCK_LIMIT);
 for (const id of [B.CINNABAR_WIRE, B.CINNABAR_TORCH, B.CINNABAR_TORCH_OFF, B.CINNABAR_LAMP, B.CINNABAR_LAMP_ON, B.REPEATER,
   B.PISTON, B.STICKY_PISTON, B.STONE_BUTTON, B.WOODEN_PRESSURE_PLATE, B.CHIME_BLOCK, B.DOOR, B.OAK_TRAPDOOR, B.OAK_FENCE_GATE, B.TNT, B.DISPENSER, B.DROPPER,
-  B.COMPARATOR, B.OBSERVER, B.DAYLIGHT_SENSOR]) CIRCUIT_REACT[id] = 1;
+  B.COMPARATOR, B.OBSERVER, B.DAYLIGHT_SENSOR, B.HUSH_SENSOR]) CIRCUIT_REACT[id] = 1;
 for (const b of BLOCKS) if (b && (b.shape === SHAPE.DOOR || b.shape === SHAPE.TRAPDOOR || b.shape === SHAPE.GATE)) CIRCUIT_REACT[b.id] = 1;
 /** Blocks re-evaluated when their chunk loads or on random ticks (state may be stale after a reload). */
 export const CIRCUIT_SETTLE = new Uint8Array(BLOCK_LIMIT);
 for (const id of [B.CINNABAR_WIRE, B.CINNABAR_TORCH, B.CINNABAR_TORCH_OFF, B.CINNABAR_LAMP, B.CINNABAR_LAMP_ON, B.REPEATER,
   B.PISTON, B.STICKY_PISTON, B.STONE_BUTTON, B.WOODEN_PRESSURE_PLATE, B.DISPENSER, B.DROPPER,
-  B.COMPARATOR, B.OBSERVER, B.DAYLIGHT_SENSOR]) CIRCUIT_SETTLE[id] = 1;
+  B.COMPARATOR, B.OBSERVER, B.DAYLIGHT_SENSOR, B.HUSH_SENSOR]) CIRCUIT_SETTLE[id] = 1;
 export { CIRCUIT_BLOCK };
 
 // ---- power queries (pure functions of a world with getBlock / getMeta) -----------------
@@ -81,6 +81,7 @@ export function strongOut(w, x, y, z, d, forWire = false) {
   switch (id) {
     case B.LEVER: case B.STONE_BUTTON: { const m = w.getMeta(x, y, z); return m & ON && same(attachDir(m), d) ? 15 : 0; }
     case B.WOODEN_PRESSURE_PLATE: return w.getMeta(x, y, z) & 1 && d[1] < 0 ? 15 : 0;
+    case B.HUSH_SENSOR: return d[1] < 0 ? w.getMeta(x, y, z) & 15 : 0; // a pulsing sensor powers the block under it
     case B.CINNABAR_TORCH: return d[1] > 0 ? 15 : 0;
     case B.REPEATER: { const m = w.getMeta(x, y, z); return m & REPEATER_POWERED && same(H4[m & 3], d) ? 15 : 0; }
     case B.COMPARATOR: { const m = w.getMeta(x, y, z); return same(H4[m & 3], d) ? comparatorLevel(m) : 0; }
@@ -96,6 +97,7 @@ export function weakOut(w, x, y, z, d, forWire = false) {
   switch (id) {
     case B.LEVER: case B.STONE_BUTTON: return w.getMeta(x, y, z) & ON ? 15 : 0;
     case B.WOODEN_PRESSURE_PLATE: return w.getMeta(x, y, z) & 1 ? 15 : 0;
+    case B.HUSH_SENSOR: return w.getMeta(x, y, z) & 15; // the pulse of a Hush Sensor (world/hushSystem.js)
     case B.CINNABAR_TORCH: return same(torchAttachDir(w.getMeta(x, y, z)), d) ? 0 : 15;
     case B.REPEATER: { const m = w.getMeta(x, y, z); return m & REPEATER_POWERED && same(H4[m & 3], d) ? 15 : 0; }
     case B.CINNABAR_BLOCK: return 15;
@@ -424,6 +426,7 @@ export class Circuits {
         break;
       }
       case B.STONE_BUTTON: if (m & ON) w.scheduleTick(x, y, z, BUTTON_TICKS); break;
+      case B.HUSH_SENSOR: if (m & 15) w.scheduleTick(x, y, z, 40); break; // (a pulse left over from before a reload ends too)
       case B.WOODEN_PRESSURE_PLATE: if (m & 1) w.scheduleTick(x, y, z, PLATE_TICKS); break;
       case B.CHIME_BLOCK: {
         const p = powerInto(w, x, y, z) > 0;
@@ -522,6 +525,7 @@ export class Circuits {
         break;
       }
       case B.STONE_BUTTON: if (m & ON) this.act(() => w.setBlock(x, y, z, id, m & ~ON)); break;
+      case B.HUSH_SENSOR: if (m & 15) this.act(() => w.setBlock(x, y, z, id, 0)); break; // the pulse ends
       case B.WOODEN_PRESSURE_PLATE:
         if (!(m & 1)) break;
         if (this.entitiesOn && this.entitiesOn(x, y, z)) w.scheduleTick(x, y, z, PLATE_TICKS);

@@ -179,6 +179,19 @@ export class Audio {
       case 'land': this.noise(t, 0.12, 500, 1, 0.4 * gain, out, 'lowpass'); break;
       case 'rocket': this.noise(t, 0.7, 2200, 0.6, 0.3 * gain, out, 'highpass'); this.tone(t, 0.5, 300, 900, 0.06 * gain, out, 'sine'); break;
       case 'rocket_burst': this.noise(t, 0.4, 300, 0.5, 0.7 * gain, out, 'lowpass'); for (let k = 0; k < 6; k++) this.noise(t + 0.15 + Math.random() * 0.6, 0.03, 3500, 4, 0.15 * gain, out); break;
+      // the Deep Hush (world/hushSystem.js, mobs/hushkeeper.js)
+      case 'hush_sensor': this.tone(t, 0.25, 900, 1500, 0.06 * gain, out, 'sine'); this.noise(t, 0.2, 3000, 6, 0.08 * gain, out); break;
+      case 'shriek':
+        // a rising, wavering howl with a breathy rasp under it
+        for (let k = 0; k < 3; k++) this.tone(t + k * 0.04, 2.2, 260 + k * 37, 1500 + k * 90, 0.12 * gain, out, k === 1 ? 'sawtooth' : 'triangle');
+        this.noise(t, 2.4, 1800, 0.8, 0.25 * gain, out); this.noise(t + 0.5, 1.8, 600, 0.6, 0.18 * gain, out, 'lowpass'); break;
+      case 'hush_heart': this.tone(t, 0.18, 70, 45, 0.5 * gain, out, 'sine'); this.tone(t + 0.22, 0.2, 62, 40, 0.4 * gain, out, 'sine'); break;
+      case 'hush_growl': this.tone(t, 1.1, 75, 55, 0.35 * gain, out, 'sawtooth'); this.noise(t, 1.0, 220, 1.2, 0.3 * gain, out, 'lowpass'); break;
+      case 'hush_sniff': for (let k = 0; k < 3; k++) this.noise(t + k * 0.16, 0.12, 1200, 1.5, 0.22 * gain, out); break;
+      case 'emerge': this.noise(t, 3.5, 140, 0.5, 0.9 * gain, out, 'lowpass'); for (let k = 0; k < 8; k++) this.noise(t + k * 0.4 + Math.random() * 0.2, 0.15, 700, 1, 0.3 * gain, out); break;
+      case 'sonic_charge': this.tone(t, 1.6, 120, 900, 0.18 * gain, out, 'sawtooth'); this.noise(t, 1.6, 500, 2, 0.15 * gain, out); break;
+      case 'sonic_boom': this.tone(t, 0.9, 140, 35, 1.0 * gain, out, 'sine'); this.noise(t, 0.7, 900, 0.4, 0.8 * gain, out); this.tone(t, 0.4, 900, 200, 0.25 * gain, out, 'square'); break;
+      case 'catalyst': this.tone(t, 0.6, 300, 600, 0.12 * gain, out, 'sine'); this.noise(t, 0.5, 900, 1, 0.12 * gain, out, 'lowpass'); break;
       default: this.tone(t, 0.1, 440, 440, 0.1 * gain, out);
     }
   }

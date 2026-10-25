@@ -271,6 +271,7 @@ export class Mob {
     this.noActionTime = 0;
     this.lastSource = source;
     if (attacker && (attacker.isPlayer || attacker.tamed)) this.lastHurtByPlayer = 100;
+    if (this.def.knockbackResist && !this.def.guard) knockback = 0; // the Hushkeeper stands its ground
     if (attacker && knockback > 0) {
       const dx = this.x - attacker.x, dz = this.z - attacker.z;
       const d = Math.hypot(dx, dz) || 1;
@@ -443,8 +444,10 @@ export class Mob {
       b.move(g.world, b.vx, b.vy, b.vz);
       if (this.deathTime >= 20) {
         this.removed = true; this.dead = true;
+        // a Hush Catalyst nearby drinks in the experience of the dead and spreads Hushmoss (world/hushSystem.js)
+        const absorbed = g.hush ? g.hush.onMobDeath(this) : false;
         // experience when killed by the player: monsters 5, animals 1-3
-        if (this.killedByPlayer) g.entities.spawnXp(this.x, this.y + 0.3, this.z, this.def.xp || (this.def.category === 'monster' ? (this.age < 0 ? 12 : 5) : 1 + Math.floor(Math.random() * 3)));
+        if (this.killedByPlayer && !absorbed) g.entities.spawnXp(this.x, this.y + 0.3, this.z, this.def.xp || (this.def.category === 'monster' ? (this.age < 0 ? 12 : 5) : 1 + Math.floor(Math.random() * 3)));
         g.particles.smoke(this.x, this.y + this.height / 2, this.z, 14, this.width);
       }
       return;
