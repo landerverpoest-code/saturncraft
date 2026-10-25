@@ -9,7 +9,8 @@ import { B, BLOCKS, SOLID, SHAPE, isFluid, CROPS, isFurnace, DOOR_SETS, CANDLES,
 import { ITEMS, I, toolOf, isBlockItem, WOOL_ITEMS, POTION_ITEM, isArrow, DISCS } from '../world/items.js';
 import { POTIONS } from '../world/potions.js';
 import { breakProgressPerTick, blockDrops, canHarvest } from '../world/mining.js';
-import { enchLevel, meleeBonus, silkDropsSelf } from '../world/enchantments.js';
+import { enchLevel, meleeBonus, silkDropsSelf, canSurge, surgeVelocity } from '../world/enchantments.js';
+import { spearDamage } from '../entities/tidespear.js';
 import { PHYS } from '../physics/constants.js';
 import { Body } from '../physics/body.js';
 import { EXHAUSTION } from './survival.js';
@@ -101,6 +102,7 @@ export class Interaction {
     if (this.breakDelay > 0) this.breakDelay--;
     if (this.useDelay > 0) this.useDelay--;
     if (this.swing > 0) this.swing--;
+    if (this.surgeTicks > 0) this.tickSurge();
 
     // Attack / mine
     // armour stands: left-click hits (two quick hits knock it down), right-click dresses or undresses it
@@ -174,8 +176,11 @@ export class Interaction {
     }
     if (d && d.spear) {
       // hold to raise the Tidespear, release after half a second to throw it
-      if (input.right) this.bowDraw++;
-      else { if (this.bowDraw >= 10) this.throwSpear(); this.bowDraw = 0; }
+      // (with Tidal Surge: to launch yourself, which only works in water or rain)
+      const surge = enchLevel(st, 'tidal_surge');
+      if (surge && !canSurge(surge, this.surgeConditions())) this.bowDraw = 0;
+      else if (input.right) this.bowDraw++;
+      else { if (this.bowDraw >= 10) { if (surge) this.surge(surge); else this.throwSpear(); } this.bowDraw = 0; }
       if (input.right) return;
     }
     if (d && d.bow) {
@@ -463,7 +468,43 @@ export class Interaction {
     g.audio.play('click', [p.x, p.y + 1, p.z]);
   }
 
-  /** Throw the held Tidespear: it flies like a heavy arrow and lands as an item with its wear. */
+  /** Is the player where Tidal Surge works: in water, or out in the rain? */
+  surgeConditions() {
+    const g = this.game, p = g.player;
+    const inRain = !!(g.world.rainingAt && g.world.rainingAt(Math.floor(p.x), Math.floor(p.y + 1), Math.floor(p.z)));
+    return { inWater: !!p.body.inWater, inRain };
+  }
+
+  /** Tidal Surge (reference: riptide): fling the player along the view, spear first, for a second of spin attack. */
+  surge(level) {
+    const g = this.game, p = g.player, b = p.body;
+    const [vx, vy, vz] = surgeVelocity(level, p.lookDir());
+    b.vx += vx; b.vy += vy; b.vz += vz;
+    if (b.onGround) b.vy += 0.5; // off the ground first
+    b.fallDistance = 0;
+    this.surgeTicks = 20;
+    this.surgeHit = new Set();
+    p.inventory.damageSelected(1);
+    g.audio.play('splash', [p.x, p.y + 1, p.z], 0.9);
+    this.swing = SWING_TICKS;
+  }
+
+  /** While surging, the spear hits each mob it passes through for its throw damage; the first hit bounces the player back. */
+  tickSurge() {
+    const g = this.game, p = g.player, b = p.body;
+    this.surgeTicks--;
+    b.fallDistance = 0;
+    const held = p.inventory.selectedStack;
+    for (const m of g.entities.list) {
+      if (m.kind !== 'mob' || m.deathTime !== 0 || this.surgeHit.has(m)) continue;
+      const hw = (m.body ? m.body.width : 0.6) / 2 + 0.6, h = m.body ? m.body.height : 1.8;
+      if (Math.abs(m.x - p.x) > hw || Math.abs(m.z - p.z) > hw || m.y > p.y + 2.4 || m.y + h < p.y - 0.6) continue;
+      this.surgeHit.add(m);
+      if (m.hurt(spearDamage(held, m), 'player', p, 0.6)) { b.vx *= -0.2; b.vy *= -0.2; b.vz *= -0.2; this.surgeTicks = 0; }
+    }
+  }
+
+  /** Throw the held Tidespear: it flies like a heavy arrow, sticks where it lands and keeps its wear and enchantments. */
   throwSpear() {
     const g = this.game, p = g.player, inv = p.inventory, st = inv.selectedStack;
     const [ex, ey, ez] = p.eyePos(), [dx, dy, dz] = p.lookDir();

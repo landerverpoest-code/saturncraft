@@ -14,6 +14,8 @@ import { RAIL_EXITS, RAIL_UP, railHeight } from '../world/rails.js';
 import { withExtras, canStack, isGlinting, arrowDamage } from '../world/enchantments.js';
 import { splashPotion } from './splash.js';
 import { ArmorStand, STAND_WIDTH, STAND_HEIGHT } from './armorStand.js';
+import { tickSpear } from './tidespear.js';
+import { buildSpearModel, lightSpear } from '../render/spearModel.js';
 
 let nextEntityId = 1;
 export const ENTITY_RENDER_DIST = 64;
@@ -349,7 +351,8 @@ export class Arrow {
     this.dead = false;
     this.prev = [x, y, z];
     this.pickup = !thrown && shooter && shooter.isPlayer;
-    this.item = null; // a thrown Tidespear: the stack it lands as
+    this.item = null; // a thrown Tidespear: the stack it is (null for a Sodden Shambler's)
+    this.creativeThrow = false; // thrown in creative: the thrower kept it, so it never turns into an item
     this.pickupId = I.ARROW; // a tipped arrow is picked back up as itself
   }
 
@@ -361,10 +364,10 @@ export class Arrow {
     this.effect = [fx[0], Math.max(1, Math.floor(fx[1] / 8)), fx[2]];
   }
 
-  /** A thrown Tidespear stops here and lies as an item (the host shares it like any drop). */
+  /** A thrown Tidespear turns into a dropped item here (the host shares it like any drop). */
   land(game) {
     this.dead = true;
-    if (this.item && (!game.net || !game.net.isClient)) game.entities.spawnItem(this.x - this.vx * 0.1, this.y + 0.1, this.z - this.vz * 0.1, this.item, [0, 0.05, 0]);
+    if (this.item && !this.creativeThrow && (!game.net || !game.net.isClient)) game.entities.spawnItem(this.x - this.vx * 0.1, this.y + 0.1, this.z - this.vz * 0.1, this.item, [0, 0.05, 0]);
     game.audio.play('arrow_hit', [this.x, this.y, this.z]);
   }
 
@@ -382,6 +385,7 @@ export class Arrow {
   tick(game) {
     this.prev = [this.x, this.y, this.z];
     this.age++;
+    if (this.thrown === 'spear') { tickSpear(this, game); return; } // tidespear.js
     if (this.stuck) {
       if (this.age > 1200) this.dead = true;
       const p = game.player;
@@ -397,11 +401,6 @@ export class Arrow {
     let endT = hit ? hit.dist : speed;
     // entity collision
     const target = game.entities.sweepHit(this, this.x, this.y, this.z, this.vx / speed, this.vy / speed, this.vz / speed, endT);
-    if (target && this.thrown === 'spear') {
-      target.hurt(8, 'arrow', this.shooter, 0.6, this);
-      this.land(game);
-      return;
-    }
     if (target && this.thrown) {
       // no damage, just a knock (snowballs and eggs); an elixir breaks on whoever it hits
       if (this.thrown === 'potion') { const t = rayAABBDist(this, target); this.x += this.vx / speed * t; this.y += this.vy / speed * t; this.z += this.vz / speed * t; }
@@ -420,7 +419,6 @@ export class Arrow {
       this.vx *= -0.1; this.vy *= -0.1; this.vz *= -0.1;
       return;
     }
-    if (hit && this.thrown === 'spear') { this.x += this.vx / speed * hit.dist; this.y += this.vy / speed * hit.dist; this.z += this.vz / speed * hit.dist; this.land(game); return; }
     if (hit && this.thrown) { this.x += this.vx / speed * hit.dist; this.y += this.vy / speed * hit.dist; this.z += this.vz / speed * hit.dist; this.shatter(game); return; }
     if (hit) {
       this.x += this.vx / speed * hit.dist; this.y += this.vy / speed * hit.dist; this.z += this.vz / speed * hit.dist;
@@ -430,9 +428,9 @@ export class Arrow {
     }
     this.x += this.vx; this.y += this.vy; this.z += this.vz;
     const inWater = w.getBlock(Math.floor(this.x), Math.floor(this.y), Math.floor(this.z)) === B.WATER;
-    const drag = inWater && this.thrown !== 'spear' ? 0.6 : 0.99; // a Tidespear cuts through water
+    const drag = inWater ? 0.6 : 0.99;
     this.vx *= drag; this.vy *= drag; this.vz *= drag;
-    this.vy -= this.thrown && this.thrown !== 'potion' && this.thrown !== 'spear' ? 0.03 : 0.05;
+    this.vy -= this.thrown && this.thrown !== 'potion' ? 0.03 : 0.05;
     if (this.y < MIN_Y - 64 || this.age > 1200) this.dead = true;
   }
 }
@@ -476,6 +474,7 @@ export class EntityManager {
     a.power = power | 0; // Strongdraw level of the bow
     a.item = item;
     if (item && !thrown) a.setTip(item.id);
+    if (thrown === 'spear') { a.pickup = !!item; a.creativeThrow = !!(item && shooter && shooter.creative); }
     return a;
   }
 
@@ -640,8 +639,8 @@ export class EntityManager {
         for (const mat of m.material) mat.color.setScalar(L);
       } else if (e.kind === 'arrow') {
         m.position.set(px, py, pz);
-        if (!e.stuck && (!e.thrown || e.thrown === 'spear')) m.lookAt(px + e.vx, py + e.vy, pz + e.vz);
-        if (e.thrown === 'spear') m.material.color.setRGB(0.35 * L, 0.66 * L, 0.6 * L); else m.material.color.setScalar(L);
+        if (!e.stuck && (!e.thrown || e.thrown === 'spear') && (e.vx || e.vy || e.vz)) m.lookAt(px + e.vx, py + e.vy, pz + e.vz);
+        if (e.thrown === 'spear') lightSpear(m, L, isGlinting(e.item), timeSec); else m.material.color.setScalar(L);
       } else if (e.renderUpdate) {
         e.renderUpdate(m, px, py, pz, alpha, L, timeSec); // mobs and custom entities (fireballs, thrown eyes)
       }
@@ -730,15 +729,8 @@ export class EntityManager {
       return s;
     }
     if (e.kind === 'arrow' && e.thrown === 'spear') {
-      // shaft and three prongs, pointing along the flight
-      const mat = new THREE.MeshLambertMaterial({ color: 0x5aa898 });
-      const g = new THREE.Group();
-      const shaft = new THREE.Mesh(this.cubeGeo, mat); shaft.scale.set(0.06, 0.06, 1.3); shaft.position.z = -0.2;
-      g.add(shaft);
-      for (const ox of [-0.09, 0, 0.09]) { const t = new THREE.Mesh(this.cubeGeo, mat); t.scale.set(0.04, 0.04, 0.25); t.position.set(ox, 0, 0.5); g.add(t); }
-      const bar = new THREE.Mesh(this.cubeGeo, mat); bar.scale.set(0.24, 0.05, 0.05); bar.position.z = 0.38; g.add(bar);
-      g.material = mat;
-      return g;
+      // shaft, crossbar and three prongs, pointing along the flight (render/spearModel.js)
+      return buildSpearModel();
     }
     if (e.kind === 'arrow' && e.thrown) {
       const m = new THREE.Mesh(this.cubeGeo, new THREE.MeshLambertMaterial({ color: e.thrown === 'egg' ? 0xefe3c8 : 0xf4f8ff }));

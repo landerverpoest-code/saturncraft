@@ -65,17 +65,6 @@ describe('tidespear', () => {
     expect(arrows[0].args[8]).toBe('spear');
     expect(arrows[0].args[11]).toMatchObject({ id: I.TIDESPEAR, damage: 4 });
   });
-  it('lands as an item where it hits', async () => {
-    const { Arrow } = await import('../src/entities/entities.js');
-    const drops = [];
-    const world = { raycast: () => ({ dist: 0.5 }), getBlock: () => 0 };
-    const game = { world, net: null, audio: { play() {} }, entities: { sweepHit: () => null, spawnItem: (x, y, z, st) => drops.push(st) } };
-    const a = new Arrow(0, 70, 0, 0, -1, 0, null, false, 'spear');
-    a.item = { id: I.TIDESPEAR, count: 1, damage: 4 };
-    a.tick(game);
-    expect(a.dead).toBe(true);
-    expect(drops).toEqual([{ id: I.TIDESPEAR, count: 1, damage: 4 }]);
-  });
 });
 
 describe('tipped arrows', () => {

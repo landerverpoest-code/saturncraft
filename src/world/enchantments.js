@@ -25,17 +25,23 @@ export const ENCHANTS = {
   swiftdig:    { name: 'Swiftdig',    max: 5, weight: 10, table: ['tool'], anvil: ['shears'], min: lin(1, 10), span: 50 },
   gentle_hand: { name: 'Gentle Hand', max: 1, weight: 1,  table: ['tool'], min: () => 15, span: 50, group: 'harvest' },
   bounty:      { name: 'Bounty',      max: 3, weight: 2,  table: ['tool'], min: lin(15, 9), span: 50, group: 'harvest' },
-  steadfast:   { name: 'Steadfast',   max: 3, weight: 5,  table: ['sword', 'tool', 'armor', 'bow'], anvil: ['shears', 'gear'], min: lin(5, 8), span: 50 },
+  steadfast:   { name: 'Steadfast',   max: 3, weight: 5,  table: ['sword', 'tool', 'armor', 'bow', 'spear'], anvil: ['shears', 'gear'], min: lin(5, 8), span: 50 },
   bulwark:     { name: 'Bulwark',     max: 4, weight: 10, table: ['armor'], min: lin(1, 11), span: 11 },
   featherstep: { name: 'Featherstep', max: 4, weight: 5,  table: ['boots'], min: lin(5, 6), span: 6 },
   strongdraw:  { name: 'Strongdraw',  max: 5, weight: 10, table: ['bow'], min: lin(1, 10), span: 15 },
   endless:     { name: 'Endless',     max: 1, weight: 1,  table: ['bow'], min: () => 20, span: 30 },
+  // Tidespear (reference: trident) enchantments. `cap` is a fixed top of the level window;
+  // `excludes` lists enchantments it cannot share an item with (Tidal Surge excludes both others).
+  homing_tide: { name: 'Homing Tide', max: 3, weight: 5,  table: ['spear'], min: lin(12, 7), cap: 50 },             // loyalty
+  tidal_surge: { name: 'Tidal Surge', max: 3, weight: 2,  table: ['spear'], min: lin(17, 7), cap: 50, excludes: ['homing_tide', 'stormcall'] }, // riptide
+  harpoon:     { name: 'Harpoon',     max: 5, weight: 2,  table: ['spear'], min: lin(1, 8), span: 20 },              // impaling
+  stormcall:   { name: 'Stormcall',   max: 1, weight: 1,  table: ['spear'], min: () => 25, cap: 50 },                 // channeling
 };
 export const ENCH_KEYS = Object.keys(ENCHANTS);
 for (const k of ENCH_KEYS) {
   const e = ENCHANTS[k];
   e.key = k;
-  e.maxCost = (l) => e.min(l) + e.span;
+  e.maxCost = (l) => (e.cap !== undefined ? e.cap : e.min(l) + e.span);
   // anvil cost multiplier per level from the rarity (weight 10 / 5 / 2 / 1)
   e.costMul = e.weight >= 10 ? 1 : e.weight >= 5 ? 2 : e.weight >= 2 ? 4 : 8;
 }
@@ -52,7 +58,7 @@ export function enchName(key, level) {
   return e.max === 1 && level === 1 ? e.name : `${e.name} ${roman(level)}`;
 }
 
-/** Categories an item belongs to: sword, tool, axe, armor, boots, bow, shears, gear, book. */
+/** Categories an item belongs to: sword, tool, axe, armor, boots, bow, spear, shears, gear, book. */
 export function categories(id) {
   const d = ITEMS[id];
   if (!d) return [];
@@ -60,6 +66,7 @@ export function categories(id) {
   if (d.tool) return d.tool.type === 'sword' ? ['sword'] : d.tool.type === 'axe' ? ['tool', 'axe'] : ['tool'];
   if (d.armor) return d.armor.slot === 3 ? ['armor', 'boots'] : ['armor'];
   if (d.bow || d.crossbow) return ['bow'];
+  if (d.spear) return ['spear'];
   if (d.shears) return ['shears'];
   if (d.durability) return ['gear'];
   return [];
@@ -71,7 +78,7 @@ export function enchantability(id) {
   if (id === I.BOOK) return 1;
   if (d.tool) return TOOL_ENCHANTABILITY[d.tool.material] || 0;
   if (d.armor) return ARMOR_ENCHANTABILITY[d.armor.material] || 0;
-  if (d.bow || d.crossbow) return 1;
+  if (d.bow || d.crossbow || d.spear) return 1;
   return 0;
 }
 
@@ -86,6 +93,7 @@ export function canApply(key, id, anvil = false) {
 
 export function compatible(a, b) {
   if (a === b) return false;
+  if ((ENCHANTS[a].excludes || []).includes(b) || (ENCHANTS[b].excludes || []).includes(a)) return false;
   const ga = ENCHANTS[a].group;
   return !ga || ga !== ENCHANTS[b].group;
 }
@@ -337,9 +345,18 @@ export function anvilCombine(left, right) {
 /** Mining speed bonus of Swiftdig (added to the tool's speed when it is the right tool). */
 export const swiftdigBonus = (level) => (level > 0 ? level * level + 1 : 0);
 
-/** Extra melee damage: Keen against anything, Hallowed against the undead. */
+/** Water mobs (fish, Inklings, Dolphins, Deepeyes, Gillnewts, Shellbacks): what Harpoon is for. */
+export function isWaterMob(target) {
+  const d = target && target.def;
+  return !!(d && (d.aquatic || d.fish || d.breathesWater || d.turtle));
+}
+
+/** Harpoon's extra damage (2.5 per level) against water mobs, in melee and when thrown. */
+export const harpoonBonus = (st, target) => (isWaterMob(target) ? 2.5 * enchLevel(st, 'harpoon') : 0);
+
+/** Extra melee damage: Keen against anything, Hallowed against the undead, Harpoon against water mobs. */
 export function meleeBonus(st, target) {
-  let d = 0;
+  let d = harpoonBonus(st, target);
   const keen = enchLevel(st, 'keen');
   if (keen) d += 0.5 * keen + 0.5;
   const hal = enchLevel(st, 'hallowed');
@@ -400,3 +417,13 @@ export function arrowDamage(speed, power = 0) {
 
 /** Plunder: each drop gets 0..lvl extra. */
 export const plunderExtra = (level, rng = Math.random) => (level > 0 ? nextInt(rng, level + 1) : 0);
+
+// ---- Tidespear --------------------------------------------------------------
+/** Tidal Surge works only for a player standing in water or out in the rain. */
+export const canSurge = (level, { inWater = false, inRain = false } = {}) => level > 0 && (inWater || inRain);
+
+/** The launch a Tidal Surge release gives along the look direction (blocks per tick): 3 x (1 + level) / 4. */
+export function surgeVelocity(level, [dx, dy, dz]) {
+  const f = 3 * (1 + level) / 4, l = Math.hypot(dx, dy, dz) || 1;
+  return [dx / l * f, dy / l * f, dz / l * f];
+}

@@ -8,7 +8,8 @@ import { itemCanvas } from '../ui/icons.js';
 import { lightAt } from '../entities/entities.js';
 import { entityGlow } from '../render/entityLight.js';
 import { PHYS } from '../physics/constants.js';
-import { heldLightLevel } from '../world/items.js';
+import { heldLightLevel, ITEMS } from '../world/items.js';
+import { heldSpearModel, lightSpear } from '../render/spearModel.js';
 import { REMOTE_LIGHTS } from '../render/terrainMaterial.js';
 
 const SWING_MS = 300;
@@ -89,8 +90,9 @@ export class RemotePlayer {
     if (id === this.itemId) return;
     this.itemId = id;
     const arm = this.root.userData.parts.armR;
-    if (this.item) { arm.remove(this.item); this.item.material.map.dispose(); this.item.material.dispose(); this.item.geometry.dispose(); this.item = null; }
+    if (this.item) { arm.remove(this.item); if (this.item.userData.dispose) this.item.userData.dispose(); else { this.item.material.map.dispose(); this.item.material.dispose(); this.item.geometry.dispose(); } this.item = null; }
     if (id == null) return;
+    if (ITEMS[id] && ITEMS[id].spear) { this.item = heldSpearModel(); arm.add(this.item); return; } // a 3D Tidespear
     let canvas;
     try { canvas = itemCanvas(id); } catch { return; }
     const tex = new THREE.CanvasTexture(canvas);
@@ -137,6 +139,7 @@ export class RemotePlayer {
     const t = (now - this.swingAt) / SWING_MS;
     if (t >= 0 && t < 1) parts.armR.rotation.x = -Math.sin(t * Math.PI) * 1.6 - 0.3;
     this.setHeldItem(s.held);
+    if (this.item && this.item.userData.spear) lightSpear(this.item, L);
   }
 
   dispose() {

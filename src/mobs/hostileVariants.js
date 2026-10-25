@@ -209,8 +209,8 @@ export const VARIANT_MOBS = {
     burnsInSun: true, sinks: true, aquaticSpawn: true,
     customAI: soddenAI, customRender: soddenRender,
     onSpawn: (m) => { m.special = Math.random() < 0.0625; }, // 1 in 16 carries a Tidespear
-    onDeath: (m, g, byPlayer) => { // and drops it now and then (worn) when a player kills it
-      if (m.special && byPlayer && Math.random() < 0.25) g.entities.spawnItem(m.x, m.y + 0.5, m.z, { id: I.TIDESPEAR, count: 1, damage: 50 + Math.floor(Math.random() * 150) });
+    onDeath: (m, g, byPlayer) => { // and very rarely drops it (worn) when a player kills it
+      if (m.special && byPlayer && Math.random() < spearDropChance(m.plunder | 0)) g.entities.spawnItem(m.x, m.y + 0.5, m.z, { id: I.TIDESPEAR, count: 1, damage: 50 + Math.floor(Math.random() * 150) });
     },
     drops: [SHAMBLER.drops[0], { id: I.COPPER_INGOT, min: 1, max: 1, playerOnly: true, chance: 0.11, plunderChance: 0.02 }],
   },
@@ -229,9 +229,12 @@ Object.assign(SHAMBLER, shamblerish, { convertsTo: 'sodden_shambler' });
 
 for (const [k, d] of Object.entries(VARIANT_MOBS)) { if (!MOBS[k]) { MOBS[k] = d; MOB_KEYS.push(k); } }
 
+/** Chance that a Sodden Shambler carrying a Tidespear drops it on a player kill: 8.5 % + 1 % per Plunder level. */
+export const spearDropChance = (plunder = 0) => 0.085 + 0.01 * plunder;
+
 /** Is the reference drowned allowed to spawn here (beyond the light test)? */
 export function soddenSpawnChance(biomeKey, y, seaLevel, rng = Math.random) {
-  if (biomeKey === 'river') return Math.floor(rng() * 15) === 0;
+  if (biomeKey === 'river' || biomeKey === 'frozen_river') return Math.floor(rng() * 15) === 0;
   return Math.floor(rng() * 40) === 0 && y < seaLevel - 5;
 }
 
