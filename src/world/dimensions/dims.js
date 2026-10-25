@@ -23,7 +23,7 @@ export const DIMENSIONS = {
 
 export const DIM_KEYS = Object.keys(DIMENSIONS);
 
-/** Resolve a user-typed dimension name ("nether"-style aliases are not used; we accept our own names). */
+/** Resolve a user-typed dimension name (only our own names are accepted). */
 export function dimensionByName(name) {
   const n = String(name || '').toLowerCase().replace(/^the[_ ]?/, '').replace(/[^a-z]/g, '');
   const aliases = { overworld: 'overworld', surface: 'overworld', world: 'overworld', cinderdeep: 'cinderdeep', cinder: 'cinderdeep', underworld: 'cinderdeep', deep: 'cinderdeep', hollow: 'hollow', void: 'hollow' };

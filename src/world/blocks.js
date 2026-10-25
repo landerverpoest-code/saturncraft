@@ -304,7 +304,7 @@ def(B.ANVIL, 'Anvil', { hardness: 5, resistance: 1200, tool: TOOL.PICKAXE, tier:
 // Brewing Alembic (reference: brewing stand): a cobblestone base with an ember rod; drawn from shapes.js BLOCK_BOXES.
 def(B.BREWING_STAND, 'Brewing Alembic', { hardness: 0.5, resistance: 0.5, tool: TOOL.PICKAXE, tier: TIER.ANY, opaque: false, shape: SHAPE.BOXES, emit: 1, sound: 'metal', container: true, tex: { top: 'brewing_stand_top', bottom: 'brewing_stand_base', side: 'brewing_stand_side' },
   iconStyle: ['alembic', { r: '#ffb030', R: '#ffe080', i: '#3a3236', v: '#dbe8f5', w: '#eef4fa', h: '#c8304a', c: '#7b7b7e', C: '#a0a0a3' }] });
-// Cinderroot (reference: nether wart): grows on Mournsand in the Cinderdeep, meta = age 0..3.
+// Cinderroot (reference: the ember-realm wart): grows on Mournsand in the Cinderdeep, meta = age 0..3.
 def(B.CINDERROOT, 'Cinderroot', { ...plant, shape: SHAPE.CROP, drops: 'cinderroot', tex: { all: 'cinderroot_3' } });
 
 // The Cinderdeep (fiery underworld) and the Hollow (void dimension); see world/dimensions/.

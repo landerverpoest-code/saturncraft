@@ -30,7 +30,7 @@ export function itemByName(name) {
       ITEM_KEYS.set(d.name.toLowerCase().replace(/[^a-z0-9]+/g, '_'), d.id);
     }
   }
-  return ITEM_KEYS.get(name.toLowerCase().replace(/^minecraft:|^saturncraft:/, '').replace(/[^a-z0-9]+/g, '_'));
+  return ITEM_KEYS.get(name.toLowerCase().replace(/^[a-z_]+:/, '').replace(/[^a-z0-9]+/g, '_'));
 }
 
 
@@ -200,7 +200,7 @@ export function runCommand(game, text) {
       const sub = (args[0] || '').toLowerCase();
       if (sub === 'clear') { p.clearEffects(); return 'Removed every effect'; }
       if (sub !== 'give' || !args[1]) return 'Usage: /effect give <effect> [seconds] [level]  or  /effect clear';
-      const name = args[1].toLowerCase().replace(/^minecraft:/, '');
+      const name = args[1].toLowerCase().replace(/^[a-z_]+:/, '');
       if (!EFFECTS[name]) return `Unknown effect: ${name}`;
       const secs = args[2] !== undefined ? Number(args[2]) : 30, lvl = args[3] !== undefined ? Number(args[3]) : 1;
       if (!(secs > 0) || !(lvl >= 1 && lvl <= 255)) return 'Usage: /effect give <effect> [seconds] [level]';
