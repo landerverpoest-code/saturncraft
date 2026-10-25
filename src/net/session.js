@@ -16,15 +16,18 @@
 //   requestSpawn(kind, data), interactMob(mob), hitBoat(boat), ride(boat, on),
 //   openContainer / closeContainer / uiBefore / uiAfter, requestTrade(...),
 //   sendCommand(text), requestTravel(dim, arrival), requestExplosion(...),
-//   onSwitchDimension(dim, pos), onArrived(x, y, z), respawnNearHost()
+//   onSwitchDimension(dim, pos), onArrived(x, y, z), respawnNearHost(), useFence(x, y, z)
 import { doubleChestHalves, doubleChestView } from '../world/chests.js';
 import { igniteTNT, PrimedTNT } from '../entities/tnt.js';
 import { useStand, punchStand } from '../entities/armorStand.js';
 import {
   PROTOCOL_VERSION, MAX_PLAYERS, encodeMessage, Reassembler, makeRoomCode, cleanName,
   packPlayerState, unpackPlayerState, packEntity, encodePackedChunk, decodePackedChunk,
-  containerSlots, diffSlots, applySlotChanges, containerState, loadContainerState, copyStack, commandName,
+  containerSlots, diffSlots, applySlotChanges, containerState, loadContainerState, copyStack, commandName, StandRequests,
 } from './protocol.js';
+import { heldBy, unleash, tieToFence, untieFromFence, isFencePost } from '../entities/leash.js';
+import { raidBarFor, championDiscount } from '../mobs/raids.js';
+import { offerPrice } from '../mobs/trades.js';
 import { EditSync } from './editSync.js';
 import { createTransport } from './transport.js';
 import { RemotePlayer } from './remotePlayer.js';
@@ -307,6 +310,7 @@ export class HostSession extends Session {
       case 'bhit': this.remoteBoatHit(c, m); break;
       case 'sthit': this.remoteStandHit(c, m); break;
       case 'stuse': this.remoteStandUse(c, m); break;
+      case 'fence': this.remoteFence(c, m); break;
       case 'cmd': this.remoteCommand(c, m); break;
       case 'travel': {
         const s = c.rp.state;
@@ -367,6 +371,7 @@ export class HostSession extends Session {
     if (!c.joined) return;
     for (const v of this.viewers.values()) v.ids.delete(c.id);
     for (const e of this.game.entities.list) if (e.remoteRider === c.id) e.remoteRider = null;
+    for (const mob of heldBy(this.game, c.rp.target)) unleash(this.game, mob, true); // the leads they held fall
     c.rp.dispose();
     this.remotes.delete(c.id);
     this.broadcast({ t: 'leave', id: c.id, name: c.name });
@@ -375,13 +380,15 @@ export class HostSession extends Session {
 
   // ---- blocks ---------------------------------------------------------------------
   applyGuestEdits(c, flat) {
-    const g = this.game, w = g.world, broken = [];
-    const bad = this.edits.apply(flat, (x, y, z) => {
+    const g = this.game, w = g.world, broken = [], shaken = [];
+    const bad = this.edits.apply(flat, (x, y, z, nid) => {
       if (!this.near(c, x + 0.5, y + 0.5, z + 0.5)) return false;
       const id = w.getBlock(x, y, z);
       if (CONTAINER_BLOCKS.has(id)) broken.push([x, y, z, id, w.getMeta(x, y, z)]);
+      if (!id !== !nid) shaken.push([x, y, z, nid ? 'place' : 'break']); // placing or breaking shakes the Deep Hush
       return true;
     });
+    if (g.hush) for (const [x, y, z, kind] of shaken) g.hush.blockEvent(x, y, z, kind, c.rp.target);
     // a chest or furnace a guest broke spills its (host-side) contents
     for (const [x, y, z, id, meta] of broken) if (!CONTAINER_BLOCKS.has(w.getBlock(x, y, z))) g.onBlockBroken(x, y, z, id, meta);
     if (bad.length) {
@@ -480,6 +487,13 @@ export class HostSession extends Session {
     }
   }
 
+  /** A guest right-clicked a fence post: tie the animals they lead to it, or take the ones tied there. */
+  remoteFence(c, m) {
+    const g = this.game, s = c.rp.state, x = m.x | 0, y = m.y | 0, z = m.z | 0;
+    if (!s || s.dead || !this.near(c, x + 0.5, y + 0.5, z + 0.5, 8) || !isFencePost(g.world.getBlock(x, y, z))) return;
+    if (tieToFence(g, x, y, z, c.rp.target) || untieFromFence(g, x, y, z, c.rp.target)) g.audio.play('hit_wood', [x + 0.5, y + 0.5, z + 0.5]);
+  }
+
   /** A guest touches an item / orb / arrow: hand over what is there (once). */
   remoteTake(c, m) {
     const e = this.entity(m.id), s = c.rp.state;
@@ -510,7 +524,7 @@ export class HostSession extends Session {
   remoteInteract(c, m) {
     const g = this.game, mob = this.entity(m.id), s = c.rp.state;
     if (!mob || mob.kind !== 'mob' || !s || s.dead || Math.hypot(mob.x - s.x, mob.y - s.y, mob.z - s.z) > 8) return;
-    const held = m.st && ITEMS[m.st.id] ? { id: m.st.id, count: Math.max(1, m.st.count | 0), damage: m.st.damage | 0 } : null;
+    const held = m.st && ITEMS[m.st.id] ? withExtras({ id: m.st.id, count: Math.max(1, Math.min(64, m.st.count | 0)), damage: m.st.damage | 0 }, m.st) : null; // (a Name Tag keeps its label)
     const d = held && ITEMS[held.id];
     if (mob.def.villager && mob.deathTime === 0 && mob.trades.length && !(d && d.food && mob.def.food)) {
       c.ch.send({ t: 'trades', id: mob.id, prof: mob.profession, trades: mob.trades });
@@ -529,6 +543,7 @@ export class HostSession extends Session {
     let ok = false;
     g.player = actor;
     try { ok = g.interaction.interactMob(mob); } finally { g.player = real; g.interaction.swing = swing; }
+    if (mob.leashHolder === actor) mob.leashHolder = c.rp.target; // the guest holds the lead (its stand-in, not this one-off actor)
     c.ch.send({ t: 'used', ok, item: held ? held.id : -1, consume: ops.consume, damage: ops.damage });
   }
 
@@ -561,16 +576,19 @@ export class HostSession extends Session {
     punchStand(this.game, e, !!s.creative);
   }
 
-  /** A guest right-clicked an armour stand holding `st`: swap and tell them what their hand now holds. */
+  /**
+   * A guest right-clicked an armour stand holding `st` (already taken out of their hand): swap, and
+   * always answer request `rid`: ok with what came off the stand, or refused (they get `st` back).
+   */
   remoteStandUse(c, m) {
-    const e = this.entity(m.id), s = c.rp.state;
-    if (!e || e.kind !== 'stand' || !s || s.dead || Math.hypot(e.x - s.x, e.z - s.z) > 6) return;
-    const st = m.st;
-    if (st && (!ITEMS[st.id] || !Number.isInteger(st.count) || st.count <= 0 || st.count > 64)) return;
+    const e = this.entity(m.id), s = c.rp.state, st = m.st;
+    const reply = (ok, give = null) => c.ch.send({ t: 'stgot', rid: m.rid, ok: ok ? 1 : 0, give: copyStack(give) });
+    if (!e || e.kind !== 'stand' || !s || s.dead || Math.hypot(e.x - s.x, e.z - s.z) > 6) { reply(false); return; }
+    if (st && (!ITEMS[st.id] || !Number.isInteger(st.count) || st.count <= 0 || st.count > 64)) { reply(false); return; }
     const r = useStand(e, st ? copyStack(st) : null, +m.y || 0);
-    if (!r.ok) return;
+    if (!r.ok) { reply(false); return; }
     this.game.audio.play('equip', [e.x, e.y + 1, e.z]);
-    c.ch.send({ t: 'stgot', item: st ? st.id : -1, give: copyStack(r.give) });
+    reply(true, r.give);
   }
 
   /** Remote players that projectiles can hit (mob arrows always, player arrows with PvP). */
@@ -665,7 +683,11 @@ export class HostSession extends Session {
 
   setOptions(m) { super.setOptions(m); this.sendEnv(); }
 
-  sendEnv() { const g = this.game; this.broadcast({ t: 'env', time: g.time, w: g.weather.save(), dl: g.daylightCycle, df: g.difficulty, pvp: this.pvp, gc: this.guestCommands }); }
+  sendEnv() {
+    const g = this.game;
+    // rb: the raid under way (mobs/raids.js raidStatus): guests near the village show its bar
+    this.broadcast({ t: 'env', time: g.time, w: g.weather.save(), dl: g.daylightCycle, df: g.difficulty, pvp: this.pvp, gc: this.guestCommands, rb: g.raids && g.raids.status ? g.raids.status() : null });
+  }
 
   /** Night is skipped once everybody has been asleep for a while (the host in bed for 5 s). */
   tickSleep() {
@@ -736,6 +758,7 @@ export class HostSession extends Session {
       const list = [[0, ...this.ownState()]];
       for (const c of this.joined()) if (c.raw) list.push([c.id, ...c.raw]);
       const riderOf = (b) => (b.rider === g.player ? 0 : b.remoteRider || -1);
+      const playerIdOf = (h) => (h === (g.localPlayer || g.player) ? 0 : h.remote ? h.remote.id : -1); // who holds a lead
       // an entity is packed at most once per tick, however many clients have it in range
       const ents = g.entities.list.filter((x) => !x.removed && (!x.dead || x.kind === 'mob') && x.kind !== 'eye');
       const packed = new Map(); // entity -> its snapshot and key, made once however many guests can see it
@@ -755,7 +778,7 @@ export class HostSession extends Session {
           if (Math.abs(x.x - s.x) > ENTITY_RANGE || Math.abs(x.z - s.z) > ENTITY_RANGE) continue;
           let p = packed.get(x);
           if (p === undefined) {
-            const a = packEntity(x, riderOf);
+            const a = packEntity(x, riderOf, playerIdOf);
             p = a ? { a, key: JSON.stringify(a) } : null;
             packed.set(x, p);
           }
@@ -805,6 +828,8 @@ export class ClientSession extends Session {
     this.id = -1;
     this.lastSeen = performance.now();
     this.cont = null; // the container screen we have open: { kind, x, y, z, obj, ep, seq, pending, snap }
+    this.stands = new StandRequests(); // armour stand swaps waiting for the host's answer
+    this.raidSeen = null; // the last raid status from the host (for the victory / defeat toasts)
   }
 
   async connect(transport, code, onStatus = () => {}) {
@@ -901,6 +926,7 @@ export class ClientSession extends Session {
         if (typeof m.dl === 'boolean') g.settings.daylightCycle = m.dl;
         if (typeof m.df === 'string') g.settings.difficulty = m.df;
         this.setOptions(m);
+        this.onRaidStatus(m.rb || null);
         break;
       case 'ents': if (m.d === g.world.dimension && !g.dims.pending) this.ents.apply(m.m, m.ids); break;
       case 'hurt': p.hurt(m.a, m.s, m.x != null ? { x: m.x, z: m.z } : null); break;
@@ -928,12 +954,13 @@ export class ClientSession extends Session {
       }
       case 'gotxp': { const lv = addXp(p.xp, m.v); g.audio.play(lv && p.xp.level % 5 === 0 ? 'levelup' : 'orb'); break; }
       case 'stgot': {
-        // the host put our item on its stand: our hand holds what came off it
-        const inv = p.inventory, st = inv.selectedStack;
-        if ((st ? st.id : -1) === m.item) inv.slots[inv.selected] = m.give && ITEMS[m.give.id] ? copyStack(m.give) : null;
-        else if (m.give && ITEMS[m.give.id]) { const left = inv.add(copyStack(m.give)); if (left > 0) g.entities.spawnItem(p.x, p.y + 1, p.z, { ...copyStack(m.give), count: left }); }
+        // the host answered an armour stand swap: what came off it (or our own item, refused) goes back in our hands
+        const inv = p.inventory;
+        if (m.give && !ITEMS[m.give.id]) m.give = null;
+        const left = this.stands.finish(inv, m, (iv, st) => iv.add(st));
+        for (const st of left) this.requestSpawn('item', { x: p.x, y: p.y + 1, z: p.z, st, pd: 40 });
         inv.changed();
-        g.audio.play('equip');
+        if (m.ok) g.audio.play('equip');
         break;
       }
       case 'used': {
@@ -992,7 +1019,41 @@ export class ClientSession extends Session {
 
   hitBoat(boat) { this.send({ t: 'bhit', id: boat.netId }); }
   hitStand(stand) { this.send({ t: 'sthit', id: stand.netId }); }
-  useStand(stand, st, relY) { this.send({ t: 'stuse', id: stand.netId, st: st ? copyStack(st) : null, y: Math.round(relY * 100) / 100 }); }
+  /** Right-click on a shared stand: the held stack leaves our hand now; the host's answer brings back what came off. */
+  useStand(stand, st, relY) {
+    const inv = this.game.player.inventory;
+    const { rid, st: taken } = this.stands.begin(inv, inv.selected, performance.now());
+    if (taken) inv.changed();
+    this.send({ t: 'stuse', id: stand.netId, st: taken, y: Math.round(relY * 100) / 100, rid });
+  }
+
+  /** Right-click on a fence post: ask the host to tie our animals to it / untie the ones there. False if neither applies. */
+  useFence(x, y, z) {
+    const g = this.game, p = g.player;
+    let ask = false;
+    for (const e of g.entities.list) {
+      if (e.kind !== 'mob' || !e.netProxy || e.dead || !e.leashHolder) continue;
+      const h = e.leashHolder;
+      if (h === p || (h.kind === 'knot' && h.bx === x && h.by === y && h.bz === z)) { ask = true; break; }
+    }
+    if (!ask) return false;
+    this.send({ t: 'fence', x, y, z });
+    g.audio.play('hit_wood', [x + 0.5, y + 0.5, z + 0.5]);
+    return true;
+  }
+
+  /** The host's raid status (once a second): the raid bar while we are near the village, toasts when it ends. */
+  onRaidStatus(rb) {
+    const g = this.game, p = g.player;
+    const bar = raidBarFor(rb, p.x, p.z);
+    if (g.hud && g.hud.raidBar) g.hud.raidBar(bar);
+    const prev = this.raidSeen;
+    this.raidSeen = rb;
+    if (!bar || !g.hud || (prev && prev.id === rb.id && prev.state === rb.state)) return;
+    if (rb.state === 'won') g.hud.toast('Victory! The village is saved', 4000);
+    else if (rb.state === 'lost') g.hud.toast('The village has fallen - raid lost', 4000);
+    else if (!prev || prev.id !== rb.id) g.hud.toast('A raid is coming! Defend the village');
+  }
   ride(boat, on) { this.send({ t: 'ride', id: boat.netId, on: on ? 1 : 0 }); }
 
   /** Another player hit by us (PvP). */
@@ -1010,9 +1071,10 @@ export class ClientSession extends Session {
     const o = m.trades && m.trades[m.i];
     if (!o) return;
     let done = 0;
+    const price = offerPrice(o, championDiscount(g.player.effects)); // a Village Champion pays less
     for (let k = 0; k < m.n; k++) {
-      if (inv.count(o.give) < o.giveCount) break;
-      let left = o.giveCount;
+      if (inv.count(o.give) < price) break;
+      let left = price;
       for (let i = 0; i < inv.slots.length && left; i++) {
         const s = inv.slots[i];
         if (!s || s.id !== o.give) continue;
@@ -1140,7 +1202,7 @@ export class ClientSession extends Session {
     const e = this.edits.take();
     if (e.length) this.send({ t: 'ed', e, d: this.game.world.dimension });
     if (this.ticks % STATE_EVERY === 0 && this.ch.backlog() < BACKLOG_LIMIT) this.send({ t: 'st', s: this.ownState() }); // skip while our upload is behind
-    if (this.ticks % PSAVE_EVERY === 0) this.send({ t: 'ps', p: playerSaveData(this.game.player) });
+    if (this.ticks % PSAVE_EVERY === 0) { this.send({ t: 'ps', p: playerSaveData(this.game.player) }); this.stands.expire(performance.now()); }
     if (this.ticks % ENV_EVERY === 0 && performance.now() - this.lastSeen > TIMEOUT_MS) this.lost('Lost connection to the host (timed out)');
   }
 
