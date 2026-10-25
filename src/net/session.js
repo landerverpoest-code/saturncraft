@@ -78,7 +78,7 @@ function joinLink(code) {
   return `${location.origin}${location.pathname}?${keep}`;
 }
 
-const CONTAINER_BLOCKS = new Set([B.CHEST, B.BARREL, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.BREWING_STAND, B.GLOOMSHELL_BOX, B.HOPPER]);
+const CONTAINER_BLOCKS = new Set([B.CHEST, B.BARREL, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.BREWING_STAND, B.GLOOMSHELL_BOX, B.HOPPER, B.DISPENSER, B.DROPPER]);
 const contKey = (k, x, y, z) => `${k}:${x},${y},${z}`;
 const finite = (...v) => v.every(Number.isFinite);
 /** Stand-in for a player whose pet is waiting for them while they are offline. */
@@ -592,7 +592,7 @@ export class HostSession extends Session {
   // ---- containers -----------------------------------------------------------------
   container(kind, x, y, z) {
     const g = this.game, id = g.world.getBlock(x, y, z);
-    if (kind === 'chest') return id === B.CHEST || id === B.BARREL || id === B.GLOOMSHELL_BOX ? g.getChest(x, y, z) : id === B.HOPPER ? g.getHopper(x, y, z) : null;
+    if (kind === 'chest') return id === B.CHEST || id === B.BARREL || id === B.GLOOMSHELL_BOX ? g.getChest(x, y, z) : id === B.HOPPER ? g.getHopper(x, y, z) : id === B.DISPENSER || id === B.DROPPER ? g.getDispenser(x, y, z) : null;
     if (kind === 'chest2') {
       const h = id === B.CHEST ? doubleChestHalves(g.world, x, y, z) : null;
       return h && h[0].x === x && h[0].z === z ? doubleChestView(g.getChest(h[0].x, y, h[0].z), g.getChest(h[1].x, y, h[1].z)) : null;

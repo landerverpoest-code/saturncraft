@@ -25,7 +25,7 @@ import { MIN_Y, MAX_Y } from './constants.js';
 import { SIDE_DIRS, DOOR_OPEN, DOOR_UPPER, TRAPDOOR_OPEN, GATE_OPEN } from './shapes.js';
 import {
   FACING6, CIRCUIT_BLOCK, isWire, isTorchC, isPiston, isConductor, wireMask, wirePowerSides, attachDir, torchAttachDir,
-  ON, TURNED, REPEATER_POWERED, PISTON_EXTENDED, HEAD_STICKY, CHIME_POWERED, OPENABLE_POWERED, SIDE_TO_FACING, facingOf,
+  ON, TURNED, REPEATER_POWERED, PISTON_EXTENDED, HEAD_STICKY, CHIME_POWERED, OPENABLE_POWERED, SIDE_TO_FACING, facingOf, DISPENSER_TRIGGERED,
 } from './circuitShapes.js';
 
 export const MAX_PUSH = 12;
@@ -33,6 +33,7 @@ export const BUTTON_TICKS = 20;
 export const PLATE_TICKS = 20;
 export const TORCH_DELAY = 2;
 export const LAMP_OFF_DELAY = 4;
+export const DISPENSE_DELAY = 4;
 export const UPDATES_PER_TICK = 20000;
 const MAX_NETWORK = 4096;
 const BURNOUT_TOGGLES = 8, BURNOUT_WINDOW = 60, BURNOUT_TICKS = 160;
@@ -46,12 +47,12 @@ const isDoorId = (id) => !!BLOCKS[id] && BLOCKS[id].shape === SHAPE.DOOR;
 const OPENABLE_SHAPE = (id) => !!BLOCKS[id] && (BLOCKS[id].shape === SHAPE.DOOR || BLOCKS[id].shape === SHAPE.TRAPDOOR || BLOCKS[id].shape === SHAPE.GATE);
 export const CIRCUIT_REACT = new Uint8Array(BLOCK_LIMIT);
 for (const id of [B.CINNABAR_WIRE, B.CINNABAR_TORCH, B.CINNABAR_TORCH_OFF, B.CINNABAR_LAMP, B.CINNABAR_LAMP_ON, B.REPEATER,
-  B.PISTON, B.STICKY_PISTON, B.STONE_BUTTON, B.WOODEN_PRESSURE_PLATE, B.CHIME_BLOCK, B.DOOR, B.OAK_TRAPDOOR, B.OAK_FENCE_GATE, B.TNT]) CIRCUIT_REACT[id] = 1;
+  B.PISTON, B.STICKY_PISTON, B.STONE_BUTTON, B.WOODEN_PRESSURE_PLATE, B.CHIME_BLOCK, B.DOOR, B.OAK_TRAPDOOR, B.OAK_FENCE_GATE, B.TNT, B.DISPENSER, B.DROPPER]) CIRCUIT_REACT[id] = 1;
 for (const b of BLOCKS) if (b && (b.shape === SHAPE.DOOR || b.shape === SHAPE.TRAPDOOR || b.shape === SHAPE.GATE)) CIRCUIT_REACT[b.id] = 1;
 /** Blocks re-evaluated when their chunk loads or on random ticks (state may be stale after a reload). */
 export const CIRCUIT_SETTLE = new Uint8Array(BLOCK_LIMIT);
 for (const id of [B.CINNABAR_WIRE, B.CINNABAR_TORCH, B.CINNABAR_TORCH_OFF, B.CINNABAR_LAMP, B.CINNABAR_LAMP_ON, B.REPEATER,
-  B.PISTON, B.STICKY_PISTON, B.STONE_BUTTON, B.WOODEN_PRESSURE_PLATE]) CIRCUIT_SETTLE[id] = 1;
+  B.PISTON, B.STICKY_PISTON, B.STONE_BUTTON, B.WOODEN_PRESSURE_PLATE, B.DISPENSER, B.DROPPER]) CIRCUIT_SETTLE[id] = 1;
 export { CIRCUIT_BLOCK };
 
 // ---- power queries (pure functions of a world with getBlock / getMeta) -----------------
@@ -236,6 +237,7 @@ export class Circuits {
     this.acting = 0;            // > 0 while the simulation itself edits blocks
     this.entitiesOn = null;     // (x, y, z) => is something standing on the plate? (set by the game)
     this.onTNT = null;          // falls back to world.onTNT
+    this.onDispense = null;     // (x, y, z, id) => fire a dispenser / dropper (set by the game, world/dispensers.js)
     this.stats = { updates: 0, networks: 0 };
     this.solved = new Set();    // wires whose network was solved in this drain (and nothing changed since)
   }
@@ -341,6 +343,13 @@ export class Circuits {
         break;
       }
       case B.TNT: if (powerInto(w, x, y, z) > 0) { const f = this.onTNT || w.onTNT; if (f) this.act(() => f(x, y, z)); } break;
+      case B.DISPENSER: case B.DROPPER: {
+        // fire once on a rising edge (after a short delay); the triggered bit remembers the power until it goes away
+        const p = powerInto(w, x, y, z) > 0;
+        if (p && !(m & DISPENSER_TRIGGERED)) { this.act(() => w.setBlock(x, y, z, id, m | DISPENSER_TRIGGERED, false)); w.scheduleTick(x, y, z, DISPENSE_DELAY); }
+        else if (!p && m & DISPENSER_TRIGGERED) this.act(() => w.setBlock(x, y, z, id, m & ~DISPENSER_TRIGGERED, false));
+        break;
+      }
       case B.DOOR: case B.OAK_TRAPDOOR: case B.OAK_FENCE_GATE: this.updateOpenable(x, y, z, id, m); break;
       default: if (OPENABLE_SHAPE(id)) this.updateOpenable(x, y, z, id, m);
     }
@@ -419,6 +428,7 @@ export class Circuits {
         else this.act(() => w.setBlock(x, y, z, id, 0));
         break;
       case B.CINNABAR_WIRE: this.updateWire(x, y, z); break;
+      case B.DISPENSER: case B.DROPPER: if (this.onDispense) this.onDispense(x, y, z, id); break;
     }
   }
 

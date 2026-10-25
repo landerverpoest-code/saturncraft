@@ -297,6 +297,9 @@ shapeless([B.STONE_BRICKS, B.VINES], B.MOSSY_STONE_BRICKS, 1);
 shaped(['S', 'S'], { S: B.STONE_BRICK_SLAB }, B.CHISELED_STONE_BRICKS, 1);
 COLOR_BLOCKS.terracotta.forEach((id, c) => shaped(['TTT', 'TDT', 'TTT'], { T: B.TERRACOTTA, D: DYES[c] }, id, 8));
 COLOR_BLOCKS.concrete.forEach((id, c) => shapeless([DYES[c], B.SAND, B.SAND, B.SAND, B.SAND, B.GRAVEL, B.GRAVEL, B.GRAVEL, B.GRAVEL], id, 8));
+shaped(['CCC', 'CBC', 'CRC'], { C: B.COBBLESTONE, B: I.BOW, R: I.CINNABAR }, B.DISPENSER, 1);
+shaped(['CCC', 'C C', 'CRC'], { C: B.COBBLESTONE, R: I.CINNABAR }, B.DROPPER, 1);
+shapeless([I.GUNPOWDER, I.EMBER_POWDER, I.COAL], I.FIRE_CHARGE, 3);
 for (const [raw, polished] of [[B.GRANITE, B.POLISHED_GRANITE], [B.DIORITE, B.POLISHED_DIORITE], [B.ANDESITE, B.POLISHED_ANDESITE]]) shaped(['XX', 'XX'], { X: raw }, polished, 4);
 
 // Smelting: input -> output; 200 ticks per item (10 s)

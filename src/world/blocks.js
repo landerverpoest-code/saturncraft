@@ -559,6 +559,11 @@ ext('BERYL_BLOCK');
 def(B.BERYL_BLOCK, 'Beryl Block', { hardness: 5, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.IRON, sound: 'metal' });
 ext('BEACON');
 def(B.BEACON, 'Beacon', { hardness: 3, resistance: 3, sound: 'glass', opaque: false, opacity: 0, layer: LAYER.CUTOUT, emit: 15, container: false, tex: { all: 'beacon' } });
+// Dispenser and Dropper (world/dispensers.js): nine slots; meta bits 0-2 = facing (FACING6), bit 3 = triggered
+ext('DISPENSER'); ext('DROPPER');
+for (const [key, name, tex] of [['DISPENSER', 'Dispenser', 'dispenser'], ['DROPPER', 'Dropper', 'dropper']]) {
+  def(B[key], name, { hardness: 3.5, resistance: 3.5, tool: TOOL.PICKAXE, tier: TIER.WOOD, container: true, tex: { top: 'dispenser_top', bottom: 'dispenser_top', side: 'furnace_side', front: tex + '_front' } });
+}
 
 export const NUM_BLOCKS = BLOCKS.length;
 

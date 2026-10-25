@@ -1033,6 +1033,31 @@ const GEN = {
   blast_furnace_side: (c) => { c.noiseFill(['#5a5a5e', '#646468', '#4e4e52'].map(hex), 0.2); for (let x = 0; x < 16; x++) { c.set(x, 0, hex('#9a9aa0')); c.set(x, 15, hex('#9a9aa0')); c.set(x, 7, hex('#8a8a90')); } },
   blast_furnace_front: (c) => { GEN.blast_furnace_side(c); for (let y = 9; y < 14; y++) for (let x = 3; x < 13; x++) c.set(x, y, (x & 1) ? hex('#2a2a2e') : hex('#141416')); },
   blast_furnace_front_lit: (c) => { GEN.blast_furnace_front(c); for (let y = 9; y < 14; y++) for (let x = 3; x < 13; x += 2) c.set(x, y, mix(hex('#ff7a1a'), hex('#fff0a0'), c.h(x, y))); },
+  // Dispenser and Dropper: a stone block with a face; the Dispenser gapes with a round mouth, the Dropper has a slot
+  dispenser_top: (c) => {
+    c.noiseFill(['#6e6e70', '#7c7c7e', '#626264'].map(hex), 0.3);
+    for (let i = 2; i < 14; i++) for (const j of [2, 13]) { c.set(i, j, hex('#58585a')); c.set(j, i, hex('#58585a')); }
+  },
+  dispenser_front: (c) => {
+    GEN.furnace_side(c);
+    for (let i = 1; i < 15; i++) for (const j of [1, 14]) { c.set(i, j, hex('#5e5e60')); c.set(j, i, hex('#5e5e60')); }
+    // eyes under a heavy brow
+    for (let x = 3; x < 13; x++) if (x < 7 || x > 8) c.set(x, 3, hex('#4a4a4c'));
+    for (const ex of [4, 10]) for (let y = 4; y < 6; y++) for (let x = ex; x < ex + 2; x++) c.set(x, y, hex('#141416'));
+    // a round open mouth with a dark throat
+    const R = [[6, 10], [5, 11], [5, 11], [5, 11], [6, 10]];
+    R.forEach(([a, b], k) => { for (let x = a - 1; x <= b; x++) c.set(x, 8 + k, hex('#3e3e40')); });
+    R.forEach(([a, b], k) => { if (k === 0 || k === 4) return; for (let x = a; x < b; x++) c.set(x, 8 + k, mix(hex('#0c0c0e'), hex('#1e1e22'), c.h(x, k))); });
+    for (let x = 6; x < 10; x++) c.set(x, 8, hex('#0c0c0e'));
+  },
+  dropper_front: (c) => {
+    GEN.furnace_side(c);
+    for (let i = 1; i < 15; i++) for (const j of [1, 14]) { c.set(i, j, hex('#5e5e60')); c.set(j, i, hex('#5e5e60')); }
+    // small eyes and a wide, flat slot of a mouth
+    for (const ex of [4, 10]) for (let y = 4; y < 6; y++) for (let x = ex; x < ex + 2; x++) c.set(x, y, hex('#141416'));
+    for (let x = 3; x < 13; x++) { c.set(x, 9, hex('#3e3e40')); c.set(x, 12, hex('#3e3e40')); }
+    for (let y = 10; y < 12; y++) for (let x = 3; x < 13; x++) c.set(x, y, hex('#0c0c0e'));
+  },
   torch: (c) => {
     for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
     for (let y = 6; y < 16; y++) { c.set(7, y, hex('#7a5a32')); c.set(8, y, hex('#5f4526')); }

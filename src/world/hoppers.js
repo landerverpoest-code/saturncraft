@@ -3,7 +3,8 @@
 // at, then takes one item from the container above it (or picks up an item
 // lying in its bowl). Furnaces take items from above into the input and from
 // the side into the fuel slot and give up their output; Brewing Alembics take
-// ingredients from above and vials or Ember Powder from the side.
+// ingredients from above and vials or Ember Powder from the side. Dispensers
+// and Droppers fill and empty like chests.
 // Meta: 0 = spout down, 1-4 = spout towards SIDE_DIRS[meta - 1].
 import { B, isFurnace } from './blocks.js';
 import { ITEMS, I, maxStack } from './items.js';
@@ -36,6 +37,10 @@ export function containerAccess(game, x, y, z) {
   if (id === B.CHEST || id === B.BARREL || id === B.GLOOMSHELL_BOX || id === B.HOPPER) {
     const c = id === B.HOPPER ? game.getHopper(x, y, z) : game.getChest(x, y, z);
     const all = c.slots.map((_, i) => arraySlot(c.slots, i, id === B.GLOOMSHELL_BOX ? (st) => st.id !== B.GLOOMSHELL_BOX : undefined));
+    return { insert: () => all, extract: all };
+  }
+  if ((id === B.DISPENSER || id === B.DROPPER) && game.getDispenser) {
+    const all = game.getDispenser(x, y, z).slots.map((_, i, arr) => arraySlot(arr, i));
     return { insert: () => all, extract: all };
   }
   if (isFurnace(id)) {
