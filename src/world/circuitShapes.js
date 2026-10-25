@@ -22,6 +22,13 @@ export const PISTON_EXTENDED = 8, HEAD_STICKY = 8;
 export const CHIME_POWERED = 32;
 export const DISPENSER_TRIGGERED = 8;                 // dispensers and droppers: powered since the last shot
 export const OPENABLE_POWERED = 16;                   // doors, trapdoors, gates: "the circuit opened it"
+export const COMPARATOR_SUBTRACT = 4;                 // comparators: subtract mode (front torch lit); bits 4-7 = output level
+export const OBSERVER_POWERED = 8;                    // observers: sending their pulse
+export const SENSOR_INVERTED = 16;                    // daylight sensors: inverted; bits 0-3 = output level
+/** Output level of a comparator / daylight sensor stored in its meta. */
+export const comparatorLevel = (meta) => (meta >> 4) & 15;
+/** Direction an observer's back (its output) points to: the opposite of its face. */
+export const observerBack = (meta) => { const [a, b, c] = FACING6[meta & 7] || FACING6[0]; return [-a, -b, -c]; };
 
 /** Direction from a lever / button towards the block holding it. */
 export function attachDir(meta) {
@@ -43,6 +50,8 @@ export const isConductor = (id) => !!(SOLID[id] && OPAQUE[id]);
 function wireAttracts(id, meta, side) {
   if (id === B.LEVER || id === B.STONE_BUTTON || id === B.WOODEN_PRESSURE_PLATE || isTorchC(id) || id === B.CINNABAR_BLOCK) return true;
   if (id === B.REPEATER) return ((meta & 3) & 1) === (side & 1); // only along its axis
+  if (id === B.COMPARATOR || id === B.DAYLIGHT_SENSOR) return true;
+  if (id === B.OBSERVER) return (meta & 7) === SIDE_TO_FACING[side]; // only at its back
   return false;
 }
 
@@ -114,6 +123,26 @@ export function circuitParts(id, meta) {
       P(7, 6, zc - 1, 9, 11, zc + 1, torch, { yaw, uv: 'torch', off: [0, -4 / 16, 0], lit: on }),
     ];
   }
+  if (id === B.COMPARATOR) {
+    // like a repeater: output towards -z before the yaw; two torches at the back (lit while it sends power), one at the front (lit in subtract mode)
+    const yaw = meta & 3, on = comparatorLevel(meta) > 0, sub = !!(meta & COMPARATOR_SUBTRACT);
+    const back = on ? 'cinnabar_torch' : 'cinnabar_torch_off';
+    return [
+      P(0, 0, 0, 16, 2, 16, ['smooth_stone', 'smooth_stone', on ? 'comparator_on' : 'comparator', 'smooth_stone', 'smooth_stone', 'smooth_stone'], { yaw }),
+      P(4, 6, 11, 6, 11, 13, back, { yaw, uv: 'torch', off: [0, -4 / 16, 0], lit: on }),
+      P(10, 6, 11, 12, 11, 13, back, { yaw, uv: 'torch', off: [0, -4 / 16, 0], lit: on }),
+      P(7, 6, 2, 9, 11, 4, sub ? 'cinnabar_torch' : 'cinnabar_torch_off', { yaw, uv: 'torch', off: [0, sub ? -4 / 16 : -5 / 16, 0], lit: sub }),
+    ];
+  }
+  if (id === B.OBSERVER) {
+    // a full block whose "up" face (the face) looks along FACING6; the back shows a dot that lights while it pulses
+    const facing = meta & 7;
+    return [P(0, 0, 0, 16, 16, 16, ['observer_side', 'observer_side', 'observer_face', meta & OBSERVER_POWERED ? 'observer_back_on' : 'observer_back', 'observer_top', 'observer_top'], { facing })];
+  }
+  if (id === B.DAYLIGHT_SENSOR) {
+    const top = meta & SENSOR_INVERTED ? 'daylight_sensor_inverted' : 'daylight_sensor_top';
+    return [P(0, 0, 0, 16, 6, 16, ['daylight_sensor_side', 'daylight_sensor_side', top, 'oak_planks', 'daylight_sensor_side', 'daylight_sensor_side'])];
+  }
   if (isPiston(id)) {
     const facing = meta & 7, ext = meta & PISTON_EXTENDED;
     const front = ext ? 'piston_inner' : id === B.STICKY_PISTON ? 'piston_top_sticky' : 'piston_top';
@@ -174,12 +203,14 @@ export function partsBounds(parts) {
 /** Selection box of a circuit block (null = full cube). */
 export function circuitSelection(id, meta) {
   if (id === B.CINNABAR_WIRE) return [0, 0, 0, 1, 1 / 16, 1];
-  if (isPiston(id) && !(meta & PISTON_EXTENDED)) return null;
+  if ((isPiston(id) && !(meta & PISTON_EXTENDED)) || id === B.OBSERVER) return null;
   const b = partsBounds(circuitParts(id, meta));
   return [Math.max(0, b[0]), Math.max(0, b[1]), Math.max(0, b[2]), b[3], b[4], b[5]];
 }
 /** Collision boxes of the solid circuit blocks (pistons and heads). */
 export function circuitCollision(id, meta) {
+  if (id === B.OBSERVER) return [[0, 0, 0, 1, 1, 1]];
+  if (id === B.DAYLIGHT_SENSOR) return [[0, 0, 0, 1, 6 / 16, 1]];
   if (isPiston(id)) return meta & PISTON_EXTENDED ? [partsBounds(circuitParts(id, meta))] : [[0, 0, 0, 1, 1, 1]];
   if (id === B.PISTON_HEAD) {
     const [plate, rod] = circuitParts(id, meta);
@@ -191,5 +222,6 @@ export function circuitCollision(id, meta) {
 
 export const CIRCUIT_BLOCK = new Uint8Array(BLOCK_LIMIT);
 for (const id of [B.CINNABAR_WIRE, B.LEVER, B.STONE_BUTTON, B.WOODEN_PRESSURE_PLATE, B.CINNABAR_TORCH, B.CINNABAR_TORCH_OFF,
-  B.CINNABAR_LAMP, B.CINNABAR_LAMP_ON, B.REPEATER, B.PISTON, B.STICKY_PISTON, B.PISTON_HEAD, B.CHIME_BLOCK, B.CINNABAR_BLOCK, B.DISPENSER, B.DROPPER]) CIRCUIT_BLOCK[id] = 1;
+  B.CINNABAR_LAMP, B.CINNABAR_LAMP_ON, B.REPEATER, B.PISTON, B.STICKY_PISTON, B.PISTON_HEAD, B.CHIME_BLOCK, B.CINNABAR_BLOCK, B.DISPENSER, B.DROPPER,
+  B.COMPARATOR, B.OBSERVER, B.DAYLIGHT_SENSOR]) CIRCUIT_BLOCK[id] = 1;
 export { BLOCKS };

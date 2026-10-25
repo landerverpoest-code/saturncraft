@@ -194,6 +194,7 @@ export class World {
       this.onNeighborChanged(x, y, z + 1); this.onNeighborChanged(x, y, z - 1);
     }
     if (CIRCUIT_BLOCK[old] || CIRCUIT_BLOCK[id]) this.circuits.blockChanged(x, y, z, old, id);
+    this.circuits.observe(x, y, z); // observers watching this cell pulse
     return true;
   }
 
@@ -310,6 +311,7 @@ export class World {
   /** Run scheduled block ticks that are due. */
   tick() {
     this.tickCount++;
+    this.circuits.poll(); // comparators re-read containers, daylight sensors the sky
     if (!this.scheduled.size) { if (this.circuits.queue.size) this.circuits.drain(); return; }
     const due = [];
     for (const [k, t] of this.scheduled) if (t.tick <= this.tickCount) { due.push(t); this.scheduled.delete(k); }

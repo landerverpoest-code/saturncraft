@@ -26,7 +26,9 @@ import { SIDE_DIRS, DOOR_OPEN, DOOR_UPPER, TRAPDOOR_OPEN, GATE_OPEN } from './sh
 import {
   FACING6, CIRCUIT_BLOCK, isWire, isTorchC, isPiston, isConductor, wireMask, wirePowerSides, attachDir, torchAttachDir,
   ON, TURNED, REPEATER_POWERED, PISTON_EXTENDED, HEAD_STICKY, CHIME_POWERED, OPENABLE_POWERED, SIDE_TO_FACING, facingOf, DISPENSER_TRIGGERED,
+  COMPARATOR_SUBTRACT, OBSERVER_POWERED, SENSOR_INVERTED, comparatorLevel, observerBack,
 } from './circuitShapes.js';
+import { comparatorOutput, daylightLevel } from './comparators.js';
 
 export const MAX_PUSH = 12;
 export const BUTTON_TICKS = 20;
@@ -34,6 +36,9 @@ export const PLATE_TICKS = 20;
 export const TORCH_DELAY = 2;
 export const LAMP_OFF_DELAY = 4;
 export const DISPENSE_DELAY = 4;
+export const COMPARATOR_DELAY = 2;
+export const OBSERVER_DELAY = 2;   // ticks before the pulse, and its length
+export const SENSOR_INTERVAL = 20; // daylight sensors look at the sky once a second
 export const UPDATES_PER_TICK = 20000;
 const MAX_NETWORK = 4096;
 const BURNOUT_TOGGLES = 8, BURNOUT_WINDOW = 60, BURNOUT_TICKS = 160;
@@ -47,12 +52,14 @@ const isDoorId = (id) => !!BLOCKS[id] && BLOCKS[id].shape === SHAPE.DOOR;
 const OPENABLE_SHAPE = (id) => !!BLOCKS[id] && (BLOCKS[id].shape === SHAPE.DOOR || BLOCKS[id].shape === SHAPE.TRAPDOOR || BLOCKS[id].shape === SHAPE.GATE);
 export const CIRCUIT_REACT = new Uint8Array(BLOCK_LIMIT);
 for (const id of [B.CINNABAR_WIRE, B.CINNABAR_TORCH, B.CINNABAR_TORCH_OFF, B.CINNABAR_LAMP, B.CINNABAR_LAMP_ON, B.REPEATER,
-  B.PISTON, B.STICKY_PISTON, B.STONE_BUTTON, B.WOODEN_PRESSURE_PLATE, B.CHIME_BLOCK, B.DOOR, B.OAK_TRAPDOOR, B.OAK_FENCE_GATE, B.TNT, B.DISPENSER, B.DROPPER]) CIRCUIT_REACT[id] = 1;
+  B.PISTON, B.STICKY_PISTON, B.STONE_BUTTON, B.WOODEN_PRESSURE_PLATE, B.CHIME_BLOCK, B.DOOR, B.OAK_TRAPDOOR, B.OAK_FENCE_GATE, B.TNT, B.DISPENSER, B.DROPPER,
+  B.COMPARATOR, B.OBSERVER, B.DAYLIGHT_SENSOR]) CIRCUIT_REACT[id] = 1;
 for (const b of BLOCKS) if (b && (b.shape === SHAPE.DOOR || b.shape === SHAPE.TRAPDOOR || b.shape === SHAPE.GATE)) CIRCUIT_REACT[b.id] = 1;
 /** Blocks re-evaluated when their chunk loads or on random ticks (state may be stale after a reload). */
 export const CIRCUIT_SETTLE = new Uint8Array(BLOCK_LIMIT);
 for (const id of [B.CINNABAR_WIRE, B.CINNABAR_TORCH, B.CINNABAR_TORCH_OFF, B.CINNABAR_LAMP, B.CINNABAR_LAMP_ON, B.REPEATER,
-  B.PISTON, B.STICKY_PISTON, B.STONE_BUTTON, B.WOODEN_PRESSURE_PLATE, B.DISPENSER, B.DROPPER]) CIRCUIT_SETTLE[id] = 1;
+  B.PISTON, B.STICKY_PISTON, B.STONE_BUTTON, B.WOODEN_PRESSURE_PLATE, B.DISPENSER, B.DROPPER,
+  B.COMPARATOR, B.OBSERVER, B.DAYLIGHT_SENSOR]) CIRCUIT_SETTLE[id] = 1;
 export { CIRCUIT_BLOCK };
 
 // ---- power queries (pure functions of a world with getBlock / getMeta) -----------------
@@ -76,6 +83,8 @@ export function strongOut(w, x, y, z, d, forWire = false) {
     case B.WOODEN_PRESSURE_PLATE: return w.getMeta(x, y, z) & 1 && d[1] < 0 ? 15 : 0;
     case B.CINNABAR_TORCH: return d[1] > 0 ? 15 : 0;
     case B.REPEATER: { const m = w.getMeta(x, y, z); return m & REPEATER_POWERED && same(H4[m & 3], d) ? 15 : 0; }
+    case B.COMPARATOR: { const m = w.getMeta(x, y, z); return same(H4[m & 3], d) ? comparatorLevel(m) : 0; }
+    case B.OBSERVER: { const m = w.getMeta(x, y, z); return m & OBSERVER_POWERED && same(observerBack(m), d) ? 15 : 0; }
     case B.CINNABAR_WIRE: return forWire ? 0 : wireOut(w, x, y, z, d);
     default: return 0;
   }
@@ -90,6 +99,9 @@ export function weakOut(w, x, y, z, d, forWire = false) {
     case B.CINNABAR_TORCH: return same(torchAttachDir(w.getMeta(x, y, z)), d) ? 0 : 15;
     case B.REPEATER: { const m = w.getMeta(x, y, z); return m & REPEATER_POWERED && same(H4[m & 3], d) ? 15 : 0; }
     case B.CINNABAR_BLOCK: return 15;
+    case B.COMPARATOR: { const m = w.getMeta(x, y, z); return same(H4[m & 3], d) ? comparatorLevel(m) : 0; }
+    case B.OBSERVER: { const m = w.getMeta(x, y, z); return m & OBSERVER_POWERED && same(observerBack(m), d) ? 15 : 0; }
+    case B.DAYLIGHT_SENSOR: return w.getMeta(x, y, z) & 15;
     case B.CINNABAR_WIRE: return forWire ? 0 : wireOut(w, x, y, z, d);
     default: return 0;
   }
@@ -128,6 +140,40 @@ export function powerInto(w, x, y, z, skip = -1) {
 export function repeaterInput(w, x, y, z, meta) {
   const d = H4[meta & 3];
   return emitted(w, x - d[0], y, z - d[2], d);
+}
+
+/** Parts that feed a comparator from the side: wire, repeaters, comparators, cinnabar blocks. */
+const SIDE_FEEDS = (id) => id === B.CINNABAR_WIRE || id === B.REPEATER || id === B.COMPARATOR || id === B.CINNABAR_BLOCK;
+
+/**
+ * Inputs of a comparator: { rear, side }. The rear reads power behind it or,
+ * with `containerSignal(x, y, z)` (-1 = no container), a container there or
+ * behind one solid block.
+ */
+export function comparatorInputs(w, x, y, z, meta, containerSignal = null) {
+  const d = H4[meta & 3], bx = x - d[0], bz = z - d[2];
+  let rear = emitted(w, bx, y, bz, d);
+  if (containerSignal) {
+    const c = containerSignal(bx, y, bz);
+    if (c >= 0) rear = c;
+    else if (rear < 15 && isConductor(get(w, bx, y, bz))) {
+      const c2 = containerSignal(bx - d[0], y, bz - d[2]);
+      if (c2 > rear) rear = c2;
+    }
+  }
+  let side = 0;
+  for (const s of [(meta + 1) & 3, (meta + 3) & 3]) {
+    const [sx, , sz] = H4[s];
+    if (!SIDE_FEEDS(get(w, x + sx, y, z + sz))) continue;
+    side = Math.max(side, weakOut(w, x + sx, y, z + sz, [-sx, 0, -sz]));
+  }
+  return { rear, side };
+}
+
+/** Level a comparator should send out now. */
+export function comparatorTarget(w, x, y, z, meta, containerSignal = null) {
+  const { rear, side } = comparatorInputs(w, x, y, z, meta, containerSignal);
+  return comparatorOutput(rear, side, !!(meta & COMPARATOR_SUBTRACT));
 }
 
 /** Is the block holding a cinnabar torch powered (the torch then turns off)? */
@@ -238,11 +284,53 @@ export class Circuits {
     this.entitiesOn = null;     // (x, y, z) => is something standing on the plate? (set by the game)
     this.onTNT = null;          // falls back to world.onTNT
     this.onDispense = null;     // (x, y, z, id) => fire a dispenser / dropper (set by the game, world/dispensers.js)
+    this.containerSignal = null; // (x, y, z) => fullness 0-15 of a container there, or -1 (set by the game, world/comparators.js)
+    this.daylight = null;        // () => brightness 0-1 of the suns here (set by the game; none = dark)
+    this.comparators = new Set(); // comparators and daylight sensors seen, polled for container and sky changes
+    this.sensors = new Set();
     this.stats = { updates: 0, networks: 0 };
     this.solved = new Set();    // wires whose network was solved in this drain (and nothing changed since)
   }
 
-  reset() { this.queue.clear(); this.burn.clear(); this.solved.clear(); }
+  reset() { this.queue.clear(); this.burn.clear(); this.solved.clear(); this.comparators.clear(); this.sensors.clear(); }
+
+  /**
+   * World.setBlock hook for every edit: observers whose face looks at x,y,z
+   * saw the block there change (id or meta) and will pulse.
+   */
+  observe(x, y, z) {
+    if (!this.enabled) return;
+    const w = this.world;
+    for (let f = 0; f < 6; f++) {
+      const [dx, dy, dz] = FACING6[f], ox = x - dx, oy = y - dy, oz = z - dz;
+      if (w.getBlock(ox, oy, oz) !== B.OBSERVER) continue;
+      const m = w.getMeta(ox, oy, oz);
+      if ((m & 7) === f && !(m & OBSERVER_POWERED)) w.scheduleTick(ox, oy, oz, OBSERVER_DELAY);
+    }
+  }
+
+  /** Once per world tick: comparators re-read their containers, daylight sensors the sky. */
+  poll() {
+    if (!this.enabled) return;
+    const w = this.world, t = w.tickCount;
+    const each = (set, id) => {
+      for (const k of set) {
+        const [x, y, z] = k.split(',').map(Number);
+        if (!w.isLoaded(x, z)) { set.delete(k); continue; } // the chunk settles it again when it comes back
+        if (w.getBlock(x, y, z) !== id) { set.delete(k); continue; }
+        this.update(x, y, z);
+      }
+    };
+    if (this.comparators.size && this.containerSignal && (t & 1) === 0) each(this.comparators, B.COMPARATOR);
+    if (this.sensors.size && t % SENSOR_INTERVAL === 0) each(this.sensors, B.DAYLIGHT_SENSOR);
+  }
+
+  /** Level a daylight sensor at x,y,z should give now. */
+  sensorLevel(x, y, z, m) {
+    const w = this.world;
+    const sky = w.skyLight ? Math.max(w.skyLight(x, y, z), w.skyLight(x, y + 1, z)) : 15;
+    return daylightLevel(sky, this.daylight ? this.daylight() : 0, !!(m & SENSOR_INVERTED));
+  }
 
   /** Something that may matter to wire changed (forget which networks are solved). */
   enqueue(x, y, z) {
@@ -350,6 +438,18 @@ export class Circuits {
         else if (!p && m & DISPENSER_TRIGGERED) this.act(() => w.setBlock(x, y, z, id, m & ~DISPENSER_TRIGGERED, false));
         break;
       }
+      case B.COMPARATOR: {
+        this.comparators.add(key(x, y, z));
+        if (comparatorTarget(w, x, y, z, m, this.containerSignal) !== comparatorLevel(m)) w.scheduleTick(x, y, z, COMPARATOR_DELAY);
+        break;
+      }
+      case B.OBSERVER: if (m & OBSERVER_POWERED) w.scheduleTick(x, y, z, OBSERVER_DELAY); break; // (a pulse left over from before a reload ends)
+      case B.DAYLIGHT_SENSOR: {
+        this.sensors.add(key(x, y, z));
+        const l = this.sensorLevel(x, y, z, m);
+        if (l !== (m & 15)) this.act(() => w.setBlock(x, y, z, id, (m & ~15) | l, false));
+        break;
+      }
       case B.DOOR: case B.OAK_TRAPDOOR: case B.OAK_FENCE_GATE: this.updateOpenable(x, y, z, id, m); break;
       default: if (OPENABLE_SHAPE(id)) this.updateOpenable(x, y, z, id, m);
     }
@@ -429,6 +529,16 @@ export class Circuits {
         break;
       case B.CINNABAR_WIRE: this.updateWire(x, y, z); break;
       case B.DISPENSER: case B.DROPPER: if (this.onDispense) this.onDispense(x, y, z, id); break;
+      case B.COMPARATOR: {
+        const out = comparatorTarget(w, x, y, z, m, this.containerSignal);
+        if (out !== comparatorLevel(m)) this.act(() => w.setBlock(x, y, z, id, (m & 15) | (out << 4), false));
+        break;
+      }
+      case B.OBSERVER:
+        // the pulse: on for two ticks, then off again
+        if (!(m & OBSERVER_POWERED)) { this.act(() => w.setBlock(x, y, z, id, m | OBSERVER_POWERED, false)); w.scheduleTick(x, y, z, OBSERVER_DELAY); }
+        else this.act(() => w.setBlock(x, y, z, id, m & ~OBSERVER_POWERED, false));
+        break;
     }
   }
 
@@ -519,6 +629,13 @@ export function placeMeta(id, face, look) {
     if (face[1] !== 1) return -1;
     return id === B.REPEATER ? sideLook : 0;
   }
+  if (id === B.COMPARATOR) return face[1] === 1 ? sideLook : -1;
+  if (id === B.OBSERVER) {
+    // the face looks away from the player (where they look, up or down too); the output points back at them
+    if (Math.abs(ly) > 0.75) return ly < 0 ? 0 : 1;
+    return SIDE_TO_FACING[sideLook];
+  }
+  if (id === B.DAYLIGHT_SENSOR) return 0;
   if (isPiston(id)) {
     // the front faces the player (up or down when placed looking steeply)
     if (Math.abs(ly) > 0.75) return ly < 0 ? 1 : 0;
@@ -545,6 +662,8 @@ export function useMeta(id, meta) {
   if (id === B.STONE_BUTTON) return meta & ON ? -1 : meta | ON;
   if (id === B.REPEATER) return (meta & ~12) | ((((meta >> 2) & 3) + 1) & 3) << 2;
   if (id === B.CHIME_BLOCK) return (meta & CHIME_POWERED) | (((meta & 31) + 1) % 25);
+  if (id === B.COMPARATOR) return meta ^ COMPARATOR_SUBTRACT;
+  if (id === B.DAYLIGHT_SENSOR) return meta ^ SENSOR_INVERTED;
   return -1;
 }
 

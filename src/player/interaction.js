@@ -46,8 +46,8 @@ const ORE_XP = {
 const BREAK_DELAY = 5;
 /** Blocks that right-click opens / toggles instead of using the held item. */
 const USABLE_BLOCKS = new Set([B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.CHEST, B.BARREL, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL, B.BREWING_STAND, B.GLOOMSHELL_BOX, B.HOPPER, B.COMPOSTER, B.SWEET_BERRY_BUSH, B.JUKEBOX, B.CAVE_VINES_LIT, B.FLOWER_POT, B.BEACON, B.DISPENSER, B.DROPPER, B.GRINDSTONE, B.STONECUTTER]);
-const CIRCUIT_USE = new Set([B.LEVER, B.STONE_BUTTON, B.REPEATER, B.CHIME_BLOCK]);
-const CIRCUIT_PLACE = new Set([B.LEVER, B.STONE_BUTTON, B.CINNABAR_WIRE, B.REPEATER, B.WOODEN_PRESSURE_PLATE, B.PISTON, B.STICKY_PISTON]);
+const CIRCUIT_USE = new Set([B.LEVER, B.STONE_BUTTON, B.REPEATER, B.CHIME_BLOCK, B.COMPARATOR, B.DAYLIGHT_SENSOR]);
+const CIRCUIT_PLACE = new Set([B.LEVER, B.STONE_BUTTON, B.CINNABAR_WIRE, B.REPEATER, B.WOODEN_PRESSURE_PLATE, B.PISTON, B.STICKY_PISTON, B.COMPARATOR, B.OBSERVER, B.DAYLIGHT_SENSOR]);
 const USE_DELAY = 4;
 
 export class Interaction {
@@ -679,7 +679,8 @@ export class Interaction {
       if (t.id === B.STONECUTTER) { g.ui.openStonecutter(t.x, t.y, t.z); return true; }
       if (t.id === B.BREWING_STAND) { g.ui.openBrewing(t.x, t.y, t.z); return true; }
       if (CIRCUIT_USE.has(t.id)) {
-        // levers flip, buttons press (the host releases them), repeaters change delay, chime blocks change pitch
+        // levers flip, buttons press (the host releases them), repeaters change delay, chime blocks change pitch,
+        // comparators switch between compare and subtract mode, daylight sensors invert
         const um = circuitUseMeta(t.id, w.getMeta(t.x, t.y, t.z));
         if (um >= 0) {
           w.setBlockUrgent(t.x, t.y, t.z, t.id, um);
@@ -897,6 +898,7 @@ export class Interaction {
       meta = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 1 : 3) : (dz > 0 ? 2 : 0);
     }
     if (placeId === B.DISPENSER || placeId === B.DROPPER) meta = dispenserPlaceMeta([ldx, ldy, ldz]); // the face looks at the player, up or down too
+    if (placeId === B.OBSERVER) meta = circuitPlaceMeta(placeId, t.face, [ldx, ldy, ldz]); // the face looks away from the player
     let chestPair = null;
     if (placeId === B.CHEST) { const pr = pairOnPlace(w, px, py, pz, meta, p.sneaking); meta = pr.meta; chestPair = pr.neighbour; } // join a lone chest beside it
     if (placeId === B.WATER && w.dimension === 'cinderdeep') {
