@@ -503,8 +503,8 @@ export class UI {
   openChest(x, y, z) {
     this.game.input.unlock();
     const halves = doubleChestHalves(this.game.world, x, y, z);
-    const hopper = this.game.world.getBlock(x, y, z) === B.HOPPER;
-    const c = halves ? doubleChestView(...halves.map((h) => this.game.getChest(h.x, h.y, h.z))) : hopper ? this.game.getHopper(x, y, z) : this.game.getChest(x, y, z);
+    const here = this.game.world.getBlock(x, y, z), hopper = here === B.HOPPER, disp = here === B.DISPENSER || here === B.DROPPER;
+    const c = halves ? doubleChestView(...halves.map((h) => this.game.getChest(h.x, h.y, h.z))) : hopper ? this.game.getHopper(x, y, z) : disp ? this.game.getDispenser(x, y, z) : this.game.getChest(x, y, z);
     const n = c.slots.length;
     const inv = this.game.player.inventory;
     /** Move a stack into a range of slots (merging first); returns what is left. */
@@ -520,8 +520,8 @@ export class UI {
     // a Gloomshell Box holds anything but other boxes
     const box = this.game.world.getBlock(x, y, z) === B.GLOOMSHELL_BOX;
     const fits = (st) => !box || st.id !== B.GLOOMSHELL_BOX;
-    this.showContainer('chest', hopper ? 'Hopper' : box ? 'Gloomshell Box' : halves ? 'Large Chest' : this.game.world.getBlock(x, y, z) === B.BARREL ? 'Barrel' : 'Chest', (panel) => {
-      const grid = el(`<div class="grid" style="grid-template-columns:repeat(${Math.min(9, n)},var(--slot));margin:0 auto 12px;width:max-content"></div>`);
+    this.showContainer('chest', disp ? (here === B.DISPENSER ? 'Dispenser' : 'Dropper') : hopper ? 'Hopper' : box ? 'Gloomshell Box' : halves ? 'Large Chest' : this.game.world.getBlock(x, y, z) === B.BARREL ? 'Barrel' : 'Chest', (panel) => {
+      const grid = el(`<div class="grid" style="grid-template-columns:repeat(${disp ? 3 : Math.min(9, n)},var(--slot));margin:0 auto 12px;width:max-content"></div>`);
       for (let i = 0; i < n; i++) {
         grid.appendChild(this.makeSlot(() => c.slots[i], (v) => { c.slots[i] = v; }, {
           filter: fits,

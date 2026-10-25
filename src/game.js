@@ -1,6 +1,8 @@
 // Game orchestrator: fixed 20 TPS simulation with interpolated rendering.
 import { Mob } from './mobs/mob.js';
 import { newHopper, hopperStep, HOPPER_COOLDOWN } from './world/hoppers.js';
+import { newDispenser, dispense } from './world/dispensers.js';
+import { Fireball } from './entities/fireball.js';
 import { powerInto } from './world/circuits.js';
 import { newMap, updateMap, MAP_SIZE } from './world/maps.js';
 import { KEEP_BITS, unpairAfterBreak } from './world/chests.js';
@@ -28,7 +30,7 @@ import { SignRenderer } from './render/signs.js';
 import { FrameRenderer } from './render/frames.js';
 import { Lightning } from './sky/lightning.js';
 import { snowfall } from './world/randomTicks.js';
-import { igniteTNT } from './entities/tnt.js';
+import { igniteTNT, PrimedTNT } from './entities/tnt.js';
 import { canLight, FIRE_DELAY } from './world/fire.js';
 import { Chat } from './ui/chat.js';
 import { Music } from './audio/music.js';
@@ -99,6 +101,7 @@ export class Game {
     this.maps = new Map();        // map id -> filled map (world/maps.js)
     this.brewingStands = new Map(); // "x,y,z" -> Brewing Alembic state (see world/brewing.js)
     this.hoppers = new Map();     // "x,y,z" -> hopper slots (see world/hoppers.js)
+    this.dispensers = new Map();  // "x,y,z" -> dispenser / dropper slots (see world/dispensers.js)
     this.fps = 0; this.frameCount = 0; this.fpsTime = 0;
     this.net = null;              // multiplayer session (src/net/session.js), null in single-player
   }
@@ -550,6 +553,25 @@ export class Game {
     if (m && m.dimension === this.world.dimension && this.ticks % 2 === 0) { updateMap(m, this.world, this.player.x, this.player.z, 600); m.dirty = true; }
   }
 
+  getDispenser(x, y, z) {
+    const k = `${x},${y},${z}`;
+    let d = this.dispensers.get(k);
+    if (!d) { d = newDispenser(x, y, z); this.dispensers.set(k, d); }
+    return d;
+  }
+
+  /** A dispenser sends out a primed TNT (centred at x, z with its feet at y). */
+  primeTNT(x, y, z) {
+    const e = this.entities.add(new PrimedTNT(x, y, z));
+    this.audio.play('fuse', [x, y + 0.5, z]);
+    return e;
+  }
+
+  /** A dispenser shoots a small fireball (a fire charge). */
+  shootFireball(x, y, z, vx, vy, vz) {
+    return this.entities.add(new Fireball(x, y, z, vx, vy, vz, null, { size: 0.2, damage: 5 }));
+  }
+
   getHopper(x, y, z) {
     const k = `${x},${y},${z}`;
     let h = this.hoppers.get(k);
@@ -617,14 +639,18 @@ export class Game {
       if (showing(this.chests.get(k))) this.ui.close();
       if (this.ui.furnace && this.ui.furnace === this.furnaces.get(k)) this.ui.close();
       if (this.ui.brewing && this.ui.brewing === this.brewingStands.get(k)) this.ui.close();
-      if (showing(this.hoppers.get(k))) this.ui.close();
-      this.chests.delete(k); this.furnaces.delete(k); this.brewingStands.delete(k); this.hoppers.delete(k);
+      if (showing(this.hoppers.get(k)) || showing(this.dispensers.get(k))) this.ui.close();
+      this.chests.delete(k); this.furnaces.delete(k); this.brewingStands.delete(k); this.hoppers.delete(k); this.dispensers.delete(k);
       return;
     }
     if (id === B.GLOOMSHELL_BOX) this.dropBox(x, y, z);
     if (id === B.HOPPER) {
       const k = `${x},${y},${z}`, h = this.hoppers.get(k);
       if (h) { for (const st of h.slots) if (st) this.entities.spawnItem(x + 0.5, y + 0.5, z + 0.5, st); this.hoppers.delete(k); if (showing(h)) this.ui.close(); }
+    }
+    if (id === B.DISPENSER || id === B.DROPPER) {
+      const k = `${x},${y},${z}`, d = this.dispensers.get(k);
+      if (d) { for (const st of d.slots) if (st) this.entities.spawnItem(x + 0.5, y + 0.5, z + 0.5, st); this.dispensers.delete(k); if (showing(d)) this.ui.close(); }
     }
     if (id === B.CHEST || id === B.BARREL) {
       const k = `${x},${y},${z}`;
@@ -871,6 +897,7 @@ export class Game {
   // ---- Cinnabar circuitry (world/circuits.js) ------------------------------
   initCircuits() {
     const w = this.world, ci = w.circuits;
+    ci.onDispense = (x, y, z) => { if (!this.net || this.net.isHost) dispense(this, x, y, z); }; // a powered dispenser / dropper fires
     ci.entitiesOn = (x, y, z) => this.feetPositions().some(([ex, ey, ez]) => Math.floor(ex) === x && Math.floor(ey + 0.05) === y && Math.floor(ez) === z);
     // sounds of changes made by the circuits (here, or on the host when we are a guest)
     const OPENABLE = new Set(BLOCKS.filter((b) => b && (b.shape === SHAPE.DOOR || b.shape === SHAPE.TRAPDOOR || b.shape === SHAPE.GATE)).map((b) => b.id));

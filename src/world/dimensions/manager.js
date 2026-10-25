@@ -98,7 +98,7 @@ export class DimensionManager {
     }
     for (const e of g.entities.list) g.entities.removeMesh(e);
     g.entities.list = [];
-    this.stores[old] = { saved: w.saved, furnaces: g.furnaces, chests: g.chests, brewingStands: g.brewingStands, hoppers: g.hoppers, savedMobs: g.spawner.savedMobs, generated: g.spawner.generated, spawnerState: g.spawnerBlocks.state };
+    this.stores[old] = { saved: w.saved, furnaces: g.furnaces, chests: g.chests, brewingStands: g.brewingStands, hoppers: g.hoppers, dispensers: g.dispensers, savedMobs: g.spawner.savedMobs, generated: g.spawner.generated, spawnerState: g.spawnerBlocks.state };
     const s = this.stores[dim] || {};
     delete this.stores[dim];
     w.setDimension(dim, s.saved || new Map());
@@ -106,6 +106,7 @@ export class DimensionManager {
     g.chests = s.chests || new Map();
     g.brewingStands = s.brewingStands || new Map();
     g.hoppers = s.hoppers || new Map();
+    g.dispensers = s.dispensers || new Map();
     g.spawner.savedMobs = s.savedMobs || new Map();
     g.spawner.generated = s.generated || new Set();
     g.spawnerBlocks.state = s.spawnerState || new Map();
@@ -450,7 +451,7 @@ export class DimensionManager {
       for (const [k, c] of s.saved) chunks[k] = pack(c);
       const savedMobs = {};
       for (const [k, v] of s.savedMobs) savedMobs[k] = v;
-      dims[dim] = { chunks, furnaces: [...s.furnaces.values()], chests: [...s.chests.values()], brewingStands: [...(s.brewingStands || new Map()).values()], hoppers: [...(s.hoppers || new Map()).values()].map((h) => ({ x: h.x, y: h.y, z: h.z, slots: h.slots })), savedMobs, generated: [...s.generated] };
+      dims[dim] = { chunks, furnaces: [...s.furnaces.values()], chests: [...s.chests.values()], brewingStands: [...(s.brewingStands || new Map()).values()], hoppers: [...(s.hoppers || new Map()).values()].map((h) => ({ x: h.x, y: h.y, z: h.z, slots: h.slots })), dispensers: [...(s.dispensers || new Map()).values()].map((d) => ({ x: d.x, y: d.y, z: d.z, slots: d.slots })), savedMobs, generated: [...s.generated] };
     }
     return { dimension: this.current, dimensions: dims, dimState: { hollow: { ...this.hollow, crystals: [...this.hollow.crystals] }, links: this.links } };
   }
@@ -470,6 +471,7 @@ export class DimensionManager {
         chests: new Map((d.chests || []).map((c) => [`${c.x},${c.y},${c.z}`, c])),
         brewingStands: new Map((d.brewingStands || []).map((c) => [`${c.x},${c.y},${c.z}`, c])),
         hoppers: new Map((d.hoppers || []).map((h) => [`${h.x},${h.y},${h.z}`, { ...h, cooldown: 0 }])),
+        dispensers: new Map((d.dispensers || []).map((c) => [`${c.x},${c.y},${c.z}`, c])),
         generated: new Set(d.generated || []),
       };
     }

@@ -20,6 +20,7 @@ export const ATTACH_MASK = 7, ON = 8, TURNED = 16;     // levers and buttons
 export const REPEATER_POWERED = 16;
 export const PISTON_EXTENDED = 8, HEAD_STICKY = 8;
 export const CHIME_POWERED = 32;
+export const DISPENSER_TRIGGERED = 8;                 // dispensers and droppers: powered since the last shot
 export const OPENABLE_POWERED = 16;                   // doors, trapdoors, gates: "the circuit opened it"
 
 /** Direction from a lever / button towards the block holding it. */
@@ -190,5 +191,5 @@ export function circuitCollision(id, meta) {
 
 export const CIRCUIT_BLOCK = new Uint8Array(BLOCK_LIMIT);
 for (const id of [B.CINNABAR_WIRE, B.LEVER, B.STONE_BUTTON, B.WOODEN_PRESSURE_PLATE, B.CINNABAR_TORCH, B.CINNABAR_TORCH_OFF,
-  B.CINNABAR_LAMP, B.CINNABAR_LAMP_ON, B.REPEATER, B.PISTON, B.STICKY_PISTON, B.PISTON_HEAD, B.CHIME_BLOCK, B.CINNABAR_BLOCK]) CIRCUIT_BLOCK[id] = 1;
+  B.CINNABAR_LAMP, B.CINNABAR_LAMP_ON, B.REPEATER, B.PISTON, B.STICKY_PISTON, B.PISTON_HEAD, B.CHIME_BLOCK, B.CINNABAR_BLOCK, B.DISPENSER, B.DROPPER]) CIRCUIT_BLOCK[id] = 1;
 export { BLOCKS };

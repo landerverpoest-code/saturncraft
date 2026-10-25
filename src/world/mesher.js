@@ -46,6 +46,8 @@ const FOLIAGE_FIXED = { [B.BIRCH_LEAVES]: [128, 167, 85], [B.SPRUCE_LEAVES]: [97
 const FOLIAGE_BIOME = new Uint8Array(BLOCK_LIMIT);
 for (const d of BLOCKS) if (d && d.tint === 'foliage') FOLIAGE_BIOME[d.id] = 1;
 const FURNACE_FRONT_DIR = [5, 0, 4, 1];
+// FACING6 index (down, up, -z, +z, -x, +x) -> face index (+x, -x, +y, -y, +z, -z)
+const FACING6_FACE = [3, 2, 5, 4, 1, 0, -1, -1];
 // double chests: does the partner on the + side of the chest's axis sit at the viewer's right (front faces -z, +x, +z, -x)?
 const CHEST_SEAM_RIGHT = [false, false, true, true];
 const CHEST_FRONT_L = texId('chest_front_l'), CHEST_FRONT_R = texId('chest_front_r');
@@ -162,6 +164,8 @@ export function meshSection(sec) {
         if (id === B.FURNACE || id === B.FURNACE_LIT) {
           if (d === FURNACE_FRONT_DIR[meta[i] & 3]) tile = texId(id === B.FURNACE ? 'furnace_front' : 'furnace_front_lit');
           else if (d !== 2 && d !== 3) tile = texId('furnace_side');
+        } else if (id === B.DISPENSER || id === B.DROPPER) {
+          if (d === FACING6_FACE[meta[i] & 7]) tile = FRONT_TILE[id]; // the face points along FACING6 (up and down too)
         } else if (FRONT_TILE[id] >= 0 && d === FURNACE_FRONT_DIR[meta[i] & 3]) {
           tile = FRONT_TILE[id];
           if (id === B.CHEST && (meta[i] & 4)) tile = CHEST_SEAM_RIGHT[meta[i] & 3] === !!(meta[i] & 128) ? CHEST_FRONT_R : CHEST_FRONT_L;
