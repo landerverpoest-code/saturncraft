@@ -271,3 +271,10 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 #raidbar .rb-fill { height: 100%; width: 0; background: linear-gradient(#e0484a, #9a1a22); transition: width .4s; }
 #raidbar.won .rb-fill { background: linear-gradient(#7ad870, #2e8a2a); }
 .trade-row .slot.discounted { outline: 2px solid #5ad25a; outline-offset: -2px; }
+/* Name Tags and Bundles */
+.tooltip .tt-label { color: #f0e0a0; font-style: italic; font-size: 13px; }
+.tooltip .tt-bundle { display: grid; grid-template-columns: repeat(4, 26px); gap: 2px; margin: 4px 0 2px; }
+.tooltip .tt-bslot { position: relative; width: 26px; height: 26px; background: rgba(0, 0, 0, .35); border: 1px solid #5a4a7a; }
+.tooltip .tt-bslot img { width: 22px; height: 22px; margin: 2px; image-rendering: pixelated; }
+.tooltip .tt-bslot span { position: absolute; right: 1px; bottom: -2px; font-size: 11px; text-shadow: 1px 1px 0 #000; }
+.nametag-input { display: block; margin: 10px auto; width: 280px; font: inherit; font-size: 18px; padding: 6px 8px; background: #1a1424; color: #fff; border: 2px solid #6a5a8a; }

@@ -109,7 +109,7 @@ export function sameEnch(a, b) {
 
 /** Can two stacks be merged into one? Never for durability items, nor enchanted with plain. */
 export function canStack(a, b) {
-  return !!a && !!b && a.id === b.id && !(ITEMS[a.id] && ITEMS[a.id].durability) && sameEnch(a.ench, b.ench) && (a.rw | 0) === (b.rw | 0) && a.map === b.map;
+  return !!a && !!b && a.id === b.id && !(ITEMS[a.id] && ITEMS[a.id].durability) && sameEnch(a.ench, b.ench) && (a.rw | 0) === (b.rw | 0) && a.map === b.map && (a.label || '') === (b.label || '');
 }
 
 /** A cleaned copy of an enchantment map from untrusted data (network, saves). */
@@ -131,7 +131,38 @@ export function withExtras(dst, src) {
   if (src && Number.isInteger(src.map)) { dst.map = src.map; dst.mapX = src.mapX | 0; dst.mapZ = src.mapZ | 0; } // filled maps
   const c = src && src.contents && cleanContents(src.contents);
   if (c) dst.contents = c;
+  const label = src && cleanLabel(src.label);
+  if (label) dst.label = label; // a Name Tag's name (or any renamed stack)
+  const bundle = src && src.bundle && cleanBundle(src.bundle);
+  if (bundle) dst.bundle = bundle; // a Bundle's contents (world/bundles.js)
   return dst;
+}
+
+/** Longest name a Name Tag carries. */
+export const LABEL_MAX = 32;
+/** A cleaned name (from untrusted data): trimmed text up to LABEL_MAX characters, or null. */
+export function cleanLabel(t) {
+  if (typeof t !== 'string') return null;
+  const s = t.replace(/[\u0000-\u001f]/g, '').trim().slice(0, LABEL_MAX);
+  return s || null;
+}
+
+/** A cleaned copy of a Bundle's stacks (from untrusted data; at most 64 entries), or null when empty. */
+export function cleanBundle(list) {
+  if (!Array.isArray(list)) return null;
+  const out = [];
+  for (const s of list.slice(0, 64)) {
+    if (!s || !ITEMS[s.id | 0] || !((s.count | 0) > 0)) continue;
+    const st = { id: s.id | 0, count: Math.min(64, s.count | 0), damage: s.damage | 0 };
+    const e = cleanEnch(s.ench);
+    if (e) st.ench = e;
+    if (s.rw > 0) st.rw = s.rw | 0;
+    const l = cleanLabel(s.label);
+    if (l) st.label = l;
+    if (Array.isArray(s.bundle)) { const b = cleanBundle(s.bundle); if (b) st.bundle = b; }
+    out.push(st);
+  }
+  return out.length ? out : null;
 }
 
 /**

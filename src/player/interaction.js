@@ -28,6 +28,9 @@ import { LEAVES, SAPLING_TREE, growTree } from '../world/trees.js';
 import { useSkyRocket } from '../entities/skyRocket.js';
 import { hushfruitTeleport } from '../world/dimensions/hushvine.js';
 import { cavePlaceMeta, waxCopper, scrapeCopper } from '../world/caves.js';
+import { canLeash, leash, unleash, isFencePost, tieToFence, untieFromFence } from '../entities/leash.js';
+import { canName, nameMob } from '../mobs/names.js';
+import { bundleTakeLast } from '../world/bundles.js';
 import { sideOf, SIDE_DIRS, DOOR_OPEN, DOOR_UPPER, BED_HEAD, SLAB_TOP, SLAB_DOUBLE, STAIRS_UPSIDE, GATE_OPEN, TRAPDOOR_OPEN, TRAPDOOR_TOP } from '../world/shapes.js';
 
 /** Brightness for block particles: local light, dimmed with the combined sunlight (as the held item). */
@@ -245,10 +248,40 @@ export class Interaction {
       if (useSkyRocket(g, this.target)) { if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1); this.swing = SWING_TICKS; }
       return;
     }
+    // a blank Name Tag: right-click to write a name on it (then use it on a mob)
+    if (d && d.nameTag && input.rightPressed && !(this.target && USABLE_BLOCKS.has(this.target.id) && !p.sneaking)) {
+      if (g.ui.openNameTag) g.ui.openNameTag(p.inventory.selected);
+      return;
+    }
+    // a Bundle: right-click takes out the last thing put in and drops it ahead
+    if (d && d.bundle && input.rightPressed && !(this.target && USABLE_BLOCKS.has(this.target.id) && !p.sneaking)) {
+      const out = bundleTakeLast(st);
+      if (out) {
+        const [ex, ey, ez] = p.eyePos(), [lx, ly, lz] = p.lookDir();
+        g.entities.spawnItem(ex + lx * 0.4, ey - 0.3, ez + lz * 0.4, out, [lx * 0.3, ly * 0.3 + 0.1, lz * 0.3]);
+        p.inventory.changed();
+        g.audio.play('pop', [p.x, p.y + 1, p.z]);
+        this.swing = SWING_TICKS;
+      }
+      return;
+    }
+    // leads: right-click a fence post to tie the animals you lead to it (or take tied ones back)
+    if (input.rightPressed && this.target && isFencePost(this.target.id) && this.useFencePost(this.target)) { this.useDelay = USE_DELAY; return; }
     if (input.right && this.useDelay === 0) {
       if (this.use()) this.useDelay = USE_DELAY;
     }
     if (input.middlePressed && this.target) this.pickBlock(this.target.id);
+  }
+
+  /** Right-click on a fence post: tie up the animals on your leads, or take the ones tied there. */
+  useFencePost(t) {
+    const g = this.game;
+    if (g.net && g.net.isClient) return false;
+    const n = tieToFence(g, t.x, t.y, t.z) || untieFromFence(g, t.x, t.y, t.z);
+    if (!n) return false;
+    g.audio.play('hit_wood', [t.x + 0.5, t.y + 0.5, t.z + 0.5]);
+    this.swing = SWING_TICKS;
+    return true;
   }
 
   hitStand(stand) {
@@ -1049,6 +1082,28 @@ export class Interaction {
       else if (p.inventory.add(milk)) g.entities.spawnItem(p.x, p.y + 1, p.z, milk);
       p.inventory.changed();
       g.audio.play('bucket_fill', [mob.x, mob.y + 1, mob.z]);
+      this.swing = SWING_TICKS;
+      return true;
+    }
+    // leads and name tags (single player and host only; see entities/leash.js, mobs/names.js)
+    if (!mob.netProxy && mob.leashHolder) {
+      if (mob.leashHolder === p) unleash(g, mob, true); // let go: the lead drops
+      else leash(mob, p); // take it from the fence post
+      g.audio.play('equip', [mob.x, mob.y + 1, mob.z]);
+      this.swing = SWING_TICKS;
+      return true;
+    }
+    if (!mob.netProxy && d && d.lead && canLeash(mob)) {
+      leash(mob, p);
+      if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
+      g.audio.play('equip', [mob.x, mob.y + 1, mob.z]);
+      this.swing = SWING_TICKS;
+      return true;
+    }
+    if (!mob.netProxy && d && d.nameTag && st.label && canName(mob, st.label)) {
+      nameMob(mob, st.label);
+      if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
+      g.audio.play('page', [mob.x, mob.y + 1, mob.z]);
       this.swing = SWING_TICKS;
       return true;
     }

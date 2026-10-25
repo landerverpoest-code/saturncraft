@@ -310,6 +310,10 @@ shaped([' T ', 'TQT', 'SSS'], { T: B.CINNABAR_TORCH, Q: I.EMBER_QUARTZ, S: B.STO
 shaped(['CCC', 'RRQ', 'CCC'], { C: 'stone_mat', R: I.CINNABAR, Q: I.EMBER_QUARTZ }, B.OBSERVER, 1);
 shaped(['GGG', 'QQQ', 'SSS'], { G: B.GLASS, Q: I.EMBER_QUARTZ, S: 'wood_slab' }, B.DAYLIGHT_SENSOR, 1);
 shapeless([I.GUNPOWDER, I.EMBER_POWDER, I.COAL], I.FIRE_CHARGE, 3);
+// Lead (4 string round a slimeball), Bundle (string tying up leather, or the older rabbit-hide pouch)
+shaped(['SS ', 'SB ', '  S'], { S: I.STRING, B: I.SLIMEBALL }, I.LEAD, 2);
+shaped(['S', 'L'], { S: I.STRING, L: I.LEATHER }, I.BUNDLE, 1);
+shaped(['SRS', 'R R', 'RRR'], { S: I.STRING, R: I.RABBIT_HIDE }, I.BUNDLE, 1);
 for (const [raw, polished] of [[B.GRANITE, B.POLISHED_GRANITE], [B.DIORITE, B.POLISHED_DIORITE], [B.ANDESITE, B.POLISHED_ANDESITE]]) shaped(['XX', 'XX'], { X: raw }, polished, 4);
 
 // Smelting: input -> output; 200 ticks per item (10 s)

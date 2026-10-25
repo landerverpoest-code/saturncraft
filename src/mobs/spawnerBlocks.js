@@ -59,7 +59,7 @@ export class SpawnerBlocks {
 // Dungeon chest loot: a few valuable rolls and three rolls of mob junk.
 const LOOT_A = [
   [I.IRON_INGOT, 1, 4, 10], [I.GOLD_INGOT, 1, 4, 5], [I.BREAD, 1, 1, 20], [I.WHEAT, 1, 4, 20], [I.COAL, 1, 4, 15],
-  [I.CINNABAR, 1, 4, 15], [I.BUCKET, 1, 1, 10], [I.CARROT, 1, 3, 10], [I.DIAMOND, 1, 2, 3], [I.IRON_CHESTPLATE, 1, 1, 2], [I.GILDED_APPLE, 1, 1, 15], ...DISCS.map((id) => [id, 1, 1, 2]),
+  [I.CINNABAR, 1, 4, 15], [I.BUCKET, 1, 1, 10], [I.CARROT, 1, 3, 10], [I.DIAMOND, 1, 2, 3], [I.IRON_CHESTPLATE, 1, 1, 2], [I.GILDED_APPLE, 1, 1, 15], [I.NAME_TAG, 1, 1, 20], [I.LEAD, 1, 1, 10], ...DISCS.map((id) => [id, 1, 1, 2]),
 ];
 const LOOT_B = [[I.BONE, 1, 8, 10], [I.GUNPOWDER, 1, 8, 10], [I.ROTTEN_FLESH, 1, 8, 10], [I.STRING, 1, 8, 10]];
 
@@ -83,7 +83,7 @@ const STRUCTURE_LOOT = {
   [LOOT.OUTPOST]: [[[I.WHEAT, 3, 5, 7], [I.POTATO, 2, 5, 5], [I.CARROT, 3, 5, 5], [I.ARROW, 2, 7, 4], [I.IRON_INGOT, 1, 3, 3], [I.STRING, 1, 6, 4], [I.BOW, 1, 1, 2], [I.CROSSBOW, 1, 1, 2], [B.DARK_OAK_LOG, 2, 3, 10]], 2, 4],
   [LOOT.RUIN]: [[[I.GILDED_APPLE, 1, 1, 15], [B.OBSIDIAN, 1, 2, 40], [I.FLINT, 1, 4, 40], [I.GOLD_NUGGET, 4, 24, 15], [I.FLINT_AND_STEEL, 1, 1, 40], [I.GOLD_INGOT, 2, 8, 15], [I.GILDED_CARROT, 4, 12, 15], [I.GILDED_MELON_SLICE, 4, 12, 5], [I.GOLD_SWORD, 1, 1, 15], [I.GOLD_PICKAXE, 1, 1, 15], [I.GOLD_HELMET, 1, 1, 15], [I.GOLD_CHESTPLATE, 1, 1, 15], [I.GOLD_BOOTS, 1, 1, 15], [B.GOLD_BLOCK, 1, 2, 1]], 4, 8],
   // shipwreck holds: supplies in the bow, treasure under the stern, charts in the stern cabin
-  [LOOT.WRECK]: [[[I.PAPER, 1, 12, 8], [I.COAL, 2, 8, 6], [I.WHEAT, 8, 21, 7], [I.CARROT, 4, 8, 7], [I.POTATO, 2, 6, 7], [I.BREAD, 1, 4, 7], [I.DRIED_KELP, 2, 8, 5], [I.PUMPKIN_PIE, 1, 2, 3], [I.ROTTEN_FLESH, 5, 24, 5], [I.LEATHER_HELMET, 1, 1, 3], [I.LEATHER_CHESTPLATE, 1, 1, 3], [B.TNT, 1, 2, 1]], 3, 8],
+  [LOOT.WRECK]: [[[I.PAPER, 1, 12, 8], [I.COAL, 2, 8, 6], [I.WHEAT, 8, 21, 7], [I.CARROT, 4, 8, 7], [I.POTATO, 2, 6, 7], [I.BREAD, 1, 4, 7], [I.DRIED_KELP, 2, 8, 5], [I.PUMPKIN_PIE, 1, 2, 3], [I.ROTTEN_FLESH, 5, 24, 5], [I.LEATHER_HELMET, 1, 1, 3], [I.LEATHER_CHESTPLATE, 1, 1, 3], [B.TNT, 1, 2, 1], [I.NAME_TAG, 1, 1, 3]], 3, 8],
   [LOOT.WRECK_TREASURE]: [[[I.IRON_INGOT, 1, 5, 90], [I.GOLD_INGOT, 1, 5, 10], [I.IRON_NUGGET, 1, 10, 50], [I.GOLD_NUGGET, 1, 10, 50], [I.BERYL, 1, 5, 40], [I.DIAMOND, 1, 1, 5], [I.AZURITE, 1, 10, 20]], 3, 6, [[I.BERYL, 1, 3]]],
   [LOOT.WRECK_MAP]: [[[I.PAPER, 1, 10, 20], [I.FEATHER, 1, 5, 10], [I.BOOK, 1, 5, 5], [I.CLOCK, 1, 1, 1], [I.COMPASS, 1, 1, 1], [I.EMPTY_MAP, 1, 1, 10]], 3, 6, [[I.EMPTY_MAP, 1, 1]]],
 };

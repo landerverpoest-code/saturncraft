@@ -18,6 +18,7 @@ import { WOOL_ITEMS } from '../world/items.js';
 import { RESTOCK_TICKS, makeTrades } from './trades.js';
 import { villagesNear, PROFESSIONS } from '../world/villages.js';
 import { marauderAI } from './raids.js';
+import { leashTick, leashSaveData, unleash } from '../entities/leash.js';
 
 import { conversionStep, newConversion } from './hostileVariants.js'; // registers the Hexwife and the Shambler / Rattler variants
 import { EFFECTS, addEffect, tickEffects, speedFactor, periodicActions, instantAmount, effectsColor, visibilityFactor } from '../player/effects.js';
@@ -114,7 +115,7 @@ export class Mob {
   }
 
   /** State kept when the mob is saved with its chunk. */
-  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor, profession: this.profession, trades: this.trades, home: this.home, lastRestock: this.lastRestock, size: this.size, coat: this.coat, temper: this.temper, saddled: this.saddled, maxHp: this.maxHp, playerMade: this.playerMade, tamed: this.tamed, sitting: this.sitting, ownerName: this.ownerName, horns: this.horns, hive: this.hive, nectar: this.nectar, beach: this.beach, pregnant: this.pregnant, captain: this.captain || undefined, raider: this.raider || undefined, raidId: this.raidId || undefined }; }
+  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor, profession: this.profession, trades: this.trades, home: this.home, lastRestock: this.lastRestock, size: this.size, coat: this.coat, temper: this.temper, saddled: this.saddled, maxHp: this.maxHp, playerMade: this.playerMade, tamed: this.tamed, sitting: this.sitting, ownerName: this.ownerName, horns: this.horns, hive: this.hive, nectar: this.nectar, beach: this.beach, pregnant: this.pregnant, captain: this.captain || undefined, raider: this.raider || undefined, raidId: this.raidId || undefined, customName: this.customName || undefined, leash: leashSaveData(this) }; }
   loadData(s) {
     this.health = s.health; this.yaw = s.yaw;
     if (s.age < 0) { this.setBaby(true); this.age = s.age; } else { if (this.age < 0) this.setBaby(false); this.age = s.age || 0; }
@@ -129,6 +130,8 @@ export class Mob {
     if (s.size) { this.setSize(s.size); this.health = s.health; }
     if (this.type === 'galloper') { if (s.coat !== undefined) this.coat = s.coat; this.temper = s.temper || 0; this.saddled = !!s.saddled; if (s.maxHp) this.maxHp = s.maxHp; }
     if (s.tamed) { this.tamed = true; this.sitting = !!s.sitting; if (s.ownerName) this.ownerName = s.ownerName; }
+    if (s.customName && typeof s.customName === 'string') { this.customName = s.customName.slice(0, 32); this.persistent = true; } // named with a Name Tag: never despawns
+    if (s.leash && (s.leash.player || Array.isArray(s.leash.knot))) { this.leashPending = s.leash; this.persistent = true; } // its holder is found again on its first tick (entities/leash.js)
     if (s.profession) { this.profession = s.profession; this.trades = s.trades || []; this.home = s.home || null; this.lastRestock = s.lastRestock || 0; }
   }
 
@@ -438,6 +441,7 @@ export class Mob {
     this.prevYaw = this.yaw;
     this.prevFuse = this.fuse;
     if (this.deathTime > 0) {
+      if (this.leashHolder) unleash(g, this, true); // a dying animal lets its lead fall
       this.deathTime++;
       b.vx *= 0.5; b.vz *= 0.5; b.vy -= 0.08;
       b.move(g.world, b.vx, b.vy, b.vz);
@@ -470,6 +474,7 @@ export class Mob {
     this.move = null;
     if (this.rider && this.def.rideable) this.riddenAI(g);
     else this.ai(g, p, pdist);
+    if (this.leashHolder || this.leashPending) leashTick(g, this); // on a lead: follows (or is dragged after) its holder
 
     const mv = this.move || { forward: 0, jump: false };
     const jump = mv.jump || (this.def.hops && mv.forward && b.onGround) || (b.inWater && !this.def.sinks && b.y + this.height * 0.4 < Math.floor(b.y) + 1.2) || (b.inLava);

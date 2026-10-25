@@ -46,6 +46,7 @@ import { Player } from './player/player.js';
 import { Interaction } from './player/interaction.js';
 import { SMELTING, SMELT_TIME, fastCook } from './player/crafting.js';
 import { EntityManager } from './entities/entities.js';
+import { MobOverlays } from './render/mobOverlays.js';
 import { MobSpawner } from './mobs/spawner.js';
 import { HUD } from './ui/hud.js';
 import { UI } from './ui/screens.js';
@@ -161,6 +162,7 @@ export class Game {
     this.player.isPlayer = true;
     this.localPlayer = this.player; // (mob AI swaps game.player for the nearest player in multiplayer)
     this.entities = new EntityManager(this);
+    this.mobOverlays = new MobOverlays(this.scene); // lead ropes and name labels
     this.spawner = new MobSpawner(this);
     this.spawnerBlocks = new SpawnerBlocks(this);
     this.milestones = new Milestones(this);
@@ -1218,6 +1220,7 @@ export class Game {
 
     this.chunks.updateVisibility(this.camera.position);
     this.entities.render(alpha, sec);
+    this.mobOverlays.update(this, alpha);
     this.enchantBooks.update(this, sec);
     this.playerModel.update(this, this.perspective !== 0 && this.cameraDist > 0.8, alpha, sec); // no model when the camera is squeezed into the head
     if (this.net) this.net.render(sec);
