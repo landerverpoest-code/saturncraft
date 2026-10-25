@@ -442,6 +442,10 @@ const GLYPHS = {
   ghost: '<path d="M4 16 L4 8 Q4 3 9 3 Q14 3 14 8 L14 16 L12 14 L10.5 16 L9 14 L7.5 16 L6 14 Z" fill="#fff" fill-opacity=".8"/><rect x="6" y="7" width="2" height="2" fill="#000"/><rect x="10" y="7" width="2" height="2" fill="#000"/>',
   feather: '<path d="M14 2 Q6 4 5 13 L4 16 M5 13 Q12 12 14 2" fill="#fff" stroke="#fff" stroke-width="1"/>',
   food: '<rect x="4" y="7" width="10" height="8" rx="3" fill="#fff"/><rect x="6" y="3" width="6" height="4" fill="#fff"/>',
+  // Dark Omen: the Captain's emblem, a broken ring around a staring eye
+  omen: '<path d="M12.5 4.2 A6 6 0 1 0 14.6 10.5" fill="none" stroke="#fff" stroke-width="1.8"/><path d="M5.5 9 Q9 5.5 12.5 9 Q9 12.5 5.5 9 Z" fill="#fff"/><circle cx="9" cy="9" r="1.4" fill="#000"/>',
+  // Village Champion: a laurel wreath
+  laurel: '<path d="M6 15 Q2 10 5 4 M12 15 Q16 10 13 4" fill="none" stroke="#fff" stroke-width="1.6"/><ellipse cx="4" cy="11" rx="1.6" ry="1" fill="#fff"/><ellipse cx="3.6" cy="7.5" rx="1.5" ry="1" fill="#fff"/><ellipse cx="14" cy="11" rx="1.6" ry="1" fill="#fff"/><ellipse cx="14.4" cy="7.5" rx="1.5" ry="1" fill="#fff"/><path d="M7 15 L11 15" stroke="#fff" stroke-width="1.6"/>',
 };
 const effectIcons = new Map();
 /** A round badge in the effect's colour with a white glyph (data URL). */

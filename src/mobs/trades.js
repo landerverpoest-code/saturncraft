@@ -32,15 +32,25 @@ export function makeTrades(profession, rng = Math.random) {
   return chosen.map(([, give, gn, get, getn]) => ({ give, giveCount: gn, get, getCount: getn, uses: 0 }));
 }
 
+/**
+ * What an offer costs after a price cut (0..1, e.g. Village Champion's, see
+ * raids.js): the reference rule takes floor(cut x price) off, at least one
+ * item, but never goes below one.
+ */
+export function offerPrice(offer, discount = 0) {
+  if (!(discount > 0)) return offer.giveCount;
+  return Math.max(1, offer.giveCount - Math.max(1, Math.floor(discount * offer.giveCount)));
+}
+
 /** Can the inventory pay for an offer? */
-export function canTrade(offer, inventory) {
-  return offer.uses < MAX_USES && inventory.count(offer.give) >= offer.giveCount;
+export function canTrade(offer, inventory, discount = 0) {
+  return offer.uses < MAX_USES && inventory.count(offer.give) >= offerPrice(offer, discount);
 }
 
 /** Take the price from the inventory; returns the goods (caller puts them in the inventory). */
-export function doTrade(offer, inventory) {
-  if (!canTrade(offer, inventory)) return null;
-  let left = offer.giveCount;
+export function doTrade(offer, inventory, discount = 0) {
+  if (!canTrade(offer, inventory, discount)) return null;
+  let left = offerPrice(offer, discount);
   for (let i = 0; i < inventory.slots.length && left; i++) {
     const s = inventory.slots[i];
     if (!s || s.id !== offer.give) continue;

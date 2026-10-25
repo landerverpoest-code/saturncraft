@@ -45,6 +45,7 @@ export class HUD {
       <div id="coords" class="hidden"></div>
       <div id="markers-root"></div>
       <div id="toast"></div>
+      <div id="raidbar" class="hidden"><div class="rb-name"></div><div class="rb-track"><div class="rb-fill"></div></div></div>
       <div id="item-name"></div>
       <div id="bottom">
         <div id="bars3" style="width:calc(var(--slot) * 9 + 8px);display:none"><div class="bar" id="absorb"></div></div>
@@ -113,6 +114,18 @@ export class HUD {
     this.root.appendChild(card);
     setTimeout(() => card.classList.add('out'), 4500);
     setTimeout(() => card.remove(), 5200);
+  }
+
+  /** The raid bar (mobs/raids.js): { label, progress 0..1, state } or null to hide it. */
+  raidBar(info) {
+    const el = this.raidEl || (this.raidEl = this.root.querySelector('#raidbar'));
+    if (!el) return;
+    el.classList.toggle('hidden', !info);
+    if (!info) return;
+    const name = el.firstChild, fill = el.lastChild.firstChild;
+    if (name.textContent !== info.label) name.textContent = info.label;
+    fill.style.width = `${Math.round(info.progress * 1000) / 10}%`;
+    el.classList.toggle('won', info.state === 'won');
   }
 
   toast(msg, ms = 2500) {

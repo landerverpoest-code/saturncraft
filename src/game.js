@@ -35,6 +35,7 @@ import { canLight, FIRE_DELAY } from './world/fire.js';
 import { Chat } from './ui/chat.js';
 import { Music } from './audio/music.js';
 import { Milestones } from './player/milestones.js';
+import { Raids } from './mobs/raids.js';
 import { effectiveSkyLight, skyState } from './sky/suns.js';
 import { SIDE_DIRS, BED_HEAD } from './world/shapes.js';
 import { CATEGORY } from './mobs/mobTypes.js';
@@ -162,6 +163,7 @@ export class Game {
     this.spawner = new MobSpawner(this);
     this.spawnerBlocks = new SpawnerBlocks(this);
     this.milestones = new Milestones(this);
+    this.raids = new Raids(this); // Marauder patrols and village raids
     this.player.inventory.listeners.push(() => this.milestones.checkInventory());
     this.interaction = new Interaction(this);
     this.input = new Input(this.canvas);
@@ -997,6 +999,7 @@ export class Game {
     if (p.riding) this.seatPlayer();
     this.spawner.tick();
     if (!this.net || this.net.isHost) this.spawnerBlocks.tick();
+    if (!this.net || this.net.isHost) this.raids.tick();
     this.tickMaps();
     if (!this.net || this.net.isHost) { this.tickFurnaces(); this.tickBrewing(); this.tickHoppers(); } // guests see the host's furnaces and alembics
     this.effectParticles();

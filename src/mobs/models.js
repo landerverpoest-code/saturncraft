@@ -797,5 +797,57 @@ export function animateModel(root, mob, alpha, L, sec, glow = null) {
   }
 }
 
+// ---- the Marauder Captain's banner -------------------------------------------------
+// A crimson war banner on a pole strapped to the Captain's back: a black border and
+// a pale broken ring (the ringed giant, shattered) around a single staring eye.
+let bannerTex = null;
+function captainBannerTexture() {
+  if (bannerTex) return bannerTex;
+  const c = document.createElement('canvas'); c.width = 10; c.height = 16;
+  const ctx = c.getContext('2d');
+  let s = 91; const rnd = () => { s = (s * 1103515245 + 12345) | 0; return ((s >>> 16) & 0x7fff) / 0x7fff; };
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 10; x++) {
+    const f = 0.85 + rnd() * 0.15;
+    ctx.fillStyle = `rgb(${Math.round(128 * f)},${Math.round(22 * f)},${Math.round(30 * f)})`; ctx.fillRect(x, y, 1, 1);
+  }
+  px(ctx, '#151215', [[0, 0, 10, 1], [0, 0, 1, 16], [9, 0, 1, 16], [0, 15, 10, 1], [1, 14, 2, 1], [4, 14, 2, 1], [7, 14, 2, 1]]);
+  // the broken ring
+  px(ctx, '#e8dcc4', [[3, 3, 4, 1], [2, 4, 1, 1], [7, 4, 1, 1], [1, 5, 1, 3], [8, 5, 1, 1], [2, 8, 1, 1], [7, 8, 1, 1], [3, 9, 3, 1]]);
+  // the eye inside it
+  px(ctx, '#f0e8d0', [[3, 5, 4, 3]]); px(ctx, '#151215', [[4, 5, 2, 3]]); px(ctx, '#d0a020', [[4, 6, 1, 1]]);
+  // a tattered hem
+  px(ctx, '#151215', [[3, 11, 4, 1], [4, 12, 2, 1]]);
+  bannerTex = new THREE.CanvasTexture(c);
+  bannerTex.magFilter = THREE.NearestFilter; bannerTex.minFilter = THREE.NearestFilter; bannerTex.colorSpace = THREE.SRGBColorSpace;
+  return bannerTex;
+}
+
+/** Strap a banner to a (Marauder) model's back; it is lit and flashes like the rest of the model. */
+export function addCaptainBanner(root) {
+  const { mats } = root.userData;
+  const group = new THREE.Group();
+  group.position.set(0, 20 / 16, 4 / 16);
+  const wood = new THREE.MeshLambertMaterial({ map: noiseTexture('bannerpole#5a3a1a'), color: '#5a3a1a' });
+  wood.userData.base = new THREE.Color('#5a3a1a');
+  const cloth = new THREE.MeshLambertMaterial({ map: captainBannerTexture(), color: 0xffffff });
+  cloth.userData.base = new THREE.Color(0xffffff);
+  mats.push(wood, cloth);
+  const box = (w, h, d, x, y, z, mat) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w / 16, h / 16, d / 16), mat);
+    m.position.set(x / 16, y / 16, z / 16); m.castShadow = true; group.add(m); return m;
+  };
+  box(1, 28, 1, 0, 6, 0, wood);        // pole, from the waist to well above the head
+  box(12, 1, 1, 0, 19.5, 0, wood);     // crossbar
+  const flag = new THREE.Group();      // the cloth hangs from the crossbar and sways
+  flag.position.set(0, 19 / 16, 0.8 / 16);
+  const c = new THREE.Mesh(new THREE.BoxGeometry(10 / 16, 16 / 16, 0.5 / 16), cloth);
+  c.position.set(0, -8 / 16, 0); c.castShadow = true;
+  flag.add(c); group.add(flag);
+  root.add(group);
+  root.userData.banner = group;
+  root.userData.bannerFlag = flag;
+  return group;
+}
+
 // Other modules (e.g. mobs/gloomshell.js) register their own models and faces here.
 export { MODELS, FACES };
