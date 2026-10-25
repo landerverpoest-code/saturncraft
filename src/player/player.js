@@ -114,6 +114,9 @@ export class Player {
     // Bulwark (all damage but the void / starving) and Featherstep (falls) on worn armour
     const epf = protectionFactor(this.inventory.armor, source);
     if (epf > 0) amount = protectionReduce(amount, epf);
+    // Resistance: a fifth less damage per level (all of it from level V); not the void
+    const res = this.effects.resistance;
+    if (res && source !== 'void') amount *= Math.max(0, 1 - 0.2 * (res.amp + 1));
     // Absorption's golden hearts take the damage first
     if (this.absorption > 0) { const soak = Math.min(this.absorption, amount); this.absorption -= soak; amount -= soak; }
     this.health = Math.max(0, this.health - amount);

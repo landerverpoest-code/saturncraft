@@ -554,6 +554,11 @@ export const POTTED = [B.OAK_SAPLING, B.BIRCH_SAPLING, B.SPRUCE_SAPLING, B.JUNGL
   B.SUNPETAL, B.REDBLOOM, B.SKYBELL, B.ROSETTE, B.BROWN_MUSHROOM, B.RED_MUSHROOM, B.DEAD_BUSH, B.CACTUS, B.AZALEA, B.FLOWERING_AZALEA, B.BAMBOO];
 ext('CHAIN');
 def(B.CHAIN, 'Chain', { hardness: 5, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD, sound: 'metal', opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, flatIcon: true, tex: { all: 'chain' } });
+// Beacons (world/beacons.js) on pyramids of metal blocks; meta = chosen powers (bits 0-2 primary, 3-4 secondary)
+ext('BERYL_BLOCK');
+def(B.BERYL_BLOCK, 'Beryl Block', { hardness: 5, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.IRON, sound: 'metal' });
+ext('BEACON');
+def(B.BEACON, 'Beacon', { hardness: 3, resistance: 3, sound: 'glass', opaque: false, opacity: 0, layer: LAYER.CUTOUT, emit: 15, container: false, tex: { all: 'beacon' } });
 
 export const NUM_BLOCKS = BLOCKS.length;
 

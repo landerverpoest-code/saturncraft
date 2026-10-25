@@ -283,6 +283,9 @@ COLOR_BLOCKS.pane.forEach((id, c) => shaped(['GGG', 'GGG'], { G: COLOR_BLOCKS.gl
 COLOR_BLOCKS.carpet.forEach((id, c) => shaped(['WW'], { W: WOOL_ITEMS[c] }, id, 3));
 shaped(['S', 'H'], { S: I.STRING, H: I.HONEYCOMB }, CANDLE_IDS[0], 1);
 shaped(['B B', ' B '], { B: I.BRICK }, B.FLOWER_POT, 1);
+shaped(['BBB', 'BBB', 'BBB'], { B: I.BERYL }, B.BERYL_BLOCK, 1);
+shapeless([B.BERYL_BLOCK], I.BERYL, 9);
+shaped(['GGG', 'GSG', 'OOO'], { G: B.GLASS, S: I.SUNCORE, O: B.OBSIDIAN }, B.BEACON, 1);
 shapeless([I.IRON_INGOT], I.IRON_NUGGET, 9);
 shaped(['NNN', 'NNN', 'NNN'], { N: I.IRON_NUGGET }, I.IRON_INGOT, 1);
 shaped(['N', 'I', 'N'], { N: I.IRON_NUGGET, I: I.IRON_INGOT }, B.CHAIN, 1);

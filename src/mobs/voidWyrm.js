@@ -4,6 +4,8 @@
 //  climb  - pulls up and away after a pass (or when the swoop times out)
 // Mending Crystals on the pillars heal it while it is within their reach
 // (see DimensionManager.wyrmTick). Its death opens the exit gate.
+import { I } from '../world/items.js';
+
 const SPEED = { circle: 0.5, swoop: 0.72, climb: 0.55 };
 
 export function wyrmAI(m, g, p, pdist) {
@@ -63,6 +65,8 @@ export function wyrmDeath(m, g) {
   }
   g.audio.play('explode', [m.x, m.y, m.z]);
   if (g.dims) g.dims.onWyrmSlain(m);
+  // two Suncores fall on the middle of the island (not into the void under the Wyrm)
+  if (!g.net || g.net.isHost) g.entities.spawnItem(0.5, g.world.heightAt(0, 0) + 1.5, 0.5, { id: I.SUNCORE, count: 2 });
 }
 
 export function wyrmRender(m, model, alpha, sec) {

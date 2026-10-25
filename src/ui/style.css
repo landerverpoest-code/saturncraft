@@ -242,3 +242,15 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 .brew-arrow > div { position: absolute; left: 0; right: 0; top: 0; background: linear-gradient(180deg, #f2f2f2, #b8e070); }
 .brew-tubes { grid-column: 1 / 4; grid-row: 2; width: 70%; height: 24px; border: 3px solid #5a554b; border-bottom: none; border-radius: 8px 8px 0 0; align-self: end; }
 .brew-hint { font-size: 12px; color: #4a453b; text-align: center; margin: 4px 0 8px; }
+
+/* beacon */
+.beacon-info { margin: 4px 0 8px; }
+.beacon-powers { display: flex; gap: 24px; justify-content: center; margin-bottom: 8px; }
+.beacon-col { display: flex; flex-wrap: wrap; gap: 6px; width: 170px; justify-content: center; align-content: flex-start; }
+.beacon-head { width: 100%; text-align: center; font: bold 14px monospace; color: #3a3428; }
+.beacon-power { pointer-events: auto; width: 44px; height: 44px; cursor: pointer; background: linear-gradient(#5a6a78, #3a4654); border: 2px solid; border-color: #8a9aa8 #1a2230 #1a2230 #8a9aa8; display: flex; align-items: center; justify-content: center; color: #fff; font: bold 16px monospace; }
+.beacon-power img { width: 28px; height: 28px; }
+.beacon-power.on { border-color: #ffe070; box-shadow: 0 0 8px #ffe07088; }
+.beacon-power:disabled { opacity: .35; cursor: default; }
+.beacon-pay { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 8px; }
+.beacon-ok:disabled { opacity: .5; }

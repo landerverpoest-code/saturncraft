@@ -405,6 +405,7 @@ export function itemCanvas(id, glint = false) {
 
 // ---- status effect badges (HUD + inventory list) -------------------------------
 const GLYPHS = {
+  shield: '<path d="M4 4 L14 4 L14 9 Q14 14 9 16 Q4 14 4 9 Z" fill="#fff"/>',
   speed: '<path d="M4 5 L9 9 L4 13 M9 5 L14 9 L9 13" fill="none" stroke="#fff" stroke-width="2"/>',
   slow: '<path d="M14 5 L9 9 L14 13 M9 5 L4 9 L9 13" fill="none" stroke="#fff" stroke-width="2"/>',
   pick: '<path d="M3 6 Q9 1 15 6" fill="none" stroke="#fff" stroke-width="2"/><path d="M9 4 L9 15" stroke="#fff" stroke-width="2"/>',

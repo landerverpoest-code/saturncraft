@@ -24,6 +24,7 @@ export const EFFECTS = {
   hunger:          { name: 'Hunger', color: '#587653', good: false, glyph: 'food' },
   levitation:      { name: 'Levitation', color: '#ceffff', good: false, glyph: 'feather' },
   absorption:      { name: 'Absorption', color: '#2552a5', good: true, glyph: 'heart' },
+  resistance:      { name: 'Resistance', color: '#99453a', good: true, glyph: 'shield' },
 };
 export const EFFECT_KEYS = Object.keys(EFFECTS);
 

@@ -57,6 +57,8 @@ import { effectsColor } from './player/effects.js';
 import { changeSound, CIRCUIT_BLOCK } from './world/circuits.js';
 import { FACING6 } from './world/circuitShapes.js';
 import { findStormRod, lightningCleanCopper } from './world/caves.js';
+import { BeaconBeams } from './render/beaconBeams.js';
+import { beaconLevel, beamColor, beaconEffects, beaconRange, beaconDuration, BEACON_PERIOD } from './world/beacons.js';
 import { PostFX } from './render/postfx.js';
 
 // Spherical (radial distance) fog instead of view-depth fog, so chunk edges never show at screen corners
@@ -114,6 +116,7 @@ export class Game {
     this.postfx = new PostFX(this.renderer);
     this.postfx.enabled = s.shaders !== false;
     this.scene = new THREE.Scene();
+    this.beaconBeams = new BeaconBeams(this.scene);
     this.camera = new THREE.PerspectiveCamera(s.fov, window.innerWidth / window.innerHeight, 0.05, 1200);
     this.scene.add(this.camera);
     this.scene.fog = new THREE.Fog(0x88aaff, 50, 120);
@@ -670,6 +673,31 @@ export class Game {
     if (this.ui.brewing === s) this.ui.close();
   }
 
+  /**
+   * Beacons in loaded chunks within 96 blocks: refresh their beams (every second) and,
+   * every 4 seconds, give the local player the powers of each one in range (every
+   * player's own game does this, so guests get theirs too).
+   */
+  tickBeacons(apply) {
+    const w = this.world, p = this.player, beams = [];
+    const pcx = Math.floor(p.x) >> 4, pcz = Math.floor(p.z) >> 4;
+    for (let dx = -6; dx <= 6; dx++) for (let dz = -6; dz <= 6; dz++) {
+      const c = w.getChunk(pcx + dx, pcz + dz);
+      if (!c || !c.beacons || !c.beacons.size) continue;
+      for (const k of c.beacons) {
+        const [x, y, z] = k.split(',').map(Number);
+        const level = beaconLevel(w, x, y, z), color = level > 0 ? beamColor(w, x, y, z) : null;
+        if (!color) continue;
+        beams.push({ x, y, z, color });
+        if (!apply || p.dead) continue;
+        const r = beaconRange(level);
+        if (Math.abs(p.x - (x + 0.5)) > r || Math.abs(p.z - (z + 0.5)) > r) continue;
+        for (const e of beaconEffects(w.getMeta(x, y, z), level)) p.addEffect(e.name, beaconDuration(level), e.amp);
+      }
+    }
+    this.beaconBeams.set(beams);
+  }
+
   tickFurnaces() {
     for (const f of this.furnaces.values()) {
       if (!this.world.isLoaded(f.x, f.z)) continue;
@@ -949,6 +977,7 @@ export class Game {
     if (this.net) this.net.tick();
     if (this.ticks % 1200 === 0) this.save(); // autosave every minute
     if (this.ticks % 100 === 0) this.milestones.tick();
+    if (this.ticks % 20 === 0) this.tickBeacons(this.ticks % BEACON_PERIOD === 0);
     if (this.ticks % 20 === 0) {
       // music mood: underground, night (all suns down) or day
       const px = Math.floor(p.x), py = Math.floor(p.y + 1), pz = Math.floor(p.z);
@@ -1160,6 +1189,7 @@ export class Game {
     this.overlay.update(this.interaction, p.dead);
     const fx = this.postfx.enabled;
     if (fx) this.postfx.begin(); else this.renderer.clear();
+    this.beaconBeams.update(sec);
     this.renderer.render(this.scene, this.camera);
     if (this.perspective === 0 && !zoom) this.held.render(this.renderer, alpha, sec);
     if (fx) {

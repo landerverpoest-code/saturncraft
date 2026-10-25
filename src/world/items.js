@@ -293,6 +293,9 @@ for (const [key, name, label, mood, root, bpm, rounds] of [
 item('dried_kelp', 'Dried Kelp', { food: { hunger: 1, saturation: 0.6, fast: true }, iconStyle: ['meat', { h: '#3a4a2a', w: '#2a3a1e' }] });
 item('glow_berries', 'Glow Berries', { food: { hunger: 2, saturation: 0.4 }, places: B.CAVE_VINES, iconStyle: ['seeds', { h: '#ffb030', H: '#ffe080' }] });
 item('iron_nugget', 'Iron Nugget', { iconStyle: ['nugget', { h: '#d8d8d8' }] });
+// Suncore (the beacon's heart): from Elder Deepeyes and the Void Wyrm
+const ICON_STAR = ['................', '.......hh.......', '.......hh.......', '......hHHh......', '..hh..hHHh..hh..', '...hhhHwwHhhh...', '....hHwwwwHh....', '..hhHwwwwwwHhh..', '..hhHwwwwwwHhh..', '....hHwwwwHh....', '...hhhHwwHhhh...', '..hh..hHHh..hh..', '......hHHh......', '.......hh.......', '.......hh.......', '................'];
+item('suncore', 'Suncore', { iconStyle: [ICON_STAR, { h: '#e8a020', H: '#ffe070', w: '#fffbe8' }] });
 ITEMS[B.GLOOMSHELL_BOX].stack = 1; // a box keeps its contents in the item (stack.contents), so it never stacks
 
 /** Light level (0-15) an item gives when held: a torch, lantern or other light block; 0 for the rest. */

@@ -213,7 +213,7 @@ export const OCEAN_MOBS = {
     flying: true, breathesWater: true, noFallDamage: true, noDespawn: true, deepeye: true,
     beamCharge: 30, beamDamage: 8, swimAccel: 0.008,
     customAI: elderAI, onHurt: deepeyeHurt, customRender: deepeyeRender,
-    drops: [{ id: I.TIDE_SHARD, min: 0, max: 2 }, { id: B.WET_SOAKMOSS, min: 1, max: 1, playerOnly: true }, { id: I.CHARM_OF_UNDYING, min: 1, max: 1, playerOnly: true, chance: 0.5 }, { oneOf: [[I.RAW_SILVERFIN, 0.5], [I.TIDE_CRYSTAL, 0.33]] }],
+    drops: [{ id: I.TIDE_SHARD, min: 0, max: 2 }, { id: B.WET_SOAKMOSS, min: 1, max: 1, playerOnly: true }, { id: I.CHARM_OF_UNDYING, min: 1, max: 1, playerOnly: true, chance: 0.5 }, { id: I.SUNCORE, min: 1, max: 1, playerOnly: true }, { oneOf: [[I.RAW_SILVERFIN, 0.5], [I.TIDE_CRYSTAL, 0.33]] }],
   },
 };
 for (const [k, d] of Object.entries(OCEAN_MOBS)) { if (!MOBS[k]) { MOBS[k] = d; MOB_KEYS.push(k); } }

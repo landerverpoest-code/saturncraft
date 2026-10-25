@@ -12,6 +12,7 @@ import { B, BLOCKS } from '../world/blocks.js';
 import { canTrade, doTrade, MAX_USES } from '../mobs/trades.js';
 import { MILESTONES } from '../player/milestones.js';
 import { loadPlayerName } from '../net/protocol.js';
+import { BEACON_POWERS, POWER_LEVEL, SECONDARY, BEACON_PAYMENT, beaconLevel, beamColor, beaconMeta, beaconRange } from '../world/beacons.js';
 
 function el(html) { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstChild; }
 
@@ -722,6 +723,65 @@ export class UI {
         this.close();
       } else w.setBlockUrgent(x, y, z, B.ANVIL, (m & 1) | (wear << 1));
     }
+  }
+
+  /** Beacon: pick a primary power (and at level 4 a secondary one), paying an ingot, diamond or beryl. */
+  openBeacon(x, y, z) {
+    this.game.input.unlock();
+    const g = this.game, w = g.world;
+    this.work = [null];
+    const cur = w.getMeta(x, y, z);
+    let primary = BEACON_POWERS[cur & 7], secondary = (cur >> 3) & 3;
+    this.showContainer('beacon', 'Beacon', (panel) => {
+      const info = el('<div class="recipes-hint beacon-info"></div>');
+      panel.appendChild(info);
+      const rows = el('<div class="beacon-powers"></div>');
+      const prim = el('<div class="beacon-col"><div class="beacon-head">Primary Power</div></div>');
+      const sec = el('<div class="beacon-col"><div class="beacon-head">Secondary Power</div></div>');
+      const button = (name, label, onPick) => {
+        const b = el(`<button class="beacon-power" title="${label}"><img src="${effectIconURL(name)}"></button>`);
+        b.addEventListener('mousedown', (e) => { e.preventDefault(); onPick(); this.refreshAll(); });
+        return b;
+      };
+      const primBtns = BEACON_POWERS.slice(1).map((name) => {
+        const b = button(name, EFFECTS[name].name, () => { primary = name; });
+        b.dataset.power = name; prim.appendChild(b); return b;
+      });
+      const regen = button('regeneration', 'Regeneration', () => { secondary = SECONDARY.REGENERATION; });
+      const boost = el('<button class="beacon-power boost" title="Primary power II"><b>II</b></button>');
+      boost.addEventListener('mousedown', (e) => { e.preventDefault(); secondary = SECONDARY.BOOST; this.refreshAll(); });
+      sec.append(regen, boost);
+      rows.append(prim, sec);
+      panel.appendChild(rows);
+      const pay = el('<div class="beacon-pay"></div>');
+      const slot = this.workSlot(0, { single: true, filter: (st) => BEACON_PAYMENT.has(st.id) });
+      slot.title = 'Payment: an iron or gold ingot, a diamond or a beryl';
+      const ok = el('<button class="btn beacon-ok">Confirm</button>');
+      ok.addEventListener('click', () => {
+        const level = beaconLevel(w, x, y, z);
+        if (!this.work[0] || !primary || POWER_LEVEL[primary] > level) return;
+        w.setBlockUrgent(x, y, z, B.BEACON, beaconMeta(primary, level >= 4 ? secondary : 0));
+        this.work[0] = null;
+        g.audio.play('levelup', [x + 0.5, y + 0.5, z + 0.5]);
+        if (g.milestones) g.milestones.event('beacon');
+        this.close();
+      });
+      pay.append(slot, ok);
+      panel.appendChild(pay);
+      this.refreshers.push(() => {
+        const level = beaconLevel(w, x, y, z), lit = level > 0 && !!beamColor(w, x, y, z);
+        info.textContent = !level ? 'Build a pyramid of iron, gold, diamond or beryl blocks under the beacon' : `Pyramid level ${level}${lit ? '' : ' · the beam is blocked'}  ·  range ${beaconRange(level)} blocks`;
+        for (const b of primBtns) { b.disabled = POWER_LEVEL[b.dataset.power] > level; b.classList.toggle('on', primary === b.dataset.power); }
+        regen.disabled = boost.disabled = level < 4;
+        regen.classList.toggle('on', level >= 4 && secondary === SECONDARY.REGENERATION);
+        boost.classList.toggle('on', level >= 4 && secondary === SECONDARY.BOOST);
+        ok.disabled = !this.work[0] || !primary || POWER_LEVEL[primary] > level;
+      });
+      panel.appendChild(this.inventoryGrid({
+        accept: (st) => { if (!this.work[0] && BEACON_PAYMENT.has(st.id)) { this.work[0] = { ...st, count: 1 }; st.count--; return st.count <= 0 ? true : 'partial'; } return false; },
+      }));
+    });
+    this.refreshAll();
   }
 
   openChat(prefix = '') {

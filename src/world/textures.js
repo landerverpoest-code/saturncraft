@@ -926,6 +926,21 @@ const GEN = {
       c.set(x, y, shade(hex(rim ? '#c8b04a' : '#b89a3a'), (slat ? 0.7 : rim && (x + y) % 4 === 0 ? 0.85 : 0.95) + c.h(x, y) * 0.08));
     }
   },
+  beryl_block: (c) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const edge = x === 0 || y === 0 || x === 15 || y === 15, facet = (x + y) % 6 === 0 || (x - y + 16) % 6 === 0;
+      c.set(x, y, shade(hex('#2ecf5a'), edge ? 0.7 : facet ? 1.2 : 0.95 + c.h(x, y) * 0.08));
+    }
+  },
+  beacon: (c) => {
+    // a glass shell round a glowing core on a dark obsidian floor
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const edge = x === 0 || y === 0 || x === 15 || y === 15, core = x >= 4 && x <= 11 && y >= 4 && y <= 11, floor = y >= 13;
+      if (core) c.set(x, y, shade(hex('#bff8f0'), 0.9 + c.h(x, y) * 0.15));
+      else if (floor) c.set(x, y, shade(hex('#1e1630'), 0.9 + c.h(x, y) * 0.2));
+      else c.set(x, y, edge ? hex('#e8f4f8') : hex('#a8d0dc'), edge ? 255 : 90);
+    }
+  },
   flower_pot: (c) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, shade(hex('#9a5a3a'), (y === 10 ? 1.15 : 0.9) + c.h(x, y) * 0.12)); },
   flower_pot_top: (c) => {
     for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {

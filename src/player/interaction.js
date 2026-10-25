@@ -43,7 +43,7 @@ const ORE_XP = {
 };
 const BREAK_DELAY = 5;
 /** Blocks that right-click opens / toggles instead of using the held item. */
-const USABLE_BLOCKS = new Set([B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.CHEST, B.BARREL, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL, B.BREWING_STAND, B.GLOOMSHELL_BOX, B.HOPPER, B.COMPOSTER, B.SWEET_BERRY_BUSH, B.JUKEBOX, B.CAVE_VINES_LIT, B.FLOWER_POT]);
+const USABLE_BLOCKS = new Set([B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.CHEST, B.BARREL, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL, B.BREWING_STAND, B.GLOOMSHELL_BOX, B.HOPPER, B.COMPOSTER, B.SWEET_BERRY_BUSH, B.JUKEBOX, B.CAVE_VINES_LIT, B.FLOWER_POT, B.BEACON]);
 const CIRCUIT_USE = new Set([B.LEVER, B.STONE_BUTTON, B.REPEATER, B.CHIME_BLOCK]);
 const CIRCUIT_PLACE = new Set([B.LEVER, B.STONE_BUTTON, B.CINNABAR_WIRE, B.REPEATER, B.WOODEN_PRESSURE_PLATE, B.PISTON, B.STICKY_PISTON]);
 const USE_DELAY = 4;
@@ -630,6 +630,7 @@ export class Interaction {
       if (t.id === B.BED) { g.trySleep(t.x, t.y, t.z); return true; }
       if (t.id === B.ENCHANTING_TABLE) { g.ui.openEnchanting(t.x, t.y, t.z); return true; }
       if (t.id === B.ANVIL) { g.ui.openAnvil(t.x, t.y, t.z); return true; }
+      if (t.id === B.BEACON) { g.ui.openBeacon(t.x, t.y, t.z); return true; }
       if (t.id === B.BREWING_STAND) { g.ui.openBrewing(t.x, t.y, t.z); return true; }
       if (CIRCUIT_USE.has(t.id)) {
         // levers flip, buttons press (the host releases them), repeaters change delay, chime blocks change pitch

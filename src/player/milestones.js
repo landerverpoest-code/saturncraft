@@ -33,6 +33,7 @@ export const MILESTONES = [
   { id: 'enchanter', title: 'Spellbound', desc: 'Make an enchanting table', icon: B.ENCHANTING_TABLE, inv: (g) => has(g, B.ENCHANTING_TABLE) },
   { id: 'enchant', title: 'Words of Power', desc: 'Enchant an item at an enchanting table', icon: I.ENCHANTED_BOOK, event: 'enchant' },
   { id: 'anvil', title: 'Good as New', desc: 'Repair or combine gear at an anvil', icon: B.ANVIL, event: 'anvil' },
+  { id: 'beacon', title: 'Light of Three Suns', desc: 'Give a beacon its power', icon: B.BEACON, event: 'beacon' },
 ];
 
 export class Milestones {
