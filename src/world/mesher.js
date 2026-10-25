@@ -67,6 +67,16 @@ const WIRE_DOT = texId('cinnabar_wire_dot'), WIRE_LINE = texId('cinnabar_wire_li
 const tileOf = (name) => texId(name) ?? 0;
 const COMPOST = texId('compost'), COMPOST_READY = texId('compost_ready');
 const WICK = texId('candle_wick'), CANDLE_FLAME = texId('candle_flame');
+// Grindstone and Stonecutter: their own tiles per box ([+x, -x, +y, -y, +z, -z]), by axis (meta bit 0)
+const WS_TILES = (() => {
+  const t = (...n) => n.map(tileOf), all = (n) => t(n, n, n, n, n, n);
+  const r = 'grindstone_round', f = 'grindstone_face', leg = all('grindstone_leg'), piv = all('grindstone_pivot');
+  const s = 'stonecutter_side', base = t(s, s, 'stonecutter_top', 'stonecutter_bottom', s, s), w = 'stonecutter_saw', o = 'stonecutter_blank';
+  return {
+    [B.GRINDSTONE]: [[t(f, f, r, r, r, r), leg, piv, leg, piv], [t(r, r, r, r, f, f), leg, piv, leg, piv]],
+    [B.STONECUTTER]: [[base, t(o, o, o, o, w, w)], [base, t(w, w, o, o, o, o)]], // only the blade's flat faces show
+  };
+})();
 const BERRY_TILES = [0, 1, 2, 3].map((i) => texId('sweet_berry_bush_' + i));
 
 class Buf {
@@ -321,7 +331,8 @@ export function meshSection(sec) {
       for (let d = 0; d < 6; d++) { const l = light[i + FACE_N[d]]; sk = Math.max(sk, l >> 4); bk = Math.max(bk, l & 15); }
       const tiles = [0, 1, 2, 3, 4, 5].map((d) => FACE_TILE[id * 6 + d]);
       if (FRONT_TILE[id] >= 0) tiles[FURNACE_FRONT_DIR[meta[i] & 3]] = FRONT_TILE[id]; // the Wyrm Head's face
-      for (const b of blockBoxes(id, meta[i])) emitBox(buf, x, y, z, b[0], b[1], b[2], b[3], b[4], b[5], tiles, sk * 17, bk * 17, 'box');
+      const ws = WS_TILES[id] && WS_TILES[id][meta[i] & 1];
+      blockBoxes(id, meta[i]).forEach((b, k) => emitBox(buf, x, y, z, b[0], b[1], b[2], b[3], b[4], b[5], ws ? ws[k] : tiles, sk * 17, bk * 17, 'box'));
       const cb = id === B.COMPOSTER && compostBox(meta[i] & 15);
       if (cb) emitBox(buf, x, y, z, cb[0], cb[1], cb[2], cb[3], cb[4], cb[5], (meta[i] & 15) >= 8 ? COMPOST_READY : COMPOST, sk * 17, bk * 17, 'box');
       const cdl = CANDLES.get(id);

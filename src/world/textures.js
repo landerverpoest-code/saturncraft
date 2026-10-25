@@ -44,6 +44,8 @@ for (let i = 0; i < 8; i++) addTex('fire_' + i);
 addTex('lava_flow');
 addTex('compost'); addTex('compost_ready');
 addTex('candle_wick'); addTex('candle_flame');
+addTex('grindstone_face'); addTex('grindstone_leg'); addTex('grindstone_pivot');
+addTex('stonecutter_blank'); addTex('stonecutter_saw'); for (let i = 0; i < 4; i++) addTex('stonecutter_saw_' + i); // the blade's frames (animated in terrainMaterial)
 for (let i = 0; i < 4; i++) addTex('sweet_berry_bush_' + i);
 for (let i = 0; i < 10; i++) addTex('destroy_' + i);
 
@@ -941,6 +943,32 @@ const GEN = {
       else c.set(x, y, edge ? hex('#e8f4f8') : hex('#a8d0dc'), edge ? 255 : 90);
     }
   },
+  // Grindstone: a sandy-grey wheel (face with rings round the axle) on dark wooden legs
+  grindstone_round: (c) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, shade(hex('#9a968c'), 0.88 + c.h(x, y) * 0.12 + (c.h(x, y >> 1, 2) < 0.15 ? -0.12 : 0)));
+  },
+  grindstone_face: (c) => {
+    // the wheel's face as the box shows it: centred on (7.5, 5.5)
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const d = Math.hypot(x - 7.5, y - 5.5);
+      const f = d < 1.3 ? 0.45 : d > 5.4 ? 0.78 : Math.abs(d - 3.4) < 0.5 ? 0.86 : 0.98;
+      c.set(x, y, shade(hex('#a8a498'), f + c.h(x, y) * 0.08));
+    }
+  },
+  grindstone_leg: (c) => planks(c, '#4e3420'),
+  grindstone_pivot: (c) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, shade(hex('#5e4028'), (y % 6 === 0 ? 0.75 : 0.95) + c.h(x, y) * 0.1)); },
+  // Stonecutter: a polished stone base banded with iron, a round plate under the blade
+  stonecutter_top: (c) => {
+    polished(c, '#8c8c90');
+    for (let y = 4; y < 12; y++) for (let x = 4; x < 12; x++) if (Math.hypot(x - 7.5, y - 7.5) < 4) c.set(x, y, shade(hex('#5c5e66'), 0.9 + c.h(x, y) * 0.15));
+  },
+  stonecutter_side: (c) => {
+    polished(c, '#8c8c90');
+    for (let x = 0; x < 16; x++) { c.set(x, 7, shade(hex('#6a6c74'), 1.1)); c.set(x, 8, hex('#4a4c54')); c.set(x, 15, shade(hex('#5a5a5e'), 0.9)); }
+    for (const x of [2, 13]) for (let y = 9; y < 15; y++) c.set(x, y, shade(hex('#6a6c74'), 0.95));
+  },
+  stonecutter_bottom: (c) => polished(c, '#7a7a7e'),
+  stonecutter_blank: (c) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0); }, // the blade's edges and top are not drawn
   flower_pot: (c) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, shade(hex('#9a5a3a'), (y === 10 ? 1.15 : 0.9) + c.h(x, y) * 0.12)); },
   flower_pot_top: (c) => {
     for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
@@ -1186,11 +1214,27 @@ function fire(c, frame) {
   }
 }
 
+// Stonecutter blade: the top half of a steel disc (rows 0-6 are what the blade box shows),
+// its teeth stepping round over 4 frames so the saw seems to spin.
+function sawBlade(c, frame) {
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    const dx = x - 7.5, dy = y - 7.5, d = Math.sqrt(dx * dx + dy * dy);
+    if (d > 7.6) { c.set(x, y, [0, 0, 0], 0); continue; }
+    const ang = Math.atan2(dy, dx), tooth = Math.floor((ang / (Math.PI * 2) + 1) * 16 + frame * 0.5) & 1;
+    if (d > 6.4) { if (tooth) c.set(x, y, shade(hex('#e8e8f0'), 0.95 + c.h(x, y) * 0.05)); else c.set(x, y, [0, 0, 0], 0); continue; }
+    const hub = d < 2.2, ring = Math.abs(d - 4.4) < 0.5;
+    const streak = Math.floor((ang / (Math.PI * 2) + 1) * 8 + frame * 0.5) & 1; // a sheen that turns with the blade
+    c.set(x, y, shade(hex(hub ? '#5a5a62' : '#b4b6c0'), hub ? 1 : ring ? 0.8 : streak ? 1.08 : 0.94));
+  }
+}
+
 function paint(c, name) {
   if (name.startsWith('destroy_')) destroyStage(c, +name.slice(8));
   else if (name.startsWith('painting_') && name !== 'painting_back') { const [, a, p] = name.split('_'); c.data.set(paintingPart(+a, +p)); }
   else if (name === 'fire') fire(c, 0);
   else if (name.startsWith('fire_')) fire(c, +name.slice(5));
+  else if (name === 'stonecutter_saw') sawBlade(c, 0);
+  else if (name.startsWith('stonecutter_saw_')) sawBlade(c, +name.slice(16));
   else if (name.startsWith('wheat_')) wheat(c, +name.slice(6));
   else if (name.startsWith('carrots_')) carrots(c, +name.slice(8));
   else if (name.startsWith('stem_')) {

@@ -54,6 +54,27 @@ function blockIcon(b, forceTint = null) {
     ctx.fillStyle = '#5a3a22'; ctx.fillRect(10, 14, 12, 2);
     return c;
   }
+  if (b.id === B.GRINDSTONE) {
+    // the wheel's face between two dark legs
+    ctx.fillStyle = '#4e3420'; ctx.fillRect(3, 14, 5, 16); ctx.fillRect(24, 14, 5, 16);
+    ctx.fillStyle = '#6a4a2c'; ctx.fillRect(3, 12, 5, 6); ctx.fillRect(24, 12, 5, 6);
+    ctx.save(); ctx.beginPath(); ctx.arc(16, 13, 11, 0, Math.PI * 2); ctx.clip();
+    ctx.drawImage(texCanvas('grindstone_face'), 1.5, 0.5, 12, 11, 5, 2, 22, 22); ctx.restore();
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(16, 13, 10.5, 0, Math.PI * 2); ctx.stroke();
+    return c;
+  }
+  if (b.id === B.STONECUTTER) {
+    // a low stone base (9/16 high) and the saw blade above it
+    const top = texCanvas(b.tex.top), side = texCanvas(b.tex.side), dy = 7;
+    ctx.save(); ctx.setTransform(1, 0.5, -1, 0.5, 16, 1 + dy); ctx.drawImage(top, 0, 0, 16, 16); ctx.restore();
+    ctx.save(); ctx.beginPath(); ctx.moveTo(16, 16); ctx.lineTo(30, 9); ctx.lineTo(30, -6); ctx.lineTo(2, -6); ctx.lineTo(2, 9); ctx.closePath(); ctx.clip();
+    ctx.drawImage(texCanvas('stonecutter_saw'), 0, 0, 16, 8, 6, 1, 20, 10); ctx.restore();
+    ctx.save(); ctx.setTransform(1, 0.5, 0, 1, 0, 9 + dy); ctx.drawImage(side, 0, 7, 16, 9, 0, 0, 16, 9);
+    ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(0, 0, 16, 9); ctx.restore();
+    ctx.save(); ctx.setTransform(1, -0.5, 0, 1, 16, 17 + dy); ctx.drawImage(side, 0, 7, 16, 9, 0, 0, 16, 9);
+    ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(0, 0, 16, 9); ctx.restore();
+    return c;
+  }
   if (b.candle) {
     // a single candle stick with its wick
     ctx.drawImage(texCanvas(b.tex.side), 4, 0, 8, 16, 12, 8, 8, 22);

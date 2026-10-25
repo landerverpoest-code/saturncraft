@@ -254,3 +254,11 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 .beacon-power:disabled { opacity: .35; cursor: default; }
 .beacon-pay { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 8px; }
 .beacon-ok:disabled { opacity: .5; }
+
+/* grindstone and stonecutter */
+.grind-top, .cutter-top { justify-content: center; gap: 16px; margin-bottom: 4px; }
+.grind-ins { display: flex; flex-direction: column; gap: 6px; }
+.grind-hint, .cutter-hint { margin: 2px auto 10px; text-align: center; min-height: 15px; }
+.cutter-list { display: grid; grid-template-columns: repeat(4, var(--slot)); grid-auto-rows: var(--slot); gap: 2px; width: calc(4 * var(--slot) + 6px); height: calc(3 * var(--slot) + 4px); overflow-y: auto; padding: 3px; background: #8b8b8b; border: 2px solid; border-color: #373737 #fff #fff #373737; }
+.cutter-opt { cursor: pointer; }
+.cutter-opt.on { outline: 2px solid #ffe070; outline-offset: -2px; background: #b8b07a; }

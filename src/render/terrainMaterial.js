@@ -32,6 +32,8 @@ export const terrainUniforms = {
   uTime: { value: 0 },
   uFire: { value: texId('fire') },
   uFireFrames: { value: texId('fire_0') },
+  uSaw: { value: texId('stonecutter_saw') },
+  uSawFrames: { value: texId('stonecutter_saw_0') },
   uGlowTiles: { value: null },
   uGlow: { value: 0 }, // 0 with shaders off
   // water surfaces reflect the sky and glint where the brightest sun catches the ripples
@@ -117,6 +119,8 @@ varying vec3 vWorld;
 uniform float uTime;
 uniform float uFire;
 uniform float uFireFrames;
+uniform float uSaw;
+uniform float uSawFrames;
 uniform sampler2D uGlowTiles;
 uniform float uGlow;
 varying vec2 vTuv;
@@ -146,6 +150,7 @@ vec2 tuv = vTuv;
 ${water ? 'if (abs(vTile - uWaterTiles.x) < 0.5) tuv += vec2(uTime * 0.02, uTime * 0.035); // still water drifts (not ice or glass)' : ''}
 float tile = vTile;
 if (abs(tile - uFire) < 0.5) tile = uFireFrames + mod(floor(uTime * 12.0), 8.0); // animated fire
+else if (abs(tile - uSaw) < 0.5) tile = uSawFrames + mod(floor(uTime * 16.0), 4.0); // the stonecutter's spinning blade
 vec4 texel = texture(uAtlas, vec3(tuv, tile));
 diffuseColor *= texel;`)
       .replace(
