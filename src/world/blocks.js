@@ -564,6 +564,13 @@ ext('DISPENSER'); ext('DROPPER');
 for (const [key, name, tex] of [['DISPENSER', 'Dispenser', 'dispenser'], ['DROPPER', 'Dropper', 'dropper']]) {
   def(B[key], name, { hardness: 3.5, resistance: 3.5, tool: TOOL.PICKAXE, tier: TIER.WOOD, container: true, tex: { top: 'dispenser_top', bottom: 'dispenser_top', side: 'furnace_side', front: tex + '_front' } });
 }
+// Comparator, Observer and Daylight Sensor (world/circuits.js, world/comparators.js).
+// Comparator: bits 0-1 output side (as repeaters), bit 2 subtract mode, bits 4-7 output level.
+// Observer: bits 0-2 the way its face looks (FACING6), bit 3 pulsing. Daylight Sensor: bits 0-3 level, bit 4 inverted.
+ext('COMPARATOR'); ext('OBSERVER'); ext('DAYLIGHT_SENSOR');
+def(B.COMPARATOR, 'Comparator', { ...part, shape: SHAPE.CIRCUIT, sound: 'stone', tex: { top: 'comparator', bottom: 'smooth_stone', side: 'smooth_stone' } });
+def(B.OBSERVER, 'Observer', { hardness: 3, resistance: 3, tool: TOOL.PICKAXE, tier: TIER.WOOD, opaque: false, opacity: 15, shape: SHAPE.CIRCUIT, sound: 'stone', cubeIcon: true, tex: { top: 'observer_top', bottom: 'observer_top', side: 'observer_side', front: 'observer_face' } });
+def(B.DAYLIGHT_SENSOR, 'Daylight Sensor', { hardness: 0.2, resistance: 0.2, tool: TOOL.AXE, flammable: true, opaque: false, opacity: 0, shape: SHAPE.CIRCUIT, sound: 'wood', tex: { top: 'daylight_sensor_top', bottom: 'oak_planks', side: 'daylight_sensor_side' } });
 
 export const NUM_BLOCKS = BLOCKS.length;
 

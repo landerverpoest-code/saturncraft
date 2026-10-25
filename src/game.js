@@ -2,6 +2,7 @@
 import { Mob } from './mobs/mob.js';
 import { newHopper, hopperStep, HOPPER_COOLDOWN } from './world/hoppers.js';
 import { newDispenser, dispense } from './world/dispensers.js';
+import { containerSignal } from './world/comparators.js';
 import { Fireball } from './entities/fireball.js';
 import { powerInto } from './world/circuits.js';
 import { newMap, updateMap, MAP_SIZE } from './world/maps.js';
@@ -898,6 +899,9 @@ export class Game {
   initCircuits() {
     const w = this.world, ci = w.circuits;
     ci.onDispense = (x, y, z) => { if (!this.net || this.net.isHost) dispense(this, x, y, z); }; // a powered dispenser / dropper fires
+    ci.containerSignal = (x, y, z) => containerSignal(this, x, y, z); // comparators read how full a container is
+    // daylight sensors: how bright the three suns are (dimmed by rain; no suns in the Cinderdeep or the Hollow)
+    ci.daylight = () => (this.world.dimension === 'overworld' ? skyState(this.time).combined * (1 - 0.3 * (this.weather ? this.weather.level : 0)) : 0);
     ci.entitiesOn = (x, y, z) => this.feetPositions().some(([ex, ey, ez]) => Math.floor(ex) === x && Math.floor(ey + 0.05) === y && Math.floor(ez) === z);
     // sounds of changes made by the circuits (here, or on the host when we are a guest)
     const OPENABLE = new Set(BLOCKS.filter((b) => b && (b.shape === SHAPE.DOOR || b.shape === SHAPE.TRAPDOOR || b.shape === SHAPE.GATE)).map((b) => b.id));

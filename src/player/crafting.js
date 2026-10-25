@@ -299,6 +299,9 @@ COLOR_BLOCKS.terracotta.forEach((id, c) => shaped(['TTT', 'TDT', 'TTT'], { T: B.
 COLOR_BLOCKS.concrete.forEach((id, c) => shapeless([DYES[c], B.SAND, B.SAND, B.SAND, B.SAND, B.GRAVEL, B.GRAVEL, B.GRAVEL, B.GRAVEL], id, 8));
 shaped(['CCC', 'CBC', 'CRC'], { C: B.COBBLESTONE, B: I.BOW, R: I.CINNABAR }, B.DISPENSER, 1);
 shaped(['CCC', 'C C', 'CRC'], { C: B.COBBLESTONE, R: I.CINNABAR }, B.DROPPER, 1);
+shaped([' T ', 'TQT', 'SSS'], { T: B.CINNABAR_TORCH, Q: I.EMBER_QUARTZ, S: B.STONE }, B.COMPARATOR, 1);
+shaped(['CCC', 'RRQ', 'CCC'], { C: 'stone_mat', R: I.CINNABAR, Q: I.EMBER_QUARTZ }, B.OBSERVER, 1);
+shaped(['GGG', 'QQQ', 'SSS'], { G: B.GLASS, Q: I.EMBER_QUARTZ, S: 'wood_slab' }, B.DAYLIGHT_SENSOR, 1);
 shapeless([I.GUNPOWDER, I.EMBER_POWDER, I.COAL], I.FIRE_CHARGE, 3);
 for (const [raw, polished] of [[B.GRANITE, B.POLISHED_GRANITE], [B.DIORITE, B.POLISHED_DIORITE], [B.ANDESITE, B.POLISHED_ANDESITE]]) shaped(['XX', 'XX'], { X: raw }, polished, 4);
 

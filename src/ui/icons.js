@@ -62,7 +62,7 @@ function blockIcon(b, forceTint = null) {
     return c;
   }
   if (b.shape === SHAPE.TRAPDOOR) { ctx.drawImage(texCanvas(b.tex.side), 0, 0, 32, 32); return c; }
-  if (b.shape === SHAPE.CIRCUIT && b.tex.top !== 'piston_top' && b.tex.top !== 'piston_top_sticky') return circuitIcon(ctx, c, b);
+  if (b.shape === SHAPE.CIRCUIT && !b.cubeIcon && b.tex.top !== 'piston_top' && b.tex.top !== 'piston_top_sticky') return circuitIcon(ctx, c, b);
   if (b.shape === SHAPE.CROSS || b.shape === SHAPE.TORCH || b.shape === SHAPE.LADDER || b.shape === SHAPE.PANE || b.shape === SHAPE.PAD || b.flatIcon) {
     ctx.drawImage(texCanvas(b.tex.side, b.tint ? GRASS_TINT : null), 0, 0, 32, 32);
     return c;
@@ -93,6 +93,14 @@ function circuitIcon(ctx, c, b) {
     tex('stone', 0, 0, 12, 8, 7, 11, 18, 10); outline(7, 11, 18, 10);
   } else if (b.name === 'Wooden Pressure Plate') {
     tex('oak_planks', 0, 0, 16, 4, 2, 18, 28, 7); outline(2, 18, 28, 7);
+  } else if (b.id === B.COMPARATOR) {
+    tex('comparator', 0, 0, 16, 16, 2, 2, 28, 28); outline(2, 2, 28, 28);
+    ctx.fillStyle = '#5a1a14'; ctx.fillRect(14, 4, 4, 4);
+    ctx.fillStyle = '#e02a18'; ctx.fillRect(7, 21, 4, 4); ctx.fillRect(21, 21, 4, 4);
+  } else if (b.id === B.DAYLIGHT_SENSOR) {
+    // seen from above at a slant: the glass top over a thin wooden side
+    tex('daylight_sensor_top', 0, 0, 16, 16, 2, 4, 28, 20); outline(2, 4, 28, 20);
+    tex('daylight_sensor_side', 0, 10, 16, 6, 2, 23, 28, 7); outline(2, 23, 28, 7);
   } else {
     tex('repeater', 0, 0, 16, 16, 2, 2, 28, 28); outline(2, 2, 28, 28);
     ctx.fillStyle = '#e02a18'; ctx.fillRect(14, 4, 4, 4); ctx.fillRect(14, 18, 4, 4);
