@@ -25,6 +25,9 @@ export const EFFECTS = {
   levitation:      { name: 'Levitation', color: '#ceffff', good: false, glyph: 'feather' },
   absorption:      { name: 'Absorption', color: '#2552a5', good: true, glyph: 'heart' },
   resistance:      { name: 'Resistance', color: '#99453a', good: true, glyph: 'shield' },
+  // raids (mobs/raids.js): from slaying a Marauder Captain / from saving a village
+  dark_omen:        { name: 'Dark Omen', color: '#3a2a4a', good: false, glyph: 'omen' },
+  village_champion: { name: 'Village Champion', color: '#44b04a', good: true, glyph: 'laurel' },
 };
 export const EFFECT_KEYS = Object.keys(EFFECTS);
 

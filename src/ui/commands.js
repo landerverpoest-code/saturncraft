@@ -69,6 +69,7 @@ export const HELP = [
   '/locate <village|temple|outpost|shipwreck|monument|mineshaft|sanctum|bastion|hut|ruin|city|gate> or /locate biome <name>',
   '/dimension <overworld|cinderdeep|hollow>',
   '/effect give <effect> [seconds] [level],  /effect clear  (effects: ' + EFFECT_KEYS.join(', ') + ')',
+  '/raid <patrol|start [level]|stop|status>',
   '/kill,  /clear,  /spawnpoint,  /seed,  /heal',
 ];
 
@@ -204,6 +205,20 @@ export function runCommand(game, text) {
       if (!(secs > 0) || !(lvl >= 1 && lvl <= 255)) return 'Usage: /effect give <effect> [seconds] [level]';
       p.applyEffect(name, Math.round(secs * 20), Math.floor(lvl) - 1);
       return `Applied ${effectLabel(name, Math.floor(lvl) - 1)}${EFFECTS[name].instant ? '' : ` for ${secs} s`}`;
+    }
+    case 'raid': {
+      // /raid patrol | start [level] | stop | status  (Marauder patrols and village raids, mobs/raids.js)
+      const r = game.raids, sub = (args[0] || 'status').toLowerCase();
+      if (!r) return 'Raids unavailable';
+      if (sub === 'patrol') { const n = r.spawnPatrol().length; return n ? `A patrol of ${n} Marauders is near` : 'No room for a patrol here'; }
+      if (sub === 'start') {
+        const v = r.villageAt(p.x, p.z, 96);
+        if (!v) return 'No village within 96 blocks';
+        r.start(v.cx, v.cz, Math.max(1, Math.min(5, Number(args[1]) || 1)));
+        return `Raid started on the village at ${v.cx}, ${v.cz}`;
+      }
+      if (sub === 'stop') { r.stop(); return 'Raid stopped'; }
+      return r.raid ? r.raid.label() : 'No raid under way';
     }
     case 'heal': p.health = 20; p.hunger.food = 20; p.hunger.saturation = 5; return 'Healed';
     case 'clear': p.inventory.clear(); return 'Cleared the inventory';

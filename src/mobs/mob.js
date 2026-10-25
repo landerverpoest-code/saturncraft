@@ -11,12 +11,14 @@ import { BIOMES } from '../world/biomes.js';
 import { rollDrops } from './drops.js';
 import { findPath } from './pathfinding.js';
 import { shouldDespawn, shouldBurnInSun } from './spawnRules.js';
-import { buildModel, animateModel } from './models.js';
+import { buildModel, animateModel, addCaptainBanner } from './models.js';
 import { entityGlow } from '../render/entityLight.js';
 import { randomSheepColor, WOOL_RGB } from '../world/colors.js';
 import { WOOL_ITEMS } from '../world/items.js';
 import { RESTOCK_TICKS, makeTrades } from './trades.js';
 import { villagesNear, PROFESSIONS } from '../world/villages.js';
+import { marauderAI } from './raids.js';
+
 import { conversionStep, newConversion } from './hostileVariants.js'; // registers the Hexwife and the Shambler / Rattler variants
 import { EFFECTS, addEffect, tickEffects, speedFactor, periodicActions, instantAmount, effectsColor, visibilityFactor } from '../player/effects.js';
 
@@ -112,7 +114,7 @@ export class Mob {
   }
 
   /** State kept when the mob is saved with its chunk. */
-  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor, profession: this.profession, trades: this.trades, home: this.home, lastRestock: this.lastRestock, size: this.size, coat: this.coat, temper: this.temper, saddled: this.saddled, maxHp: this.maxHp, playerMade: this.playerMade, tamed: this.tamed, sitting: this.sitting, ownerName: this.ownerName, horns: this.horns, hive: this.hive, nectar: this.nectar, beach: this.beach, pregnant: this.pregnant }; }
+  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor, profession: this.profession, trades: this.trades, home: this.home, lastRestock: this.lastRestock, size: this.size, coat: this.coat, temper: this.temper, saddled: this.saddled, maxHp: this.maxHp, playerMade: this.playerMade, tamed: this.tamed, sitting: this.sitting, ownerName: this.ownerName, horns: this.horns, hive: this.hive, nectar: this.nectar, beach: this.beach, pregnant: this.pregnant, captain: this.captain || undefined, raider: this.raider || undefined, raidId: this.raidId || undefined }; }
   loadData(s) {
     this.health = s.health; this.yaw = s.yaw;
     if (s.age < 0) { this.setBaby(true); this.age = s.age; } else { if (this.age < 0) this.setBaby(false); this.age = s.age || 0; }
@@ -122,6 +124,8 @@ export class Mob {
     if (s.hive) { this.hive = s.hive; this.nectar = !!s.nectar; }
     if (s.beach) { this.beach = s.beach; this.pregnant = !!s.pregnant; }
     if (s.playerMade) this.playerMade = true;
+    if (s.captain) this.captain = true; // Marauder Captains (and raiders) of patrols and raids, see raids.js
+    if (s.raider) { this.raider = true; this.raidId = s.raidId || null; }
     if (s.size) { this.setSize(s.size); this.health = s.health; }
     if (this.type === 'galloper') { if (s.coat !== undefined) this.coat = s.coat; this.temper = s.temper || 0; this.saddled = !!s.saddled; if (s.maxHp) this.maxHp = s.maxHp; }
     if (s.tamed) { this.tamed = true; this.sitting = !!s.sitting; if (s.ownerName) this.ownerName = s.ownerName; }
@@ -135,6 +139,10 @@ export class Mob {
     // now and then two adults by day make a child, if the village has a free bed
     if (this.age === 0 && this.home && g.ticks % 200 === this.id % 200 && Math.random() < 0.05 && g.sky.state.aboveCount > 0) this.trySettlerBreed(g);
     if (g.time - this.lastRestock > RESTOCK_TICKS) { this.lastRestock = g.time; for (const o of this.trades) o.uses = 0; }
+    const h = this.home;
+    // raiders in the village: settlers run home and stay inside (a hit only makes them hurry)
+    const raid = !!(g.raids && h && g.raids.activeNear(h.x, h.z));
+    if (raid && this.panicTicks > 0) this.panicTicks--;
     if (this.panicTicks > 0) return this.passiveAI(g);
     // flee from Shamblers within 8 blocks
     for (const e of g.entities.list) {
@@ -142,13 +150,13 @@ export class Mob {
       const dx = this.x - e.x, dz = this.z - e.z;
       if (dx * dx + dz * dz < 64) { this.steer(this.x + dx * 4, this.z + dz * 4, this.def.panicSpeed); return; }
     }
-    const h = this.home;
-    const night = g.sky.state.aboveCount === 0;
+    const night = g.sky.state.aboveCount === 0 || raid;
     if (h) {
       const dh = Math.hypot(h.x - this.x, h.z - this.z);
       if (dh > (night ? 1.5 : 24)) {
+        const sp = raid ? this.def.panicSpeed : 1;
         if (!this.path || g.ticks % 40 === 0) this.pathTo(g, Math.floor(h.x), Math.floor(h.y), Math.floor(h.z));
-        if (!this.followPath(g, 1)) this.steer(h.x, h.z, 1);
+        if (!this.followPath(g, sp)) this.steer(h.x, h.z, sp);
         return;
       }
       if (night) return;
@@ -336,6 +344,7 @@ export class Mob {
     if (killedByPlayer) g.player.stats.kills++;
     if (killedByPlayer && this.def.category === CATEGORY.MONSTER && g.milestones) g.milestones.event('kill');
     if (this.def.onDeath) this.def.onDeath(this, g, killedByPlayer);
+    if (this.captain && g.raids) g.raids.onCaptainKilled(this, killedByPlayer); // Dark Omen
     if (this.age < 0 && this.def.category !== CATEGORY.MONSTER) { this.killedByPlayer = false; return; } // baby animals drop nothing
     const plunder = source === 'player' ? this.plunder | 0 : 0; // set by the player's melee hit
     for (const d of rollDrops(this.type, { killedByPlayer, onFire: this.fireTicks > 0, sheared: this.sheared, plunder })) {
@@ -581,7 +590,8 @@ export class Mob {
     switch (this.type) {
       case 'shambler': return this.meleeAI(g, p, pdist);
       case 'skitterer': return this.spiderAI(g, p, pdist);
-      case 'rattler': case 'marauder': return this.rangedAI(g, p, pdist);
+      case 'rattler': return this.rangedAI(g, p, pdist);
+      case 'marauder': return marauderAI(this, g, p, pdist); // patrols and raids (raids.js)
       case 'fizzler': return this.fizzlerAI(g, p, pdist);
       case 'voidwalker': return this.voidwalkerAI(g, p, pdist);
       case 'wobbler': return this.wobblerAI(g, p, pdist);
@@ -1545,6 +1555,8 @@ export class Mob {
     if (this.roosting) { m.rotation.z = Math.PI; m.position.y += this.height; } // hanging upside down
     if (parts && parts.armL && this.def.guard && this.swingTime > 0) parts.armL.rotation.x = parts.armR.rotation.x = -2 * Math.sin((this.swingTime - alpha) / 10 * Math.PI);
     if (this.def.customRender) this.def.customRender(this, m, alpha, sec);
+    if (this.captain && !m.userData.banner) addCaptainBanner(m);
+    if (m.userData.bannerFlag) m.userData.bannerFlag.rotation.x = -(0.12 + Math.sin(sec * 2.3 + this.id) * 0.06 + this.limbAmount * 0.25); // sways, streams out when walking
     if (parts && parts.saddle) {
       if (m.userData.coat !== this.coat) {
         m.userData.coat = this.coat;

@@ -9,7 +9,8 @@ import { spendLevels } from '../player/experience.js';
 import { mulberry32 } from '../world/noise.js';
 import { craft, RECIPES, recipeLayout, chooseIngredients } from '../player/crafting.js';
 import { B, BLOCKS } from '../world/blocks.js';
-import { canTrade, doTrade, MAX_USES } from '../mobs/trades.js';
+import { canTrade, doTrade, offerPrice, MAX_USES } from '../mobs/trades.js';
+import { championDiscount } from '../mobs/raids.js';
 import { MILESTONES } from '../player/milestones.js';
 import { loadPlayerName } from '../net/protocol.js';
 import { BEACON_POWERS, POWER_LEVEL, SECONDARY, BEACON_PAYMENT, beaconLevel, beamColor, beaconMeta, beaconRange } from '../world/beacons.js';
@@ -833,11 +834,13 @@ export class UI {
     this.game.input.unlock();
     const g = this.game, inv = g.player.inventory;
     const title = `${mob.profession[0].toUpperCase() + mob.profession.slice(1)} Settler`;
+    // Village Champions pay less (the host prices guests' trades without it)
+    const cut = mob.netProxy ? 0 : championDiscount(g.player.effects);
     this.showContainer('trade', title, (panel) => {
       const list = el('<div class="trade-list"></div>');
       mob.trades.forEach((o) => {
         const row = el(`<div class="trade-row">
-          <div class="slot">${this.slotHTML({ id: o.give, count: o.giveCount })}</div>
+          <div class="slot${offerPrice(o, cut) < o.giveCount ? ' discounted' : ''}">${this.slotHTML({ id: o.give, count: offerPrice(o, cut) })}</div>
           <div class="arrow">➜</div>
           <div class="slot">${this.slotHTML({ id: o.get, count: o.getCount })}</div>
           <span class="trade-name"></span><button class="btn trade-btn">Trade</button></div>`);
@@ -848,8 +851,8 @@ export class UI {
           const times = e.shiftKey ? 64 : 1;
           if (mob.netProxy) { if (canTrade(o, inv)) g.net.requestTrade(mob, mob.trades.indexOf(o), times); return; } // the host keeps count
           let done = 0;
-          for (let k = 0; k < times && canTrade(o, inv); k++) {
-            const got = doTrade(o, inv);
+          for (let k = 0; k < times && canTrade(o, inv, cut); k++) {
+            const got = doTrade(o, inv, cut);
             const left = inv.add(got);
             if (left) g.entities.spawnItem(g.player.x, g.player.y + 1, g.player.z, { ...got, count: left });
             done++;
@@ -858,7 +861,7 @@ export class UI {
           this.refreshAll();
         });
         this.refreshers.push(() => {
-          const ok = canTrade(o, inv);
+          const ok = canTrade(o, inv, cut);
           btn.disabled = !ok;
           row.classList.toggle('sold-out', o.uses >= MAX_USES);
           btn.textContent = o.uses >= MAX_USES ? 'Sold out' : 'Trade';

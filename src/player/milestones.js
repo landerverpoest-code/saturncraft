@@ -34,6 +34,7 @@ export const MILESTONES = [
   { id: 'enchant', title: 'Words of Power', desc: 'Enchant an item at an enchanting table', icon: I.ENCHANTED_BOOK, event: 'enchant' },
   { id: 'anvil', title: 'Good as New', desc: 'Repair or combine gear at an anvil', icon: B.ANVIL, event: 'anvil' },
   { id: 'beacon', title: 'Light of Three Suns', desc: 'Give a beacon its power', icon: B.BEACON, event: 'beacon' },
+  { id: 'raid', title: 'Shield of the Hamlet', desc: 'Win a raid and save a village', icon: I.CROSSBOW, event: 'raid' },
 ];
 
 export class Milestones {
