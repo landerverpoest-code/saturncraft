@@ -169,7 +169,7 @@ export class EntityMirror {
       this.session.send({ t: 'take', id: e.netId, n: 1 });
     } else if (e.stuck && e.pickup) {
       if (!(Math.abs(p.x - e.x) < 1.2 && Math.abs(p.z - e.z) < 1.2 && e.y > p.y - 0.5 && e.y < p.y + 2.3)) return;
-      if (roomFor(p.inventory.slots, { id: I.ARROW }, maxStack) <= 0) return;
+      if (e.thrown === 'spear' ? !p.inventory.slots.some((sl) => !sl) : roomFor(p.inventory.slots, { id: I.ARROW }, maxStack) <= 0) return; // (the host checks a spear's thrower)
       e.takeAt = g.ticks;
       this.session.send({ t: 'take', id: e.netId, n: 1 });
     }

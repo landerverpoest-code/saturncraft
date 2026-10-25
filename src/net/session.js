@@ -35,6 +35,7 @@ import { B, isFurnace } from '../world/blocks.js';
 import { I, ITEMS } from '../world/items.js';
 import { withExtras } from '../world/enchantments.js';
 import { rayAABB } from '../entities/entities.js';
+import { canPickUpSpear } from '../entities/tidespear.js';
 import { runRandomTicks } from '../world/randomTicks.js';
 import { addXp } from '../player/experience.js';
 import { MAX_USES } from '../mobs/trades.js';
@@ -488,6 +489,11 @@ export class HostSession extends Session {
     } else if (e.kind === 'xp') {
       e.dead = true;
       c.ch.send({ t: 'gotxp', v: e.value });
+    } else if (e.kind === 'arrow' && e.thrown === 'spear') {
+      // a stuck Tidespear: only its thrower can pull it out (with its wear and enchantments)
+      if (!e.stuck || !canPickUpSpear(e, c.rp.target)) return;
+      e.dead = true;
+      if (!e.creativeThrow) c.ch.send({ t: 'got', st: copyStack(e.item) });
     } else if (e.kind === 'arrow' && e.stuck && e.pickup) {
       e.dead = true;
       c.ch.send({ t: 'got', st: { id: e.pickupId || I.ARROW, count: 1, damage: 0 } });

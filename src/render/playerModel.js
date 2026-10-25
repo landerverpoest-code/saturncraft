@@ -7,6 +7,8 @@ import { lightAt } from '../entities/entities.js';
 import { entityGlow } from './entityLight.js';
 import { SWING_TICKS } from '../player/interaction.js';
 import { wearArmor, lightArmor } from './armorModel.js';
+import { heldSpearModel, lightSpear } from './spearModel.js';
+import { ITEMS } from '../world/items.js';
 
 export class PlayerModel {
   constructor(scene) {
@@ -26,8 +28,9 @@ export class PlayerModel {
     if (id === this.itemId) return;
     this.itemId = id;
     const arm = this.root.userData.parts.armR;
-    if (this.item) { arm.remove(this.item); this.item.material.map.dispose(); this.item.material.dispose(); this.item = null; }
+    if (this.item) { arm.remove(this.item); if (this.item.userData.dispose) this.item.userData.dispose(); else { this.item.material.map.dispose(); this.item.material.dispose(); } this.item = null; }
     if (id == null) return;
+    if (ITEMS[id] && ITEMS[id].spear) { this.item = heldSpearModel(); arm.add(this.item); return; } // a 3D Tidespear
     const tex = new THREE.CanvasTexture(itemCanvas(id));
     tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter; tex.colorSpace = THREE.SRGBColorSpace;
     this.item = new THREE.Mesh(new THREE.PlaneGeometry(0.45, 0.45), new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.3, side: THREE.DoubleSide }));
@@ -76,5 +79,10 @@ export class PlayerModel {
     if (t > 0) parts.armR.rotation.x = -Math.sin(t * Math.PI) * 1.6 - 0.3;
     const st = p.inventory.selectedStack;
     this.setHeldItem(st ? st.id : null);
+    if (this.item && this.item.userData.spear) {
+      // a Tidespear held up behind the head while charging a throw
+      if (st && it.bowDraw > 0) parts.armR.rotation.x = Math.PI - 0.3 + p.pitch * 0.5;
+      lightSpear(this.item, L, !!(st && st.ench && Object.keys(st.ench).length), sec);
+    }
   }
 }

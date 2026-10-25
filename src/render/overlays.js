@@ -8,6 +8,7 @@ import { drawDial, itemCanvas } from '../ui/icons.js';
 import { blockFaceTexture, lightAt } from '../entities/entities.js';
 import { SWING_TICKS } from '../player/interaction.js';
 import { selectionBox } from '../world/shapes.js';
+import { buildSpearModel, lightSpear } from './spearModel.js';
 
 export class BlockOverlay {
   constructor(scene) {
@@ -84,6 +85,7 @@ export class HeldItem {
 
   build(id, glint = false) {
     this.group.clear();
+    if (this.spear) { this.spear.userData.dispose(); this.spear = null; }
     this.mesh = null;
     this.glintMat = null;
     if (id == null) { this.group.add(this.hand); this.hand.position.set(0.52, -0.48, -0.8); this.hand.rotation.set(-0.55, 0.2, 0.32); return; }
@@ -98,6 +100,15 @@ export class HeldItem {
       this.mesh.position.set(0.12, -0.12, -0.62);
       this.mesh.rotation.set(-0.32, -0.1, 0.03);
       this.mapView = { canvas: cv, tex, last: '' };
+      this.group.add(this.mesh);
+      return;
+    }
+    if (d.spear) {
+      // a 3D Tidespear, prongs forward and up out of the bottom-right corner
+      this.mesh = this.spear = buildSpearModel();
+      this.spearGlint = glint;
+      this.mesh.position.set(0.45, -0.45, -0.9);
+      this.mesh.rotation.set(0.5, Math.PI + 0.15, 0);
       this.group.add(this.mesh);
       return;
     }
@@ -146,6 +157,14 @@ export class HeldItem {
       } else { const st = g.sky.state; light = Math.min(1, st.combined); suns = st.aboveCount; }
       const sig = `${Math.round(a * 20)},${Math.round(light * 20)},${suns}`;
       if (sig !== this.dial.last) { this.dial.last = sig; drawDial(this.dial.canvas, this.dial.kind, a, light, suns); this.dial.tex.needsUpdate = true; }
+    }
+    if (this.spear) {
+      // charging a throw: pulled back and levelled, trembling once it is ready
+      const c = g.interaction.bowDraw > 0 ? Math.min(1, (g.interaction.bowDraw + alpha) / 10) : 0;
+      const shake = c >= 1 ? Math.sin(sec * 40) * 0.006 : 0;
+      this.spear.position.set(0.45 - c * 0.1 + shake, -0.45 + c * 0.08, -0.9 + c * 0.35);
+      this.spear.rotation.set(0.5 - c * 0.38, Math.PI + 0.15 - c * 0.1, 0);
+      lightSpear(this.spear, 1, this.spearGlint, sec);
     }
     // enchanted items shimmer: a slow purple pulse on the emissive colour
     if (this.glintMat) this.glintMat.emissive.setRGB(0.1 + 0.07 * Math.sin(sec * 3), 0.02, 0.16 + 0.1 * Math.sin(sec * 3));
