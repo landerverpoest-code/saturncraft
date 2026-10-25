@@ -197,7 +197,7 @@ export function planCity(seed, o, groundAt) {
 // [id, min, max, weight] (reference city table: 2-6 rolls; enchanted gear at level 20-39)
 const CITY_LOOT = () => [
   [I.DIAMOND, 2, 7, 5], [I.IRON_INGOT, 4, 8, 10], [I.GOLD_INGOT, 2, 7, 15], [I.BERYL, 2, 6, 2],
-  [I.BEETROOT_SEEDS, 1, 10, 5], [I.SADDLE, 1, 1, 3], [I.DRIFT_MEMBRANE, 1, 3, 4], [I.SKY_ROCKET, 2, 6, 3],
+  [I.BEETROOT_SEEDS, 1, 10, 5], [I.SADDLE, 1, 1, 3], [I.DRIFT_MEMBRANE, 1, 3, 4], [I.SKY_ROCKET, 2, 6, 3], [I.HOLLOW_BREATH, 1, 3, 3],
   ...[I.DIAMOND_SWORD, I.DIAMOND_BOOTS, I.DIAMOND_CHESTPLATE, I.DIAMOND_LEGGINGS, I.DIAMOND_HELMET, I.DIAMOND_PICKAXE, I.DIAMOND_SHOVEL,
     I.IRON_SWORD, I.IRON_BOOTS, I.IRON_CHESTPLATE, I.IRON_LEGGINGS, I.IRON_HELMET, I.IRON_PICKAXE, I.IRON_SHOVEL].map((id) => [id, 1, 1, 3, true]),
 ];

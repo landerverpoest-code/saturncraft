@@ -11,7 +11,7 @@ import { armorReduce, armorTotals, wearArmor, BYPASSES_ARMOR } from './armor.js'
 import { newXp } from './experience.js';
 import { protectionFactor, protectionReduce } from '../world/enchantments.js';
 import { gliderUsable, canStartGliding, glideStep, rocketBoost, wallDamage, wearsThisTick } from './glider.js';
-import { EFFECTS, addEffect as stackEffect, tickEffects, effectLevel, speedFactor, jumpBonus, fallDamageWithEffects, periodicActions, instantAmount } from './effects.js';
+import { EFFECTS, addEffect as stackEffect, tickEffects, effectLevel, speedFactor, jumpBonus, fallDamageWithEffects, periodicActions, instantAmount, resistanceFactor } from './effects.js';
 
 const FIRE_SOURCES = new Set(['fire', 'lava', 'fireball']);
 
@@ -115,8 +115,7 @@ export class Player {
     const epf = protectionFactor(this.inventory.armor, source);
     if (epf > 0) amount = protectionReduce(amount, epf);
     // Resistance: a fifth less damage per level (all of it from level V); not the void
-    const res = this.effects.resistance;
-    if (res && source !== 'void') amount *= Math.max(0, 1 - 0.2 * (res.amp + 1));
+    amount *= resistanceFactor(this.effects, source);
     // Absorption's golden hearts take the damage first
     if (this.absorption > 0) { const soak = Math.min(this.absorption, amount); this.absorption -= soak; amount -= soak; }
     this.health = Math.max(0, this.health - amount);
@@ -296,6 +295,8 @@ export class Player {
     if (b.inWater) this.fireTicks = 0;
     // walking through a grown berry bush pricks (reference: 1 damage while moving)
     if (b.inBerry && Math.hypot(b.vx, b.vz) > 0.01 && (world.getMeta(Math.floor(b.x), Math.floor(b.y + 0.1), Math.floor(b.z)) & 3) > 0) this.hurt(1, 'berry_bush');
+    // touching a Blight Rose withers (reference: Wither I for 2 s, renewed while in it)
+    if (b.inBlight && !this.creative && (!fx.wither || fx.wither.ticks < 10)) this.addEffect('wither', 40, 0);
     // standing on a lit campfire burns (1 per second)
     if (!this.creative && world.getBlock(Math.floor(b.x), Math.floor(b.y - 0.01), Math.floor(b.z)) === B.CAMPFIRE && this.attackTicks % 20 === 0) this.hurt(1, 'fire');
     if (this.fireTicks > 0) {

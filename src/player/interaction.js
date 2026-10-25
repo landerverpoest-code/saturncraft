@@ -8,6 +8,7 @@ import { compost, READY, SETTLE_TICKS } from '../world/composter.js';
 import { B, BLOCKS, SOLID, SHAPE, isFluid, CROPS, isFurnace, DOOR_SETS, CANDLES, POTTED, WATERLOGGED_FORM, isPropagule, PROPAGULE_HANGING } from '../world/blocks.js';
 import { ITEMS, I, toolOf, isBlockItem, WOOL_ITEMS, POTION_ITEM, isArrow, DISCS } from '../world/items.js';
 import { POTIONS } from '../world/potions.js';
+import { breathCloudNear } from '../entities/areaCloud.js';
 import { breakProgressPerTick, blockDrops, canHarvest } from '../world/mining.js';
 import { enchLevel, meleeBonus, silkDropsSelf, canSurge, surgeVelocity } from '../world/enchantments.js';
 import { spearDamage } from '../entities/tidespear.js';
@@ -647,6 +648,19 @@ export class Interaction {
     }
     // Glass vials fill at a water source (which stays)
     if (st && st.id === I.GLASS_VIAL && !(usable && !p.sneaking)) {
+      // ... and in the Void Wyrm's breath they fill with Hollow Breath (areaCloud.js)
+      const breath = breathCloudNear(g, p.x, p.y, p.z);
+      if (breath) {
+        const full = { id: I.HOLLOW_BREATH, count: 1, damage: 0 };
+        p.inventory.removeFromSlot(p.inventory.selected, 1);
+        if (!p.inventory.selectedStack) p.inventory.slots[p.inventory.selected] = full;
+        else if (p.inventory.add(full)) g.entities.spawnItem(p.x, p.y + 1, p.z, full);
+        p.inventory.changed();
+        if (!breath.netProxy) breath.radius -= 0.25; // (the host's cloud shrinks a little; a guest's copy follows it)
+        g.audio.play('bucket_fill');
+        this.swing = SWING_TICKS;
+        return true;
+      }
       const [ex, ey, ez] = p.eyePos();
       const [dx, dy, dz] = p.lookDir();
       const hit = w.raycast(ex, ey, ez, dx, dy, dz, PHYS.REACH, true);

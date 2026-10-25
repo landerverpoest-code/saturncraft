@@ -126,7 +126,7 @@ export class Body {
   /** Update inWater/inLava flags from overlapping fluid blocks. */
   updateFluidState(world, eyeHeight) {
     const b = this.box();
-    this.inWater = false; this.inLava = false; this.eyeInWater = false; this.eyeInLava = false; this.inFire = false; this.inWeb = false; this.inBerry = false;
+    this.inWater = false; this.inLava = false; this.eyeInWater = false; this.eyeInLava = false; this.inFire = false; this.inWeb = false; this.inBerry = false; this.inBlight = false;
     const ey = this.y + eyeHeight;
     const flow = [0, 0, 0];
     for (let x = Math.floor(b[0] + 0.001); x <= Math.floor(b[3] - 0.001); x++)
@@ -136,6 +136,7 @@ export class Body {
           if (id === B.FIRE) { this.inFire = true; continue; }
           if (id === B.COBWEB) { this.inWeb = true; continue; }
           if (id === B.SWEET_BERRY_BUSH) { this.inBerry = true; continue; }
+          if (id === B.BLIGHT_ROSE) { this.inBlight = true; continue; }
           if (WATERLOGGED[id]) { // kelp and seagrass stand in still, full water
             this.inWater = true;
             if (Math.floor(this.x) === x && Math.floor(this.z) === z && ey >= y && ey < y + 1) this.eyeInWater = true;

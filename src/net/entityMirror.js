@@ -7,6 +7,7 @@ import { Mob } from '../mobs/mob.js';
 import { MOBS } from '../mobs/mobTypes.js';
 import { ItemEntity, XPOrb, Arrow, Boat, Minecart, FallingBlock } from '../entities/entities.js';
 import { ArmorStand } from '../entities/armorStand.js';
+import { AreaCloud } from '../entities/areaCloud.js';
 import { I, ITEMS, maxStack } from '../world/items.js';
 import { unpackEntity, roomFor } from './protocol.js';
 import { knotAt } from '../entities/leash.js';
@@ -74,6 +75,7 @@ export class EntityMirror {
       case 'boat': e = s.cart ? new Minecart(s.x, s.y, s.z, s.yaw) : new Boat(s.x, s.y, s.z, s.yaw); break;
       case 'falling': e = new FallingBlock(0, 0, 0, s.blockId); break;
       case 'stand': e = new ArmorStand(s.x, s.y, s.z, s.yaw); break;
+      case 'cloud': e = new AreaCloud(s.x, s.y, s.z, { potion: s.potion, breath: s.breath, radius: s.radius }); break;
       default: return null;
     }
     if (e.body) { e.body.vx = e.body.vy = e.body.vz = 0; }
@@ -112,6 +114,7 @@ export class EntityMirror {
       e.yaw = s.yaw; e.hitTime = s.hitTime;
       e.armor = s.armor.map(st); e.hand = st(s.hand);
     }
+    else if (e.kind === 'cloud') e.radius = s.radius;
     else if (e.kind === 'arrow') {
       e.vx = s.vx; e.vy = s.vy; e.vz = s.vz; e.stuck = s.stuck; e.pickup = s.pickup;
     } else if (e.kind === 'boat') {
@@ -166,6 +169,7 @@ export class EntityMirror {
       e.limbSwing += moved * 4;
     }
     if (e.kind === 'xp' && e.age !== undefined) e.age++;
+    if (e.proxyTick) e.proxyTick(g); // a lingering cloud's specks
     this.tryPickup(e);
   }
 
