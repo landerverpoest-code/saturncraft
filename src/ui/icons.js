@@ -7,6 +7,7 @@ import { COLORS, WOOL_RGB } from '../world/colors.js';
 import { hasEnch, enchLines } from '../world/enchantments.js';
 import { POTIONS } from '../world/potions.js';
 import { bundleFill, bundleWeight, BUNDLE_CAPACITY } from '../world/bundles.js';
+import { SHERDS } from '../world/sherds.js';
 import { EFFECTS, effectLabel, formatTicks } from '../player/effects.js';
 import { TOOL_TEMPLATES, GEAR_TEMPLATES, paintTemplate, materialRamp, ramp, WOOD_HANDLE } from './toolArt.js';
 
@@ -53,6 +54,16 @@ function blockIcon(b, forceTint = null) {
     ctx.drawImage(side, 0, 0, 16, 16, 9, 14, 14, 14);
     ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.fillRect(18, 14, 5, 14);
     ctx.fillStyle = '#5a3a22'; ctx.fillRect(10, 14, 12, 2);
+    return c;
+  }
+  if (b.id === B.DECORATED_POT) {
+    // a round-bellied clay pot with a narrow neck and lip
+    const side = texCanvas(b.tex.side);
+    ctx.save(); ctx.beginPath(); ctx.ellipse(16, 19, 12, 11, 0, 0, Math.PI * 2); ctx.rect(11, 3, 10, 8); ctx.clip();
+    ctx.drawImage(side, 0, 0, 16, 16, 3, 2, 26, 29); ctx.restore();
+    ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.beginPath(); ctx.ellipse(16, 19, 12, 11, 0, -Math.PI / 2, Math.PI / 2); ctx.fill();
+    ctx.fillStyle = '#c87a52'; ctx.fillRect(9, 2, 14, 3);
+    ctx.fillStyle = '#2a160e'; ctx.fillRect(12, 2, 8, 2);
     return c;
   }
   if (b.id === B.GRINDSTONE) {
@@ -397,6 +408,10 @@ export function tooltipHTML(st, extra = '') {
       h += `<div class="${good ? 'tt-good' : 'tt-bad'}">${esc(effectLabel(type, amp))}${EFFECTS[type].instant ? '' : ` (${formatTicks(ticks)})`}</div>`;
     }
     if (d.potion.splash) h += '<div class="tt-dura">Thrown: affects all within 4 blocks</div>';
+  }
+  if (Array.isArray(st.sherds)) {
+    // a Decorated Pot names the sherds on its sides
+    for (const f of st.sherds) if (f > 0 && SHERDS[f - 1]) h += `<div class="tt-dura">${esc(SHERDS[f - 1].name)}</div>`;
   }
   if (Array.isArray(st.contents)) {
     // a Gloomshell Box lists the first few things it carries (reference: shulker box tooltip)

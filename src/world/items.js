@@ -4,6 +4,7 @@
 import { BLOCKS, B, TOOL, TIER, isBlockId, EXT_BASE, DOOR_SETS } from './blocks.js';
 import { COLORS } from './colors.js';
 import { POTIONS, POTION_KEYS, potionColor } from './potions.js';
+import { SHERDS, POT_CLAY } from './sherds.js';
 
 export const ITEMS = [];
 export const I = {};
@@ -318,6 +319,16 @@ const ICON_BUNDLE = ['................', '................', '......kkkk......',
 item('lead', 'Lead', { lead: true, iconStyle: [ICON_LEAD, { h: '#b08a5a', H: '#d8b88a', k: '#7a5a32' }] });
 item('name_tag', 'Name Tag', { nameTag: true, iconStyle: [ICON_TAG, { h: '#8a6a3a', H: '#d8c8a0', w: '#f4ecd8', k: '#9a9aa0' }] });
 item('bundle', 'Bundle', { stack: 1, bundle: true, iconStyle: [ICON_BUNDLE, { h: '#7a4a2a', H: '#a8683a', s: '#c8a068', k: '#e8dcc0' }] });
+// Archaeology (world/archaeology.js): the Brush (hold use on Suspicious Sand or Gravel) and the Pottery Sherds it finds
+const ICON_BRUSH = ['................', '...........hHh..', '..........hHHHh.', '.........hHHHHh.', '.........hhHHh..', '........cchhh...', '.......cCc......', '......sss.......', '.....ss.........', '....ss..........', '...ss...........', '..ss............', '.ss.............', '................', '................', '................'];
+item('brush', 'Brush', { stack: 1, durability: 64, brush: true, iconStyle: [ICON_BRUSH, { h: '#e8e4dc', H: '#ffffff', c: '#c87a4a', C: '#f0a070', s: '#8a6034' }] });
+const SHERD_SHAPE = ['................', '.....HHHHHH.....', '...HHhhhhhhhh...', '..Hhhhhhhhhhhh..', '..hhhhhhhhhhhhh.', '.Hhhhhhhhhhhhhh.', '.hhhhhhhhhhhhhh.', '.hhhhhhhhhhhhh..', '.hhhhhhhhhhhhh..', '..hhhhhhhhhhhs..', '..hhhhhhhhhhs...', '...hhhhhhhhhs...', '....hhhhhhss....', '.....hhhss......', '......ss........', '................'];
+export const SHERD_ITEMS = [];
+SHERDS.forEach((s, k) => {
+  const tpl = SHERD_SHAPE.map((row, y) => [...row].map((ch, x) => (ch !== '.' && y >= 3 && y < 11 && x >= 4 && x < 12 && s.motif[y - 3][x - 4] === '#' ? 'k' : ch)).join(''));
+  SHERD_ITEMS.push(item('sherd_' + s.key, s.name, { sherd: k, iconStyle: [tpl, { h: POT_CLAY.body, H: POT_CLAY.light, s: POT_CLAY.dark, k: POT_CLAY.line }] }).id);
+});
+ITEMS[B.DECORATED_POT].stack = 1; // a pot keeps its sherds in the item (stack.sherds)
 ITEMS[B.GLOOMSHELL_BOX].stack = 1; // a box keeps its contents in the item (stack.contents), so it never stacks
 
 /** Light level (0-15) an item gives when held: a torch, lantern or other light block; 0 for the rest. */

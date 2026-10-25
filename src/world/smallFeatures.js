@@ -4,6 +4,7 @@ import { B } from './blocks.js';
 import { BIOME } from './biomes.js';
 import { cidx, SEA_LEVEL } from './constants.js';
 import { hashf } from './noise.js';
+import { SITE, susMeta } from './archaeology.js';
 
 export function stampSmallFeatures(gen, blocks, meta, cx, cz, heightmap, biomes) {
   const set = (x, y, z, id, m = 0) => { if (x < 0 || x > 15 || z < 0 || z > 15) return; const i = cidx(x, y, z); blocks[i] = id; meta[i] = m; };
@@ -23,6 +24,10 @@ export function stampSmallFeatures(gen, blocks, meta, cx, cz, heightmap, biomes)
       for (const [x, z] of [[7, 7], [9, 7], [7, 9], [9, 9]]) for (let y = top + 1; y <= top + 2; y++) set(x, y, z, B.SANDSTONE);
       for (let x = 7; x <= 9; x++) for (let z = 7; z <= 9; z++) set(x, top + 3, z, B.SANDSTONE_SLAB);
       set(8, top + 3, 8, B.SANDSTONE);
+      // Suspicious Sand in the footing beside the basin, one or two blocks, for a Brush (world/archaeology.js)
+      const spots = [[6, 8], [10, 8], [8, 6], [8, 10]], first = Math.floor(hashf(gen.seed, cx, cz, 76) * 4);
+      set(spots[first][0], top - 1, spots[first][1], B.SUSPICIOUS_SAND, susMeta(SITE.WELL));
+      if (hashf(gen.seed, cx, cz, 77) < 0.5) { const [x, z] = spots[(first + 2) & 3]; set(x, top - 1, z, B.SUSPICIOUS_SAND, susMeta(SITE.WELL)); }
     }
   }
   // fossil: 1 chunk in 64 of desert or swamp, 15-30 blocks under the surface

@@ -32,6 +32,7 @@ import { cavePlaceMeta, waxCopper, scrapeCopper } from '../world/caves.js';
 import { canLeash, leash, unleash, isFencePost, tieToFence, untieFromFence } from '../entities/leash.js';
 import { canName, nameMob } from '../mobs/names.js';
 import { bundleTakeLast } from '../world/bundles.js';
+import { isSuspicious, archaeologyLoot, potDrops } from '../world/archaeology.js';
 import { sideOf, SIDE_DIRS, DOOR_OPEN, DOOR_UPPER, BED_HEAD, SLAB_TOP, SLAB_DOUBLE, STAIRS_UPSIDE, GATE_OPEN, TRAPDOOR_OPEN, TRAPDOOR_TOP } from '../world/shapes.js';
 
 /** Brightness for block particles: local light, dimmed with the combined sunlight (as the held item). */
@@ -199,6 +200,8 @@ export class Interaction {
     p.blocking = !!(d && d.shield && input.right && (this.shieldRaise = (this.shieldRaise || 0) + 1) > 5);
     if (!(d && d.shield && input.right)) this.shieldRaise = 0;
     if (d && d.shield) return;
+    // a Brush held on Suspicious Sand or Gravel sweeps it (2.5 s) until the find comes out
+    if (d && d.brush && input.right && this.target && isSuspicious(this.target.id)) { this.brush(this.target); return; }
     if (d && d.rod && input.rightPressed) {
       // cast the bobber, or reel it in (a catch if a fish is biting)
       if (this.bobber && !this.bobber.dead) {
@@ -290,6 +293,30 @@ export class Interaction {
     return true;
   }
 
+  /** One tick of brushing a suspicious block: dust flies off the face; when it is clean the find pops out. */
+  brush(t) {
+    const g = this.game, p = g.player, w = g.world;
+    const r = g.archaeology.brush(w, t.x, t.y, t.z, g.ticks);
+    if (!r) return;
+    if (this.swing <= 0) this.swing = SWING_TICKS;
+    const [fx, fy, fz] = t.face, gravel = r.plain === B.GRAVEL;
+    const cx = t.x + 0.5 + fx * 0.52, cy = t.y + 0.5 + fy * 0.52, cz = t.z + 0.5 + fz * 0.52;
+    const lit = particleLight(g, cx + fx * 0.5, cy + fy * 0.5, cz + fz * 0.5);
+    for (let k = 0; k < 2; k++) {
+      const jx = fx ? 0 : (Math.random() - 0.5) * 0.8, jy = fy ? 0 : (Math.random() - 0.5) * 0.8, jz = fz ? 0 : (Math.random() - 0.5) * 0.8;
+      const c = gravel ? [0.55, 0.52, 0.5] : [0.88, 0.8, 0.58];
+      g.particles.emit(cx + jx, cy + jy, cz + jz, fx * 0.04 + (Math.random() - 0.5) * 0.04, 0.02 + fy * 0.04 + Math.random() * 0.03, fz * 0.04 + (Math.random() - 0.5) * 0.04, c[0] * lit, c[1] * lit, c[2] * lit, 18 + Math.random() * 10, 0.004);
+    }
+    if (g.ticks % 5 === 0) g.audio.play('hit_' + BLOCKS[t.id].sound, [t.x + 0.5, t.y + 0.5, t.z + 0.5], 0.6);
+    if (!r.done) return;
+    // swept clean: plain sand or gravel is left and the find pops out towards the brusher
+    w.setBlockUrgent(t.x, t.y, t.z, r.plain, 0);
+    const loot = archaeologyLoot(g.seed, t.x, t.y, t.z, r.site);
+    g.entities.spawnItem(cx + fx * 0.2, cy + fy * 0.2 - 0.1, cz + fz * 0.2, loot, [fx * 0.1, 0.15 + Math.max(0, fy) * 0.1, fz * 0.1]);
+    g.audio.play('break_' + BLOCKS[t.id].sound, [t.x + 0.5, t.y + 0.5, t.z + 0.5]);
+    if (!p.creative) p.inventory.damageSelected(1);
+  }
+
   hitStand(stand) {
     const g = this.game, p = g.player;
     if (stand.netProxy) { g.net.hitStand(stand); return; } // a shared stand: the host counts the hits
@@ -350,6 +377,7 @@ export class Interaction {
   breakBlock(x, y, z, id, tool) {
     const g = this.game, p = g.player;
     const meta = g.world.getMeta(x, y, z);
+    const potFaces = id === B.DECORATED_POT ? g.pots.get(`${x},${y},${z}`) : null;
     g.world.setBlockUrgent(x, y, z, BLOCKS[id].waterlogged ? B.WATER : B.AIR); // kelp leaves its water behind
     if (g.onBlockBroken) g.onBlockBroken(x, y, z, id, meta);
     if (g.hush) g.hush.blockEvent(x, y, z, 'break', p); // the Deep Hush hears it
@@ -361,6 +389,12 @@ export class Interaction {
     const xp = p.creative || silk ? null : ORE_XP[id];
     if (xp && canHarvest(id, tool)) g.entities.spawnXp(x + 0.5, y + 0.5, z + 0.5, xp[0] + Math.floor(Math.random() * (xp[1] - xp[0] + 1)));
     if (!p.creative) for (const drop of blockDrops(id, tool, Math.random, meta, ench)) g.entities.spawnItem(x + 0.5, y + 0.3, z + 0.5, drop);
+    if (id === B.DECORATED_POT) {
+      // with a tool the pot comes away whole (sherds and all); otherwise it shatters into its sides
+      if (!p.creative) for (const drop of potDrops(potFaces, !!tool.type)) g.entities.spawnItem(x + 0.5, y + 0.3, z + 0.5, drop);
+      if (!tool.type) g.audio.play('break_glass', [x + 0.5, y + 0.5, z + 0.5]);
+      g.setPot(x, y, z, null);
+    }
     // Ice melts into water when broken above a solid block
     if (id === B.ICE && SOLID[g.world.getBlock(x, y - 1, z)] && g.world.dimension !== 'cinderdeep') {
       g.world.setBlockUrgent(x, y, z, B.WATER, 0);
@@ -976,6 +1010,7 @@ export class Interaction {
     if (placeId === B.GRINDSTONE) meta = Math.abs(ldx) > Math.abs(ldz) ? 1 : 0; // the wheel rolls towards the player
     if (placeId === B.STONECUTTER) meta = Math.abs(ldx) > Math.abs(ldz) ? 0 : 1; // the blade runs towards the player
     if (placeId === B.ANVIL) meta = Math.abs(ldx) > Math.abs(ldz) ? 1 : 0; // the long side faces across the player's view
+    if (placeId === B.DECORATED_POT) { const dx = p.x - (px + 0.5), dz = p.z - (pz + 0.5); meta = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 1 : 3) : (dz > 0 ? 2 : 0); } // its front faces the player
     if (BLOCKS[placeId].crystal || placeId === B.STORM_ROD) {
       // buds point away from the clicked face, spikes up or down, rods stand or hang
       meta = cavePlaceMeta(w, px, py, pz, placeId, t.face);
@@ -1005,6 +1040,7 @@ export class Interaction {
     if (lift) { p.body.y = py + 1; p.body.vy = Math.max(p.body.vy, 0); }
     if (chestPair) w.setBlockUrgent(chestPair.x, chestPair.y, chestPair.z, B.CHEST, chestPair.meta);
     if (placeId === B.GLOOMSHELL_BOX && g.onBoxPlaced) g.onBoxPlaced(px, py, pz, st); // the box unpacks what it carried
+    if (placeId === B.DECORATED_POT) g.setPot(px, py, pz, st.sherds || null); // the pot keeps its sherds
     if (CROPS.has(placeId) && g.milestones) g.milestones.event('plant');
     if (isFluid(placeId)) w.scheduleTick(px, py, pz, 5);
     g.audio.play('place_' + BLOCKS[placeId].sound, [px + 0.5, py + 0.5, pz + 0.5]);

@@ -15,6 +15,7 @@ import { mulberry32, hash4, hashf } from './noise.js';
 import { monumentsNear } from './monuments.js';
 import { villagesNear } from './villages.js';
 import { ruinsNear } from './ruinedPortals.js';
+import { SITE, susMeta } from './archaeology.js';
 
 export const WRECK_REGION = 160;
 export const WRECK_REACH = 12; // furthest a wreck's block lies from its centre (x or z)
@@ -165,6 +166,17 @@ export function wreckPlan(wk) {
 
 const PLANT = new Set([B.KELP, B.SEAGRASS, B.TALL_GRASS].filter((x) => x !== undefined));
 
+const SEABED = new Set([B.SAND, B.GRAVEL, B.DIRT, B.CLAY]);
+/** Columns [x, z] near a wreck where Suspicious Gravel may lie in the sea bed (3-6 of them). */
+export function wreckDigSpots(wk) {
+  const out = [], n = 3 + Math.floor(hashf(wk.seed, 1, 2, 77) * 4);
+  for (let k = 0; k < n; k++) {
+    const a = hashf(wk.seed, k, 3, 78) * Math.PI * 2, r = 3 + hashf(wk.seed, k, 4, 79) * (WRECK_REACH - 5);
+    out.push([wk.cx + Math.round(Math.cos(a) * r), wk.cz + Math.round(Math.sin(a) * r)]);
+  }
+  return out;
+}
+
 /** Stamp the parts of nearby wrecks inside chunk (cx, cz). */
 export function stampWrecks(gen, blocks, meta, cx, cz) {
   const X0 = cx * 16, Z0 = cz * 16;
@@ -181,6 +193,16 @@ export function stampWrecks(gen, blocks, meta, cx, cz) {
         const j = cidx(x - X0, yy, z - Z0);
         if (!PLANT.has(blocks[j])) break;
         blocks[j] = fluid(yy); meta[j] = 0;
+      }
+    }
+    // Suspicious Gravel in the sea bed round the wreck, where its cargo spilled (world/archaeology.js)
+    for (const [x, z] of wreckDigSpots(wk)) {
+      if (!inside(x, wk.y, z)) continue;
+      for (let y = wk.y + 4; y > wk.y - 10 && y > MIN_Y + 1; y--) {
+        const i = cidx(x - X0, y, z - Z0), above = blocks[cidx(x - X0, y + 1, z - Z0)], below = blocks[cidx(x - X0, y - 1, z - Z0)];
+        if (above !== B.WATER && above !== B.AIR) continue;
+        if (SEABED.has(blocks[i]) && below && below !== B.WATER && below !== B.AIR) { blocks[i] = B.SUSPICIOUS_GRAVEL; meta[i] = susMeta(SITE.WRECK); }
+        if (blocks[i] !== B.WATER && blocks[i] !== B.AIR) break;
       }
     }
   }

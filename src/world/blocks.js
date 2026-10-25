@@ -638,6 +638,18 @@ def(B.HUSH_SHRIEKER, 'Hush Shrieker', { hardness: 3, resistance: 3, tool: TOOL.H
 ext('HUSH_CATALYST');
 def(B.HUSH_CATALYST, 'Hush Catalyst', { hardness: 3, resistance: 3, tool: TOOL.HOE, sound: 'wool', emit: 6, drops: null, silkSelf: true, tex: { top: 'hush_catalyst_top', bottom: 'hush_catalyst_bottom', side: 'hush_catalyst_side' } });
 
+// Archaeology (world/archaeology.js): Suspicious Sand and Gravel hide one find each; a Brush uncovers it.
+// Meta bits 0-1 = brushing stage (0-3, the texture shows the dig), bits 2-3 = the kind of site (SITE).
+// They fall like sand, but a fall breaks them and the find is lost; mined, they drop nothing.
+ext('SUSPICIOUS_SAND'); ext('SUSPICIOUS_GRAVEL');
+def(B.SUSPICIOUS_SAND, 'Suspicious Sand', { hardness: 0.25, resistance: 0.25, tool: TOOL.SHOVEL, gravity: true, sound: 'sand', drops: null, suspicious: B.SAND, tex: { all: 'suspicious_sand_0' } });
+def(B.SUSPICIOUS_GRAVEL, 'Suspicious Gravel', { hardness: 0.25, resistance: 0.25, tool: TOOL.SHOVEL, gravity: true, sound: 'gravel', drops: null, suspicious: B.GRAVEL, tex: { all: 'suspicious_gravel_0' } });
+// Decorated Pot: a round clay pot; meta bits 0-1 = the side its front faces (SIDE_DIRS); the sherds on
+// its four sides are kept per position in game.pots (render/pots.js draws them). Drops handled by
+// player/interaction.js: whole with a tool in hand, else it shatters into its sherds.
+ext('DECORATED_POT');
+def(B.DECORATED_POT, 'Decorated Pot', { hardness: 0, resistance: 0, sound: 'stone', opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, drops: null, tex: { top: 'decorated_pot_top', bottom: 'decorated_pot_bottom', side: 'decorated_pot_side' } });
+
 export const NUM_BLOCKS = BLOCKS.length;
 
 // Flat lookup tables used by hot loops (mesher, lighting, physics) and workers.
