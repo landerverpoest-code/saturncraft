@@ -3,6 +3,7 @@
 // Pure functions only, so everything here is unit-testable without a network.
 
 import { cleanEnch, withExtras, sameEnch } from '../world/enchantments.js';
+import { equipIds } from '../mobs/equipment.js';
 
 export const PROTOCOL_VERSION = 1;
 export const MAX_PLAYERS = 8;
@@ -141,13 +142,14 @@ export function unpackPlayerState(a) {
 }
 
 // ---- mob snapshots --------------------------------------------------------------
-export const MF = { GROUND: 1, TARGET: 2, ANGRY: 4, BABY: 8, SHEARED: 16, TAMED: 32, SITTING: 64, ENEMY: 128, SPECIAL: 256, CAPTAIN: 512 }; // SPECIAL: a Hexwife drinking, a Shambler about to convert
-/** [id, type, x, y, z, yaw, headPitch, health, hurtTime, deathTime, flags, woolColor, fuse, profession, beam [x,y,z] | 0, moving] */
+export const MF = { GROUND: 1, TARGET: 2, ANGRY: 4, BABY: 8, SHEARED: 16, TAMED: 32, SITTING: 64, ENEMY: 128, SPECIAL: 256, CAPTAIN: 512, RIDING: 1024 }; // RIDING: a jockey on its Cluckling // SPECIAL: a Hexwife drinking, a Shambler about to convert
+/** [id, type, x, y, z, yaw, headPitch, health, hurtTime, deathTime, flags, woolColor, fuse, profession, beam [x,y,z] | 0, moving, equipment [hand, helmet, chest, legs, boots] | 0] */
 export function packMob(m) {
   const f = (m.body && m.body.onGround ? MF.GROUND : 0) | (m.target ? MF.TARGET : 0) | (m.angry ? MF.ANGRY : 0) |
-    (m.age < 0 ? MF.BABY : 0) | (m.sheared ? MF.SHEARED : 0) | (m.tamed ? MF.TAMED : 0) | (m.sitting ? MF.SITTING : 0) | (m.enemy ? MF.ENEMY : 0) | (m.special ? MF.SPECIAL : 0) | (m.captain ? MF.CAPTAIN : 0);
+    (m.age < 0 ? MF.BABY : 0) | (m.sheared ? MF.SHEARED : 0) | (m.tamed ? MF.TAMED : 0) | (m.sitting ? MF.SITTING : 0) | (m.enemy ? MF.ENEMY : 0) | (m.special ? MF.SPECIAL : 0) | (m.captain ? MF.CAPTAIN : 0) | (m.mount ? MF.RIDING : 0);
   return [m.id, m.type, r2(m.x), r2(m.y), r2(m.z), r2(m.yaw), r2(m.headPitch || 0), r2(m.health), m.hurtTime | 0, m.deathTime | 0, f, m.woolColor | 0, m.fuse | 0, m.profession || 0,
-    m.beam ? [r2(m.beam.x), r2(m.beam.y), r2(m.beam.z)] : 0, m.moving ? 1 : 0]; // Deepeye beams (mobs/oceanMobs.js)
+    m.beam ? [r2(m.beam.x), r2(m.beam.y), r2(m.beam.z)] : 0, m.moving ? 1 : 0, // Deepeye beams (mobs/oceanMobs.js)
+    equipIds(m.equip) || 0]; // worn armour and held weapon (mobs/equipment.js)
 }
 export function unpackMob(a) {
   if (!Array.isArray(a) || a.length < 13) return null;
@@ -155,9 +157,10 @@ export function unpackMob(a) {
   return {
     id: a[0], type: a[1], x: a[2], y: a[3], z: a[4], yaw: a[5], headPitch: a[6], health: a[7], hurtTime: a[8], deathTime: a[9],
     onGround: !!(f & MF.GROUND), target: !!(f & MF.TARGET), angry: !!(f & MF.ANGRY), baby: !!(f & MF.BABY),
-    sheared: !!(f & MF.SHEARED), tamed: !!(f & MF.TAMED), sitting: !!(f & MF.SITTING), enemy: !!(f & MF.ENEMY), special: !!(f & MF.SPECIAL), captain: !!(f & MF.CAPTAIN),
+    sheared: !!(f & MF.SHEARED), tamed: !!(f & MF.TAMED), sitting: !!(f & MF.SITTING), enemy: !!(f & MF.ENEMY), special: !!(f & MF.SPECIAL), captain: !!(f & MF.CAPTAIN), riding: !!(f & MF.RIDING),
     woolColor: a[11] | 0, fuse: a[12] | 0, profession: a[13] || null,
     beam: Array.isArray(a[14]) && a[14].length === 3 && a[14].every(Number.isFinite) ? { x: a[14][0], y: a[14][1], z: a[14][2] } : null, moving: !!a[15],
+    equip: Array.isArray(a[16]) ? a[16].slice(0, 5).map((v) => (Number.isInteger(v) && v > 0 ? v : 0)) : null,
   };
 }
 

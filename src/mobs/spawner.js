@@ -2,7 +2,7 @@
 // passive-mob persistence across chunk unloads and mob caps.
 import { villagesNear, houseHome } from '../world/villages.js';
 import { makeTrades } from './trades.js';
-import { Mob } from './mob.js';
+import { Mob, HUT_CAT_COAT } from './mob.js';
 import { MOBS, CATEGORY } from './mobTypes.js';
 import {
   spawnTable, weightedPick, scaledCap, isDarkEnoughToSpawn, isBrightEnoughForAnimal, isSlimeChunk,
@@ -21,6 +21,9 @@ import { HUT_MONSTERS, isNewtPoolFloor } from './spawnRules.js';
 import { soddenSpawnChance } from './hostileVariants.js';
 import { SEA_LEVEL } from '../world/constants.js';
 import { tickMonumentSpawns, spawnElders } from './oceanMobs.js';
+import { EQUIP_KINDS, rollEquipment, rollCanPickUp, localDifficulty, clampedDifficulty, jockeyRoll } from './equipment.js';
+
+const INHABITED_MAX = 3600000; // the local difficulty stops growing after 50 hours
 
 const NO_MONSTER_FLOOR = new Set([B.BEDROCK, B.GLASS, ...LEAVES, B.ICE, B.CACTUS]);
 const MAX_PER_CHUNK = 4;
@@ -30,6 +33,7 @@ export class MobSpawner {
     this.game = game;
     this.savedMobs = new Map();
     this.generated = new Set();
+    this.inhabited = new Map(); // chunk key -> ticks a player spent nearby (local difficulty)
     this.enabled = true;
   }
 
@@ -45,13 +49,47 @@ export class MobSpawner {
     return `hostile ${m}  passive ${c}`;
   }
 
-  spawnMob(type, x, y, z) {
+  /** Spawn a mob; `fresh: false` (loading a saved mob, a conversion) skips the baby, gear and jockey rolls. */
+  spawnMob(type, x, y, z, { fresh = true } = {}) {
     const m = new Mob(type, x, y, z);
     m._game = this.game;
-    if (m.def.babyChance && Math.random() < m.def.babyChance) m.setBaby(true); // 5 % of Shamblers are babies (for good)
+    if (fresh && m.def.babyChance && Math.random() < m.def.babyChance) m.setBaby(true); // 5 % of Shamblers are babies (for good)
     if (m.def.onSpawn) m.def.onSpawn(m);
+    if (fresh && EQUIP_KINDS[type]) {
+      // armour and weapons, likelier the longer the world has run and players have stayed here (mobs/equipment.js)
+      const clamped = clampedDifficulty(this.localDifficulty(x, z));
+      m.equip = rollEquipment(type, clamped, this.game.difficulty);
+      m.canPickUp = rollCanPickUp(clamped);
+    }
     this.game.entities.add(m);
+    if (fresh && m.age < 0 && m.def.shamblerKin && !m.def.aquaticSpawn) this.tryJockey(m);
     return m;
+  }
+
+  /** Regional difficulty at (x, z): the game's difficulty, the world's age and the chunk's inhabited time. */
+  localDifficulty(x, z) {
+    const g = this.game;
+    return localDifficulty({ difficulty: g.difficulty, worldTicks: g.time || 0, inhabitedTicks: this.inhabited.get(chunkKey(Math.floor(x) >> 4, Math.floor(z) >> 4)) || 0 });
+  }
+
+  /** Chicken jockeys: a fresh baby Shambler may climb on a free Cluckling nearby, or bring its own. */
+  tryJockey(m) {
+    const free = this.game.entities.list.find((e) => e.kind === 'mob' && e.type === 'cluckling' && !e.dead && e.deathTime === 0 && !e.passenger && e.age >= 0 &&
+      Math.abs(e.x - m.x) <= 5 && Math.abs(e.y - m.y) <= 3 && Math.abs(e.z - m.z) <= 5);
+    const r = jockeyRoll(!!free);
+    if (r === 'existing') m.mountOn(free);
+    else if (r === 'new') { const c = this.spawnMob('cluckling', m.x, m.y, m.z); c.yaw = m.yaw; m.mountOn(c); }
+  }
+
+  /** Inhabited time (reference): every chunk within 4 of the player counts the ticks spent near it. */
+  tickInhabited() {
+    const g = this.game, p = g.player;
+    if (g.ticks % 20 !== 0 || !p || (g.world.dimension && g.world.dimension !== 'overworld')) return;
+    const pcx = Math.floor(p.x) >> 4, pcz = Math.floor(p.z) >> 4;
+    for (let dx = -4; dx <= 4; dx++) for (let dz = -4; dz <= 4; dz++) {
+      const k = chunkKey(pcx + dx, pcz + dz);
+      this.inhabited.set(k, Math.min(INHABITED_MAX, (this.inhabited.get(k) || 0) + 20));
+    }
   }
 
   /** Can a mob of `type` stand at block (x,y,z)? */
@@ -137,6 +175,7 @@ export class MobSpawner {
 
   tick() {
     const g = this.game, w = g.world, p = g.player;
+    if (!p.dead) this.tickInhabited();
     if (!this.enabled || p.dead) return;
     const R = Math.min(8, g.chunks.renderDistance);
     const pcx = Math.floor(p.x / 16), pcz = Math.floor(p.z / 16);
@@ -210,7 +249,7 @@ export class MobSpawner {
     const k = chunkKey(cx, cz);
     const saved = this.savedMobs.get(k);
     if (saved) {
-      for (const s of saved) this.spawnMob(s.type, s.x, s.y, s.z).loadData(s);
+      for (const s of saved) this.spawnMob(s.type, s.x, s.y, s.z, { fresh: false }).loadData(s);
       this.savedMobs.delete(k);
     }
     if (this.generated.has(k)) return;
@@ -239,6 +278,12 @@ export class MobSpawner {
       if (Math.floor(h.cx / 16) !== cx || Math.floor(h.cz / 16) !== cz || !this.hostileEnabled()) continue;
       const m = this.spawnMob('hexwife', h.cx + 0.5, h.y, h.cz + 2.5);
       if (m) m.persistent = true;
+    }
+    // and a black Purrling (once, when the hut's chunk is first made; tame it as usual)
+    for (const h of hutsNear(this.game.world.gen, cx * 16, cz * 16, cx * 16 + 15, cz * 16 + 15)) {
+      if (Math.floor(h.cx / 16) !== cx || Math.floor(h.cz / 16) !== cz) continue;
+      const cat = this.spawnMob('purrling', h.cx - 1.5, h.y, h.cz + 0.5);
+      if (cat) { cat.woolColor = HUT_CAT_COAT; cat.persistent = true; }
     }
     // a settler is kept in the cell of every igloo basement
     for (const g of igloosNear(this.game.world.gen, cx * 16, cz * 16, cx * 16 + 15, cz * 16 + 15)) {

@@ -110,6 +110,7 @@ export async function saveGame(game) {
     boats: game.entities.list.filter((e) => e.kind === 'boat' && !e.dead).map((e) => ({ x: e.x, y: e.y, z: e.z, yaw: e.yaw, cart: !!e.cart })),
     armorStands: liveStands(game),
     generated: [...game.spawner.generated],
+    inhabited: [...(game.spawner.inhabited || new Map())].filter(([, t]) => t >= 1200), // ticks players spent near each chunk (local difficulty)
     savedMobs, liveMobs, chunks,
     // which dimension the player (and the fields above) are in, plus the other dimensions' state
     ...(game.dims ? game.dims.saveData(packChunk) : {}),
@@ -201,6 +202,7 @@ export function applySave(game, data) {
   for (const h of data.hoppers || []) if (h && Array.isArray(h.slots)) game.hoppers.set(`${h.x},${h.y},${h.z}`, { ...h, cooldown: 0 });
   for (const d of data.dispensers || []) if (d && Array.isArray(d.slots)) game.dispensers.set(`${d.x},${d.y},${d.z}`, { x: d.x, y: d.y, z: d.z, slots: d.slots });
   for (const k of data.generated) game.spawner.generated.add(k);
+  for (const e of Array.isArray(data.inhabited) ? data.inhabited : []) if (Array.isArray(e) && Number.isFinite(e[1])) game.spawner.inhabited.set(+e[0], e[1]);
   for (const [k, v] of Object.entries(data.savedMobs)) game.spawner.savedMobs.set(+k, v);
   // live mobs go back into their chunk's saved list so they reappear when it loads
   for (const m of data.liveMobs) {

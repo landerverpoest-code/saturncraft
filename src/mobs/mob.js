@@ -5,7 +5,7 @@ import { Body } from '../physics/body.js';
 import { fallDamage } from '../physics/constants.js';
 import { isStalagmiteTip, stalagmiteFallDamage } from '../world/caves.js';
 import { B, SOLID, CROPS, isWaterish, CROAKLIGHTS } from '../world/blocks.js';
-import { I } from '../world/items.js';
+import { I, ITEMS } from '../world/items.js';
 import { MOBS, CATEGORY } from './mobTypes.js';
 import { BIOMES } from '../world/biomes.js';
 import { rollDrops } from './drops.js';
@@ -19,6 +19,10 @@ import { RESTOCK_TICKS, makeTrades } from './trades.js';
 import { villagesNear, PROFESSIONS } from '../world/villages.js';
 import { marauderAI } from './raids.js';
 import { leashTick, leashSaveData, unleash } from '../entities/leash.js';
+import { mobDamageTaken, weaponBonus, equipmentDrops, equipFromSave, slotFor, isBetter, helmetShadesSun } from './equipment.js';
+import { wearArmor as wearArmorModel, lightArmor } from '../render/armorModel.js';
+import { itemCanvas } from '../ui/icons.js';
+import * as THREE from 'three';
 
 import { conversionStep, newConversion } from './hostileVariants.js'; // registers the Hexwife and the Shambler / Rattler variants
 import { EFFECTS, addEffect, tickEffects, speedFactor, periodicActions, instantAmount, effectsColor, visibilityFactor } from '../player/effects.js';
@@ -31,6 +35,8 @@ function angleTo(dx, dz) { return Math.atan2(-dx, -dz); }
 function wrap(a) { while (a > Math.PI) a -= TAU; while (a < -Math.PI) a += TAU; return a; }
 function gaussian() { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(TAU * v); }
 
+/** The coat of the black Purrling living in each swamp hut (an index into CAT_COATS). */
+export const HUT_CAT_COAT = 2;
 /** Purrling coats: [fur, ears and tail] (ginger, tabby grey, black, white, calico-ish brown, siamese cream). */
 const CAT_COATS = [['#c8883a', '#a86a2a'], ['#8a8a86', '#5a5a56'], ['#2a2626', '#141212'], ['#ecebe6', '#c8c6c0'], ['#8a6040', '#3a2a1e'], ['#e8dcc0', '#5a4636']];
 
@@ -85,6 +91,10 @@ export class Mob {
     if (type === 'galloper') { this.coat = Math.floor(Math.random() * 5); this.temper = 0; this.saddled = false; this.health = 15 + Math.floor(Math.random() * 16); this.maxHp = this.health; this.jumpPower = 0.5 + Math.random() * 0.2; this.seatY = 0.85; }
     // Wobblers (slimes) come in three sizes
     if (type === 'wobbler') this.setSize([1, 2, 4][Math.floor(Math.random() * 3)]);
+    // gear (mobs/equipment.js): { hand, armor: [helmet, chest, legs, boots] }; picked-up slots always drop
+    this.equip = null; this.equipPicked = 0; this.canPickUp = false;
+    // chicken jockeys: the rider steers its mount
+    this.mount = null; this.passenger = null;
   }
 
   setSize(n) {
@@ -115,7 +125,7 @@ export class Mob {
   }
 
   /** State kept when the mob is saved with its chunk. */
-  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor, profession: this.profession, trades: this.trades, home: this.home, lastRestock: this.lastRestock, size: this.size, coat: this.coat, temper: this.temper, saddled: this.saddled, maxHp: this.maxHp, playerMade: this.playerMade, tamed: this.tamed, sitting: this.sitting, ownerName: this.ownerName, horns: this.horns, hive: this.hive, nectar: this.nectar, beach: this.beach, pregnant: this.pregnant, captain: this.captain || undefined, raider: this.raider || undefined, raidId: this.raidId || undefined, customName: this.customName || undefined, leash: leashSaveData(this) }; }
+  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor, profession: this.profession, trades: this.trades, home: this.home, lastRestock: this.lastRestock, size: this.size, coat: this.coat, temper: this.temper, saddled: this.saddled, maxHp: this.maxHp, playerMade: this.playerMade, tamed: this.tamed, sitting: this.sitting, ownerName: this.ownerName, horns: this.horns, hive: this.hive, nectar: this.nectar, beach: this.beach, pregnant: this.pregnant, captain: this.captain || undefined, raider: this.raider || undefined, raidId: this.raidId || undefined, customName: this.customName || undefined, leash: leashSaveData(this), equip: this.equip || undefined, equipPicked: this.equipPicked || undefined, canPickUp: this.canPickUp || undefined }; }
   loadData(s) {
     this.health = s.health; this.yaw = s.yaw;
     if (s.age < 0) { this.setBaby(true); this.age = s.age; } else { if (this.age < 0) this.setBaby(false); this.age = s.age || 0; }
@@ -132,6 +142,8 @@ export class Mob {
     if (s.tamed) { this.tamed = true; this.sitting = !!s.sitting; if (s.ownerName) this.ownerName = s.ownerName; }
     if (s.customName && typeof s.customName === 'string') { this.customName = s.customName.slice(0, 32); this.persistent = true; } // named with a Name Tag: never despawns
     if (s.leash && (s.leash.player || Array.isArray(s.leash.knot))) { this.leashPending = s.leash; this.persistent = true; } // its holder is found again on its first tick (entities/leash.js)
+    this.equip = equipFromSave(s.equip); this.equipPicked = s.equipPicked | 0; this.canPickUp = !!s.canPickUp;
+    if (this.mount) this.dismount(true); // (a fresh spawn's jockey roll does not apply to a loaded mob)
     if (s.profession) { this.profession = s.profession; this.trades = s.trades || []; this.home = s.home || null; this.lastRestock = s.lastRestock || 0; }
   }
 
@@ -262,10 +274,8 @@ export class Mob {
       this.teleportRandom(this._game);
       return false;
     }
-    if (this.def.armor) {
-      const a = this.def.armor;
-      dmg *= 1 - Math.min(20, Math.max(a / 5, a - dmg / 2)) / 25;
-    }
+    // natural armour (every source) and worn armour (what stops the player's armour too)
+    if (this.def.armor || this.equip) dmg = mobDamageTaken(dmg, this.def.armor || 0, this.equip, source);
     if (this.invulnerable > 10) {
       if (dmg <= this.lastHurt) return false;
       const extra = dmg - this.lastHurt; this.lastHurt = dmg; dmg = extra;
@@ -349,6 +359,7 @@ export class Mob {
     if (killedByPlayer && this.def.category === CATEGORY.MONSTER && g.milestones) g.milestones.event('kill');
     if (this.def.onDeath) this.def.onDeath(this, g, killedByPlayer);
     if (this.captain && g.raids) g.raids.onCaptainKilled(this, killedByPlayer); // Dark Omen
+    for (const st of equipmentDrops(this.equip, { killedByPlayer, plunder: source === 'player' ? this.plunder | 0 : 0, picked: this.equipPicked })) g.entities.spawnItem(this.x, this.y + 0.5, this.z, st);
     if (this.age < 0 && this.def.category !== CATEGORY.MONSTER) { this.killedByPlayer = false; return; } // baby animals drop nothing
     const plunder = source === 'player' ? this.plunder | 0 : 0; // set by the player's melee hit
     for (const d of rollDrops(this.type, { killedByPlayer, onFire: this.fireTicks > 0, sheared: this.sheared, plunder })) {
@@ -438,11 +449,12 @@ export class Mob {
   tick(g) {
     this._game = g;
     const b = this.body;
-    this.prev = [b.x, b.y, b.z];
+    if (!this.mount) this.prev = [b.x, b.y, b.z]; // (a rider is placed by its mount)
     this.prevYaw = this.yaw;
     this.prevFuse = this.fuse;
     if (this.deathTime > 0) {
       if (this.leashHolder) unleash(g, this, true); // a dying animal lets its lead fall
+      if (this.mount || this.passenger) this.dismount();
       this.deathTime++;
       b.vx *= 0.5; b.vz *= 0.5; b.vy -= 0.08;
       b.move(g.world, b.vx, b.vy, b.vz);
@@ -468,15 +480,34 @@ export class Mob {
     const p = g.player;
     const pdx = p.x - this.x, pdy = p.y - this.y, pdz = p.z - this.z;
     const pdist = Math.hypot(pdx, pdy, pdz);
-    if (!this.persistent && !this.def.noDespawn) {
+    if (!this.persistent && !this.def.noDespawn && !this.passenger) {
       if (pdist < 32) this.noActionTime = 0;
-      if (shouldDespawn(pdist, this.noActionTime)) { this.removed = true; this.dead = true; return; }
+      if (shouldDespawn(pdist, this.noActionTime)) {
+        this.removed = true; this.dead = true;
+        if (this.mount && this.mount.jockey) this.mount.removed = this.mount.dead = true; // a jockey's Cluckling goes with it
+        return;
+      }
     }
+    if (this.mount && (this.mount.removed || this.mount.deathTime > 0)) this.dismount();
+    if (this.passenger && (this.passenger.removed || this.passenger.deathTime > 0 || this.passenger.mount !== this)) this.dismount();
 
     b.updateFluidState(g.world, this.height * 0.85);
     this.move = null;
     if (this.rider && this.def.rideable) this.riddenAI(g);
-    else this.ai(g, p, pdist);
+    else if (this.passenger) {
+      // a jockey's mount goes where its rider wants
+      const mv = this.passenger.jockeyMove;
+      this.yaw = this.passenger.yaw;
+      this.move = mv ? { forward: mv.forward, strafe: mv.strafe || 0, jump: mv.jump || (b.horizontalCollision && b.onGround), mod: mv.mod } : null;
+    } else this.ai(g, p, pdist);
+    if (this.mount) {
+      // riding: the AI's walking goes to the mount; the rider itself sits still on top of it
+      this.jockeyMove = this.move; this.move = null;
+      b.vx = b.vy = b.vz = 0; b.fallDistance = 0;
+      this.limbAmount *= 0.6;
+      this.environment(g);
+      return;
+    }
     if (this.leashHolder || this.leashPending) leashTick(g, this); // on a lead: follows (or is dragged after) its holder
 
     const mv = this.move || { forward: 0, jump: false };
@@ -484,6 +515,8 @@ export class Mob {
     if (this.def.flying) this.flyMove(g);
     else b.travel(g.world, { forward: mv.forward, strafe: mv.strafe || 0, yaw: this.yaw, jump, speed: mv.forward ? this.speed() * (mv.mod || 1) : this.speed(), climbing: this.def.climbs && b.horizontalCollision && !!this.move, levitation: this.effects.levitation ? this.effects.levitation.amp + 1 : 0 });
     if (this.type === 'cluckling' && !b.onGround && b.vy < 0) { b.vy *= 0.6; b.fallDistance = 0; }
+    if (this.passenger) this.placePassenger();
+    if (this.canPickUp && this.equip && g.ticks % 10 === this.id % 10) this.pickUpGear(g);
 
     // Limb animation
     const moved = Math.hypot(b.x - this.prev[0], b.z - this.prev[2]);
@@ -499,13 +532,67 @@ export class Mob {
     }
   }
 
+  /** Seat height of a rider on this mob. */
+  get jockeySeat() { return this.height * 0.7; }
+
+  /** Climb onto `m` (a Cluckling, for chicken jockeys). */
+  mountOn(m) {
+    if (this.mount) this.dismount();
+    this.mount = m; m.passenger = this; m.jockey = true;
+    m.persistent = false;
+    this.placePassengerOf(m);
+  }
+
+  placePassengerOf(m) {
+    const y = m.jockeySeat;
+    this.prev = [m.prev[0], m.prev[1] + y, m.prev[2]];
+    this.body.setPos(m.x, m.y + y, m.z);
+  }
+  placePassenger() { if (this.passenger) this.passenger.placePassengerOf(this); }
+
+  /** Get off (or throw off) whoever this mob rides or carries; `dropJockey` also removes a jockey's mount. */
+  dismount(dropJockey = false) {
+    const m = this.mount;
+    if (m) {
+      this.mount = null; this.jockeyMove = null;
+      if (m.passenger === this) m.passenger = null;
+      if (dropJockey && m.jockey) m.removed = m.dead = true;
+      this.prev = [this.x, this.y, this.z];
+    }
+    const r = this.passenger;
+    if (r) { this.passenger = null; if (r.mount === this) { r.mount = null; r.jockeyMove = null; r.prev = [r.x, r.y, r.z]; } }
+  }
+
+  /** Mobs that may pick up loot take better armour and weapons lying within reach (and then stay). */
+  pickUpGear(g) {
+    for (const e of g.entities.list) {
+      if (e.kind !== 'item' || e.dead || e.removed || e.pickupDelay > 0 || e.netProxy) continue;
+      if (Math.abs(e.x - this.x) > 1 + this.width / 2 || Math.abs(e.z - this.z) > 1 + this.width / 2 || e.y < this.y - 0.5 || e.y > this.y + this.height + 0.5) continue;
+      const slot = slotFor(this.type, e.stack.id);
+      if (slot < 0) continue;
+      const cur = slot === 0 ? this.equip.hand : this.equip.armor[slot - 1];
+      if (!isBetter(slot, e.stack, cur)) continue;
+      // what it wore falls off (picked-up gear always, its own with the usual drop chance)
+      if (cur && ((this.equipPicked & (1 << slot)) || Math.random() < 0.085)) g.entities.spawnItem(this.x, this.y + 0.5, this.z, cur);
+      const st = { ...e.stack, count: 1 };
+      if (slot === 0) this.equip.hand = st; else this.equip.armor[slot - 1] = st;
+      this.equipPicked |= 1 << slot;
+      this.persistent = true; // (reference: picking up loot makes a mob stay)
+      if (e.stack.count > 1) e.stack.count--; else e.dead = true;
+      g.audio.play('pop', [this.x, this.y + 1, this.z], 0.4);
+      return;
+    }
+  }
+
   /** Replace this mob by a fresh one of `type` (full health), keeping its place, age and persistence. */
   convert(g, type) {
-    const m = g.spawner.spawnMob(type, this.x, this.y, this.z);
+    const m = g.spawner.spawnMob(type, this.x, this.y, this.z, { fresh: false });
     if (!m) return null;
     m.setBaby(this.age < 0);
     m.yaw = m.prevYaw = this.yaw;
     m.persistent = this.persistent;
+    m.equip = this.equip; m.equipPicked = this.equipPicked; m.canPickUp = this.canPickUp; // it keeps its gear
+    if (this.mount) { const mount = this.mount; this.dismount(); m.mountOn(mount); }
     m.target = this.target;
     this.removed = true; this.dead = true;
     g.audio.play('grunt', [this.x, this.y + 1, this.z]);
@@ -544,7 +631,7 @@ export class Mob {
       const inRain = g.weather && g.weather.rainingAt(w, this.x, this.y + this.height, this.z);
       if (inRain) this.fireTicks = 0;
       if (!inRain && shouldBurnInSun({ sunlit: st.sunlit, effectiveLevel: effective, canSeeSky: raw === 15 && w.heightAt(bx, bz) < by, inWater: b.inWater })) {
-        this.fireTicks = Math.max(this.fireTicks, 160);
+        if (!helmetShadesSun(this.equip)) this.fireTicks = Math.max(this.fireTicks, 160); // a helmet keeps the sun off (and wears)
       }
     }
     // Daybreak: monsters out in the open (enough sky light, also in the shade of trees) fade away in a puff
@@ -1361,6 +1448,9 @@ export class Mob {
     if (!this.followPath(g, mod)) this.steer(p.x, p.z, mod);
   }
 
+  /** Melee damage: the mob's own plus a held weapon's bonus (an iron sword +5, an iron shovel +3.5). */
+  attackDamage() { return (this.def.attack || 0) + (this.equip ? weaponBonus(this.equip.hand) : 0); }
+
   meleeReachSq(p) { const w = this.width * 2; return w * w + 0.6; }
 
   tryMelee(g, p) {
@@ -1368,7 +1458,7 @@ export class Mob {
     const d2 = dx * dx + dz * dz;
     if (d2 <= this.meleeReachSq(p) && Math.abs(dy) < this.height && this.attackCooldown <= 0) {
       this.attackCooldown = 20;
-      const hit = p.hurt(this.def.attack, 'mob:' + this.def.name, this);
+      const hit = p.hurt(this.attackDamage(), 'mob:' + this.def.name, this);
       const fx = this.def.hitEffect; // Dune Shamblers: Hunger
       if (hit && fx && p.applyEffect) p.applyEffect(fx[0], fx[1], fx[2]);
     }
@@ -1537,6 +1627,37 @@ export class Mob {
   // ---------------------------------------------------------------------------
   createMesh() { return buildModel(this.type); }
 
+  /** Worn armour as shells over the body parts and the held weapon in the right hand (an archer's bow is part of its model). */
+  renderEquip(m, L) {
+    const ud = m.userData, parts = ud.parts, eq = this.equip;
+    if (!parts || !parts.body) return;
+    wearArmorModel(m, eq ? eq.armor.map((st) => (st ? st.id : null)) : [null, null, null, null]);
+    lightArmor(m, L);
+    const flash = this.hurtTime > 0 || this.deathTime > 0 ? 0.45 : 0;
+    for (const mat of ud.armorMats || []) mat.emissive.setRGB(flash, 0, 0);
+    const hand = eq && eq.hand && !(parts.bow && ITEMS[eq.hand.id] && ITEMS[eq.hand.id].bow) ? eq.hand.id : null;
+    if (ud.heldId !== hand) {
+      ud.heldId = hand;
+      if (ud.held) { ud.held.parent.remove(ud.held); ud.held.geometry.dispose(); ud.held.material.map.dispose(); ud.held.material.dispose(); ud.held = null; }
+      if (hand && parts.armR) {
+        const tex = new THREE.CanvasTexture(itemCanvas(hand));
+        tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter; tex.colorSpace = THREE.SRGBColorSpace;
+        const held = new THREE.Mesh(new THREE.PlaneGeometry(0.45, 0.45), new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.3, side: THREE.DoubleSide }));
+        held.position.set(0, -0.62, -0.18);
+        held.rotation.set(0, Math.PI / 2, 0.6);
+        held.castShadow = true;
+        parts.armR.add(held);
+        ud.held = held;
+        if (!ud.disposeHeld) {
+          const base = ud.dispose;
+          ud.disposeHeld = true;
+          ud.dispose = () => { if (ud.held) { ud.held.material.map.dispose(); ud.held.material.dispose(); } for (const mat of ud.armorMats || []) mat.dispose(); base(); };
+        }
+      }
+    }
+    if (ud.held) ud.held.material.color.setScalar(L);
+  }
+
   renderUpdate(m, px, py, pz, alpha, L, sec) {
     m.position.set(px, py, pz);
     m.scale.setScalar(this.age < 0 ? 0.5 : 1);
@@ -1563,6 +1684,8 @@ export class Mob {
     if (this.roosting) { m.rotation.z = Math.PI; m.position.y += this.height; } // hanging upside down
     if (parts && parts.armL && this.def.guard && this.swingTime > 0) parts.armL.rotation.x = parts.armR.rotation.x = -2 * Math.sin((this.swingTime - alpha) / 10 * Math.PI);
     if (this.def.customRender) this.def.customRender(this, m, alpha, sec);
+    if (this.equip || m.userData.armorKey) this.renderEquip(m, L);
+    if (parts && parts.legL && parts.legR && (this.mount || this.netRiding)) { parts.legL.rotation.x = parts.legR.rotation.x = -1.4; parts.legL.rotation.z = -0.15; parts.legR.rotation.z = 0.15; } // a jockey sits astride
     if (this.captain && !m.userData.banner) addCaptainBanner(m);
     if (m.userData.bannerFlag) m.userData.bannerFlag.rotation.x = -(0.12 + Math.sin(sec * 2.3 + this.id) * 0.06 + this.limbAmount * 0.25); // sways, streams out when walking
     if (parts && parts.saddle) {

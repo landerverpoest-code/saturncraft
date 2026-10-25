@@ -5,6 +5,7 @@
 import { splashParticles } from '../entities/splash.js';
 import { Mob } from '../mobs/mob.js';
 import { MOBS } from '../mobs/mobTypes.js';
+import { equipFromIds } from '../mobs/equipment.js';
 import { ItemEntity, XPOrb, Arrow, Boat, Minecart, FallingBlock } from '../entities/entities.js';
 import { ArmorStand } from '../entities/armorStand.js';
 import { I, ITEMS, maxStack } from '../world/items.js';
@@ -95,6 +96,9 @@ export class EntityMirror {
       e.angry = s.angry; e.sheared = s.sheared; e.tamed = s.tamed; e.sitting = s.sitting; e.enemy = s.enemy ? 'player' : null;
       e.woolColor = s.woolColor; e.fuse = s.fuse; e.special = s.special; e.beam = s.beam; e.moving = s.moving; e.captain = s.captain; // Marauder Captains carry a banner
       if (s.profession) e.profession = s.profession;
+      e.netRiding = s.riding; // a jockey: seated pose (the host places it on its mount)
+      const ek = s.equip ? s.equip.join(',') : '';
+      if (e.equipKey !== ek) { e.equipKey = ek; e.equip = equipFromIds(s.equip); } // shown only; the host keeps the real gear
       if (s.baby !== e.age < 0) e.setBaby(s.baby);
       e.body.onGround = s.onGround;
     } else if (e.kind === 'item') {
