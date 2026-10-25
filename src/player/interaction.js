@@ -42,6 +42,7 @@ const ORE_XP = {
   [B.COAL_ORE]: [0, 2], [B.DEEP_COAL_ORE]: [0, 2], [B.DIAMOND_ORE]: [3, 7], [B.DEEP_DIAMOND_ORE]: [3, 7],
   [B.BERYL_ORE]: [3, 7], [B.AZURITE_ORE]: [2, 5], [B.DEEP_AZURITE_ORE]: [2, 5],
   [B.CINNABAR_ORE]: [1, 5], [B.DEEP_CINNABAR_ORE]: [1, 5], [B.SPAWNER]: [15, 43],
+  [B.HUSHMOSS]: [1, 1], [B.HUSH_SENSOR]: [5, 5], [B.HUSH_SHRIEKER]: [5, 5], [B.HUSH_CATALYST]: [5, 5],
 };
 const BREAK_DELAY = 5;
 /** Blocks that right-click opens / toggles instead of using the held item. */
@@ -310,6 +311,7 @@ export class Interaction {
     const meta = g.world.getMeta(x, y, z);
     g.world.setBlockUrgent(x, y, z, BLOCKS[id].waterlogged ? B.WATER : B.AIR); // kelp leaves its water behind
     if (g.onBlockBroken) g.onBlockBroken(x, y, z, id, meta);
+    if (g.hush) g.hush.blockEvent(x, y, z, 'break', p); // the Deep Hush hears it
     if (id === B.FIRE) { g.audio.play('fizz', [x + 0.5, y + 0.5, z + 0.5]); return; }
     g.audio.play('break_' + BLOCKS[id].sound, [x + 0.5, y + 0.5, z + 0.5]);
     g.particles && g.particles.blockBreak(x, y, z, id, particleLight(g, x + 0.5, y + 0.5, z + 0.5));
@@ -915,6 +917,7 @@ export class Interaction {
     if (CROPS.has(placeId) && g.milestones) g.milestones.event('plant');
     if (isFluid(placeId)) w.scheduleTick(px, py, pz, 5);
     g.audio.play('place_' + BLOCKS[placeId].sound, [px + 0.5, py + 0.5, pz + 0.5]);
+    if (g.hush) g.hush.blockEvent(px, py, pz, 'place', p);
     if (d.places === B.WATER || d.places === B.LAVA) {
       p.inventory.slots[p.inventory.selected] = { id: I.BUCKET, count: 1, damage: 0 };
       p.inventory.changed();
@@ -1092,6 +1095,7 @@ export class Interaction {
     if (id === B.PUMPKIN || id === B.JACK_O_LANTERN) { if (!this.tryBuildIronguard(x, y, z)) this.tryBuildFrostling(x, y, z); }
     if (id === B.RAIL) updateRails(g.world, x, y, z);
     g.audio.play('place_' + BLOCKS[id].sound, [x + 0.5, y + 0.5, z + 0.5]);
+    if (g.hush) g.hush.blockEvent(x, y, z, 'place', p);
     p.inventory.removeFromSlot(p.inventory.selected, 1);
     this.swing = SWING_TICKS;
     return true;

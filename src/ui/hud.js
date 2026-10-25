@@ -36,6 +36,7 @@ export class HUD {
       <div id="overlay-lava" class="hidden"></div>
       <div id="overlay-fire" class="hidden"></div>
       <div id="overlay-vignette"></div>
+      <div id="overlay-darkness"></div>
       <div id="overlay-scope" class="hidden"></div>
       <div id="crosshair"></div>
       <div id="attack-indicator" class="hidden"><div></div></div>
@@ -86,6 +87,7 @@ export class HUD {
       fire: this.root.querySelector('#overlay-fire'), vign: this.root.querySelector('#overlay-vignette'),
     };
     this.scopeEl = this.root.querySelector('#overlay-scope');
+    this.darkEl = this.root.querySelector('#overlay-darkness');
     this.frame = 0;
     this.lastHotbarKey = '';
     this.lastSel = -1;
@@ -207,6 +209,9 @@ export class HUD {
     this.ov.fire.classList.toggle('hidden', !(p.fireTicks > 0 && !b.inWater));
     const vign = this.ov.vign;
     vign.style.background = p.hurtTime > 0 ? `radial-gradient(ellipse at center, transparent 50%, rgba(200,0,0,${p.hurtTime / 22}) 100%)` : (p.health <= 4 ? 'radial-gradient(ellipse at center, transparent 60%, rgba(120,0,0,.35) 100%)' : '');
+    // Darkness from Hush Shriekers: black closing in from the edges in waves (game.render works out how dark)
+    const dk = g.darkness || 0;
+    if (Math.abs(dk - (this.lastDark || 0)) > 0.004) { this.lastDark = dk; this.darkEl.style.opacity = String(dk); }
     if (this.frame % 5 === 0) this.drawEffects();
     if (this.frame++ % 10 === 0) this.drawSky();
     if (this.showDebug && this.frame % 6 === 0) this.debugEl.textContent = g.debugText();

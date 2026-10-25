@@ -25,6 +25,7 @@ export const EFFECTS = {
   levitation:      { name: 'Levitation', color: '#ceffff', good: false, glyph: 'feather' },
   absorption:      { name: 'Absorption', color: '#2552a5', good: true, glyph: 'heart' },
   resistance:      { name: 'Resistance', color: '#99453a', good: true, glyph: 'shield' },
+  darkness:        { name: 'Darkness', color: '#292721', good: false, glyph: 'eye' }, // from Hush Shriekers: the view darkens in waves
 };
 export const EFFECT_KEYS = Object.keys(EFFECTS);
 

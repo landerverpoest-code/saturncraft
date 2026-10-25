@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { generateTextureData, TEX_NAMES, TEX_SIZE, texId } from '../world/textures.js';
 import { CLOUD_Y } from '../sky/clouds.js';
+import { HUSH_PULSE } from '../world/hushTextures.js';
 
 // How strongly each light-giving texture glows when shaders are on (its bright
 // pixels are pushed above white so the bloom pass haloes them).
@@ -11,9 +12,12 @@ const GLOW = {
   glowshard: 0.8, rift: 0.8, hollow_gate: 0.6, far_gate: 0.6, cinnabar_torch: 0.9, cinnabar_lamp_on: 0.8, wisp_rod: 1, tide_lantern: 0.8, cave_vines_lit: 0.9, candle_flame: 1.2, beacon: 0.5, amber_croaklight_side: 0.6, pearl_croaklight_side: 0.6, moss_croaklight_side: 0.6, amber_croaklight_top: 0.6, pearl_croaklight_top: 0.6, moss_croaklight_top: 0.6,
 };
 for (let i = 0; i < 8; i++) GLOW['fire_' + i] = 1;
+GLOW.hush_tendril_active = 0.9; GLOW.hush_catalyst_side = 0.5; GLOW.hush_catalyst_top = 0.5;
+// Deep Hush tiles (green channel): their bright cyan specks glow in slow waves, shaders on or off
+const PULSE = new Set(HUSH_PULSE);
 function glowTexture() {
   const w = Math.max(512, TEX_NAMES.length), data = new Uint8Array(w * 4);
-  TEX_NAMES.forEach((n, i) => { if (GLOW[n]) data[i * 4] = Math.round(GLOW[n] * 200); });
+  TEX_NAMES.forEach((n, i) => { if (GLOW[n]) data[i * 4] = Math.round(GLOW[n] * 200); if (PULSE.has(n)) data[i * 4 + 1] = 255; });
   const t = new THREE.DataTexture(data, w, 1, THREE.RGBAFormat);
   t.needsUpdate = true;
   return t;
@@ -179,6 +183,16 @@ vec3 outgoingLight = reflectedLight.directDiffuse * skyB * mix(1.0, aoF, 0.5) * 
 if (uGlow > 0.0) {
   float gl = texelFetch(uGlowTiles, ivec2(int(vTile + 0.5), 0), 0).r * 1.275;
   if (gl > 0.0) outgoingLight += diffuseColor.rgb * gl * uGlow * smoothstep(0.45, 0.95, max(texel.r, max(texel.g, texel.b)));
+}
+{
+  // Hushmoss specks breathe: waves of light rolling slowly over the Deep Hush
+  float hp = texelFetch(uGlowTiles, ivec2(int(vTile + 0.5), 0), 0).g;
+  if (hp > 0.5) {
+    float speck = smoothstep(0.25, 0.6, texel.g - texel.r);
+    float wave = sin(uTime * 1.3 - dot(vWorld, vec3(0.23, 0.11, 0.17)));
+    float pulse = 0.25 + 0.75 * pow(0.5 + 0.5 * wave, 3.0);
+    outgoingLight += diffuseColor.rgb * speck * pulse * (0.55 + 0.6 * uGlow);
+  }
 }
 if (uGlow > 0.0 && vUnder > 0.5) {
   // caustics: sunlight focused by the waves above dances over the sea floor

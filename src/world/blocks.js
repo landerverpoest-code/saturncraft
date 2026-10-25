@@ -570,6 +570,19 @@ ext('GRINDSTONE');
 def(B.GRINDSTONE, 'Grindstone', { hardness: 2, resistance: 6, tool: TOOL.PICKAXE, sound: 'stone', opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, tex: { top: 'grindstone_round', bottom: 'grindstone_round', side: 'grindstone_round' } });
 ext('STONECUTTER');
 def(B.STONECUTTER, 'Stonecutter', { hardness: 3.5, resistance: 3.5, tool: TOOL.PICKAXE, tier: TIER.WOOD, opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, tex: { top: 'stonecutter_top', bottom: 'stonecutter_bottom', side: 'stonecutter_side' } });
+// The Deep Hush (world/deepHush.js, world/hushSystem.js): dark teal Hushmoss with pulsing specks, thin Hush Veins,
+// Hush Sensors (meta = the cinnabar power of their pulse, 0 idle), Hush Shriekers (meta bit 0: can call a Hushkeeper)
+// and the Hush Catalyst that spreads moss when creatures die near it. They drop themselves only with Gentle Hand.
+ext('HUSHMOSS');
+def(B.HUSHMOSS, 'Hushmoss', { hardness: 0.2, resistance: 0.2, tool: TOOL.HOE, sound: 'wool', drops: null, silkSelf: true });
+ext('HUSH_VEIN');
+def(B.HUSH_VEIN, 'Hush Vein', { hardness: 0.2, resistance: 0.2, tool: TOOL.HOE, sound: 'wool', opaque: false, shape: SHAPE.SNOW, layer: LAYER.CUTOUT, needsSupport: true, carpet: true, drops: null, silkSelf: true, tex: { all: 'hush_vein' } });
+ext('HUSH_SENSOR');
+def(B.HUSH_SENSOR, 'Hush Sensor', { hardness: 1.5, resistance: 1.5, tool: TOOL.HOE, sound: 'wool', opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, emit: 1, drops: null, silkSelf: true, tex: { top: 'hush_sensor_top', bottom: 'hushmoss', side: 'hush_sensor_side' } });
+ext('HUSH_SHRIEKER');
+def(B.HUSH_SHRIEKER, 'Hush Shrieker', { hardness: 3, resistance: 3, tool: TOOL.HOE, sound: 'wool', opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, drops: null, silkSelf: true, tex: { top: 'hush_shrieker_top', bottom: 'hushmoss', side: 'hush_shrieker_side' } });
+ext('HUSH_CATALYST');
+def(B.HUSH_CATALYST, 'Hush Catalyst', { hardness: 3, resistance: 3, tool: TOOL.HOE, sound: 'wool', emit: 6, drops: null, silkSelf: true, tex: { top: 'hush_catalyst_top', bottom: 'hush_catalyst_bottom', side: 'hush_catalyst_side' } });
 
 export const NUM_BLOCKS = BLOCKS.length;
 

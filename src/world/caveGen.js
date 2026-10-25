@@ -6,6 +6,7 @@
 import { B, BLOCK_LIMIT } from './blocks.js';
 import { Simplex, hash4, hashf, mulberry32 } from './noise.js';
 import { MIN_Y, WORLD_HEIGHT, cidx } from './constants.js';
+import { stampDeepHush } from './deepHush.js';
 import { geodeIn, geodeLayer, GEODE_RADII, BUDDING_CHANCE, BUD_PLACE_CHANCE, BUD_STAGES, DIRS6, FACING_UP, FACING_DOWN, spikeMeta, spikeThickness } from './caves.js';
 
 const noises = new Map();
@@ -85,6 +86,8 @@ export function stampCaveFeatures(gen, blocks, meta, cx, cz, heightmap) {
   }
   stampSeepstone(gen, blocks, meta, cx, cz, heightmap);
   stampLush(gen, blocks, meta, cx, cz, heightmap);
+  // the Deep Hush, far down (deepHush.js); lush caves keep their own columns
+  stampDeepHush(gen.seed, blocks, meta, cx, cz, heightmap, (x, z) => lushRegion(gen.seed, x, z) >= LUSH_THRESHOLD);
 }
 
 /** The part of geode `g` inside chunk (cx, cz). */

@@ -6,7 +6,7 @@ import { durabilityLoss } from '../world/enchantments.js';
 export const ARMOR_SLOTS = ['helmet', 'chestplate', 'leggings', 'boots'];
 
 // Damage sources that armour does not reduce (reference "bypasses_armor").
-export const BYPASSES_ARMOR = new Set(['fall', 'drown', 'starve', 'fire', 'void', 'poison', 'generic', 'kill', 'magic', 'wall', 'stalagmite']);
+export const BYPASSES_ARMOR = new Set(['sonic', 'fall', 'drown', 'starve', 'fire', 'void', 'poison', 'generic', 'kill', 'magic', 'wall', 'stalagmite']);
 
 /** Damage after armour: damage * (1 - min(20, max(armor / 5, armor - 4 * damage / (toughness + 8))) / 25). */
 export function armorReduce(damage, armor, toughness = 0) {

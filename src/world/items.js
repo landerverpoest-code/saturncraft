@@ -301,6 +301,8 @@ const ICON_STAND = ['................', '.......ww.......', '.......ww.......', 
 item('armor_stand', 'Armor Stand', { stack: 16, armorStand: true, iconStyle: [ICON_STAND, { w: '#b08850', s: '#b4b4b4', S: '#7a7a7a' }] });
 // Fire Charge: lights a fire where it is used (used up); a Dispenser shoots it as a small fireball
 item('fire_charge', 'Fire Charge', { igniter: true, charge: true, iconStyle: ['pearl', { h: '#4a2a14', H: '#ff8a20' }] });
+// Hush Shard: a sliver of a Hushkeeper's heart, found in the chests of the Deep Hush ruins
+item('hush_shard', 'Hush Shard', { iconStyle: ['gem', { h: '#1a6a70', H: '#5ff8ec' }] });
 ITEMS[B.GLOOMSHELL_BOX].stack = 1; // a box keeps its contents in the item (stack.contents), so it never stacks
 
 /** Light level (0-15) an item gives when held: a torch, lantern or other light block; 0 for the rest. */
