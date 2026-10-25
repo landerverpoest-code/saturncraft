@@ -1,9 +1,11 @@
 // A splash elixir breaking: a burst of coloured droplets, and its effects on
 // every creature within 4 blocks, weaker with distance (see effects.js
 // splashFactor). In multiplayer the host applies it (guests get theirs sent).
+// A lingering elixir instead leaves an area-effect cloud (areaCloud.js).
 import { ITEMS } from '../world/items.js';
 import { POTIONS, potionColor } from '../world/potions.js';
 import { splashFactor } from '../player/effects.js';
+import { AreaCloud, cloudFloor } from './areaCloud.js';
 
 const rgb = (hex) => { const n = parseInt(hex.slice(1), 16); return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255]; };
 
@@ -30,6 +32,12 @@ export function splashPotion(game, x, y, z, potionId, direct = null, shooter = n
   if (!d || !d.potion) return [];
   splashParticles(game, x, y, z, potionId);
   if (game.net && game.net.isClient) return []; // the host's copy of this splash does the work
+  if (d.potion.lingering) {
+    // a lingering elixir touches no one on impact: it leaves a cloud on the ground (areaCloud.js)
+    const cy = game.world ? cloudFloor(game.world, x, y, z) : y;
+    game.entities.add(new AreaCloud(x, cy, z, { potion: potionId, owner: shooter }));
+    return [];
+  }
   const effects = POTIONS[d.potion.kind].effects;
   const water = d.potion.kind === 'water';
   const reached = [];

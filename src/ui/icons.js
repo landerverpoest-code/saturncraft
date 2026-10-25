@@ -7,7 +7,7 @@ import { COLORS, WOOL_RGB } from '../world/colors.js';
 import { hasEnch, enchLines } from '../world/enchantments.js';
 import { POTIONS } from '../world/potions.js';
 import { bundleFill, bundleWeight, BUNDLE_CAPACITY } from '../world/bundles.js';
-import { EFFECTS, effectLabel, formatTicks } from '../player/effects.js';
+import { EFFECTS, effectLabel, formatTicks, LINGER_DURATION_FACTOR } from '../player/effects.js';
 import { TOOL_TEMPLATES, GEAR_TEMPLATES, paintTemplate, materialRamp, ramp, WOOD_HANDLE } from './toolArt.js';
 
 const cache = new Map();
@@ -170,6 +170,8 @@ const T = {
   bowl: ['................', '................', '................', '................', '................', '................', '..hwwwwwwwwwwh..', '..hHwwwwwwwwwh..', '..hHhhhhhhhhhh..', '...hHhhhhhhhh...', '....hhhhhhhh....', '.....hhhhhh.....', '................', '................', '................', '................'],
   vial: ['................', '......ssss......', '......sSss......', '.......gg.......', '.......gg.......', '......gwwg......', '.....gwwwwg.....', '....ghhhhhhg....', '...ghHHhhhhhg...', '...ghHhhhhhhg...', '...ghhhhhhhhg...', '...ghhhhhhhhg...', '....ghhhhhhg....', '.....gggggg.....', '................', '................'],
   splash: ['................', '........ss......', '.......ssS......', '.......gg.......', '......gwwg......', '.....gwwwwg.....', '....ghhhhhhg....', '...ghHHhhhhhg...', '...ghHhhhhhhgg..', '...ghhhhhhhhg.g.', '...ghhhhhhhhg.g.', '....ghhhhhhgg...', '.....gggggg.....', '................', '................', '................'],
+  // lingering vial: a flat round flask with a wisp curling out of its neck
+  lingering: ['.......w........', '......w.w.......', '.......ww.s.....', '........sSs.....', '.......gg.......', '......gwwg......', '....gghhhhgg....', '...ghHHhhhhhg...', '..ghHHhhhhhhhg..', '..ghHhhhhhhhhg..', '..ghhhhhhhhhhg..', '..ghhhhhhhhhhg..', '...ghhhhhhhhg...', '....gggggggg....', '................', '................'],
   nugget: ['................', '................', '................', '................', '................', '.....hh.........', '....hHhh........', '....hhhh..hh....', '.....hh..hHhh...', '.........hhhh...', '..........hh....', '................', '................', '................', '................', '................'],
   root: ['................', '.........s......', '........s.s.....', '.......s...s....', '.......s........', '......hhh.......', '.....hHhhh......', '....hHhhhhh.....', '....hhhhhhhh....', '.....hhhhhhh....', '......hhhhh.....', '.......hhh.s....', '......s.h...s...', '.....s...s......', '................', '................'],
   tear: ['................', '................', '.......h........', '.......h........', '......hhh.......', '......hHh.......', '.....hHhhh......', '.....hHhhh......', '....hhhhhhh.....', '....hhhhhhh.....', '....hhhhhhh.....', '.....hhhhh......', '......hhh.......', '................', '................', '................'],
@@ -394,9 +396,11 @@ export function tooltipHTML(st, extra = '') {
     if (!fx.length) h += '<div class="tt-dura">No Effects</div>';
     for (const [type, ticks, amp] of fx) {
       const good = EFFECTS[type].good;
-      h += `<div class="${good ? 'tt-good' : 'tt-bad'}">${esc(effectLabel(type, amp))}${EFFECTS[type].instant ? '' : ` (${formatTicks(ticks)})`}</div>`;
+      const t = d.potion.lingering ? Math.floor(ticks * LINGER_DURATION_FACTOR) : ticks; // a cloud lays a quarter
+      h += `<div class="${good ? 'tt-good' : 'tt-bad'}">${esc(effectLabel(type, amp))}${EFFECTS[type].instant ? '' : ` (${formatTicks(t)})`}</div>`;
     }
-    if (d.potion.splash) h += '<div class="tt-dura">Thrown: affects all within 4 blocks</div>';
+    if (d.potion.lingering) h += '<div class="tt-dura">Thrown: leaves a lingering cloud for 30 s</div>';
+    else if (d.potion.splash) h += '<div class="tt-dura">Thrown: affects all within 4 blocks</div>';
   }
   if (Array.isArray(st.contents)) {
     // a Gloomshell Box lists the first few things it carries (reference: shulker box tooltip)
@@ -451,6 +455,8 @@ export function itemCanvas(id, glint = false) {
 // ---- status effect badges (HUD + inventory list) -------------------------------
 const GLYPHS = {
   shield: '<path d="M4 4 L14 4 L14 9 Q14 14 9 16 Q4 14 4 9 Z" fill="#fff"/>',
+  // Luck / Bad Luck: a four-leaf clover
+  clover: '<circle cx="6.3" cy="6.3" r="2.8" fill="#fff"/><circle cx="11.7" cy="6.3" r="2.8" fill="#fff"/><circle cx="6.3" cy="11.7" r="2.8" fill="#fff"/><circle cx="11.7" cy="11.7" r="2.8" fill="#fff"/><path d="M9 9 L13 16" stroke="#fff" stroke-width="1.6"/>',
   speed: '<path d="M4 5 L9 9 L4 13 M9 5 L14 9 L9 13" fill="none" stroke="#fff" stroke-width="2"/>',
   slow: '<path d="M14 5 L9 9 L14 13 M9 5 L4 9 L9 13" fill="none" stroke="#fff" stroke-width="2"/>',
   pick: '<path d="M3 6 Q9 1 15 6" fill="none" stroke="#fff" stroke-width="2"/><path d="M9 4 L9 15" stroke="#fff" stroke-width="2"/>',

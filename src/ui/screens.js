@@ -1218,7 +1218,7 @@ export class UI {
     const msgs = {
       fall: 'hit the ground too hard', lava: 'tried to swim in lava', fire: 'burned to death', drown: 'drowned',
       starve: 'starved to death', cactus: 'was pricked to death', berry_bush: 'was poked to death by a sweet berry bush', void: 'fell out of the world', explosion: 'was blown up',
-      arrow: 'was shot by a Rattler', poison: 'succumbed to poison', magic: 'was killed by magic',
+      arrow: 'was shot by a Rattler', poison: 'succumbed to poison', magic: 'was killed by magic', wither: 'withered away',
       wall: 'experienced kinetic energy',
     };
     const text = msgs[cause] || (cause && cause.startsWith('mob:') ? `was slain by a ${cause.slice(4)}` : cause && cause.startsWith('player:') ? `was slain by ${cause.slice(7)}` : 'died');

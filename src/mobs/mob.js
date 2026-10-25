@@ -21,7 +21,7 @@ import { marauderAI } from './raids.js';
 import { leashTick, leashSaveData, unleash } from '../entities/leash.js';
 
 import { conversionStep, newConversion } from './hostileVariants.js'; // registers the Hexwife and the Shambler / Rattler variants
-import { EFFECTS, addEffect, tickEffects, speedFactor, periodicActions, instantAmount, effectsColor, visibilityFactor } from '../player/effects.js';
+import { EFFECTS, addEffect, tickEffects, speedFactor, periodicActions, instantAmount, effectsColor, visibilityFactor, resistanceFactor } from '../player/effects.js';
 
 let nextMobId = 1_000_000;
 const TAU = Math.PI * 2;
@@ -266,6 +266,7 @@ export class Mob {
       const a = this.def.armor;
       dmg *= 1 - Math.min(20, Math.max(a / 5, a - dmg / 2)) / 25;
     }
+    dmg *= resistanceFactor(this.effects, source); // Resistance (a Turtle Master elixir, a beacon)
     if (this.invulnerable > 10) {
       if (dmg <= this.lastHurt) return false;
       const extra = dmg - this.lastHurt; this.lastHurt = dmg; dmg = extra;
@@ -474,6 +475,8 @@ export class Mob {
     }
 
     b.updateFluidState(g.world, this.height * 0.85);
+    // a Blight Rose withers whatever brushes it (the Void Wyrm and Ashwraiths fly too high to care)
+    if (b.inBlight && this.deathTime === 0 && (!this.effects.wither || this.effects.wither.ticks < 10)) addEffect(this.effects, 'wither', 40, 0);
     this.move = null;
     if (this.rider && this.def.rideable) this.riddenAI(g);
     else this.ai(g, p, pdist);

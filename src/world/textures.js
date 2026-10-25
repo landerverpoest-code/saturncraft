@@ -600,6 +600,8 @@ const GEN = {
   },
   skybell: (c) => crossPlant(c, '#3f8a2a', '#4a7ae8', '#d8e0ff'),
   rosette: (c) => crossPlant(c, '#3f8a2a', '#f08ab8', '#fff0a0'),
+  // Blight Rose: a sooty stem and black petals round a dull red heart
+  blight_rose: (c) => { crossPlant(c, '#2e3a22', '#1c1a1e', '#6a1a1a'); c.set(8, 5, hex('#3a3440')); c.set(6, 7, hex('#2a262c')); c.set(10, 10, hex('#22281a')); },
   oak_planks: (c) => planks(c, '#a7834e'),
   spruce_planks: (c) => planks(c, '#6f4f2f'),
   birch_planks: (c) => planks(c, '#cdb987'),

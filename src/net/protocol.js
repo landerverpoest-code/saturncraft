@@ -187,10 +187,12 @@ export function packEntity(e, riderOf = () => -1) {
     case 'boat': return ['b', e.id, r2(e.x), r2(e.y), r2(e.z), r2(e.yaw), e.hitTime | 0, riderOf(e), e.cart ? 1 : 0, r2(e.pitch || 0)];
     case 'falling': return ['f', e.id, r2(e.x), r2(e.y), r2(e.z), e.blockId];
     case 'stand': return ['s', e.id, r2(e.x), r2(e.y), r2(e.z), r2(e.yaw), e.hitTime | 0, e.armor.map((st) => (st ? st.id : 0)), e.hand ? e.hand.id : 0];
+    // a lingering elixir's (or the Wyrm's breath) cloud: radius to a tenth so it is resent only every few ticks
+    case 'cloud': return ['c', e.id, r2(e.x), r2(e.y), r2(e.z), Math.round(e.radius * 10) / 10, e.potion | 0, e.breath ? 1 : 0];
     default: return null;
   }
 }
-const ENTITY_KINDS = { m: 'mob', i: 'item', x: 'xp', a: 'arrow', b: 'boat', f: 'falling', s: 'stand' };
+const ENTITY_KINDS = { m: 'mob', i: 'item', x: 'xp', a: 'arrow', b: 'boat', f: 'falling', s: 'stand', c: 'cloud' };
 export function unpackEntity(a) {
   if (!Array.isArray(a) || !ENTITY_KINDS[a[0]]) return null;
   if (a[0] === 'm') { const m = unpackMob(a.slice(1)); return m && { ...m, kind: 'mob' }; }
@@ -202,6 +204,7 @@ export function unpackEntity(a) {
   else if (k === 'a') Object.assign(o, { vx: a[5], vy: a[6], vz: a[7], stuck: !!a[8], pickup: !!a[9], thrown: a[10] === 4 ? 'spear' : a[10] === 3 ? 'potion' : a[10] === 2 ? 'egg' : a[10] === 1 ? 'snowball' : null, potion: a[11] | 0 });
   else if (k === 'b') Object.assign(o, { yaw: a[5], hitTime: a[6] | 0, rider: a[7], cart: !!a[8], pitch: +a[9] || 0 });
   else if (k === 'f') o.blockId = a[5] | 0;
+  else if (k === 'c') Object.assign(o, { radius: Math.max(0, Math.min(16, +a[5] || 0)), potion: a[6] | 0, breath: !!a[7] });
   else if (k === 's') {
     const ids = Array.isArray(a[7]) ? a[7] : [];
     Object.assign(o, { yaw: +a[5] || 0, hitTime: a[6] | 0, armor: [0, 1, 2, 3].map((i) => (ids[i] | 0) || null), hand: (a[8] | 0) || null });

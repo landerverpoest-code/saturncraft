@@ -637,6 +637,11 @@ ext('HUSH_SHRIEKER');
 def(B.HUSH_SHRIEKER, 'Hush Shrieker', { hardness: 3, resistance: 3, tool: TOOL.HOE, sound: 'wool', opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, drops: null, silkSelf: true, tex: { top: 'hush_shrieker_top', bottom: 'hushmoss', side: 'hush_shrieker_side' } });
 ext('HUSH_CATALYST');
 def(B.HUSH_CATALYST, 'Hush Catalyst', { hardness: 3, resistance: 3, tool: TOOL.HOE, sound: 'wool', emit: 6, drops: null, silkSelf: true, tex: { top: 'hush_catalyst_top', bottom: 'hush_catalyst_bottom', side: 'hush_catalyst_side' } });
+// Blight Rose (reference: wither rose): a black flower of the Cinderdeep's floors; touching it gives Wither
+// (player/player.js, mobs/mob.js), and it brews the Elixir of Decay. Grows on Cinderstone, Mournsand and soil.
+ext('BLIGHT_ROSE');
+def(B.BLIGHT_ROSE, 'Blight Rose', { ...plant, blight: true });
+POTTED.push(B.BLIGHT_ROSE); // appended: pot metas index this list
 
 export const NUM_BLOCKS = BLOCKS.length;
 

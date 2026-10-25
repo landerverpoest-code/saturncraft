@@ -1,6 +1,6 @@
 // Shaped/shapeless crafting and furnace smelting recipes.
 import { B, BLOCKS, WOOD_SETS, STONE_SETS, COLOR_BLOCKS, DOOR_SETS, GATE_SETS, CANDLE_IDS } from '../world/blocks.js';
-import { I, ITEMS, DYES, WOOL_ITEMS, TIPPED_ARROW, SPLASH_ITEM } from '../world/items.js';
+import { I, ITEMS, DYES, WOOL_ITEMS, TIPPED_ARROW, SPLASH_ITEM, LINGERING_ITEM } from '../world/items.js';
 import { COLOR } from '../world/colors.js';
 
 const TAGS = {
@@ -124,6 +124,8 @@ shaped(['I I', 'ICI', ' I '], { I: I.IRON_INGOT, C: B.CHEST }, B.HOPPER, 1);
 shaped(['S S', 'S S', 'SSS'], { S: 'wood_slab' }, B.COMPOSTER, 1);
 shaped(['PPP', 'PDP', 'PPP'], { P: 'planks', D: I.DIAMOND }, B.JUKEBOX, 1);
 shaped(['GGG', 'GAG', 'GGG'], { G: I.GOLD_INGOT, A: I.APPLE }, I.GILDED_APPLE, 1);
+// tipped arrows: eight arrows round a lingering elixir (reference); a splash elixir still works too
+for (const [kind, id] of Object.entries(TIPPED_ARROW)) shaped(['AAA', 'APA', 'AAA'], { A: I.ARROW, P: LINGERING_ITEM[kind] }, id, 8);
 for (const [kind, id] of Object.entries(TIPPED_ARROW)) shaped(['AAA', 'APA', 'AAA'], { A: I.ARROW, P: SPLASH_ITEM[kind] }, id, 8);
 shaped(['PPP', 'HHH', 'PPP'], { P: 'planks', H: I.HONEYCOMB }, B.BEEHIVE, 1);
 shapeless([I.HONEY_BOTTLE], I.SUGAR, 3);
