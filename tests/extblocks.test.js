@@ -27,7 +27,7 @@ describe('extended block ids', () => {
     expect(unpackChunk(packChunk(old)).blocks[123]).toBe(B.DIRT);
   });
   it('every wood has slabs, stairs and a fence', () => {
-    expect(WOOD_SETS.length).toBe(7);
+    expect(WOOD_SETS.length).toBe(8);
     for (const [planks, slab, stairs, fence] of WOOD_SETS) {
       const P = { id: planks, count: 1 };
       expect(craft([P, P, P, null, null, null, null, null, null], 3)).toEqual({ id: slab, count: 6 });

@@ -2,7 +2,7 @@
 // section near the player get a chance to change, as in the reference game
 // (randomTickSpeed = 3). Handles grass spreading, farmland moisture and crop
 // growth.
-import { B, OPAQUE, SOLID, CROPS, STEM_FRUIT, BLOCK_LIMIT } from './blocks.js';
+import { B, OPAQUE, SOLID, CROPS, STEM_FRUIT, BLOCK_LIMIT, isPropagule, PROPAGULE_HANGING } from './blocks.js';
 import { BIOMES } from './biomes.js';
 import { MIN_Y, SECTION_COUNT, cidx } from './constants.js';
 import { lavaIgnite, FIRE_DELAY } from './fire.js';
@@ -97,6 +97,12 @@ export function randomTickBlock(world, x, y, z, id, rng = Math.random) {
   } else if (id === B.HUSHVINE_FLOWER) {
     // Hushvine flowers grow up, branch and wither (dimensions/hushvine.js); reference: 1 in ~1 tick odds are slow anyway
     if (rng() < 0.25) tickHushFlower(world, x, y, z, rng);
+  } else if (isPropagule(id) && (world.getMeta(x, y, z) & PROPAGULE_HANGING)) {
+    // a hanging propagule ripens (age 0-3) and then lets go: it drops as an item to be planted
+    const m = world.getMeta(x, y, z), age = m & 3;
+    if (rng() >= 0.1) return;
+    if (age < 3) world.setBlock(x, y, z, id, m + 1);
+    else world.breakBlock(x, y, z, true);
   } else if (SAPLING_TREE[id]) {
     // reference: light >= 9 and a 1-in-7 chance per random tick; stage 0 -> 1, then the tree
     if (rawLight(world, x, y + 1, z) < 9 || rng() >= 1 / 7) return;

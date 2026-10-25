@@ -276,7 +276,7 @@ export function repairMaterial(id) {
   const mat = (d.tool && d.tool.material) || (d.armor && d.armor.material);
   return { wood: 'planks', stone: B.COBBLESTONE, iron: I.IRON_INGOT, gold: I.GOLD_INGOT, diamond: I.DIAMOND, leather: I.LEATHER }[mat] || null;
 }
-const PLANKS = [B.OAK_PLANKS, B.SPRUCE_PLANKS, B.BIRCH_PLANKS, B.JUNGLE_PLANKS, B.ACACIA_PLANKS, B.DARK_OAK_PLANKS, B.BLOSSOM_PLANKS];
+const PLANKS = [B.OAK_PLANKS, B.SPRUCE_PLANKS, B.BIRCH_PLANKS, B.JUNGLE_PLANKS, B.ACACIA_PLANKS, B.DARK_OAK_PLANKS, B.BLOSSOM_PLANKS, B.MANGROVE_PLANKS];
 function isRepairMaterial(id, mat) { return mat === 'planks' ? PLANKS.includes(id) : id === mat || (mat === B.COBBLESTONE && id === B.COBBLED_DEEPSTONE); }
 
 /**

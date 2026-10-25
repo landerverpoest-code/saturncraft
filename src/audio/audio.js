@@ -97,10 +97,11 @@ export class Audio {
     const out = p;
     const t = now;
     const mat = name.split('_').slice(1).join('_');
-    const matFreq = { stone: 900, wood: 500, grass: 2400, gravel: 1400, sand: 3000, snow: 3500, glass: 4000, metal: 2500, wool: 1800 }[mat] || 1200;
+    const matFreq = { stone: 900, wood: 500, grass: 2400, gravel: 1400, sand: 3000, snow: 3500, glass: 4000, metal: 2500, wool: 1800, mud: 420 }[mat] || 1200;
     if (name.startsWith('break_')) { this.noise(t, 0.18, matFreq, 1.2, 0.6 * gain, out); this.noise(t + 0.03, 0.12, matFreq * 0.6, 2, 0.4 * gain, out); }
     else if (name.startsWith('hit_')) this.noise(t, 0.06, matFreq, 2, 0.25 * gain, out);
     else if (name.startsWith('place_')) this.noise(t, 0.1, matFreq * 0.8, 1.5, 0.5 * gain, out);
+    else if (name === 'step_mud') { this.noise(t, 0.09, 420, 1.2, 0.14 * gain, out); this.tone(t + 0.02, 0.08, 160, 90, 0.05 * gain, out, 'sine'); } // a wet squelch
     else if (name.startsWith('step_')) this.noise(t, 0.07, matFreq * 0.7, 1.5, 0.12 * gain, out);
     else if (name.startsWith('chime_')) {
       // chime block: 25 semitones from F#3 like the reference note block, a bell-like pair of sines

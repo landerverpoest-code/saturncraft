@@ -6,7 +6,7 @@ export const BIOME = {
   OCEAN: 0, FROZEN_OCEAN: 1, BEACH: 2, PLAINS: 3, FOREST: 4, BIRCH_FOREST: 5,
   TAIGA: 6, SNOWY_PLAINS: 7, DESERT: 8, STONY_PEAKS: 9, SNOWY_PEAKS: 10,
   SWAMP: 11, JUNGLE: 12, SAVANNA: 13, BADLANDS: 14, DARK_FOREST: 15,
-  MUSHROOM_FIELDS: 16, SNOWY_TAIGA: 17, FLOWER_FOREST: 18, BLOSSOM_GROVE: 19,
+  MUSHROOM_FIELDS: 16, SNOWY_TAIGA: 17, FLOWER_FOREST: 18, BLOSSOM_GROVE: 19, MANGROVE_SWAMP: 20,
 };
 
 export const BIOMES = [
@@ -30,6 +30,7 @@ export const BIOMES = [
   { id: 17, key: 'snowy_taiga', name: 'Snowy Taiga', temp: -0.5, humid: 0.4 },
   { id: 18, key: 'flower_forest', name: 'Flower Forest', temp: 0.7, humid: 0.8 },
   { id: 19, key: 'blossom_grove', name: 'Blossom Grove', temp: 0.5, humid: 0.8, grass: [182, 219, 97], foliage: [182, 219, 97] },
+  { id: 20, key: 'mangrove_swamp', name: 'Mangrove Swamp', temp: 0.95, humid: 0.9, grass: [78, 122, 58], foliage: [92, 132, 50] },
 ];
 
 export function biomeName(id) { return BIOMES[id] ? BIOMES[id].name : '?'; }

@@ -48,6 +48,7 @@ addTex('grindstone_face'); addTex('grindstone_leg'); addTex('grindstone_pivot');
 addTex('stonecutter_blank'); addTex('stonecutter_saw'); for (let i = 0; i < 4; i++) addTex('stonecutter_saw_' + i); // the blade's frames (animated in terrainMaterial)
 for (let i = 0; i < 4; i++) addTex('sweet_berry_bush_' + i);
 for (let i = 0; i < 10; i++) addTex('destroy_' + i);
+addTex('mangrove_propagule_hanging');
 
 export function texId(name) { return texIndex.get(name); }
 
@@ -1298,7 +1299,7 @@ for (const [key, base, hi] of [['tube', '#3050c8', '#6a8af0'], ['brain', '#d0508
 }
 
 // doors and trapdoors of the other woods, in their planks' colours
-for (const [key, base] of [['spruce', '#6f4f2f'], ['birch', '#cdb987'], ['jungle', '#a07350'], ['acacia', '#b0603a'], ['dark_oak', '#4f3720'], ['blossom', '#e2b2a6']]) {
+for (const [key, base] of [['spruce', '#6f4f2f'], ['birch', '#cdb987'], ['jungle', '#a07350'], ['acacia', '#b0603a'], ['dark_oak', '#4f3720'], ['blossom', '#e2b2a6'], ['mangrove', '#7a3530']]) {
   const dark = '#' + hex(base).map((v) => Math.round(v * 0.55).toString(16).padStart(2, '0')).join('');
   GEN[key + '_door_lower'] = (c) => GEN.door_lower(c, base, dark);
   GEN[key + '_door_upper'] = (c) => GEN.door_upper(c, base, dark);
@@ -1349,6 +1350,64 @@ for (const [key, core, rind] of [['amber', '#ffe090', '#d89a3a'], ['pearl', '#ff
     }
   };
 }
+
+// Mangrove swamps: mud and its bricks, the red mangrove wood, tangled roots and propagules
+function mudTex(c) {
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    const n = c.h(x >> 1, y >> 1, 1) * 0.6 + c.h(x, y) * 0.4;
+    c.set(x, y, n > 0.9 ? hex('#5a524c') : shade(hex('#3d3532'), 0.86 + n * 0.28)); // wet glints
+  }
+}
+/** Thin, wavy root strands over whatever is already drawn (a transparent canvas for the roots block). */
+function rootStrands(c, col, dark) {
+  const a = hex(col), d = hex(dark);
+  const put = (x, y, k) => c.set(((x % 16) + 16) % 16, ((y % 16) + 16) % 16, shade(c.h(x, y, k) < 0.3 ? d : a, 0.85 + c.h(x, y, k + 1) * 0.3));
+  for (const [x0, ph] of [[1, 0], [6, 2], [11, 4]]) for (let y = 0; y < 16; y++) put(x0 + Math.round(Math.sin((y + ph) * 0.55) * 1.2), y, 3);
+  for (const [y0, sl] of [[2, 1], [9, -1]]) for (let x = 0; x < 16; x++) put(x, y0 + Math.round(x * sl * 0.45), 5);
+}
+GEN.mud = mudTex;
+GEN.packed_mud = (c) => {
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    const straw = c.h(x, y, 7) < 0.08;
+    c.set(x, y, straw ? hex('#c8a860') : shade(hex('#8c6a50'), 0.88 + c.h(x >> 1, y >> 1, 2) * 0.12 + c.h(x, y) * 0.06));
+  }
+};
+GEN.mud_bricks = (c) => {
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    const row = y >> 2, off = row % 2 ? 4 : 0, mortar = y % 4 === 3 || (x + off) % 8 === 7;
+    c.set(x, y, mortar ? shade(hex('#a88a6c'), 0.95 + c.h(x, y) * 0.08) : shade(hex('#86644c'), 0.88 + c.h(x, y, 3) * 0.12 + c.h((x + off) >> 3, row, 4) * 0.08));
+  }
+};
+GEN.mangrove_log = (c) => logSide(c, '#5a3a2c', '#3e281e', false);
+GEN.mangrove_log_top = (c) => logTop(c, '#5a3a2c', '#8a3c34');
+GEN.mangrove_planks = (c) => planks(c, '#7a3530');
+GEN.mangrove_leaves = (c) => {
+  // glossy olive-green leaves, yellower at the tips
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    const n = c.h(x, y);
+    if (n > 0.8) { c.set(x, y, [0, 0, 0], 0); continue; }
+    c.set(x, y, c.h(x, y, 9) < 0.1 ? hex('#a6c050') : shade(hex('#5a8a34'), 0.7 + c.h(x >> 1, y >> 1, 3) * 0.4));
+  }
+};
+GEN.mangrove_roots = (c) => {
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
+  rootStrands(c, '#5e4632', '#3e2c1e');
+};
+GEN.muddy_mangrove_roots = (c) => { mudTex(c); rootStrands(c, '#6a5038', '#4a3424'); };
+GEN.muddy_mangrove_roots_top = (c) => { mudTex(c); for (let k = 0; k < 6; k++) { const x = Math.floor(c.h(k, 0, 8) * 14) + 1, y = Math.floor(c.h(k, 1, 8) * 14) + 1; c.set(x, y, hex('#6a5038')); c.set(x + 1, y, hex('#4a3424')); } };
+GEN.mangrove_propagule = (c) => {
+  // planted: a green pod standing in the mud with two small leaves at its top
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
+  for (let y = 6; y < 16; y++) { c.set(7, y, shade(hex('#6a8a2a'), 0.85 + c.h(7, y) * 0.3)); c.set(8, y, shade(hex('#4e6e20'), 0.9 + c.h(8, y) * 0.2)); }
+  for (const [x, y] of [[5, 4], [6, 4], [6, 5], [4, 3], [9, 4], [10, 4], [9, 5], [11, 3], [7, 5], [8, 5]]) c.set(x, y, hex('#5a9a34'));
+};
+GEN.mangrove_propagule_hanging = (c) => {
+  // hanging: a brown cap at the top, a long pod tapering to a point
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
+  for (let x = 6; x <= 9; x++) for (let y = 0; y < 3; y++) c.set(x, y, shade(hex('#6a4a2a'), 0.85 + c.h(x, y) * 0.3));
+  for (let y = 3; y < 14; y++) { c.set(7, y, shade(hex('#7a9a34'), 0.85 + c.h(7, y) * 0.3)); c.set(8, y, shade(hex('#5a7a26'), 0.9 + c.h(8, y) * 0.2)); }
+  c.set(7, 14, hex('#5a7a26'));
+};
 
 /** Pixel data for all layers: Uint8Array(16*16*4*N) */
 export function generateTextureData() {
