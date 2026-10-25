@@ -157,10 +157,12 @@ export class MobSpawner {
       const a = Math.random() * Math.PI * 2, r = 16 + Math.random() * 24;
       const x = Math.floor(p.x + Math.cos(a) * r), z = Math.floor(p.z + Math.sin(a) * r);
       if (w.isLoaded(x, z)) {
-        const y = SEA_LEVEL - 2 - Math.floor(Math.random() * 6);
+        // rivers are only a few blocks deep: small schools of Silverfins just under the surface
+        const river = BIOMES[w.biomeAt(x, z)]?.key === 'river';
+        const y = SEA_LEVEL - 2 - Math.floor(Math.random() * (river ? 2 : 6));
         if (w.getBlock(x, y, z) === B.WATER && w.getBlock(x, y + 1, z) === B.WATER && w.getBlock(x, y - 1, z) === B.WATER) {
           const warm = w.gen && w.gen.column ? w.gen.column(x, z).temp > 0.95 : false;
-          const type = Math.random() < 0.12 ? 'dolphin' : warm && Math.random() < 0.7 ? 'reeffin' : 'silverfin';
+          const type = river ? 'silverfin' : Math.random() < 0.12 ? 'dolphin' : warm && Math.random() < 0.7 ? 'reeffin' : 'silverfin';
           for (let i = 0, n = type === 'dolphin' ? 2 + Math.floor(Math.random() * 2) : 3 + Math.floor(Math.random() * 4); i < n; i++) this.spawnMob(type, x + 0.5 + (Math.random() - 0.5) * 2, y, z + 0.5 + (Math.random() - 0.5) * 2);
         }
       }

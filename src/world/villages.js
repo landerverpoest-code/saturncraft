@@ -45,6 +45,10 @@ function planVillage(gen, rx, rz) {
   if (![BIOME.PLAINS, BIOME.DESERT, BIOME.TAIGA, BIOME.SNOWY_PLAINS, BIOME.SAVANNA].includes(biome)) return null;
   if (biome === BIOME.SAVANNA && rng() < 0.5) return null; // savanna villages are rarer
   if (y <= SEA_LEVEL + 1 || y > SEA_LEVEL + 45) return null;
+  // villages keep off rivers: the well needs dry ground, roads stop short of the water
+  // and buildings that would reach a river are left out
+  const rivers = !!gen.riverInBox;
+  if (rivers && gen.riverInBox(cx - 12, cz - 12, cx + 12, cz + 12)) return null;
   const style = biome === BIOME.DESERT ? 'desert' : biome === BIOME.PLAINS ? 'plains' : biome === BIOME.SAVANNA ? 'savanna' : 'taiga';
   const pieces = [{ type: 'well', x0: cx - 2, z0: cz - 2, x1: cx + 1, z1: cz + 1, y }];
   const roads = [];
@@ -52,7 +56,8 @@ function planVillage(gen, rx, rz) {
   let houseNo = 0;
   for (let s = 0; s < 4; s++) {
     const [dx, , dz] = SIDE_DIRS[s];
-    const len = 16 + Math.floor(rng() * 18);
+    let len = 16 + Math.floor(rng() * 18);
+    if (rivers) for (let k = 2; k <= len + 1; k++) if (gen.nearRiver(cx + dx * k, cz + dz * k, 4)) { len = k - 2; break; }
     // three-wide road from the well outwards
     for (let k = 2; k <= len; k++) for (let w = -1; w <= 1; w++) roads.push([cx + dx * k + (dz ? w : 0), cz + dz * k + (dx ? w : 0)]);
     // buildings on both sides every 9 blocks
@@ -68,6 +73,7 @@ function planVillage(gen, rx, rz) {
       const hw = Math.floor((alongX ? w : d) / 2), hd = Math.floor((alongX ? d : w) / 2);
       const p = { type, x0: bx - hw, x1: bx - hw + (alongX ? w : d) - 1, z0: bz - hd, z1: bz - hd + (alongX ? d : w) - 1 };
       if (taken(p)) continue;
+      if (rivers && gen.riverInBox(p.x0 - 1, p.z0 - 1, p.x1 + 1, p.z1 + 1, 3, 2)) continue;
       const gy = gen.surfaceAt(bx, bz) + 1;
       if (gy <= SEA_LEVEL + 1 || Math.abs(gy - y) > 7) continue;
       p.y = gy;
