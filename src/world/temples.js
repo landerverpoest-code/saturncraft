@@ -1,5 +1,5 @@
-// Temples: one 256 x 256-block region in three may hold one: a desert temple,
-// a jungle temple or (in snowy biomes) an igloo, depending on the biome. A 21 x 21 sandstone hall with two corner towers, a
+// Temples: one 256 x 256-block region in three may hold one: a desert temple
+// or a jungle temple, depending on the biome (igloos live in igloos.js). A 21 x 21 sandstone hall with two corner towers, a
 // terracotta star in the floor and, 12 blocks under its centre, a hidden
 // chamber with four loot chests above a trap of nine TNT. Planned from the
 // seed alone; each chunk stamps its own part.
@@ -23,7 +23,7 @@ export function templeInRegion(gen, rx, rz) {
     // only on fairly level ground: the corners within 4 blocks of the centre's height
     const flat = [[-10, -10], [10, -10], [-10, 10], [10, 10]].every(([dx, dz]) => Math.abs(gen.surfaceAt(cx + dx, cz + dz) - top) <= 4);
     const biome = gen.biomeFor(col, top);
-    const kind = biome === BIOME.DESERT ? 'desert' : biome === BIOME.JUNGLE ? 'jungle' : (biome === BIOME.SNOWY_PLAINS || biome === BIOME.SNOWY_TAIGA) ? 'igloo' : null;
+    const kind = biome === BIOME.DESERT ? 'desert' : biome === BIOME.JUNGLE ? 'jungle' : null;
     if (kind && flat && top > SEA_LEVEL) t = { kind, cx, cz, y: top + 1, x0: cx - 10, z0: cz - 10, x1: cx + 10, z1: cz + 10 };
   }
   if (cache.size > 64) cache.clear();
@@ -50,7 +50,6 @@ export function stampTemples(gen, blocks, meta, cx, cz) {
       const i = cidx(x - X0, y, z - Z0); blocks[i] = id; meta[i] = m;
     };
     if (t.kind === 'jungle') { jungleTemple(t, set); continue; }
-    if (t.kind === 'igloo') { igloo(t, set); continue; }
     const { y, x0, z0, x1, z1, cx: tx, cz: tz } = t;
     for (let x = x0; x <= x1; x++) for (let z = z0; z <= z1; z++) {
       if (!inChunk(x, z)) continue;
@@ -130,89 +129,6 @@ function jungleTemple(t, set) {
   set(cx + 2, y - 4, cz + 3, B.CHEST, 2 | 8 | (3 << 4));
   set(cx - 4, y, cz + 5, B.CHEST, 1 | 8 | (3 << 4));
   for (let yy = y - 3; yy < y; yy++) set(cx + 1, yy, cz + 2, B.LADDER, 0);
-}
-
-/** Igloo: a snow dome with a bed, a workbench, a furnace, a torch and a carpet of wool. */
-function igloo(t, set) {
-  const { cx, cz, y } = t;
-  // clear trees and snow around the dome
-  for (let x = cx - 6; x <= cx + 6; x++) for (let z = cz - 7; z <= cz + 6; z++) for (let yy = y; yy < y + 14; yy++) set(x, yy, z, 0);
-  for (let x = cx - 4; x <= cx + 4; x++) for (let z = cz - 4; z <= cz + 4; z++) for (let yy = y - 1; yy < y + 5; yy++) {
-    const d = Math.hypot((x - cx) / 4.2, (yy - y + 0.5) / 4.2, (z - cz) / 4.2);
-    if (yy === y - 1 && d < 1) set(x, yy, z, B.SNOW_BLOCK);
-    else if (d < 1 && d > 0.72) set(x, yy, z, B.SNOW_BLOCK);
-    else if (d <= 0.72) set(x, yy, z, 0);
-  }
-  for (let z = cz - 5; z <= cz - 3; z++) for (let yy = y; yy < y + 2; yy++) set(cx, yy, z, 0); // tunnel entrance
-  set(cx, y + 2, cz - 4, B.ICE);
-  for (let x = cx - 1; x <= cx + 1; x++) for (let z = cz - 1; z <= cz + 1; z++) set(x, y - 1, z, B.WOOL, 14);
-  set(cx - 2, y, cz + 1, B.BED, 0 | 8); set(cx - 2, y, cz + 2, B.BED, 0);
-  set(cx + 2, y, cz + 1, B.WORKBENCH); set(cx + 2, y, cz - 1, B.FURNACE, 3);
-  set(cx - 2, y, cz - 1, B.TORCH, 0);
-  set(cx + 1, y, cz + 2, B.CHEST, 0 | 8 | (4 << 4));
-}
-
-// ---- shipwrecks -------------------------------------------------------------------
-export const WRECK_REGION = 160;
-const wreckCache = new Map();
-
-/** A wreck on the floor of the ocean in 40 % of 160 x 160 regions (if the spot is ocean). */
-export function wreckInRegion(gen, rx, rz) {
-  const key = `${gen.seed}:${rx},${rz}`;
-  if (wreckCache.has(key)) return wreckCache.get(key);
-  const rng = mulberry32(hash4(gen.seed, rx, rz, 6262));
-  let wk = null;
-  if (rng() < 0.4) {
-    const R = WRECK_REGION, M = 20;
-    const cx = rx * R + M + Math.floor(rng() * (R - 2 * M)), cz = rz * R + M + Math.floor(rng() * (R - 2 * M));
-    const col = gen.column(cx, cz), top = gen.surfaceAt(cx, cz, col);
-    const biome = gen.biomeFor(col, top);
-    if ((biome === BIOME.OCEAN || biome === BIOME.FROZEN_OCEAN) && top < SEA_LEVEL - 5) {
-      wk = { cx, cz, y: top + 1, alongX: rng() < 0.5, wood: rng() < 0.5 ? B.OAK_PLANKS : B.SPRUCE_PLANKS, seed: Math.floor(rng() * 1e9) };
-    }
-  }
-  if (wreckCache.size > 64) wreckCache.clear();
-  wreckCache.set(key, wk);
-  return wk;
-}
-
-export function wrecksNear(gen, x0, z0, x1, z1) {
-  const out = [], R = WRECK_REGION;
-  for (let rx = Math.floor((x0 - 10) / R); rx <= Math.floor((x1 + 10) / R); rx++) for (let rz = Math.floor((z0 - 10) / R); rz <= Math.floor((z1 + 10) / R); rz++) {
-    const wk = wreckInRegion(gen, rx, rz);
-    if (wk && wk.cx + 10 >= x0 && wk.cx - 10 <= x1 && wk.cz + 10 >= z0 && wk.cz - 10 <= z1) out.push(wk);
-  }
-  return out;
-}
-
-/** A wooden hull 17 long and 5 wide with a broken deck, a mast and two chests. */
-export function stampWrecks(gen, blocks, meta, cx, cz) {
-  const X0 = cx * 16, Z0 = cz * 16;
-  for (const wk of wrecksNear(gen, X0, Z0, X0 + 15, Z0 + 15)) {
-    const rng = mulberry32(wk.seed);
-    const set = (a, y, b, id, m = 0) => {
-      const x = wk.alongX ? wk.cx + a : wk.cx + b, z = wk.alongX ? wk.cz + b : wk.cz + a;
-      if (x < X0 || x >= X0 + 16 || z < Z0 || z >= Z0 + 16 || y <= MIN_Y || y >= MIN_Y + WORLD_HEIGHT) return;
-      const i = cidx(x - X0, y, z - Z0); blocks[i] = id; meta[i] = m;
-    };
-    const y = wk.y;
-    for (let a = -8; a <= 8; a++) {
-      const taper = Math.abs(a) > 5 ? Math.abs(a) - 5 : 0; // pointed bow and stern
-      const half = 2 - Math.min(2, taper);
-      for (let b = -half; b <= half; b++) {
-        set(a, y, b, wk.wood);                                     // keel / bottom
-        const side = Math.abs(b) === half;
-        for (let h = 1; h <= 3; h++) {
-          if (side && rng() > 0.15) set(a, y + h, b, h === 3 ? B.OAK_SLAB : wk.wood);
-          else if (!side) set(a, y + h, b, B.WATER);
-        }
-        if (!side && Math.abs(a) < 7 && rng() > 0.35) set(a, y + 3, b, wk.wood); // broken deck
-      }
-    }
-    for (let h = 1; h <= 8; h++) if (h < 6 || rng() < 0.6) set(0, y + h, 0, h > 3 ? B.OAK_FENCE : B.OAK_LOG); // the mast, snapped
-    set(-5, y + 1, 0, B.CHEST, (wk.alongX ? 1 : 2) | 8 | (5 << 4));
-    set(5, y + 1, 0, B.CHEST, (wk.alongX ? 3 : 0) | 8 | (5 << 4));
-  }
 }
 
 // ---- raider outposts ----------------------------------------------------------------

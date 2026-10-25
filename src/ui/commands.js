@@ -2,7 +2,9 @@
 import { BIOMES } from '../world/biomes.js';
 import { ITEMS, I, maxStack } from '../world/items.js';
 import { mineshaftsNear } from '../world/mineshafts.js';
-import { templesNear, wrecksNear, outpostsNear } from '../world/temples.js';
+import { templesNear, outpostsNear } from '../world/temples.js';
+import { wrecksNear } from '../world/shipwrecks.js';
+import { igloosNear } from '../world/igloos.js';
 import { ruinsNear } from '../world/ruinedPortals.js';
 import { hutsNear } from '../world/swampHuts.js';
 import { nearestMonument } from '../world/monuments.js';
@@ -66,7 +68,7 @@ export const HELP = [
   '/enchant <name> [level]  (the held item; names: ' + ENCH_KEYS.join(', ') + ')',
   '/summon <mob> [x y z]',
   '/xp <amount> [levels]',
-  '/locate <village|temple|outpost|shipwreck|monument|mineshaft|sanctum|bastion|hut|ruin|city|gate> or /locate biome <name>',
+  '/locate <village|temple|igloo|outpost|shipwreck|monument|mineshaft|sanctum|bastion|hut|ruin|city|gate> or /locate biome <name>',
   '/dimension <overworld|cinderdeep|hollow>',
   '/effect give <effect> [seconds] [level],  /effect clear  (effects: ' + EFFECT_KEYS.join(', ') + ')',
   '/kill,  /clear,  /spawnpoint,  /seed,  /heal',
@@ -265,7 +267,14 @@ export function runCommand(game, text) {
         for (let r = 0; r < 12 && !list.length; r++) list.push(...wrecksNear(game.world.gen, p.x - 160 * r - 80, p.z - 160 * r - 80, p.x + 160 * r + 80, p.z + 160 * r + 80));
         if (!list.length) return 'No shipwreck found nearby';
         const t = list.reduce((a, c) => (Math.hypot(c.cx - p.x, c.cz - p.z) < Math.hypot(a.cx - p.x, a.cz - p.z) ? c : a));
-        return `The nearest shipwreck is at ${t.cx}, ${t.y}, ${t.cz} (${Math.round(Math.hypot(t.cx - p.x, t.cz - p.z))} blocks away)`;
+        return `The nearest shipwreck is at ${t.cx}, ${t.y}, ${t.cz} (${Math.round(Math.hypot(t.cx - p.x, t.cz - p.z))} blocks away)${t.beached ? ', run aground' : ''}`;
+      }
+      if (what === 'igloo') {
+        if (game.world.dimension !== 'overworld') return 'Igloos are only found in the overworld';
+        const list = igloosNear(game.world.gen, p.x - 1500, p.z - 1500, p.x + 1500, p.z + 1500);
+        if (!list.length) return 'No igloo found nearby';
+        const t = list.reduce((a, c) => (Math.hypot(c.cx - p.x, c.cz - p.z) < Math.hypot(a.cx - p.x, a.cz - p.z) ? c : a));
+        return `The nearest igloo is at ${t.cx}, ${t.y}, ${t.cz} (${Math.round(Math.hypot(t.cx - p.x, t.cz - p.z))} blocks away)${t.basement ? ', with a basement' : ''}`;
       }
       if (what === 'temple') {
         if (game.world.dimension !== 'overworld') return 'Desert temples are only found in the overworld';
@@ -294,7 +303,7 @@ export function runCommand(game, text) {
         if (!m) return 'No Tide Citadel found nearby';
         return `The nearest Tide Citadel is at ${m.cx}, ${m.y}, ${m.cz} (${Math.round(Math.hypot(m.cx - p.x, m.cz - p.z))} blocks away)`;
       }
-      if (what !== 'village') return 'Usage: /locate <village|temple|outpost|shipwreck|mineshaft|sanctum|bastion|hut>';
+      if (what !== 'village') return 'Usage: /locate <village|temple|igloo|outpost|shipwreck|mineshaft|sanctum|bastion|hut>';
       const R = VILLAGE_REGION, prx = Math.floor(p.x / R), prz = Math.floor(p.z / R);
       let best = null;
       // search rings of regions outwards; one ring past the first find, since a neighbour can be closer

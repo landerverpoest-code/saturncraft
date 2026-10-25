@@ -2,7 +2,9 @@
 // but is a pure module so it can be unit-tested and used for spawn search.
 import { stampVillages } from './villages.js';
 import { stampMineshafts } from './mineshafts.js';
-import { stampTemples, stampWrecks, stampOutposts } from './temples.js';
+import { stampTemples, stampOutposts } from './temples.js';
+import { stampWrecks } from './shipwrecks.js';
+import { stampIgloos } from './igloos.js';
 import { stampHuts } from './swampHuts.js';
 import { stampSanctums } from './dimensions/sanctum.js';
 import { stampMonuments } from './monuments.js';
@@ -396,10 +398,11 @@ export class TerrainGenerator {
     stampVillages(this, blocks, meta, cx, cz);
     stampTemples(this, blocks, meta, cx, cz);
     stampHuts(this, blocks, meta, cx, cz);     // swamp huts (world/swampHuts.js)
-    stampWrecks(this, blocks, meta, cx, cz);
+    stampWrecks(this, blocks, meta, cx, cz);   // shipwrecks (world/shipwrecks.js)
     stampMonuments(this, blocks, meta, cx, cz); // Tide Citadels (world/monuments.js)
     stampOutposts(this, blocks, meta, cx, cz);
     stampRuins(this, blocks, meta, cx, cz); // Ruined Rifts (world/ruinedPortals.js)
+    stampIgloos(this, blocks, meta, cx, cz);   // igloos (world/igloos.js), clear of the structures above
     stampSmallFeatures(this, blocks, meta, cx, cz, heightmap, biomes); // desert wells, fossils
     stampSanctums(this, blocks, meta, cx, cz); // Hollow Sanctums (world/dimensions/sanctum.js)
 
