@@ -9,6 +9,8 @@ import { ItemEntity, XPOrb, Arrow, Boat, Minecart, FallingBlock } from '../entit
 import { ArmorStand } from '../entities/armorStand.js';
 import { I, ITEMS, maxStack } from '../world/items.js';
 import { unpackEntity, roomFor } from './protocol.js';
+import { knotAt } from '../entities/leash.js';
+import { dirt } from '../mobs/hushkeeper.js';
 
 const TAKE_RETRY = 10; // ticks between pickup requests for the same entity
 
@@ -95,6 +97,9 @@ export class EntityMirror {
       e.angry = s.angry; e.sheared = s.sheared; e.tamed = s.tamed; e.sitting = s.sitting; e.enemy = s.enemy ? 'player' : null;
       e.woolColor = s.woolColor; e.fuse = s.fuse; e.special = s.special; e.beam = s.beam; e.moving = s.moving; e.captain = s.captain; // Marauder Captains carry a banner
       if (s.profession) e.profession = s.profession;
+      e.customName = s.name || undefined; // a Name Tag's label
+      e.leashHolder = this.leashHolder(s.leash);
+      e.emerging = s.emerging; e.digging = s.digging; // a Hushkeeper rising / sinking (drawn by its customRender)
       if (s.baby !== e.age < 0) e.setBaby(s.baby);
       e.body.onGround = s.onGround;
     } else if (e.kind === 'item') {
@@ -117,13 +122,34 @@ export class EntityMirror {
     }
   }
 
+  /** The object a mirrored lead is drawn to: us, another player, or a (local copy of a) fence knot. */
+  leashHolder(l) {
+    const g = this.game;
+    if (!l) return null;
+    if (l.knot) {
+      const [bx, by, bz] = l.knot;
+      let k = knotAt(g, bx, by, bz);
+      if (!k) { k = knotAt(g, bx, by, bz, true); k.mirrored = true; }
+      return k;
+    }
+    if (l.player === this.session.id) return g.player;
+    const rp = this.session.remotes.get(l.player);
+    return rp ? rp.anchor : null;
+  }
+
   /** One game tick: move halfway to the snapshot (snapshots come every other tick). */
   tickProxy(e) {
     const g = this.game, s = e.netState, p = g.player;
     this.ticks = g.ticks;
     if (e.kind === 'boat' && p.riding === e) { this.tickRiddenBoat(e); return; }
     e.prev = [e.x, e.y, e.z];
-    if (e.kind === 'mob') { e.prevYaw = e.yaw; e.prevFuse = e.fuse; if (e.hurtTime > 0) e.hurtTime--; }
+    if (e.kind === 'mob') {
+      e.prevYaw = e.yaw; e.prevFuse = e.fuse; if (e.hurtTime > 0) e.hurtTime--;
+      if (e.emerging > 0 || e.digging > 0) { // count down between snapshots (smooth rising / sinking), throwing up dirt
+        if (e.emerging > 0) e.emerging--; else e.digging--;
+        if (g.ticks % 4 === 0 && g.particles) dirt(e, g);
+      }
+    }
     if (e.kind === 'boat') e.prevYaw = e.yaw;
     if (!s) return;
     const dx = s.x - e.x, dy = s.y - e.y, dz = s.z - e.z;

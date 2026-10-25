@@ -29,7 +29,7 @@ import { LEAVES, SAPLING_TREE, growTree } from '../world/trees.js';
 import { useSkyRocket } from '../entities/skyRocket.js';
 import { hushfruitTeleport } from '../world/dimensions/hushvine.js';
 import { cavePlaceMeta, waxCopper, scrapeCopper } from '../world/caves.js';
-import { canLeash, leash, unleash, isFencePost, tieToFence, untieFromFence } from '../entities/leash.js';
+import { canLeash, leash, unleash, isFencePost, tieToFence, untieFromFence, isHolder } from '../entities/leash.js';
 import { canName, nameMob } from '../mobs/names.js';
 import { bundleTakeLast } from '../world/bundles.js';
 import { sideOf, SIDE_DIRS, DOOR_OPEN, DOOR_UPPER, BED_HEAD, SLAB_TOP, SLAB_DOUBLE, STAIRS_UPSIDE, GATE_OPEN, TRAPDOOR_OPEN, TRAPDOOR_TOP } from '../world/shapes.js';
@@ -282,7 +282,12 @@ export class Interaction {
   /** Right-click on a fence post: tie up the animals on your leads, or take the ones tied there. */
   useFencePost(t) {
     const g = this.game;
-    if (g.net && g.net.isClient) return false;
+    if (g.net && g.net.isClient) {
+      // a guest: the host ties / unties (only asked when we lead something or something is tied here)
+      if (!g.net.useFence(t.x, t.y, t.z)) return false;
+      this.swing = SWING_TICKS;
+      return true;
+    }
     const n = tieToFence(g, t.x, t.y, t.z) || untieFromFence(g, t.x, t.y, t.z);
     if (!n) return false;
     g.audio.play('hit_wood', [t.x + 0.5, t.y + 0.5, t.z + 0.5]);
@@ -1129,9 +1134,9 @@ export class Interaction {
       this.swing = SWING_TICKS;
       return true;
     }
-    // leads and name tags (single player and host only; see entities/leash.js, mobs/names.js)
+    // leads and name tags (run on the host, also for guests' requests; see entities/leash.js, mobs/names.js)
     if (!mob.netProxy && mob.leashHolder) {
-      if (mob.leashHolder === p) unleash(g, mob, true); // let go: the lead drops
+      if (isHolder(mob.leashHolder, p)) unleash(g, mob, true); // let go: the lead drops
       else leash(mob, p); // take it from the fence post
       g.audio.play('equip', [mob.x, mob.y + 1, mob.z]);
       this.swing = SWING_TICKS;

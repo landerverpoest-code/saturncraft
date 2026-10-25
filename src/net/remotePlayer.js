@@ -66,6 +66,13 @@ export class RemotePlayer {
     this.swingSeq = null; this.swingAt = -1e9;
     this.itemId = -1; this.item = null;
     this.target = makeTarget(this);
+    // where a lead this player holds is drawn to (the smoothed position the model is shown at)
+    const rp = this;
+    this.anchor = {
+      isPlayer: true, isRemotePlayer: true, remote: rp,
+      get x() { return rp.shown ? rp.shown.x : rp.x; }, get y() { return rp.shown ? rp.shown.y : rp.y; }, get z() { return rp.shown ? rp.shown.z : rp.z; },
+      get yaw() { return rp.bodyYaw; }, get dead() { return !rp.state || !!rp.state.dead; },
+    };
   }
 
   /** Light level of what this player holds (0 when nothing lights). */

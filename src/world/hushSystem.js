@@ -8,8 +8,12 @@
 // ground nearby. A Hush Catalyst drinks in the experience of creatures dying
 // within 8 blocks and spreads Hushmoss from where they fell. The recent noises
 // are kept for the Hushkeeper, which hunts by sound. Simulated on the host
-// (or in single player); guests see the block changes and the mob.
-import { B } from './blocks.js';
+// (or in single player): guests' footsteps and landings are worked out from
+// the positions they send (remoteVibration), the blocks they place and break
+// come with their edits (net/session.js), each player has a warning level of
+// their own, and a shriek's Darkness reaches guests as an effect message.
+// Guests see the block changes and the mob (rising / sinking included).
+import { B, SOLID } from './blocks.js';
 import { HUSHKEEPER } from '../mobs/hushkeeper.js';
 import {
   VIBRATION_RANGE, SENSOR_PULSE, SENSOR_REST, WARNING_MAX, DARKNESS_TICKS, DARKNESS_RANGE, SHRIEKER_CAN_SUMMON,
@@ -19,6 +23,32 @@ import {
 const LISTENERS = new Set([B.HUSH_SENSOR, B.HUSH_SHRIEKER]);
 const CATALYSTS = new Set([B.HUSH_CATALYST]);
 export const NOISE_MEMORY = 60, SHRIEK_REST = 90, KEEPER_RANGE = 48;
+/** A guest's step: at least this far (blocks) between two of their states, at most every REMOTE_STEP_EVERY ticks. */
+export const REMOTE_STEP_MOVE = 0.1, REMOTE_STEP_EVERY = 8;
+
+/**
+ * Footsteps and landings of a player we only know from the states it sends (a guest on the host).
+ * `t` keeps what the last states were ({} to start); `s` is the new state ({ x, y, z, sneaking,
+ * riding, dead }), `now` the tick and `below` the block under its feet. Returns 'land', 'step' or null.
+ */
+export function remoteVibration(t, s, now, below) {
+  const prev = t.last;
+  t.last = { x: s.x, y: s.y, z: s.z };
+  if (!prev || s.dead) { t.peak = null; return null; }
+  if (s.riding) { t.peak = null; return null; }
+  const dy = s.y - prev.y;
+  if (dy < -0.05) { t.peak = Math.max(t.peak ?? prev.y, prev.y); return null; } // falling
+  if (t.peak != null) {
+    const fell = t.peak - s.y;
+    t.peak = null;
+    if (fell > 0.5 && SOLID[below]) return 'land';
+  }
+  if (dy > 0.05) return null; // going up: a jump (or climbing, flying)
+  const moved = Math.hypot(s.x - prev.x, s.z - prev.z);
+  if (moved < REMOTE_STEP_MOVE || !SOLID[below] || now - (t.lastStep ?? -1e9) < REMOTE_STEP_EVERY || quietStep(s.sneaking, below)) return null;
+  t.lastStep = now;
+  return 'step';
+}
 
 export class HushSystem {
   constructor(game) {
@@ -27,6 +57,7 @@ export class HushSystem {
     this.warnings = new WarningLevels();
     this.rest = new Map();         // "x,y,z" -> tick a sensor / shrieker can hear again
     this.lastStep = 0;
+    this.remote = new Map();       // guest name -> what remoteVibration keeps of them (multiplayer host)
   }
 
   get now() { return this.game.ticks; }
@@ -37,6 +68,7 @@ export class HushSystem {
     const g = this.game, p = g.player, now = this.now;
     if (this.noises.length && now - this.noises[0].t > NOISE_MEMORY) this.noises = this.noises.filter((n) => now - n.t <= NOISE_MEMORY);
     if (now % 20 === 0) this.warnings.decay(now);
+    if (g.net && g.net.isHost) this.tickRemote();
     if (!p || p.dead || p.spectator || (g.net && g.net.isClient)) return;
     const b = p.body;
     const below = g.world.getBlock(Math.floor(b.x), Math.floor(b.y - 0.2), Math.floor(b.z));
@@ -45,6 +77,24 @@ export class HushSystem {
       this.lastStep = now;
       this.vibrate(b.x, b.y, b.z, 'step', p, below === B.HUSH_SHRIEKER ? [Math.floor(b.x), Math.floor(b.y - 0.2), Math.floor(b.z)] : null);
     }
+  }
+
+  /** Multiplayer host: the guests' footsteps and landings, from each new state they sent. */
+  tickRemote() {
+    const g = this.game, w = g.world, seen = new Set();
+    for (const pl of g.net.players().slice(1)) {
+      const rp = pl.c && pl.c.rp, s = rp && rp.state;
+      if (!s) continue;
+      seen.add(pl.name);
+      let t = this.remote.get(pl.name);
+      if (!t) { t = {}; this.remote.set(pl.name, t); }
+      if (t.state === s) continue; // nothing new from them since the last tick
+      t.state = s;
+      const bx = Math.floor(s.x), by = Math.floor(s.y - 0.2), bz = Math.floor(s.z), below = w.getBlock(bx, by, bz);
+      const kind = remoteVibration(t, s, this.now, below);
+      if (kind) this.vibrate(s.x, s.y, s.z, kind, pl.obj, kind === 'step' && below === B.HUSH_SHRIEKER ? [bx, by, bz] : null);
+    }
+    for (const k of this.remote.keys()) if (!seen.has(k)) this.remote.delete(k);
   }
 
   /**
@@ -115,6 +165,11 @@ export class HushSystem {
     if (!summons) return;
     const p = g.player;
     if (p && !p.dead && Math.hypot(p.x - x, p.y - y, p.z - z) <= DARKNESS_RANGE && p.addEffect) p.addEffect('darkness', DARKNESS_TICKS, 0);
+    // guests near it too: their stand-in passes the effect on to their own game (an 'eff' message)
+    if (g.net && g.net.isHost) for (const pl of g.net.players().slice(1)) {
+      const o = pl.obj;
+      if (o && !o.dead && Math.hypot(o.x - x, o.y - y, o.z - z) <= DARKNESS_RANGE && o.addEffect) o.addEffect('darkness', DARKNESS_TICKS, 0);
+    }
     // a Hushkeeper already about comes to look
     for (const e of this.keepers(x, y, z)) { e.investigate = [x, y, z]; e.lastDisturb = this.now; }
   }

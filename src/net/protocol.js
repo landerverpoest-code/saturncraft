@@ -2,7 +2,7 @@
 // typed arrays as base64, compact player / mob snapshots and room codes.
 // Pure functions only, so everything here is unit-testable without a network.
 
-import { cleanEnch, withExtras, sameEnch } from '../world/enchantments.js';
+import { cleanEnch, withExtras, sameEnch, cleanLabel } from '../world/enchantments.js';
 
 export const PROTOCOL_VERSION = 1;
 export const MAX_PLAYERS = 8;
@@ -142,12 +142,35 @@ export function unpackPlayerState(a) {
 
 // ---- mob snapshots --------------------------------------------------------------
 export const MF = { GROUND: 1, TARGET: 2, ANGRY: 4, BABY: 8, SHEARED: 16, TAMED: 32, SITTING: 64, ENEMY: 128, SPECIAL: 256, CAPTAIN: 512 }; // SPECIAL: a Hexwife drinking, a Shambler about to convert
-/** [id, type, x, y, z, yaw, headPitch, health, hurtTime, deathTime, flags, woolColor, fuse, profession, beam [x,y,z] | 0, moving] */
-export function packMob(m) {
+// ---- leads (entities/leash.js) ----------------------------------------------------
+/**
+ * Who holds a mob's lead, for the wire: 0 (nobody), ['p', playerId] (0 = the host) or
+ * ['k', bx, by, bz] (the knot on that fence post). `playerIdOf(holder)` gives a player's id or -1.
+ */
+export function packLeash(h, playerIdOf = () => -1) {
+  if (!h) return 0;
+  if (h.kind === 'knot') return ['k', h.bx | 0, h.by | 0, h.bz | 0];
+  const id = playerIdOf(h);
+  return Number.isInteger(id) && id >= 0 ? ['p', id] : 0;
+}
+/** { player: id } | { knot: [bx, by, bz] } | null */
+export function unpackLeash(a) {
+  if (!Array.isArray(a)) return null;
+  if (a[0] === 'p' && Number.isInteger(a[1]) && a[1] >= 0) return { player: a[1] };
+  if (a[0] === 'k' && a.length === 4 && a.slice(1).every((v) => Number.isInteger(v) && Math.abs(v) < 3e7)) return { knot: [a[1], a[2], a[3]] };
+  return null;
+}
+
+/**
+ * [id, type, x, y, z, yaw, headPitch, health, hurtTime, deathTime, flags, woolColor, fuse, profession, beam [x,y,z] | 0, moving,
+ *  name | 0, lead (packLeash), emerging, digging]   (the last two: a Hushkeeper rising out of / sinking into the ground)
+ */
+export function packMob(m, playerIdOf = () => -1) {
   const f = (m.body && m.body.onGround ? MF.GROUND : 0) | (m.target ? MF.TARGET : 0) | (m.angry ? MF.ANGRY : 0) |
     (m.age < 0 ? MF.BABY : 0) | (m.sheared ? MF.SHEARED : 0) | (m.tamed ? MF.TAMED : 0) | (m.sitting ? MF.SITTING : 0) | (m.enemy ? MF.ENEMY : 0) | (m.special ? MF.SPECIAL : 0) | (m.captain ? MF.CAPTAIN : 0);
   return [m.id, m.type, r2(m.x), r2(m.y), r2(m.z), r2(m.yaw), r2(m.headPitch || 0), r2(m.health), m.hurtTime | 0, m.deathTime | 0, f, m.woolColor | 0, m.fuse | 0, m.profession || 0,
-    m.beam ? [r2(m.beam.x), r2(m.beam.y), r2(m.beam.z)] : 0, m.moving ? 1 : 0]; // Deepeye beams (mobs/oceanMobs.js)
+    m.beam ? [r2(m.beam.x), r2(m.beam.y), r2(m.beam.z)] : 0, m.moving ? 1 : 0, // Deepeye beams (mobs/oceanMobs.js)
+    m.customName || 0, packLeash(m.leashHolder, playerIdOf), m.emerging > 0 ? m.emerging | 0 : 0, m.digging > 0 ? m.digging | 0 : 0];
 }
 export function unpackMob(a) {
   if (!Array.isArray(a) || a.length < 13) return null;
@@ -158,6 +181,7 @@ export function unpackMob(a) {
     sheared: !!(f & MF.SHEARED), tamed: !!(f & MF.TAMED), sitting: !!(f & MF.SITTING), enemy: !!(f & MF.ENEMY), special: !!(f & MF.SPECIAL), captain: !!(f & MF.CAPTAIN),
     woolColor: a[11] | 0, fuse: a[12] | 0, profession: a[13] || null,
     beam: Array.isArray(a[14]) && a[14].length === 3 && a[14].every(Number.isFinite) ? { x: a[14][0], y: a[14][1], z: a[14][2] } : null, moving: !!a[15],
+    name: cleanLabel(a[16]), leash: unpackLeash(a[17]), emerging: Math.max(0, a[18] | 0), digging: Math.max(0, a[19] | 0),
   };
 }
 
@@ -176,11 +200,12 @@ export function savePlayerName(name) {
 // ---- shared entities (items, orbs, arrows, boats, falling blocks, armour stands, mobs) ---
 /**
  * Compact snapshot of any host entity: [kind, id, x, y, z, ...kind specific].
- * `riderOf(boat)` gives the boat rider's player id (0 = host) or -1.
+ * `riderOf(boat)` gives the boat rider's player id (0 = host) or -1; `playerIdOf(player)` the id of a
+ * player holding a mob's lead (or -1).
  */
-export function packEntity(e, riderOf = () => -1) {
+export function packEntity(e, riderOf = () => -1, playerIdOf = () => -1) {
   switch (e.kind) {
-    case 'mob': return ['m', ...packMob(e)];
+    case 'mob': return ['m', ...packMob(e, playerIdOf)];
     case 'item': return ['i', e.id, r2(e.x), r2(e.y), r2(e.z), e.stack.id, e.stack.count, e.stack.damage | 0, e.pickupDelay > 0 ? 1 : 0, e.stack.ench ? cleanEnch(e.stack.ench) : 0, e.stack.contents || 0, Number.isInteger(e.stack.map) ? [e.stack.map, e.stack.mapX | 0, e.stack.mapZ | 0] : 0];
     case 'xp': return ['x', e.id, r2(e.x), r2(e.y), r2(e.z), e.value];
     case 'arrow': return ['a', e.id, r2(e.x), r2(e.y), r2(e.z), r2(e.vx), r2(e.vy), r2(e.vz), e.stuck ? 1 : 0, e.pickup ? 1 : 0, e.thrown === 'spear' ? 4 : e.thrown === 'potion' ? 3 : e.thrown === 'egg' ? 2 : e.thrown ? 1 : 0, e.potion | 0];
@@ -272,3 +297,42 @@ export function roomFor(slots, st, maxStackOf, stackable = true) {
 /** Chat commands that change the shared world: guests have the host run them. */
 export const WORLD_COMMANDS = new Set(['time', 'weather', 'gamerule', 'summon', 'dimension', 'dim']);
 export function commandName(text) { return (String(text).trim().replace(/^\//, '').split(/\s+/)[0] || '').toLowerCase(); }
+
+// ---- armour stands: a guest's request and the host's answer -------------------------------
+/**
+ * Guest side of an armour stand swap. The item leaves the guest's hand at once (so a slow or lost
+ * answer can never leave it both on the stand and in the hand); the host's answer `{ rid, ok, give }`
+ * either hands back what came off the stand (ok) or returns the guest's own item (refused).
+ */
+export class StandRequests {
+  constructor() { this.seq = 0; this.pending = new Map(); }
+  /** Take the held stack out of `inv` (slot `slot`) and return the message fields to send. */
+  begin(inv, slot, now = 0) {
+    const st = inv.slots[slot] ? copyStack(inv.slots[slot]) : null;
+    const rid = ++this.seq;
+    if (st) inv.slots[slot] = null;
+    this.pending.set(rid, { slot, st, at: now });
+    return { rid, st };
+  }
+  /**
+   * The host answered: put stacks back into `inv`. Returns the stacks that did not fit (to drop).
+   * `addStack(inv, st)` adds a stack and returns how many did not fit.
+   */
+  finish(inv, m, addStack) {
+    const p = this.pending.get(m.rid);
+    this.pending.delete(m.rid);
+    const back = [];
+    const give = m.ok && m.give && Number.isInteger(m.give.id) && m.give.count > 0 ? copyStack(m.give) : null;
+    if (give) back.push(give);
+    if (!m.ok && p && p.st) back.push(p.st); // refused: our own item comes back
+    const left = [];
+    for (const st of back) {
+      if (p && !inv.slots[p.slot]) { inv.slots[p.slot] = st; continue; }
+      const n = addStack(inv, st);
+      if (n > 0) left.push({ ...st, count: n });
+    }
+    return left;
+  }
+  /** Forget requests the host never answered (the connection went): nothing is given back, so nothing doubles. */
+  expire(now, ms = 30000) { for (const [rid, p] of this.pending) if (now - p.at > ms) this.pending.delete(rid); }
+}
