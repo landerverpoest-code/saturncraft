@@ -2,6 +2,7 @@
 import { BIOMES } from '../world/biomes.js';
 import { ITEMS, I, maxStack } from '../world/items.js';
 import { mineshaftsNear } from '../world/mineshafts.js';
+import { vaultsNear } from '../world/provingVaults.js';
 import { templesNear, outpostsNear } from '../world/temples.js';
 import { wrecksNear } from '../world/shipwrecks.js';
 import { buriedRuinsNear } from '../world/buriedRuins.js';
@@ -69,7 +70,7 @@ export const HELP = [
   '/enchant <name> [level]  (the held item; names: ' + ENCH_KEYS.join(', ') + ')',
   '/summon <mob> [x y z]',
   '/xp <amount> [levels]',
-  '/locate <village|temple|igloo|outpost|shipwreck|monument|mineshaft|sanctum|bastion|hut|ruin|buried|city|gate> or /locate biome <name>',
+  '/locate <village|temple|igloo|outpost|shipwreck|monument|mineshaft|sanctum|bastion|hut|ruin|buried|vaults|city|gate> or /locate biome <name>',
   '/dimension <overworld|cinderdeep|hollow>',
   '/effect give <effect> [seconds] [level],  /effect clear  (effects: ' + EFFECT_KEYS.join(', ') + ')',
   '/raid <patrol|start [level]|stop|status>',
@@ -320,13 +321,20 @@ export function runCommand(game, text) {
         const m = list.reduce((a, c) => (Math.hypot(c.cx - p.x, c.cz - p.z) < Math.hypot(a.cx - p.x, a.cz - p.z) ? c : a));
         return `The nearest mineshaft is at ${m.cx}, ${m.y}, ${m.cz} (${Math.round(Math.hypot(m.cx - p.x, m.cz - p.z))} blocks away)`;
       }
+      if (what === 'vaults' || what === 'vault' || what === 'proving_vaults') {
+        if (game.world.dimension !== 'overworld') return 'The Proving Vaults are only found in the overworld';
+        const list = vaultsNear(game.world.gen.seed, p.x - 2000, p.z - 2000, p.x + 2000, p.z + 2000);
+        if (!list.length) return 'No Proving Vaults found nearby';
+        const v = list.reduce((a, c) => (Math.hypot(c.cx - p.x, c.cz - p.z) < Math.hypot(a.cx - p.x, a.cz - p.z) ? c : a));
+        return `The nearest Proving Vaults are at ${v.cx}, ${v.y}, ${v.cz} (${Math.round(Math.hypot(v.cx - p.x, v.cz - p.z))} blocks away, ${v.rooms.length} rooms)`;
+      }
       if (what === 'monument' || what === 'citadel') {
         if (game.world.dimension !== 'overworld') return 'Tide Citadels are only found in the overworld';
         const m = nearestMonument(game.world.gen, p.x, p.z);
         if (!m) return 'No Tide Citadel found nearby';
         return `The nearest Tide Citadel is at ${m.cx}, ${m.y}, ${m.cz} (${Math.round(Math.hypot(m.cx - p.x, m.cz - p.z))} blocks away)`;
       }
-      if (what !== 'village') return 'Usage: /locate <village|temple|igloo|outpost|shipwreck|mineshaft|sanctum|bastion|hut>';
+      if (what !== 'village') return 'Usage: /locate <village|temple|igloo|outpost|shipwreck|mineshaft|vaults|sanctum|bastion|hut>';
       const R = VILLAGE_REGION, prx = Math.floor(p.x / R), prz = Math.floor(p.z / R);
       let best = null;
       // search rings of regions outwards; one ring past the first find, since a neighbour can be closer

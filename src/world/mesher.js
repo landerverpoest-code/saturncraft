@@ -97,6 +97,8 @@ const WS_TILES = (() => {
 const BERRY_TILES = [0, 1, 2, 3].map((i) => texId('sweet_berry_bush_' + i));
 // Suspicious Sand and Gravel: one tile per brushing stage (meta bits 0-1, world/archaeology.js)
 const SUS_TILES = { [B.SUSPICIOUS_SAND]: [0, 1, 2, 3].map((i) => texId('suspicious_sand_' + i)), [B.SUSPICIOUS_GRAVEL]: [0, 1, 2, 3].map((i) => texId('suspicious_gravel_' + i)) };
+// Proving Spawners show their state on the sides (meta bits 4-5: waiting, active, cooling down; world/provingVaults.js)
+const PROVING_SIDES = [0, 1, 2].map((i) => texId('proving_spawner_side_' + i));
 
 class Buf {
   constructor(cap = 16384) { this.alloc(cap); this.n = 0; this.ni = 0; this.yBase = 0; }
@@ -203,6 +205,7 @@ export function meshSection(sec) {
         }
         else if (id === B.FARMLAND && d === 2 && meta[i] > 0) tile = FARMLAND_MOIST;
         else if (SUS_TILES[id]) tile = SUS_TILES[id][meta[i] & 3];
+        else if (id === B.PROVING_SPAWNER && d !== 2 && d !== 3) tile = PROVING_SIDES[((meta[i] >> 4) & 3) % 3];
         let r = 255, g = 255, b2 = 255;
         if ((id === B.GRASS && d === 2)) { r = colors[ci]; g = colors[ci + 1]; b2 = colors[ci + 2]; }
         else if (FOLIAGE_BIOME[id]) { r = colors[ci + 3]; g = colors[ci + 4]; b2 = colors[ci + 5]; }

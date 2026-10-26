@@ -5,6 +5,8 @@
 import { B, SOLID } from '../world/blocks.js';
 import { I, DISCS } from '../world/items.js';
 import { hollowCityLoot, LOOT_CITY, LOOT_SHIP } from '../world/dimensions/hollowCity.js';
+import { VAULTS_CHEST } from '../world/provingLoot.js';
+import { VAULTS_LOOT } from '../world/provingVaults.js';
 
 export const SPAWNER_TYPES = ['shambler', 'rattler', 'skitterer'];
 export const SPAWNER_RANGE = 16, SPAWN_COUNT = 4, MAX_NEARBY = 6;
@@ -89,6 +91,10 @@ const STRUCTURE_LOOT = {
   // the ruins of the Deep Hush (world/deepHush.js HUSH_LOOT)
   [LOOT.DEEP_HUSH]: [[[I.HUSH_SHARD, 1, 3, 12], [B.CANDLE, 1, 4, 15], [I.BONE, 2, 6, 15], [I.IRON_INGOT, 1, 4, 10], [I.AZURITE, 2, 6, 8], [I.DIAMOND, 1, 2, 4], [I.GILDED_APPLE, 1, 1, 3], [I.GOLD_INGOT, 1, 3, 6], [B.HUSHMOSS, 4, 10, 8], [I.DISC_HOLLOW, 1, 1, 2]], 3, 7],
 };
+
+// the store rooms and galleries of the Proving Vaults (world/provingVaults.js)
+LOOT.PROVING_VAULTS = VAULTS_LOOT;
+STRUCTURE_LOOT[VAULTS_LOOT] = VAULTS_CHEST;
 
 export function dungeonLoot(rng = Math.random, kind = LOOT.DUNGEON) {
   if (kind === LOOT.HOLLOW_CITY || kind === LOOT.HOLLOW_SHIP) return hollowCityLoot(rng, kind === LOOT.HOLLOW_SHIP); // enchanted gear, Voidwing

@@ -76,6 +76,9 @@ const VARIANTS = new Map([
   [B.HOLLOWSTONE, [B.HOLLOWSTONE_BRICKS]],
   [B.HOLLOWBRICK, [B.HOLLOWBRICK_PILLAR]],
 ]);
+// Ashstone (the Proving Vaults' stone) is cut from Tuff
+VARIANTS.set(B.TUFF, [B.POLISHED_ASHSTONE, B.ASHSTONE_BRICKS]);
+VARIANTS.set(B.ASHSTONE_BRICKS, [B.ASHSTONE_TILES]);
 const WALLS = new Map([[B.COBBLESTONE, B.COBBLESTONE_WALL], [B.MOSSY_COBBLESTONE, B.MOSSY_COBBLESTONE_WALL]]);
 // slabs and stairs of every stone (the original sets, the extended ones and the Hollow's)
 const SLABS = new Map(), STAIRS = new Map();
