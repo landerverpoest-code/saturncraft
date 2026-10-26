@@ -648,12 +648,34 @@ def(B.SUSPICIOUS_GRAVEL, 'Suspicious Gravel', { hardness: 0.25, resistance: 0.25
 // player/interaction.js: whole with a tool in hand, else it shatters into its sherds.
 ext('DECORATED_POT');
 def(B.DECORATED_POT, 'Decorated Pot', { hardness: 0, resistance: 0, sound: 'stone', opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, drops: null, tex: { top: 'decorated_pot_top', bottom: 'decorated_pot_bottom', side: 'decorated_pot_side' } });
-
 // Blight Rose (reference: wither rose): a black flower of the Cinderdeep's floors; touching it gives Wither
 // (player/player.js, mobs/mob.js), and it brews the Elixir of Decay. Grows on Cinderstone, Mournsand and soil.
 ext('BLIGHT_ROSE');
 def(B.BLIGHT_ROSE, 'Blight Rose', { ...plant, blight: true });
 POTTED.push(B.BLIGHT_ROSE); // appended: pot metas index this list
+// Lectern (world/books.js): a reading desk on a post. Meta bits 0-1 = the side its reader stands on
+// (SIDE_DIRS), bit 2 = a book lies on it (drawn), bit 3 = the short cinnabar pulse of a turned page.
+// The book and the open page are kept per position in game.lecterns.
+ext('LECTERN');
+def(B.LECTERN, 'Lectern', { hardness: 2.5, resistance: 2.5, tool: TOOL.AXE, sound: 'wood', flammable: true, opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, tex: { top: 'lectern_top', bottom: 'oak_planks', side: 'lectern_side' } });
+// Target block: hit by an arrow or anything thrown it sends out a signal (meta bits 0-3) that is
+// stronger the closer the hit was to the middle of the face (world/signalBlocks.js)
+ext('TARGET');
+def(B.TARGET, 'Target', { hardness: 0.5, resistance: 0.5, tool: TOOL.HOE, sound: 'grass', tex: { top: 'target_top', bottom: 'target_top', side: 'target_side' } });
+// Cake: meta = slices eaten (0-6); a comparator reads the slices left
+ext('CAKE');
+def(B.CAKE, 'Cake', { hardness: 0.5, resistance: 0.5, sound: 'wool', opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, drops: null, needsSupport: true, tex: { top: 'cake_top', bottom: 'cake_bottom', side: 'cake_side' } });
+// Gloomshell Boxes in the sixteen dye colours (a box dyed at the workbench keeps what it holds)
+export const BOX_COLORS = [];
+for (const [key, name] of COLORS) {
+  const K = key.toUpperCase() + '_GLOOMSHELL_BOX';
+  BOX_COLORS.push(ext(K));
+  def(B[K], `${name} Gloomshell Box`, { ...BLOCKS[B.GLOOMSHELL_BOX], tex: { top: key + '_gloomshell_box_top', bottom: key + '_gloomshell_box_top', side: key + '_gloomshell_box_side' } });
+}
+/** Every Gloomshell Box: the plain one, then the sixteen colours. */
+export const BOX_IDS = [B.GLOOMSHELL_BOX, ...BOX_COLORS];
+const BOX_SET = new Set(BOX_IDS);
+export const isBox = (id) => BOX_SET.has(id);
 
 export const NUM_BLOCKS = BLOCKS.length;
 

@@ -10,6 +10,7 @@ import { MONUMENT_TEX } from './monumentTextures.js';
 import { CAVE_TEX } from './caveTextures.js';
 import { HUSH_TEX } from './hushTextures.js';
 import { ARCH_TEX } from './archaeologyTextures.js';
+import { LIBRARY_TEX } from './libraryTextures.js';
 
 export const TEX_SIZE = 16;
 
@@ -43,6 +44,7 @@ for (const n of Object.keys(CIRCUIT_TEX)) addTex(n); // circuit parts (world/cir
 for (const n of Object.keys(CAVE_TEX)) addTex(n); // caves content (world/caveTextures.js)
 for (const n of Object.keys(HUSH_TEX)) addTex(n); // the Deep Hush (world/hushTextures.js)
 for (const n of Object.keys(ARCH_TEX)) addTex(n); // archaeology: brushing stages, pots (world/archaeologyTextures.js)
+for (const n of Object.keys(LIBRARY_TEX)) addTex(n); // lecterns, targets, cakes, dyed boxes (world/libraryTextures.js)
 ARTS.forEach(([, w, h], art) => { for (let p = 0; p < w * h; p++) addTex(`painting_${art}_${p}`); });
 for (let i = 0; i < 8; i++) addTex('fire_' + i);
 addTex('lava_flow');
@@ -1289,6 +1291,7 @@ function paint(c, name) {
   else if (CAVE_TEX[name]) CAVE_TEX[name](c, { hex, mix, shade });
   else if (HUSH_TEX[name]) HUSH_TEX[name](c, { hex, mix, shade });
   else if (ARCH_TEX[name]) ARCH_TEX[name](c, { hex, mix, shade });
+  else if (LIBRARY_TEX[name]) LIBRARY_TEX[name](c, { hex, mix, shade, planks });
   else c.noiseFill(P.stone);
 }
 

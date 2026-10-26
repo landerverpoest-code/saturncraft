@@ -50,7 +50,7 @@ export const isConductor = (id) => !!(SOLID[id] && OPAQUE[id]);
 function wireAttracts(id, meta, side) {
   if (id === B.LEVER || id === B.STONE_BUTTON || id === B.WOODEN_PRESSURE_PLATE || isTorchC(id) || id === B.CINNABAR_BLOCK) return true;
   if (id === B.REPEATER) return ((meta & 3) & 1) === (side & 1); // only along its axis
-  if (id === B.COMPARATOR || id === B.DAYLIGHT_SENSOR) return true;
+  if (id === B.COMPARATOR || id === B.DAYLIGHT_SENSOR || id === B.TARGET) return true;
   if (id === B.OBSERVER) return (meta & 7) === SIDE_TO_FACING[side]; // only at its back
   return false;
 }
@@ -223,5 +223,5 @@ export function circuitCollision(id, meta) {
 export const CIRCUIT_BLOCK = new Uint8Array(BLOCK_LIMIT);
 for (const id of [B.CINNABAR_WIRE, B.LEVER, B.STONE_BUTTON, B.WOODEN_PRESSURE_PLATE, B.CINNABAR_TORCH, B.CINNABAR_TORCH_OFF,
   B.CINNABAR_LAMP, B.CINNABAR_LAMP_ON, B.REPEATER, B.PISTON, B.STICKY_PISTON, B.PISTON_HEAD, B.CHIME_BLOCK, B.CINNABAR_BLOCK, B.DISPENSER, B.DROPPER,
-  B.COMPARATOR, B.OBSERVER, B.DAYLIGHT_SENSOR, B.HUSH_SENSOR]) CIRCUIT_BLOCK[id] = 1;
+  B.COMPARATOR, B.OBSERVER, B.DAYLIGHT_SENSOR, B.HUSH_SENSOR, B.TARGET, B.LECTERN]) CIRCUIT_BLOCK[id] = 1;
 export { BLOCKS };

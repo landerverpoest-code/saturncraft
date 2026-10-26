@@ -34,7 +34,7 @@ import { RemotePlayer } from './remotePlayer.js';
 import { EntityMirror } from './entityMirror.js';
 import { packChunk, unpackChunk, playerSaveData, applyPlayerSave } from '../world/save.js';
 import { chunkKey } from '../world/world.js';
-import { B, isFurnace } from '../world/blocks.js';
+import { B, isFurnace, isBox, BOX_COLORS } from '../world/blocks.js';
 import { I, ITEMS } from '../world/items.js';
 import { withExtras } from '../world/enchantments.js';
 import { rayAABB } from '../entities/entities.js';
@@ -83,7 +83,7 @@ function joinLink(code) {
   return `${location.origin}${location.pathname}?${keep}`;
 }
 
-const CONTAINER_BLOCKS = new Set([B.CHEST, B.BARREL, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.BREWING_STAND, B.GLOOMSHELL_BOX, B.HOPPER, B.DISPENSER, B.DROPPER]);
+const CONTAINER_BLOCKS = new Set([B.CHEST, B.BARREL, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.BREWING_STAND, B.GLOOMSHELL_BOX, ...BOX_COLORS, B.HOPPER, B.DISPENSER, B.DROPPER]);
 const contKey = (k, x, y, z) => `${k}:${x},${y},${z}`;
 const finite = (...v) => v.every(Number.isFinite);
 /** Stand-in for a player whose pet is waiting for them while they are offline. */
@@ -270,6 +270,13 @@ export class HostSession extends Session {
         this.broadcast({ t: 'pot', x: m.x | 0, y: m.y | 0, z: m.z | 0, f: g.pots.get(`${m.x | 0},${m.y | 0},${m.z | 0}`) || null }, c);
         break;
       }
+      case 'lectern': {
+        // a guest put a book on a lectern, took it off or turned its page
+        if (!finite(m.x, m.y, m.z) || !this.near(c, m.x, m.y, m.z, 12)) break;
+        g.setLectern(m.x | 0, m.y | 0, m.z | 0, m.s || null, true);
+        this.broadcast({ t: 'lectern', x: m.x | 0, y: m.y | 0, z: m.z | 0, s: g.lecterns.get(`${m.x | 0},${m.y | 0},${m.z | 0}`) || null }, c);
+        break;
+      }
       case 'sign': {
         if (!finite(m.x, m.y, m.z) || !this.near(c, m.x, m.y, m.z, 12) || !Array.isArray(m.l)) break;
         g.setSignText(m.x | 0, m.y | 0, m.z | 0, m.l, true);
@@ -346,7 +353,7 @@ export class HostSession extends Session {
       dl: g.daylightCycle, df: g.difficulty, pvp: this.pvp, gc: this.guestCommands,
       worldSpawn: g.worldSpawn, pos: { x: p.x, y: p.y, z: p.z, yaw: p.yaw },
       player: g.netPlayers[name] || null,
-      signs: [...g.signs], frames: [...g.frames], pots: [...g.pots],
+      signs: [...g.signs], frames: [...g.frames], pots: [...g.pots], lecterns: [...g.lecterns],
       players: [{ id: 0, name: this.name }, ...this.joined().map((o) => ({ id: o.id, name: o.name }))],
       chunks: chunks.length,
     });
@@ -627,7 +634,7 @@ export class HostSession extends Session {
   // ---- containers -----------------------------------------------------------------
   container(kind, x, y, z) {
     const g = this.game, id = g.world.getBlock(x, y, z);
-    if (kind === 'chest') return id === B.CHEST || id === B.BARREL || id === B.GLOOMSHELL_BOX ? g.getChest(x, y, z) : id === B.HOPPER ? g.getHopper(x, y, z) : id === B.DISPENSER || id === B.DROPPER ? g.getDispenser(x, y, z) : null;
+    if (kind === 'chest') return id === B.CHEST || id === B.BARREL || isBox(id) ? g.getChest(x, y, z) : id === B.HOPPER ? g.getHopper(x, y, z) : id === B.DISPENSER || id === B.DROPPER ? g.getDispenser(x, y, z) : null;
     if (kind === 'chest2') {
       const h = id === B.CHEST ? doubleChestHalves(g.world, x, y, z) : null;
       return h && h[0].x === x && h[0].z === z ? doubleChestView(g.getChest(h[0].x, y, h[0].z), g.getChest(h[1].x, y, h[1].z)) : null;
@@ -749,6 +756,7 @@ export class HostSession extends Session {
   sendSign(x, y, z, l) { this.broadcast({ t: 'sign', x, y, z, l }); }
   sendFrame(x, y, z, st) { this.broadcast({ t: 'frame', x, y, z, st }); }
   sendPot(x, y, z, f) { this.broadcast({ t: 'pot', x, y, z, f }); }
+  sendLectern(x, y, z, s) { this.broadcast({ t: 'lectern', x, y, z, s }); }
 
   tick() {
     if (this.closed) return;
@@ -884,6 +892,7 @@ export class ClientSession extends Session {
     for (const [k, l] of w.signs || []) game.signs.set(k, l);
     for (const [k, st] of w.frames || []) game.frames.set(k, st);
     for (const [k, f] of w.pots || []) { const [x, y, z] = String(k).split(',').map(Number); if (finite(x, y, z)) game.setPot(x, y, z, f, true); }
+    for (const [k, l] of w.lecterns || []) { const [x, y, z] = String(k).split(',').map(Number); if (finite(x, y, z)) game.setLectern(x, y, z, l, true); }
     if (typeof w.dl === 'boolean') game.settings.daylightCycle = w.dl;
     if (typeof w.df === 'string') game.settings.difficulty = w.df;
     game.spawner.enabled = false;
@@ -924,6 +933,7 @@ export class ClientSession extends Session {
       case 'sign': if (Array.isArray(m.l)) g.setSignText(m.x | 0, m.y | 0, m.z | 0, m.l, true); break;
       case 'frame': g.setFrameItem(m.x | 0, m.y | 0, m.z | 0, m.st || null, true); break;
       case 'pot': g.setPot(m.x | 0, m.y | 0, m.z | 0, m.f || null, true); break;
+      case 'lectern': g.setLectern(m.x | 0, m.y | 0, m.z | 0, m.s || null, true); break;
       case 'cmdout': for (const l of m.lines || []) g.chat.add(String(l)); break;
       case 'env':
         if (Math.abs(g.time - m.time) > 2) g.time = m.time;
@@ -1166,6 +1176,7 @@ export class ClientSession extends Session {
   sendSign(x, y, z, l) { this.send({ t: 'sign', x, y, z, l }); }
   sendFrame(x, y, z, st) { this.send({ t: 'frame', x, y, z, st }); }
   sendPot(x, y, z, f) { this.send({ t: 'pot', x, y, z, f }); }
+  sendLectern(x, y, z, s) { this.send({ t: 'lectern', x, y, z, s }); }
 
   /** We stepped through a portal: the host takes the whole group there. */
   requestTravel(dim, arrival) {

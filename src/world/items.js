@@ -1,7 +1,7 @@
 // Item registry. Item ids 0..255 are block items (id === block id); 256+ are
 // pure items. Tool stats, food values and fuel times mirror the documented
 // reference numbers.
-import { BLOCKS, B, TOOL, TIER, isBlockId, EXT_BASE, DOOR_SETS } from './blocks.js';
+import { BLOCKS, B, TOOL, TIER, isBlockId, EXT_BASE, DOOR_SETS, BOX_COLORS } from './blocks.js';
 import { COLORS } from './colors.js';
 import { POTIONS, POTION_KEYS, potionColor } from './potions.js';
 import { SHERDS, POT_CLAY } from './sherds.js';
@@ -346,6 +346,15 @@ for (const kind of POTION_KEYS) {
   }
   LINGERING_ITEM[kind] = item(kind === 'water' ? 'lingering_water_vial' : 'lingering_elixir_' + kind, 'Lingering ' + p.name, { stack: 1, potion: { kind, splash: true, lingering: true }, throwable: 'potion', iconStyle: ['lingering', { g: '#c8dcf0', h: color }] }).id;
 }
+// Books you write in (world/books.js): a Writable Book keeps its pages on the stack (stack.pages);
+// signed, it becomes a Written Book with a title and an author that can only be read
+const ICON_QUILL_BOOK = ['................', '............kk..', '....hhhhhhhkk...', '...hHHHHHHHkw...', '...hhhhhhhkhw...', '...hhhhhhkhhw...', '...hhwwwkhhhw...', '...hhhhkhhhhw...', '...hhhhhhhhhw...', '...hhhhhhhhhw...', '...hhhhhhhhhw...', '...hhhhhhhhw....', '................', '................', '................', '................'];
+item('writable_book', 'Writable Book', { stack: 1, writable: true, iconStyle: [ICON_QUILL_BOOK, { h: '#7a4a2a', H: '#9a6038', w: '#f0eadc', k: '#2a2a32' }] });
+item('written_book', 'Written Book', { stack: 16, written: true, iconStyle: ['book', { h: '#2a5a7a', H: '#3a7aa0', w: '#f0eadc' }] });
+for (const id of [B.CAKE, ...BOX_COLORS]) ITEMS[id].stack = 1; // a cake is carried whole; dyed boxes keep their contents too
+ITEMS[I.MILK_BUCKET].craftRemainder = I.BUCKET; // the cake's milk leaves its buckets in the grid
+BLOCKS[B.CAKE].iconStyle = [['................', '................', '................', '.......rr.......', '....wwwwwwww....', '..wwwwwwwwwwww..', '..WwwwwwwwwwwW..', '..ssWWwwwwWWss..', '..ssssWWWWssss..', '..hhhhhhhhhhhh..', '..ssssssssssss..', '..hhhhhhhhhhhh..', '..ssssssssssss..', '...hhhhhhhhhh...', '................', '................'], { w: '#f4f0ec', W: '#e0d8d0', s: '#c8884a', h: '#a8683a', r: '#d0283a' }];
+BLOCKS[B.LECTERN].iconStyle = [['................', '................', '..wwwwwwwwwwww..', '..wppppppppppw..', '..wppppppppppw..', '..wwwwwwwwwwww..', '..ssssssssssss..', '......hhhh......', '......hHhh......', '......hHhh......', '......hHhh......', '......hhhh......', '...ssssssssss...', '..hhhhhhhhhhhh..', '..ssssssssssss..', '................'], { w: '#8a6034', p: '#e8dcc0', s: '#6e4a26', h: '#a07a45', H: '#b8905a' }];
 
 /** Light level (0-15) an item gives when held: a torch, lantern or other light block; 0 for the rest. */
 /** Is this item an arrow a bow can shoot (plain or tipped)? */

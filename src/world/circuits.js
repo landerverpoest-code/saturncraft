@@ -29,6 +29,8 @@ import {
   COMPARATOR_SUBTRACT, OBSERVER_POWERED, SENSOR_INVERTED, comparatorLevel, observerBack,
 } from './circuitShapes.js';
 import { comparatorOutput, daylightLevel } from './comparators.js';
+import { LECTERN_POWERED, LECTERN_PULSE_TICKS } from './books.js';
+import { TARGET_TICKS_STUCK } from './signalBlocks.js';
 
 export const MAX_PUSH = 12;
 export const BUTTON_TICKS = 20;
@@ -53,13 +55,13 @@ const OPENABLE_SHAPE = (id) => !!BLOCKS[id] && (BLOCKS[id].shape === SHAPE.DOOR 
 export const CIRCUIT_REACT = new Uint8Array(BLOCK_LIMIT);
 for (const id of [B.CINNABAR_WIRE, B.CINNABAR_TORCH, B.CINNABAR_TORCH_OFF, B.CINNABAR_LAMP, B.CINNABAR_LAMP_ON, B.REPEATER,
   B.PISTON, B.STICKY_PISTON, B.STONE_BUTTON, B.WOODEN_PRESSURE_PLATE, B.CHIME_BLOCK, B.DOOR, B.OAK_TRAPDOOR, B.OAK_FENCE_GATE, B.TNT, B.DISPENSER, B.DROPPER,
-  B.COMPARATOR, B.OBSERVER, B.DAYLIGHT_SENSOR, B.HUSH_SENSOR]) CIRCUIT_REACT[id] = 1;
+  B.COMPARATOR, B.OBSERVER, B.DAYLIGHT_SENSOR, B.HUSH_SENSOR, B.TARGET, B.LECTERN]) CIRCUIT_REACT[id] = 1;
 for (const b of BLOCKS) if (b && (b.shape === SHAPE.DOOR || b.shape === SHAPE.TRAPDOOR || b.shape === SHAPE.GATE)) CIRCUIT_REACT[b.id] = 1;
 /** Blocks re-evaluated when their chunk loads or on random ticks (state may be stale after a reload). */
 export const CIRCUIT_SETTLE = new Uint8Array(BLOCK_LIMIT);
 for (const id of [B.CINNABAR_WIRE, B.CINNABAR_TORCH, B.CINNABAR_TORCH_OFF, B.CINNABAR_LAMP, B.CINNABAR_LAMP_ON, B.REPEATER,
   B.PISTON, B.STICKY_PISTON, B.STONE_BUTTON, B.WOODEN_PRESSURE_PLATE, B.DISPENSER, B.DROPPER,
-  B.COMPARATOR, B.OBSERVER, B.DAYLIGHT_SENSOR, B.HUSH_SENSOR]) CIRCUIT_SETTLE[id] = 1;
+  B.COMPARATOR, B.OBSERVER, B.DAYLIGHT_SENSOR, B.HUSH_SENSOR, B.TARGET, B.LECTERN]) CIRCUIT_SETTLE[id] = 1;
 export { CIRCUIT_BLOCK };
 
 // ---- power queries (pure functions of a world with getBlock / getMeta) -----------------
@@ -82,6 +84,7 @@ export function strongOut(w, x, y, z, d, forWire = false) {
     case B.LEVER: case B.STONE_BUTTON: { const m = w.getMeta(x, y, z); return m & ON && same(attachDir(m), d) ? 15 : 0; }
     case B.WOODEN_PRESSURE_PLATE: return w.getMeta(x, y, z) & 1 && d[1] < 0 ? 15 : 0;
     case B.HUSH_SENSOR: return d[1] < 0 ? w.getMeta(x, y, z) & 15 : 0; // a pulsing sensor powers the block under it
+    case B.LECTERN: return d[1] < 0 && w.getMeta(x, y, z) & LECTERN_POWERED ? 15 : 0; // a turned page powers the block under it
     case B.CINNABAR_TORCH: return d[1] > 0 ? 15 : 0;
     case B.REPEATER: { const m = w.getMeta(x, y, z); return m & REPEATER_POWERED && same(H4[m & 3], d) ? 15 : 0; }
     case B.COMPARATOR: { const m = w.getMeta(x, y, z); return same(H4[m & 3], d) ? comparatorLevel(m) : 0; }
@@ -98,6 +101,8 @@ export function weakOut(w, x, y, z, d, forWire = false) {
     case B.LEVER: case B.STONE_BUTTON: return w.getMeta(x, y, z) & ON ? 15 : 0;
     case B.WOODEN_PRESSURE_PLATE: return w.getMeta(x, y, z) & 1 ? 15 : 0;
     case B.HUSH_SENSOR: return w.getMeta(x, y, z) & 15; // the pulse of a Hush Sensor (world/hushSystem.js)
+    case B.TARGET: return w.getMeta(x, y, z) & 15; // a hit target block (world/signalBlocks.js)
+    case B.LECTERN: return w.getMeta(x, y, z) & LECTERN_POWERED ? 15 : 0; // a page was turned (world/books.js)
     case B.CINNABAR_TORCH: return same(torchAttachDir(w.getMeta(x, y, z)), d) ? 0 : 15;
     case B.REPEATER: { const m = w.getMeta(x, y, z); return m & REPEATER_POWERED && same(H4[m & 3], d) ? 15 : 0; }
     case B.CINNABAR_BLOCK: return 15;
@@ -246,7 +251,7 @@ export function solveNetwork(w, x, y, z, cap = MAX_NETWORK) {
 export function immovable(id, meta) {
   const d = BLOCKS[id];
   if (!d || d.hardness < 0 || id === B.OBSIDIAN || d.container || isFurnace(id) || id === B.SPAWNER) return true;
-  if (id === B.ENCHANTING_TABLE || id === B.PISTON_HEAD || id === B.RIFT) return true;
+  if (id === B.ENCHANTING_TABLE || id === B.PISTON_HEAD || id === B.RIFT || id === B.LECTERN) return true; // (a lectern keeps its book per position)
   if (isPiston(id) && meta & PISTON_EXTENDED) return true;
   return false;
 }
@@ -290,11 +295,12 @@ export class Circuits {
     this.daylight = null;        // () => brightness 0-1 of the suns here (set by the game; none = dark)
     this.comparators = new Set(); // comparators and daylight sensors seen, polled for container and sky changes
     this.sensors = new Set();
+    this.targetUntil = new Map(); // target block key -> tick its signal ends (a new hit restarts it)
     this.stats = { updates: 0, networks: 0 };
     this.solved = new Set();    // wires whose network was solved in this drain (and nothing changed since)
   }
 
-  reset() { this.queue.clear(); this.burn.clear(); this.solved.clear(); this.comparators.clear(); this.sensors.clear(); }
+  reset() { this.queue.clear(); this.burn.clear(); this.targetUntil.clear(); this.solved.clear(); this.comparators.clear(); this.sensors.clear(); }
 
   /**
    * World.setBlock hook for every edit: observers whose face looks at x,y,z
@@ -309,6 +315,17 @@ export class Circuits {
       const m = w.getMeta(ox, oy, oz);
       if ((m & 7) === f && !(m & OBSERVER_POWERED)) w.scheduleTick(ox, oy, oz, OBSERVER_DELAY);
     }
+  }
+
+  /** A projectile hit the target block at x,y,z: it sends `power` (1-15) for `ticks` ticks (world/signalBlocks.js). */
+  hitTarget(x, y, z, power, ticks) {
+    if (!this.enabled) return false;
+    const w = this.world;
+    if (w.getBlock(x, y, z) !== B.TARGET) return false;
+    this.targetUntil.set(key(x, y, z), w.tickCount + ticks);
+    this.act(() => w.setBlock(x, y, z, B.TARGET, Math.max(1, Math.min(15, power | 0)), false));
+    w.scheduleTick(x, y, z, ticks);
+    return true;
   }
 
   /** Once per world tick: comparators re-read their containers, daylight sensors the sky. */
@@ -364,6 +381,7 @@ export class Circuits {
     // a lever / button / plate that turns on schedules its own release
     if (id === B.STONE_BUTTON && w.getMeta(x, y, z) & ON) w.scheduleTick(x, y, z, BUTTON_TICKS);
     if (id === B.WOODEN_PRESSURE_PLATE && w.getMeta(x, y, z) & 1) w.scheduleTick(x, y, z, PLATE_TICKS);
+    if (id === B.LECTERN && w.getMeta(x, y, z) & LECTERN_POWERED) w.scheduleTick(x, y, z, LECTERN_PULSE_TICKS);
     // pistons and their heads go together
     if (isPiston(old) && old !== id) {
       // the base was removed: take its head with it (the meta is gone, so look for a head pointing away from here)
@@ -427,6 +445,8 @@ export class Circuits {
       }
       case B.STONE_BUTTON: if (m & ON) w.scheduleTick(x, y, z, BUTTON_TICKS); break;
       case B.HUSH_SENSOR: if (m & 15) w.scheduleTick(x, y, z, 40); break; // (a pulse left over from before a reload ends too)
+      case B.TARGET: if (m & 15) w.scheduleTick(x, y, z, Math.max(1, (this.targetUntil.get(key(x, y, z)) ?? w.tickCount + TARGET_TICKS_STUCK) - w.tickCount)); break;
+      case B.LECTERN: if (m & LECTERN_POWERED) w.scheduleTick(x, y, z, LECTERN_PULSE_TICKS); break;
       case B.WOODEN_PRESSURE_PLATE: if (m & 1) w.scheduleTick(x, y, z, PLATE_TICKS); break;
       case B.CHIME_BLOCK: {
         const p = powerInto(w, x, y, z) > 0;
@@ -526,6 +546,15 @@ export class Circuits {
       }
       case B.STONE_BUTTON: if (m & ON) this.act(() => w.setBlock(x, y, z, id, m & ~ON)); break;
       case B.HUSH_SENSOR: if (m & 15) this.act(() => w.setBlock(x, y, z, id, 0)); break; // the pulse ends
+      case B.TARGET: {
+        if (!(m & 15)) break;
+        const k = key(x, y, z), until = this.targetUntil.get(k) ?? 0;
+        if (until > w.tickCount) { w.scheduleTick(x, y, z, until - w.tickCount); break; } // hit again since: keep going
+        this.targetUntil.delete(k);
+        this.act(() => w.setBlock(x, y, z, id, 0, false));
+        break;
+      }
+      case B.LECTERN: if (m & LECTERN_POWERED) this.act(() => w.setBlock(x, y, z, id, m & ~LECTERN_POWERED, false)); break;
       case B.WOODEN_PRESSURE_PLATE:
         if (!(m & 1)) break;
         if (this.entitiesOn && this.entitiesOn(x, y, z)) w.scheduleTick(x, y, z, PLATE_TICKS);
