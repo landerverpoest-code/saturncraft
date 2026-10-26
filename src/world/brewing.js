@@ -3,7 +3,8 @@
 //   fuel     = brews left from the last Ember Powder (20 each)
 //   brewTime = ticks left of the current brew (400 to 0), 0 when idle
 //   brewing  = the ingredient item id being brewed (the brew stops if it changes)
-import { ITEMS, I, POTION_ITEM, SPLASH_ITEM } from './items.js';
+import { ITEMS, I, POTION_ITEM, SPLASH_ITEM, LINGERING_ITEM } from './items.js';
+import { B } from './blocks.js';
 import { brewKind, BREW_INGREDIENTS } from './potions.js';
 
 export const BREW_TICKS = 400;
@@ -11,7 +12,8 @@ export const BREWS_PER_POWDER = 20;
 export const VIAL_SLOTS = [0, 1, 2];
 export const INGREDIENT_SLOT = 3, FUEL_SLOT = 4;
 
-const INGREDIENT_IDS = new Set(BREW_INGREDIENTS.map((k) => I[k.toUpperCase()]).filter((id) => id !== undefined));
+// (an ingredient may be a block item, such as the Blight Rose)
+const INGREDIENT_IDS = new Set(BREW_INGREDIENTS.map((k) => I[k.toUpperCase()] ?? B[k.toUpperCase()]).filter((id) => id !== undefined));
 
 export function newStand(x, y, z) { return { x, y, z, slots: [null, null, null, null, null], fuel: 0, brewTime: 0, brewing: null }; }
 
@@ -24,11 +26,12 @@ export const isVial = (id) => !!(ITEMS[id] && ITEMS[id].potion);
 export function brewItem(vialId, ingId) {
   const d = ITEMS[vialId], ing = ITEMS[ingId];
   if (!d || !d.potion || !ing) return null;
-  const { kind, splash } = d.potion;
+  const { kind, splash, lingering } = d.potion;
   if (ingId === I.GUNPOWDER) return splash ? null : SPLASH_ITEM[kind];
+  if (ingId === I.HOLLOW_BREATH) return splash && !lingering ? LINGERING_ITEM[kind] : null; // splash -> lingering
   const out = brewKind(kind, ing.key);
   if (!out) return null;
-  return splash ? SPLASH_ITEM[out] : POTION_ITEM[out];
+  return lingering ? LINGERING_ITEM[out] : splash ? SPLASH_ITEM[out] : POTION_ITEM[out];
 }
 
 /** Can the stand's ingredient change any of its vials? */

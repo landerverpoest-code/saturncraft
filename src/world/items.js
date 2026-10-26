@@ -200,6 +200,7 @@ item('milk_bucket', 'Milk Bucket', { stack: 1, milk: true, iconStyle: ['bucket',
 export const POTION_ITEM = {}, SPLASH_ITEM = {};
 for (const kind of POTION_KEYS) {
   const p = POTIONS[kind], color = potionColor(kind);
+  if (p.late) continue; // (registered at the end, below)
   POTION_ITEM[kind] = item(kind === 'water' ? 'water_vial' : 'elixir_' + kind, p.name, { stack: 1, potion: { kind, splash: false }, drink: true, iconStyle: ['vial', { g: '#c8dcf0', h: color }] }).id;
   SPLASH_ITEM[kind] = item(kind === 'water' ? 'splash_water_vial' : 'splash_elixir_' + kind, 'Splash ' + p.name, { stack: 1, potion: { kind, splash: true }, throwable: 'potion', iconStyle: ['splash', { g: '#c8dcf0', h: color }] }).id;
 }
@@ -268,7 +269,7 @@ item('gilded_apple', 'Gilded Apple', { food: { hunger: 4, saturation: 9.6, alway
 export const TIPPED_ARROW = {};
 for (const kind of POTION_KEYS) {
   const p = POTIONS[kind];
-  if (!p.effects.length) continue;
+  if (!p.effects.length || p.late) continue;
   TIPPED_ARROW[kind] = item('tipped_arrow_' + kind, p.name.replace('Elixir of', 'Arrow of'), { tipped: kind, gear: ['arrow', { tip: potionColor(kind) }] }).id;
 }
 // Charm of Undying (reference: totem of undying): saves its holder from death once (player/player.js)
@@ -330,6 +331,21 @@ SHERDS.forEach((s, k) => {
 });
 ITEMS[B.DECORATED_POT].stack = 1; // a pot keeps its sherds in the item (stack.sherds)
 ITEMS[B.GLOOMSHELL_BOX].stack = 1; // a box keeps its contents in the item (stack.contents), so it never stacks
+// Lingering elixirs (appended so earlier ids stay stable; see entities/areaCloud.js): Hollow Breath, bottled
+// from the Void Wyrm's breath clouds, turns a splash vial into a lingering one whose cloud lays a quarter of
+// each effect. Then the vials and tipped arrows of the elixir kinds added later (POTIONS[kind].late).
+item('hollow_breath', 'Hollow Breath', { iconStyle: ['vial', { g: '#dbe8f5', h: '#a04ad8', H: '#f0b8ff', w: '#e8c8ff' }] });
+export const LINGERING_ITEM = {};
+const tipName = (p) => p.name.replace('Elixir of', 'Arrow of');
+for (const kind of POTION_KEYS) {
+  const p = POTIONS[kind], color = potionColor(kind);
+  if (p.late) {
+    POTION_ITEM[kind] = item('elixir_' + kind, p.name, { stack: 1, potion: { kind, splash: false }, drink: true, iconStyle: ['vial', { g: '#c8dcf0', h: color }] }).id;
+    SPLASH_ITEM[kind] = item('splash_elixir_' + kind, 'Splash ' + p.name, { stack: 1, potion: { kind, splash: true }, throwable: 'potion', iconStyle: ['splash', { g: '#c8dcf0', h: color }] }).id;
+    if (p.effects.length) TIPPED_ARROW[kind] = item('tipped_arrow_' + kind, tipName(p), { tipped: kind, gear: ['arrow', { tip: color }] }).id;
+  }
+  LINGERING_ITEM[kind] = item(kind === 'water' ? 'lingering_water_vial' : 'lingering_elixir_' + kind, 'Lingering ' + p.name, { stack: 1, potion: { kind, splash: true, lingering: true }, throwable: 'potion', iconStyle: ['lingering', { g: '#c8dcf0', h: color }] }).id;
+}
 // Books you write in (world/books.js): a Writable Book keeps its pages on the stack (stack.pages);
 // signed, it becomes a Written Book with a title and an author that can only be read
 const ICON_QUILL_BOOK = ['................', '............kk..', '....hhhhhhhkk...', '...hHHHHHHHkw...', '...hhhhhhhkhw...', '...hhhhhhkhhw...', '...hhwwwkhhhw...', '...hhhhkhhhhw...', '...hhhhhhhhhw...', '...hhhhhhhhhw...', '...hhhhhhhhhw...', '...hhhhhhhhw....', '................', '................', '................', '................'];

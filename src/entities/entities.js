@@ -358,10 +358,11 @@ export class Arrow {
 
   /** Make this a tipped arrow (item id): its hit lays an eighth of the elixir's effect. */
   setTip(id) {
-    const d = ITEMS[id], fx = d && d.tipped && POTIONS[d.tipped].effects[0];
-    if (!fx) return;
+    const d = ITEMS[id], fx = d && d.tipped && POTIONS[d.tipped].effects;
+    if (!fx || !fx.length) return;
     this.pickupId = id;
-    this.effect = [fx[0], Math.max(1, Math.floor(fx[1] / 8)), fx[2]];
+    this.tipEffects = fx.map(([type, ticks, amp]) => [type, Math.max(1, Math.floor(ticks / 8)), amp]); // every effect (the Shellback elixir has two)
+    this.effect = this.tipEffects[0];
   }
 
   /** A thrown Tidespear turns into a dropped item here (the host shares it like any drop). */
@@ -413,7 +414,7 @@ export class Arrow {
       if (this.crit) dmg += Math.floor(Math.random() * (dmg / 2 + 2));
       const ok = target.hurt(dmg, 'arrow', this.shooter, 0.6, this);
       // tipped arrows (Rime Rattlers shoot Slowness)
-      if (ok && this.effect && target.applyEffect) target.applyEffect(this.effect[0], this.effect[1], this.effect[2], 1, this.shooter);
+      if (ok && target.applyEffect) for (const fx of this.tipEffects || (this.effect ? [this.effect] : [])) target.applyEffect(fx[0], fx[1], fx[2], 1, this.shooter);
       if (ok) { this.dead = true; return; }
       // deflected
       this.vx *= -0.1; this.vy *= -0.1; this.vz *= -0.1;

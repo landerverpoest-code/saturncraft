@@ -129,7 +129,8 @@ function sonicBoom(m, g, p) {
   }
 }
 
-function dirt(m, g) {
+/** Dirt thrown up while it rises or digs (also drawn by guests, net/entityMirror.js). */
+export function dirt(m, g) {
   for (let k = 0; k < 6; k++) g.particles.emit(m.x + (Math.random() - 0.5) * 1.6, m.y + 0.1, m.z + (Math.random() - 0.5) * 1.6, (Math.random() - 0.5) * 0.15, 0.15 + Math.random() * 0.1, (Math.random() - 0.5) * 0.15, 0.08, 0.2, 0.22, 20, 0.02);
 }
 

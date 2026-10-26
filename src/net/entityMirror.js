@@ -5,10 +5,14 @@
 import { splashParticles } from '../entities/splash.js';
 import { Mob } from '../mobs/mob.js';
 import { MOBS } from '../mobs/mobTypes.js';
+import { equipFromIds } from '../mobs/equipment.js';
 import { ItemEntity, XPOrb, Arrow, Boat, Minecart, FallingBlock } from '../entities/entities.js';
 import { ArmorStand } from '../entities/armorStand.js';
+import { AreaCloud } from '../entities/areaCloud.js';
 import { I, ITEMS, maxStack } from '../world/items.js';
 import { unpackEntity, roomFor } from './protocol.js';
+import { knotAt } from '../entities/leash.js';
+import { dirt } from '../mobs/hushkeeper.js';
 
 const TAKE_RETRY = 10; // ticks between pickup requests for the same entity
 
@@ -72,6 +76,7 @@ export class EntityMirror {
       case 'boat': e = s.cart ? new Minecart(s.x, s.y, s.z, s.yaw) : new Boat(s.x, s.y, s.z, s.yaw); break;
       case 'falling': e = new FallingBlock(0, 0, 0, s.blockId); break;
       case 'stand': e = new ArmorStand(s.x, s.y, s.z, s.yaw); break;
+      case 'cloud': e = new AreaCloud(s.x, s.y, s.z, { potion: s.potion, breath: s.breath, radius: s.radius }); break;
       default: return null;
     }
     if (e.body) { e.body.vx = e.body.vy = e.body.vz = 0; }
@@ -95,6 +100,12 @@ export class EntityMirror {
       e.angry = s.angry; e.sheared = s.sheared; e.tamed = s.tamed; e.sitting = s.sitting; e.enemy = s.enemy ? 'player' : null;
       e.woolColor = s.woolColor; e.fuse = s.fuse; e.special = s.special; e.beam = s.beam; e.moving = s.moving; e.captain = s.captain; // Marauder Captains carry a banner
       if (s.profession) e.profession = s.profession;
+      e.customName = s.name || undefined; // a Name Tag's label
+      e.leashHolder = this.leashHolder(s.leash);
+      e.emerging = s.emerging; e.digging = s.digging; // a Hushkeeper rising / sinking (drawn by its customRender)
+      e.netRiding = s.riding; // a jockey: seated pose (the host places it on its mount)
+      const ek = s.equip ? s.equip.join(',') : '';
+      if (e.equipKey !== ek) { e.equipKey = ek; e.equip = equipFromIds(s.equip); } // shown only; the host keeps the real gear
       if (s.baby !== e.age < 0) e.setBaby(s.baby);
       e.body.onGround = s.onGround;
     } else if (e.kind === 'item') {
@@ -107,6 +118,7 @@ export class EntityMirror {
       e.yaw = s.yaw; e.hitTime = s.hitTime;
       e.armor = s.armor.map(st); e.hand = st(s.hand);
     }
+    else if (e.kind === 'cloud') e.radius = s.radius;
     else if (e.kind === 'arrow') {
       e.vx = s.vx; e.vy = s.vy; e.vz = s.vz; e.stuck = s.stuck; e.pickup = s.pickup;
     } else if (e.kind === 'boat') {
@@ -117,13 +129,34 @@ export class EntityMirror {
     }
   }
 
+  /** The object a mirrored lead is drawn to: us, another player, or a (local copy of a) fence knot. */
+  leashHolder(l) {
+    const g = this.game;
+    if (!l) return null;
+    if (l.knot) {
+      const [bx, by, bz] = l.knot;
+      let k = knotAt(g, bx, by, bz);
+      if (!k) { k = knotAt(g, bx, by, bz, true); k.mirrored = true; }
+      return k;
+    }
+    if (l.player === this.session.id) return g.player;
+    const rp = this.session.remotes.get(l.player);
+    return rp ? rp.anchor : null;
+  }
+
   /** One game tick: move halfway to the snapshot (snapshots come every other tick). */
   tickProxy(e) {
     const g = this.game, s = e.netState, p = g.player;
     this.ticks = g.ticks;
     if (e.kind === 'boat' && p.riding === e) { this.tickRiddenBoat(e); return; }
     e.prev = [e.x, e.y, e.z];
-    if (e.kind === 'mob') { e.prevYaw = e.yaw; e.prevFuse = e.fuse; if (e.hurtTime > 0) e.hurtTime--; }
+    if (e.kind === 'mob') {
+      e.prevYaw = e.yaw; e.prevFuse = e.fuse; if (e.hurtTime > 0) e.hurtTime--;
+      if (e.emerging > 0 || e.digging > 0) { // count down between snapshots (smooth rising / sinking), throwing up dirt
+        if (e.emerging > 0) e.emerging--; else e.digging--;
+        if (g.ticks % 4 === 0 && g.particles) dirt(e, g);
+      }
+    }
     if (e.kind === 'boat') e.prevYaw = e.yaw;
     if (!s) return;
     const dx = s.x - e.x, dy = s.y - e.y, dz = s.z - e.z;
@@ -140,6 +173,7 @@ export class EntityMirror {
       e.limbSwing += moved * 4;
     }
     if (e.kind === 'xp' && e.age !== undefined) e.age++;
+    if (e.proxyTick) e.proxyTick(g); // a lingering cloud's specks
     this.tryPickup(e);
   }
 

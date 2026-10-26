@@ -637,7 +637,6 @@ ext('HUSH_SHRIEKER');
 def(B.HUSH_SHRIEKER, 'Hush Shrieker', { hardness: 3, resistance: 3, tool: TOOL.HOE, sound: 'wool', opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, drops: null, silkSelf: true, tex: { top: 'hush_shrieker_top', bottom: 'hushmoss', side: 'hush_shrieker_side' } });
 ext('HUSH_CATALYST');
 def(B.HUSH_CATALYST, 'Hush Catalyst', { hardness: 3, resistance: 3, tool: TOOL.HOE, sound: 'wool', emit: 6, drops: null, silkSelf: true, tex: { top: 'hush_catalyst_top', bottom: 'hush_catalyst_bottom', side: 'hush_catalyst_side' } });
-
 // Archaeology (world/archaeology.js): Suspicious Sand and Gravel hide one find each; a Brush uncovers it.
 // Meta bits 0-1 = brushing stage (0-3, the texture shows the dig), bits 2-3 = the kind of site (SITE).
 // They fall like sand, but a fall breaks them and the find is lost; mined, they drop nothing.
@@ -649,6 +648,11 @@ def(B.SUSPICIOUS_GRAVEL, 'Suspicious Gravel', { hardness: 0.25, resistance: 0.25
 // player/interaction.js: whole with a tool in hand, else it shatters into its sherds.
 ext('DECORATED_POT');
 def(B.DECORATED_POT, 'Decorated Pot', { hardness: 0, resistance: 0, sound: 'stone', opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, drops: null, tex: { top: 'decorated_pot_top', bottom: 'decorated_pot_bottom', side: 'decorated_pot_side' } });
+// Blight Rose (reference: wither rose): a black flower of the Cinderdeep's floors; touching it gives Wither
+// (player/player.js, mobs/mob.js), and it brews the Elixir of Decay. Grows on Cinderstone, Mournsand and soil.
+ext('BLIGHT_ROSE');
+def(B.BLIGHT_ROSE, 'Blight Rose', { ...plant, blight: true });
+POTTED.push(B.BLIGHT_ROSE); // appended: pot metas index this list
 // Lectern (world/books.js): a reading desk on a post. Meta bits 0-1 = the side its reader stands on
 // (SIDE_DIRS), bit 2 = a book lies on it (drawn), bit 3 = the short cinnabar pulse of a turned page.
 // The book and the open page are kept per position in game.lecterns.

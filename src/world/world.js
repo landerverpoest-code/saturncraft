@@ -283,6 +283,7 @@ export class World {
     if (id === B.DEAD_BUSH) return below === B.SAND || below === B.RED_SAND || below === B.DIRT || below === B.GRASS || (below >= B.TERRACOTTA && below <= B.LIGHT_GRAY_TERRACOTTA);
     if (CROPS.has(id)) return below === B.FARMLAND;
     if (id === B.CINDERROOT) return below === B.MOURNSAND;
+    if (id === B.BLIGHT_ROSE) return below === B.CINDERSTONE || below === B.MOURNSAND || below === B.GRASS || below === B.DIRT || below === B.SNOWY_GRASS || below === B.MYCELIUM || below === B.MOSS_BLOCK || below === B.MUD;
     if (id === B.HUSHVINE) return hushvineSupported((a, b, c) => this.getBlock(a, b, c), x, y, z);
     if (id === B.HUSHVINE_FLOWER) return hushFlowerSupported((a, b, c) => this.getBlock(a, b, c), x, y, z);
     if (BLOCKS[id].hanging) { const above = this.getBlock(x, y + 1, z); return !!SOLID[above] || above === B.CAVE_VINES || above === B.CAVE_VINES_LIT; }

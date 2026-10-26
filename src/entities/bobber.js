@@ -5,17 +5,28 @@
 import * as THREE from 'three';
 import { B, SOLID } from '../world/blocks.js';
 import { I } from '../world/items.js';
+import { luckOf } from '../player/effects.js';
 
 let nextId = 7_000_000;
 
+/**
+ * Weights of the three catch groups at a luck (reference: fish 85 - luck, junk 10 - 2 luck,
+ * treasure 5 + 2 luck; never below 0). Luck comes from the Luck / Bad Luck effects.
+ */
+export function catchWeights(luck = 0) {
+  return { fish: Math.max(0, 85 - luck), junk: Math.max(0, 10 - 2 * luck), treasure: Math.max(0, 5 + 2 * luck) };
+}
+
 /** Weighted loot: fish (silverfin 60, redfin 25, spinefish 13, glimmerfin 2), junk and treasure. */
-export function rollCatch(rng = Math.random) {
+export function rollCatch(rng = Math.random, luck = 0) {
+  const w = catchWeights(luck), total = w.fish + w.junk + w.treasure;
   const r = rng();
-  if (r < 0.85) {
+  const fishCut = w.fish / total, junkCut = (w.fish + w.junk) / total;
+  if (r < fishCut) {
     const f = rng() * 100;
     return { id: f < 60 ? I.RAW_SILVERFIN : f < 85 ? I.RAW_REDFIN : f < 98 ? I.SPINEFISH : I.GLIMMERFIN, count: 1 };
   }
-  if (r < 0.95) {
+  if (r < junkCut) {
     const junk = [[I.STICK, 1], [I.BONE, 1], [I.STRING, 1], [I.BOWL, 1], [I.ROTTEN_FLESH, 1], [I.LEATHER, 1], [B.LILY_PAD ?? I.STICK, 1], [I.LEATHER_BOOTS, 1]];
     const [id, count] = junk[Math.floor(rng() * junk.length)];
     return { id, count, damage: id === I.LEATHER_BOOTS ? Math.floor(rng() * 40) : 0 };
@@ -89,7 +100,7 @@ export class Bobber {
     const p = game.player;
     let dmg = 0;
     if (this.bite > 0) {
-      const st = rollCatch();
+      const st = rollCatch(Math.random, luckOf(p.effects));
       const dx = p.x - this.x, dy = p.y + 1 - this.y, dz = p.z - this.z;
       const d = Math.hypot(dx, dy, dz) || 1;
       game.entities.spawnItem(this.x, this.y + 0.3, this.z, st, [dx * 0.1, dy * 0.1 + Math.sqrt(d) * 0.08, dz * 0.1]);

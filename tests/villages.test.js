@@ -22,7 +22,12 @@ describe('villages', () => {
     expect(n).toBeGreaterThan(5);
   });
   it('houses get doors and beds stamped across chunk borders', () => {
-    const v = villageInRegion(gen, 0, -1);
+    // the first oak-door (plains) village near the origin with a house (rivers keep some regions empty)
+    let v = null;
+    for (let r = 0; r <= 3 && !v; r++) for (let rx = -r; rx <= r && !v; rx++) for (let rz = -r; rz <= r && !v; rz++) {
+      const c = villageInRegion(gen, rx, rz);
+      if (c && c.style === 'plains' && c.pieces.some((p) => p.type === 'house')) v = c;
+    }
     expect(v).toBeTruthy();
     const house = v.pieces.find((p) => p.type === 'house');
     expect(PROFESSIONS).toContain(house.profession);

@@ -10,7 +10,7 @@ export function stampSmallFeatures(gen, blocks, meta, cx, cz, heightmap, biomes)
   const set = (x, y, z, id, m = 0) => { if (x < 0 || x > 15 || z < 0 || z > 15) return; const i = cidx(x, y, z); blocks[i] = id; meta[i] = m; };
   const mid = 8 + 8 * 16, biome = biomes[mid], top = heightmap[mid];
   // desert well: 1 chunk in 150 of desert, on flat sand
-  if (biome === BIOME.DESERT && hashf(gen.seed, cx, cz, 71) < 1 / 150 && top > SEA_LEVEL) {
+  if (biome === BIOME.DESERT && hashf(gen.seed, cx, cz, 71) < 1 / 150 && top > SEA_LEVEL && !(gen.riverInBox && gen.riverInBox(cx * 16 + 5, cz * 16 + 5, cx * 16 + 11, cz * 16 + 11))) {
     const flat = [[5, 5], [11, 5], [5, 11], [11, 11]].every(([x, z]) => Math.abs(heightmap[x + z * 16] - top) <= 3);
     if (flat) {
       for (let x = 6; x <= 10; x++) for (let z = 6; z <= 10; z++) {

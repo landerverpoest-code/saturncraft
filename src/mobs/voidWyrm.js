@@ -4,7 +4,21 @@
 //  climb  - pulls up and away after a pass (or when the swoop times out)
 // Mending Crystals on the pillars heal it while it is within their reach
 // (see DimensionManager.wyrmTick). Its death opens the exit gate.
+// Pulling up after a swoop it breathes a violet cloud onto the ground below
+// (Instant Damage, 10 s; entities/areaCloud.js): Glass Vials filled in it hold
+// Hollow Breath, which brews splash elixirs into lingering ones.
 import { I } from '../world/items.js';
+import { AreaCloud } from '../entities/areaCloud.js';
+
+/** The Wyrm's breath: a cloud on the island under it (nothing over the void or from high up). */
+export function exhale(m, g) {
+  if (g.net && g.net.isClient) return null;
+  const x = Math.floor(m.x), z = Math.floor(m.z), h = g.world.heightAt(x, z);
+  if (!(h > 8) || m.y - h > 40 || !g.world.getBlock(x, h, z)) return null;
+  const c = g.entities.add(new AreaCloud(m.x, h + 1, m.z, { breath: true }));
+  g.audio.play('hiss', [m.x, h + 1, m.z], 1);
+  return c;
+}
 
 const SPEED = { circle: 0.5, swoop: 0.72, climb: 0.55 };
 
@@ -20,7 +34,7 @@ export function wyrmAI(m, g, p, pdist) {
     if (--m.phaseTimer <= 0 && canTarget) { m.phase = 'swoop'; m.phaseTimer = 240; g.audio.play('scream', [m.x, m.y + 1, m.z], 1); }
   } else if (m.phase === 'swoop') {
     tx = p.x; ty = p.y + 0.6; tz = p.z;
-    if (--m.phaseTimer <= 0 || !canTarget) { m.phase = 'climb'; m.phaseTimer = 70; }
+    if (--m.phaseTimer <= 0 || !canTarget) { m.phase = 'climb'; m.phaseTimer = 70; exhale(m, g); }
   } else {
     const d = Math.hypot(m.x, m.z) || 1;
     tx = m.x + (m.x / d) * 24; tz = m.z + (m.z / d) * 24; ty = cy + 12;
@@ -44,7 +58,7 @@ export function wyrmAI(m, g, p, pdist) {
       const kx = p.x - m.x, kz = p.z - m.z, kl = Math.hypot(kx, kz) || 1;
       p.body.vx += kx / kl * 1.1; p.body.vz += kz / kl * 1.1; p.body.vy = 0.75;
       m.buffet = 20;
-      if (m.phase === 'swoop') { m.phase = 'climb'; m.phaseTimer = 70; }
+      if (m.phase === 'swoop') { m.phase = 'climb'; m.phaseTimer = 70; exhale(m, g); }
     }
   }
   if (ctl) ctl.wyrmTick(m);
@@ -66,7 +80,10 @@ export function wyrmDeath(m, g) {
   g.audio.play('explode', [m.x, m.y, m.z]);
   if (g.dims) g.dims.onWyrmSlain(m);
   // two Suncores fall on the middle of the island (not into the void under the Wyrm)
-  if (!g.net || g.net.isHost) g.entities.spawnItem(0.5, g.world.heightAt(0, 0) + 1.5, 0.5, { id: I.SUNCORE, count: 2 });
+  if (!g.net || g.net.isHost) {
+    g.entities.spawnItem(0.5, g.world.heightAt(0, 0) + 1.5, 0.5, { id: I.SUNCORE, count: 2 });
+    g.entities.spawnItem(0.5, g.world.heightAt(0, 0) + 1.5, 0.5, { id: I.HOLLOW_BREATH, count: 4 }); // its last breath, bottled
+  }
 }
 
 export function wyrmRender(m, model, alpha, sec) {

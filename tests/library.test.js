@@ -12,6 +12,7 @@ import { canStack, withExtras, cleanContents } from '../src/world/enchantments.j
 import { sameStack, copyStack, packEntity, unpackEntity } from '../src/net/protocol.js';
 import { blockBoxes, collisionBoxes } from '../src/world/shapes.js';
 import { TEX_NAMES } from '../src/world/textures.js';
+import { pidx, PAD_VOL, meshSection } from '../src/world/mesher.js';
 import {
   cleanPage, cleanPages, cleanTitle, signBook, sameBook, bookPages, lecternSignal, cleanLectern, lecternMeta,
   BOOK_MAX_PAGES, PAGE_MAX, LECTERN_HAS_BOOK, LECTERN_POWERED, LECTERN_PULSE_TICKS,
@@ -121,6 +122,15 @@ describe('lecterns', () => {
     expect(deskZ[2]).toBeCloseTo(0.5); expect(deskX[0]).toBeCloseTo(1 / 16);
     expect(collisionBoxes(B.LECTERN, 0)).toBeTruthy();
     for (const t of ['lectern_top', 'lectern_side', 'lectern_book', 'lectern_post', 'target_top', 'cake_inner']) expect(TEX_NAMES).toContain(t);
+  });
+
+  it('are meshed with and without a book, beside cakes, targets and dyed boxes', () => {
+    const blocks = new Uint16Array(PAD_VOL), meta = new Uint8Array(PAD_VOL);
+    const put = (x, id, m = 0) => { blocks[pidx(x, 3, 3)] = id; meta[pidx(x, 3, 3)] = m; };
+    put(1, B.LECTERN, 1); put(3, B.LECTERN, 2 | LECTERN_HAS_BOOK); put(5, B.CAKE, 0); put(7, B.CAKE, 4); put(9, B.TARGET); put(11, BOX_COLORS[3]);
+    const r = meshSection({ blocks, light: new Uint8Array(PAD_VOL).fill(0xf0), meta, colors: new Uint8Array(256 * 6) });
+    expect(r.cutout.idx.length).toBe((4 + 5 + 1 + 1) * 36); // lectern boxes (+ the book) and two cakes
+    expect(r.opaque.idx.length).toBe(2 * 36); // the target block and the box
   });
 
   it('pulse when a page is turned and are read by a comparator', () => {

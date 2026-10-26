@@ -55,6 +55,7 @@ export function iglooInRegion(gen, rx, rz) {
     if (top <= SEA_LEVEL || !IGLOO_BIOMES.includes(gen.biomeFor(col, top))) continue;
     if (![[-4, -4], [4, -4], [-4, 4], [4, 4]].every(([dx, dz]) => Math.abs(gen.surfaceAt(cx + dx, cz + dz) - top) <= 2)) continue;
     if (crowded(gen, cx, cz)) continue;
+    if (gen.riverInBox && gen.riverInBox(cx - 5, cz - 5, cx + 5, cz + 5)) continue; // not on a river bank
     const y = top + 1;
     g = { cx, cz, y, basement, depth, seed, ...box(cx, cz), y0: basement ? y - 2 - depth - 5 : y - 1, y1: y + 5 };
   }

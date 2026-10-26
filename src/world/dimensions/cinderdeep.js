@@ -138,6 +138,21 @@ export class CinderdeepGenerator {
       }
     }
 
+    // 9. scattered Blight Roses on open Cinderstone and Mournsand floors (own random stream too)
+    const rb = mulberry32(hash4(this.seed, cx, cz, 6133));
+    if (rb() < 0.18) {
+      const px = 2 + Math.floor(rb() * 12), pz = 2 + Math.floor(rb() * 12);
+      for (let n = 0; n < 8; n++) {
+        const x = px + Math.floor(rb() * 5) - 2, z = pz + Math.floor(rb() * 5) - 2;
+        for (let y = CINDER_LAVA + 1; y < 110; y++) {
+          const floor = blocks[cidx(x, y, z)];
+          if ((floor !== B.CINDERSTONE && floor !== B.MOURNSAND) || blocks[cidx(x, y + 1, z)] !== B.AIR) continue;
+          if (rb() < 0.5) blocks[cidx(x, y + 1, z)] = B.BLIGHT_ROSE;
+          break;
+        }
+      }
+    }
+
     for (let z = 0; z < 16; z++) for (let x = 0; x < 16; x++) {
       let y = CINDER_CEILING;
       while (y > 0 && !blocks[cidx(x, y, z)]) y--;

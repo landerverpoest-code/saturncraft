@@ -24,7 +24,7 @@ export function ruinInRegion(gen, rx, rz) {
     const R = RUIN_REGION, M = 16;
     const cx = rx * R + M + Math.floor(rng() * (R - 2 * M)), cz = rz * R + M + Math.floor(rng() * (R - 2 * M));
     const col = gen.column(cx, cz), top = gen.surfaceAt(cx, cz, col), biome = gen.biomeFor(col, top);
-    if (top > SEA_LEVEL && biome !== BIOME.OCEAN && biome !== BIOME.FROZEN_OCEAN) {
+    if (top > SEA_LEVEL && biome !== BIOME.OCEAN && biome !== BIOME.FROZEN_OCEAN && !(gen.riverInBox && gen.riverInBox(cx - 8, cz - 8, cx + 8, cz + 8))) {
       o = {
         cx, cz, y: top + 1, w: 2 + Math.floor(rng() * 3), h: 3 + Math.floor(rng() * 3),
         alongX: rng() < 0.5, toppled: rng() < 0.3, sunk: rng() < 0.3 ? 1 + Math.floor(rng() * 2) : 0,

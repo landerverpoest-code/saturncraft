@@ -29,6 +29,10 @@ export const EFFECTS = {
   dark_omen:        { name: 'Dark Omen', color: '#3a2a4a', good: false, glyph: 'omen' },
   village_champion: { name: 'Village Champion', color: '#44b04a', good: true, glyph: 'laurel' },
   darkness:        { name: 'Darkness', color: '#292721', good: false, glyph: 'eye' }, // from Hush Shriekers: the view darkens in waves
+  // damage over time that can kill (Blight Roses, the Elixir of Decay); luck tilts fishing catches
+  wither:          { name: 'Wither', color: '#736156', good: false, glyph: 'skull' },
+  luck:            { name: 'Luck', color: '#59c106', good: true, glyph: 'clover' },
+  unluck:          { name: 'Bad Luck', color: '#c0a44d', good: false, glyph: 'clover' },
 };
 export const EFFECT_KEYS = Object.keys(EFFECTS);
 
@@ -127,6 +131,22 @@ export function miningFactor(map) { return (1 + 0.2 * effectLevel(map, 'haste'))
 /** Ticks between poison / regeneration pulses at an amplifier (25 >> amp, 50 >> amp). */
 export function poisonInterval(amp) { return Math.max(1, 25 >> amp); }
 export function regenInterval(amp) { return Math.max(1, 50 >> amp); }
+/** Ticks between Wither pulses (40 >> amp, reference). Unlike poison, Wither can kill. */
+export function witherInterval(amp) { return Math.max(1, 40 >> amp); }
+
+/** Damage multiplier from Resistance: a fifth less per level, none left from level V (the void ignores it). */
+export function resistanceFactor(map, source = 'generic') {
+  const lv = effectLevel(map, 'resistance');
+  return lv && source !== 'void' ? Math.max(0, 1 - 0.2 * lv) : 1;
+}
+
+/** Luck for loot rolls: +1 per Luck level, -1 per Bad Luck level. */
+export function luckOf(map) { return effectLevel(map, 'luck') - effectLevel(map, 'unluck'); }
+
+// Lingering elixirs: their cloud lays a quarter of each lasting effect (and half of an instant one)
+export const LINGER_DURATION_FACTOR = 0.25, LINGER_INSTANT_FACTOR = 0.5;
+/** The strength factor a lingering cloud applies an effect at. */
+export function lingerFactor(type) { return EFFECTS[type] && EFFECTS[type].instant ? LINGER_INSTANT_FACTOR : LINGER_DURATION_FACTOR; }
 
 /** Instant Health heals 4 << amp, Instant Damage hurts 6 << amp, scaled by a splash factor. */
 export function instantAmount(name, amp, factor = 1) {
@@ -144,6 +164,8 @@ export function periodicActions(map, { health, undead = false } = {}) {
   if (r && r.ticks % regenInterval(r.amp) === 0 && !undead) out.push({ type: 'heal', amount: 1 });
   const p = map.poison;
   if (p && p.ticks % poisonInterval(p.amp) === 0 && !undead && health > 1) out.push({ type: 'hurt', amount: 1, source: 'poison' });
+  const w = map.wither;
+  if (w && w.ticks % witherInterval(w.amp) === 0) out.push({ type: 'hurt', amount: 1, source: 'wither' });
   return out;
 }
 
