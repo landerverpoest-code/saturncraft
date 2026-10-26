@@ -564,6 +564,7 @@ export class HostSession extends Session {
     if (!o) return;
     const n = Math.max(0, Math.min(m.n | 0, MAX_USES - o.uses));
     o.uses += n;
+    if (n > 0) mob.traded = true; // it keeps its trade now even if its job-site block goes (mobs/jobSites.js)
     c.ch.send({ t: 'traded', id: mob.id, i: m.i | 0, n, trades: mob.trades });
   }
 

@@ -676,6 +676,12 @@ for (const [key, name] of COLORS) {
 export const BOX_IDS = [B.GLOOMSHELL_BOX, ...BOX_COLORS];
 const BOX_SET = new Set(BOX_IDS);
 export const isBox = (id) => BOX_SET.has(id);
+// Job-site blocks still missing for two trades (mobs/jobSites.js): the Loom (shepherds; recolours wool
+// and carpets, world/workstations.js) and the Fletching Table (fletchers). Their front faces the player.
+ext('LOOM');
+def(B.LOOM, 'Loom', { hardness: 2.5, resistance: 2.5, tool: TOOL.AXE, sound: 'wood', flammable: true, tex: { top: 'loom_top', bottom: 'loom_bottom', side: 'loom_side', front: 'loom_front' } });
+ext('FLETCHING_TABLE');
+def(B.FLETCHING_TABLE, 'Fletching Table', { hardness: 2.5, resistance: 2.5, tool: TOOL.AXE, sound: 'wood', flammable: true, tex: { top: 'fletching_table_top', bottom: 'birch_planks', side: 'fletching_table_side', front: 'fletching_table_front' } });
 
 export const NUM_BLOCKS = BLOCKS.length;
 

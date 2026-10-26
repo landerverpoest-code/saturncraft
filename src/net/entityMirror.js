@@ -100,7 +100,10 @@ export class EntityMirror {
       e.angry = s.angry; e.sheared = s.sheared; e.tamed = s.tamed; e.sitting = s.sitting; e.enemy = s.enemy ? 'player' : null;
       e.woolColor = s.woolColor; e.fuse = s.fuse; e.special = s.special; e.beam = s.beam; e.moving = s.moving; e.captain = s.captain; // Marauder Captains carry a banner
       e.saddled = s.saddled; e.dancing = s.dancing; e.passengerId = s.passenger >= 0 ? s.passenger : null; e.heldItemId = ITEMS[s.heldItem] ? s.heldItem : 0; // Dune Striders, Hoverlings
-      if (s.profession) e.profession = s.profession;
+      if (e.def && e.def.villager) { // a settler's trade (robe colour) follows the host's, including losing it; a new one shows the green burst
+        if (e.netProfSeen && s.profession && s.profession !== e.profession) e.jobBurst(this.game);
+        e.profession = s.profession; e.netProfSeen = true;
+      } else if (s.profession) e.profession = s.profession;
       e.customName = s.name || undefined; // a Name Tag's label
       e.leashHolder = this.leashHolder(s.leash);
       e.emerging = s.emerging; e.digging = s.digging; // a Hushkeeper rising / sinking (drawn by its customRender)
