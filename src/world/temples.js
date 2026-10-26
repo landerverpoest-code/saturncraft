@@ -153,6 +153,8 @@ function jungleTemple(t, set) {
 
 // ---- raider outposts ----------------------------------------------------------------
 export const OUTPOST_REGION = 288;
+/** The cage beside each outpost tower: its inner cell, relative to the tower's centre (at the tower's base height). */
+export const OUTPOST_CAGE = { dx: 6, dz: 0 };
 const outpostCache = new Map();
 
 /** A dark oak watchtower in one 288 x 288 region in four, on plains, taiga, desert or savanna. */
@@ -212,5 +214,14 @@ export function stampOutposts(gen, blocks, meta, cx, cz) {
     for (let yy = y; yy < y + 2; yy++) set(tx, yy, tz - 3, 0);
     for (let yy = y; yy < y + 13; yy++) set(tx + 2, yy, tz + 2, B.LADDER, 2);
     set(tx - 2, y + 13, tz - 2, B.CHEST, 1 | 8 | (6 << 4));
+    // beside the tower, a small dark oak cage on a cobblestone footing: a Hoverling is kept in it (mobs/hoverling.js)
+    const kx = tx + OUTPOST_CAGE.dx, kz = tz + OUTPOST_CAGE.dz;
+    for (let x = kx - 1; x <= kx + 1; x++) for (let z = kz - 1; z <= kz + 1; z++) {
+      for (let yy = y - 4; yy < y; yy++) set(x, yy, z, B.COBBLESTONE);
+      for (let yy = y; yy < y + 4; yy++) set(x, yy, z, 0);
+      const wall = x !== kx || z !== kz;
+      for (let yy = y; yy < y + 2; yy++) if (wall) set(x, yy, z, B.DARK_OAK_FENCE);
+      set(x, y + 2, z, B.DARK_OAK_SLAB);
+    }
   }
 }

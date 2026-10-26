@@ -17,6 +17,7 @@ import { BIOMES } from '../world/biomes.js';
 import { withExtras } from '../world/enchantments.js';
 import { itemCanvas } from '../ui/icons.js';
 import { CHIME_POWERED } from '../world/circuitShapes.js';
+import { OUTPOST_CAGE } from '../world/temples.js';
 
 export const COLLECT_RANGE = 32;          // blocks it looks for matching items
 export const CHIME_MEMORY = 600;          // ticks (30 s) a heard Chime Block stays its drop-off
@@ -308,7 +309,7 @@ if (!MOBS.hoverling) { MOBS.hoverling = HOVERLING; MOB_KEYS.push('hoverling'); }
 
 // ---- where they are found -------------------------------------------------------------
 /** The cage beside each Marauder outpost: its inner cell relative to the tower's centre and base. */
-export const CAGE = { dx: 6, dz: 0 };
+export const CAGE = OUTPOST_CAGE;
 
 /** Forests: now and then a Hoverling when a chunk is first made (rare). */
 export const FOREST_CHUNK_CHANCE = 0.006;

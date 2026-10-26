@@ -280,3 +280,10 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 .tooltip .tt-bslot img { width: 22px; height: 22px; margin: 2px; image-rendering: pixelated; }
 .tooltip .tt-bslot span { position: absolute; right: 1px; bottom: -2px; font-size: 11px; text-shadow: 1px 1px 0 #000; }
 .nametag-input { display: block; margin: 10px auto; width: 280px; font: inherit; font-size: 18px; padding: 6px 8px; background: #1a1424; color: #fff; border: 2px solid #6a5a8a; }
+
+/* Dune Strider dash gauge (above the experience bar while riding one) */
+#dashbar { width: calc(var(--slot) * 9 + 8px); height: 6px; background: rgba(0,0,0,.55); border: 1px solid #000; box-sizing: border-box; }
+#dashbar.hidden { display: none; }
+#dashbar > div { height: 100%; width: 100%; background: linear-gradient(#e8d28a, #b08a3a); }
+#dashbar.charging > div { background: linear-gradient(#ffe070, #e09a20); }
+#dashbar.cooling > div { background: linear-gradient(#9a9a9a, #5a5a5a); }
