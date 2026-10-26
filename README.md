@@ -294,6 +294,8 @@ southern sky with a slow libration.
 | Voidwalker | enderman | 40 | 0.30 (+0.15 angry) | 0.6×2.9 | angered by eye contact, teleports, hurt by water, dodges arrows |
 | Deepeye | guardian | 30 | swims | 0.85×0.85 | 2 s beam (6), thorns 2 while still, Tide Citadels only |
 | Elder Deepeye | elder guardian | 80 | swims | 1.99×1.99 | 1.5 s beam (8), Mining Fatigue III every minute, 3 per citadel |
+| Dune Strider | camel | 32 | 0.18 | 1.7×2.4 | saddled it seats two, steps up 1.5 blocks, charged dash (2.75 s cooldown), breeds with cactus |
+| Hoverling | allay | 20 | flies | 0.35×0.6 | gathers dropped items matching the one you give it and brings them back |
 
 Mob movement uses the same physics with vanilla's mob acceleration (speed²),
 A* pathfinding over walkable cells, panic when hurt (passives), melee reach
@@ -322,6 +324,9 @@ sky light ≤ rand(32) and combined light ≤ rand(0…7); animals need grass an
 light > 8. Hostiles despawn instantly beyond 128 blocks and with 1/800 chance
 per tick beyond 32 blocks after 30 s without interaction; animals persist (also
 across chunk unloads and saves).
+
+* **Dune Striders** (reference: camel; `src/mobs/duneStrider.js`): tall, humped desert beasts, one by the well of every desert village and now and then a lone one (or a pair) in the open desert. No taming: right-click with a Saddle, then with an empty hand to climb on (sneak to get off); WASD and sprint steer it and it walks straight up 1.5-block steps. Hold the jump key to charge a **dash** and let go to leap far ahead (a longer charge leaps further); it then needs 2.75 s to recover, shown by a gauge above the experience bar. In multiplayer a guest can take the **second seat** behind the host's rider. Riders sit too high for Shamblers and other mobs of their size to hit them. Left alone a Strider sits down now and then; it breeds (and heals) with cactus, its young keep close to the grown-ups, and it drops 0-2 leather (and its saddle)
+* **Hoverlings** (reference: allay; `src/mobs/hoverling.js`): small blue spirits on glassy wings, kept in a dark oak cage beside every Marauder outpost, rarely found in forests and drifting through Hollow Cities. Right-click one with an item to hand it over: it gathers dropped items of the same kind within 32 blocks (up to a stack) and brings them to the player who gave it the item, or drops them on a Chime Block it heard ring within the last 30 s. Right-click with an empty hand to take the item back. Near a playing jukebox it dances; it drops nothing of its own (only what it holds)
 
 ### Items and progression
 

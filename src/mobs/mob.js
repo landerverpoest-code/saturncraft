@@ -25,6 +25,8 @@ import { itemCanvas } from '../ui/icons.js';
 import * as THREE from 'three';
 
 import { conversionStep, newConversion } from './hostileVariants.js'; // registers the Hexwife and the Shambler / Rattler variants
+import { outOfMeleeReach } from './duneStrider.js'; // registers the Dune Strider
+import './hoverling.js'; // registers the Hoverling
 import { EFFECTS, addEffect, tickEffects, speedFactor, periodicActions, instantAmount, effectsColor, visibilityFactor, resistanceFactor } from '../player/effects.js';
 
 let nextMobId = 1_000_000;
@@ -125,7 +127,7 @@ export class Mob {
   }
 
   /** State kept when the mob is saved with its chunk. */
-  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor, profession: this.profession, trades: this.trades, home: this.home, lastRestock: this.lastRestock, size: this.size, coat: this.coat, temper: this.temper, saddled: this.saddled, maxHp: this.maxHp, playerMade: this.playerMade, tamed: this.tamed, sitting: this.sitting, ownerName: this.ownerName, horns: this.horns, hive: this.hive, nectar: this.nectar, beach: this.beach, pregnant: this.pregnant, captain: this.captain || undefined, raider: this.raider || undefined, raidId: this.raidId || undefined, customName: this.customName || undefined, leash: leashSaveData(this), equip: this.equip || undefined, equipPicked: this.equipPicked || undefined, canPickUp: this.canPickUp || undefined }; }
+  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor, profession: this.profession, trades: this.trades, home: this.home, lastRestock: this.lastRestock, size: this.size, coat: this.coat, temper: this.temper, saddled: this.saddled, maxHp: this.maxHp, playerMade: this.playerMade, tamed: this.tamed, sitting: this.sitting, ownerName: this.ownerName, horns: this.horns, hive: this.hive, nectar: this.nectar, beach: this.beach, pregnant: this.pregnant, captain: this.captain || undefined, raider: this.raider || undefined, raidId: this.raidId || undefined, customName: this.customName || undefined, leash: leashSaveData(this), equip: this.equip || undefined, equipPicked: this.equipPicked || undefined, canPickUp: this.canPickUp || undefined, ...(this.def.saveExtra ? this.def.saveExtra(this) : {}) }; }
   loadData(s) {
     this.health = s.health; this.yaw = s.yaw;
     if (s.age < 0) { this.setBaby(true); this.age = s.age; } else { if (this.age < 0) this.setBaby(false); this.age = s.age || 0; }
@@ -140,6 +142,7 @@ export class Mob {
     if (s.size) { this.setSize(s.size); this.health = s.health; }
     if (this.type === 'galloper') { if (s.coat !== undefined) this.coat = s.coat; this.temper = s.temper || 0; this.saddled = !!s.saddled; if (s.maxHp) this.maxHp = s.maxHp; }
     if (s.tamed) { this.tamed = true; this.sitting = !!s.sitting; if (s.ownerName) this.ownerName = s.ownerName; }
+    if (this.def.loadExtra) this.def.loadExtra(this, s); // Dune Striders' saddles, Hoverlings' items
     if (s.customName && typeof s.customName === 'string') { this.customName = s.customName.slice(0, 32); this.persistent = true; } // named with a Name Tag: never despawns
     if (s.leash && (s.leash.player || Array.isArray(s.leash.knot))) { this.leashPending = s.leash; this.persistent = true; } // its holder is found again on its first tick (entities/leash.js)
     this.equip = equipFromSave(s.equip); this.equipPicked = s.equipPicked | 0; this.canPickUp = !!s.canPickUp;
@@ -666,6 +669,7 @@ export class Mob {
 
   // ---------------------------------------------------------------------------
   ai(g, p, pdist) {
+    if (this.def.ownAI) return this.def.ownAI(this, g, p, pdist); // Dune Striders, Hoverlings
     if (this.def.villager) return this.settlerAI(g, p, pdist);
     if (this.def.parrot) return this.parrotAI(g, p, pdist);
     if (this.def.feline) return this.catAI(g, p, pdist);
@@ -1386,6 +1390,7 @@ export class Mob {
    * ones follow WASD and jump with Space.
    */
   riddenAI(g) {
+    if (this.def.riddenAI) return this.def.riddenAI(this, g); // Dune Striders steer and dash their own way
     const input = g.boatInput, b = this.body;
     if (!this.tamed) {
       if (this.buck === undefined) this.buck = 40 + Math.floor(Math.random() * 40);
@@ -1459,6 +1464,8 @@ export class Mob {
   tryMelee(g, p) {
     const dx = p.x - this.x, dz = p.z - this.z, dy = p.y - this.y;
     const d2 = dx * dx + dz * dz;
+    // up on a Dune Strider a rider is out of reach of anything about as tall as a Shambler
+    if (outOfMeleeReach(this.height, dy, (p.riding && p.riding.def && p.riding.def.strider) || (p.remote && p.remote.state && p.remote.state.riding))) return;
     if (d2 <= this.meleeReachSq(p) && Math.abs(dy) < this.height && this.attackCooldown <= 0) {
       this.attackCooldown = 20;
       const hit = p.hurt(this.attackDamage(), 'mob:' + this.def.name, this);

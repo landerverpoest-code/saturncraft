@@ -42,6 +42,7 @@ import { canPickUpSpear } from '../entities/tidespear.js';
 import { runRandomTicks } from '../world/randomTicks.js';
 import { addXp } from '../player/experience.js';
 import { MAX_USES } from '../mobs/trades.js';
+import { claimSeat } from '../mobs/duneStrider.js';
 import { EFFECTS } from '../player/effects.js';
 import { runCommand } from '../ui/commands.js';
 import { DIMENSIONS } from '../world/dimensions/dims.js';
@@ -295,6 +296,8 @@ export class HostSession extends Session {
       case 'boxput': if (this.near(c, m.x + 0.5, m.y + 0.5, m.z + 0.5, 8)) g.onBoxPlaced(m.x | 0, m.y | 0, m.z | 0, { contents: m.s }, true); break;
       case 'ride': {
         const b = this.entity(m.id);
+        // the back seat of a Dune Strider (mobs/duneStrider.js)
+        if (b && b.kind === 'mob' && (!m.on || this.near(c, b.x, b.y, b.z, 8))) { claimSeat(b, c.id, !!m.on); break; }
         if (!b || b.kind !== 'boat') break;
         if (m.on && !b.rider && !b.remoteRider) b.remoteRider = c.id;
         else if (!m.on && b.remoteRider === c.id) b.remoteRider = null;
@@ -370,7 +373,7 @@ export class HostSession extends Session {
     c.ch.close();
     if (!c.joined) return;
     for (const v of this.viewers.values()) v.ids.delete(c.id);
-    for (const e of this.game.entities.list) if (e.remoteRider === c.id) e.remoteRider = null;
+    for (const e of this.game.entities.list) { if (e.remoteRider === c.id) e.remoteRider = null; if (e.passengerId === c.id) e.passengerId = null; }
     for (const mob of heldBy(this.game, c.rp.target)) unleash(this.game, mob, true); // the leads they held fall
     c.rp.dispose();
     this.remotes.delete(c.id);
@@ -602,8 +605,10 @@ export class HostSession extends Session {
     const g = this.game, real = g.player;
     let best = null;
     const players = this.players();
-    if (e.kind === 'mob' && e.tamed) {
-      const owner = e.ownerName ? players.find((p) => p.name === e.ownerName) : players[0];
+    if (e.kind === 'mob' && (e.tamed || e.giverName)) {
+      // tamed pets follow their owner, a Hoverling works for whoever gave it its item
+      const name = e.tamed ? e.ownerName : e.giverName;
+      const owner = name ? players.find((p) => p.name === name) : players[0];
       best = owner ? owner.obj : OFFLINE;
     }
     if (!best) {

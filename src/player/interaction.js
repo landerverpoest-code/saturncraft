@@ -34,6 +34,8 @@ import { canLeash, leash, unleash, isFencePost, tieToFence, untieFromFence, isHo
 import { canName, nameMob } from '../mobs/names.js';
 import { bundleTakeLast } from '../world/bundles.js';
 import { isSuspicious, archaeologyLoot, potDrops } from '../world/archaeology.js';
+import { interactStrider, guestWantsSeat } from '../mobs/duneStrider.js';
+import { interactHoverling } from '../mobs/hoverling.js';
 import { sideOf, SIDE_DIRS, DOOR_OPEN, DOOR_UPPER, BED_HEAD, SLAB_TOP, SLAB_DOUBLE, STAIRS_UPSIDE, GATE_OPEN, TRAPDOOR_OPEN, TRAPDOOR_TOP } from '../world/shapes.js';
 
 /** Brightness for block particles: local light, dimmed with the combined sunlight (as the held item). */
@@ -1206,9 +1208,14 @@ export class Interaction {
       this.swing = SWING_TICKS;
       return true;
     }
+    // multiplayer guest: the back seat of a host's saddled Dune Strider (the host keeps the seat for us, see net/session.js)
+    if (mob.netProxy && guestWantsSeat(mob, p, st)) { g.mount(mob); this.swing = SWING_TICKS; return true; }
     if (mob.netProxy) return g.net.interactMob(mob); // multiplayer guest: the host feeds, shears, tames or trades
     if (mob.def.villager && mob.deathTime === 0 && mob.trades.length && !(d && d.food && mob.def.food)) { g.ui.openTrade(mob); g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); return true; }
     if (mob.def.tameable && mob.deathTime === 0 && this.interactHowler(mob, st, d)) return true;
+    const useOne = () => { if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1); this.swing = SWING_TICKS; };
+    if (mob.def.strider) return interactStrider(g, mob, p, st, useOne); // saddle, cactus, climb on
+    if (mob.def.hoverling) return interactHoverling(g, mob, p, st, useOne); // give it an item, take it back
     if (mob.def.rideable && mob.deathTime === 0 && mob.age >= 0) {
       // Gallopers: saddle a tame one, feed it (taming goes faster), or climb on
       const use = () => { if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1); this.swing = SWING_TICKS; };
