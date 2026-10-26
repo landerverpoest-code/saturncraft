@@ -901,6 +901,23 @@ export class TerrainGenerator {
   }
 
   /** Find a dry land spawn column near the origin. */
+  /**
+   * Is the ground at (x, z) dry and whole once the chunk is really built? Cave tunnels
+   * and noise caves can open a pit there (flooded up to sea level), which the column
+   * estimate cannot see, so the candidate's chunk is generated and looked at.
+   */
+  dryGroundAt(x, z, top) {
+    const ch = this.generate(x >> 4, z >> 4), lx = x & 15, lz = z & 15;
+    const h = ch.heightmap[lx + lz * 16];
+    if (h < top - 1) return false; // the ground fell away into a pit
+    for (let y = top - 1; y <= h; y++) {
+      const id = ch.blocks[cidx(lx, y, lz)];
+      if (y <= top && !id) return false;
+      if (id === B.WATER || id === B.LAVA || id === B.ICE) return false;
+    }
+    return true;
+  }
+
   findSpawn() {
     for (let r = 0; r < 4096; r += 16) {
       for (let a = 0; a < 8; a++) {
@@ -909,7 +926,7 @@ export class TerrainGenerator {
         const top = this.surfaceAt(x, z, col);
         const biome = this.biomeFor(col, top);
         if (top > SEA_LEVEL + 1 && top < 100 && biome !== BIOME.BEACH && biome !== BIOME.DESERT && biome !== BIOME.BADLANDS && biome !== BIOME.SWAMP && biome !== BIOME.MANGROVE_SWAMP
-          && biome !== BIOME.RIVER && biome !== BIOME.FROZEN_RIVER && !this.nearRiver(x, z, 6)) return { x: x + 0.5, y: top + 1, z: z + 0.5 };
+          && biome !== BIOME.RIVER && biome !== BIOME.FROZEN_RIVER && !this.nearRiver(x, z, 6) && this.dryGroundAt(x, z, top)) return { x: x + 0.5, y: top + 1, z: z + 0.5 };
       }
     }
     return { x: 0.5, y: 100, z: 0.5 };

@@ -305,7 +305,10 @@ export class DimensionManager {
   }
 
   // ---- the Hollow and its Wyrm ---------------------------------------------------
-  wyrmCircleY() { return this.game.world.dimGenerator.fountainY() + 24; }
+  wyrmCircleY() {
+    const gen = this.game.world.dimGenerator; // (a Wyrm summoned outside the Hollow circles at a fixed height)
+    return gen && gen.fountainY ? gen.fountainY() + 24 : 100;
+  }
 
   tickHollow() {
     const g = this.game, w = g.world, gen = w.dimGenerator, p = g.player, h = this.hollow;
@@ -366,11 +369,13 @@ export class DimensionManager {
   }
 
   onCrystalDestroyed(m) {
+    if (this.current !== DIM.HOLLOW) return; // a summoned crystal elsewhere guards nothing
     if (m.crystalIndex !== undefined) this.hollow.crystals[m.crystalIndex] = false;
   }
 
   onWyrmSlain() {
     const g = this.game;
+    if (this.current !== DIM.HOLLOW) return; // only the Hollow's own Wyrm opens its gates
     this.hollow.defeated = true;
     this.hollow.wyrmHealth = 0;
     this.beam.visible = false;
