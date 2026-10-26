@@ -157,6 +157,8 @@ export class Audio {
       case 'lightning': this.noise(t, 0.25, 6000, 0.3, 0.8 * gain, out, 'highpass'); this.noise(t, 0.6, 1500, 0.4, 0.6 * gain, out); break;
       case 'mew': this.tone(t, 0.22, 700 + Math.random() * 120, 1000, 0.12 * gain, out, 'triangle'); this.tone(t + 0.12, 0.2, 1000, 620, 0.1 * gain, out, 'triangle'); break;
       case 'squeak': this.tone(t, 0.06, 3200 + Math.random() * 800, 2600, 0.06 * gain, out, 'sine'); this.tone(t + 0.08, 0.05, 3400, 2800, 0.05 * gain, out, 'sine'); break;
+      case 'strider': this.tone(t, 0.6, 120, 85, 0.22 * gain, out, 'sawtooth'); this.noise(t + 0.1, 0.4, 300, 1, 0.12 * gain, out, 'lowpass'); break; // a Dune Strider's low grumble
+      case 'hoverling': for (let k = 0; k < 3; k++) this.tone(t + k * 0.07, 0.18, 1500 + k * 260 + Math.random() * 120, 1900 + k * 260, 0.05 * gain, out, 'sine'); break; // a Hoverling's twinkle
       case 'neigh': this.tone(t, 0.5, 700, 500, 0.15 * gain, out, 'sawtooth'); this.tone(t + 0.05, 0.4, 820, 560, 0.08 * gain, out, 'square'); break;
       case 'shield': this.noise(t, 0.1, 700, 1.5, 0.45 * gain, out, 'lowpass'); this.tone(t, 0.12, 180, 120, 0.2 * gain, out, 'triangle'); break;
       case 'fuse': this.noise(t, 1.2, 5000, 0.6, 0.25 * gain, out, 'highpass'); break;

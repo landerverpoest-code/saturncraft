@@ -8,11 +8,16 @@
 //   rear - side.
 // * Container fullness (reference formula): 0 when empty, otherwise
 //   floor(1 + 14 * (sum of count / max stack) / slots).
+// * Other blocks a comparator reads: a composter (its level), a jukebox (the
+//   disc), a cake (2 x the slices left), a lectern (the open page, world/books.js)
+//   and an item frame (1 + the item's rotation; world/signalBlocks.js).
 // * Daylight Sensor: sky light at the sensor times the brightness of the three
 //   suns (sky/suns.js skyState().combined); inverted mode gives 15 minus that.
-import { B, isFurnace } from './blocks.js';
+import { B, isFurnace, isBox } from './blocks.js';
 import { maxStack } from './items.js';
 import { doubleChestHalves } from './chests.js';
+import { lecternSignal } from './books.js';
+import { cakeSignal, frameSignal } from './signalBlocks.js';
 
 /** Comparator output for a rear and side level (subtract = subtract mode). */
 export function comparatorOutput(rear, side, subtract) {
@@ -41,8 +46,9 @@ export function daylightLevel(sky, brightness, inverted = false) {
 
 /** Blocks a comparator reads as a container. */
 export function isReadable(id) {
-  return id === B.CHEST || id === B.BARREL || id === B.GLOOMSHELL_BOX || id === B.HOPPER || id === B.DISPENSER || id === B.DROPPER
-    || id === B.BREWING_STAND || id === B.COMPOSTER || id === B.JUKEBOX || isFurnace(id);
+  return id === B.CHEST || id === B.BARREL || isBox(id) || id === B.HOPPER || id === B.DISPENSER || id === B.DROPPER
+    || id === B.BREWING_STAND || id === B.COMPOSTER || id === B.JUKEBOX || isFurnace(id)
+    || id === B.CAKE || id === B.LECTERN || id === B.ITEM_FRAME;
 }
 
 // look the state up without creating it (getChest would roll a dungeon chest's loot)
@@ -57,6 +63,9 @@ export function containerSignal(game, x, y, z) {
   if (!isReadable(id)) return -1;
   if (id === B.COMPOSTER) return Math.min(8, w.getMeta(x, y, z) & 15);
   if (id === B.JUKEBOX) return Math.min(15, w.getMeta(x, y, z)); // meta = 1 + the disc's index while one plays
+  if (id === B.CAKE) return cakeSignal(w.getMeta(x, y, z) & 7);
+  if (id === B.LECTERN) { const l = game.lecterns && game.lecterns.get(`${x},${y},${z}`); return l ? lecternSignal(l.book, l.page) : 0; }
+  if (id === B.ITEM_FRAME) return frameSignal(w.getMeta(x, y, z), !!(game.frames && game.frames.get(`${x},${y},${z}`)));
   const chestAt = (a, b, c) => peek(game.chests, game.getChest && ((p, q, r) => game.getChest(p, q, r)), a, b, c);
   if (id === B.CHEST) {
     const halves = doubleChestHalves(w, x, y, z);
@@ -66,7 +75,7 @@ export function containerSignal(game, x, y, z) {
       return fullness(slots, 54);
     }
   }
-  if (id === B.CHEST || id === B.BARREL || id === B.GLOOMSHELL_BOX) { const c = chestAt(x, y, z); return c ? fullness(c.slots, 27) : 0; }
+  if (id === B.CHEST || id === B.BARREL || isBox(id)) { const c = chestAt(x, y, z); return c ? fullness(c.slots, 27) : 0; }
   if (id === B.HOPPER) { const h = peek(game.hoppers, game.getHopper && ((a, b, c) => game.getHopper(a, b, c)), x, y, z); return h ? fullness(h.slots) : 0; }
   if (id === B.DISPENSER || id === B.DROPPER) { const d = peek(game.dispensers, game.getDispenser && ((a, b, c) => game.getDispenser(a, b, c)), x, y, z); return d ? fullness(d.slots) : 0; }
   if (id === B.BREWING_STAND) { const s = peek(game.brewingStands, null, x, y, z); return s ? fullness(s.slots) : 0; }

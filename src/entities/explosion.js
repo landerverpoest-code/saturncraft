@@ -1,6 +1,6 @@
 // Explosions: 16x16x16 ray block destruction with blast resistance, entity
 // damage with exposure, and 1/power drop survival.
-import { B, BLOCKS, isFluid, isFurnace } from '../world/blocks.js';
+import { B, BLOCKS, isFluid, isFurnace, isBox } from '../world/blocks.js';
 import { igniteTNT } from './tnt.js';
 import { blockDrops } from '../world/mining.js';
 
@@ -81,7 +81,7 @@ export function explode(game, x, y, z, power, source) {
       const ideal = { type: BLOCKS[id].tool, tier: 99, speed: 1 };
       for (const st of blockDrops(id, ideal, Math.random, meta)) game.entities.spawnItem(bx + 0.5, by + 0.5, bz + 0.5, st);
     }
-    if (isFurnace(id) || id === B.CHEST || id === B.BARREL || id === B.BREWING_STAND || id === B.GLOOMSHELL_BOX || id === B.HOPPER || id === B.DISPENSER || id === B.DROPPER) game.onBlockBroken(bx, by, bz, id, meta);
+    if (isFurnace(id) || id === B.CHEST || id === B.BARREL || id === B.BREWING_STAND || isBox(id) || id === B.LECTERN || id === B.HOPPER || id === B.DISPENSER || id === B.DROPPER) game.onBlockBroken(bx, by, bz, id, meta);
   }
   game.particles.smoke(x, y, z, 80, power * 1.5);
   game.audio.play('explode', [x, y, z]);

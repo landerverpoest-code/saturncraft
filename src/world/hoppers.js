@@ -6,7 +6,7 @@
 // ingredients from above and vials or Ember Powder from the side. Dispensers
 // and Droppers fill and empty like chests.
 // Meta: 0 = spout down, 1-4 = spout towards SIDE_DIRS[meta - 1].
-import { B, isFurnace } from './blocks.js';
+import { B, isFurnace, isBox } from './blocks.js';
 import { ITEMS, I, maxStack } from './items.js';
 import { SIDE_DIRS } from './shapes.js';
 import { canStack } from './enchantments.js';
@@ -34,9 +34,9 @@ const keySlot = (obj, k, accepts = () => true) => ({ get: () => obj[k], set: (v)
  */
 export function containerAccess(game, x, y, z) {
   const id = game.world.getBlock(x, y, z);
-  if (id === B.CHEST || id === B.BARREL || id === B.GLOOMSHELL_BOX || id === B.HOPPER) {
+  if (id === B.CHEST || id === B.BARREL || isBox(id) || id === B.HOPPER) {
     const c = id === B.HOPPER ? game.getHopper(x, y, z) : game.getChest(x, y, z);
-    const all = c.slots.map((_, i) => arraySlot(c.slots, i, id === B.GLOOMSHELL_BOX ? (st) => st.id !== B.GLOOMSHELL_BOX : undefined));
+    const all = c.slots.map((_, i) => arraySlot(c.slots, i, isBox(id) ? (st) => !isBox(st.id) : undefined));
     return { insert: () => all, extract: all };
   }
   if ((id === B.DISPENSER || id === B.DROPPER) && game.getDispenser) {

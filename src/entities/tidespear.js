@@ -110,6 +110,7 @@ export function tickSpear(a, game) {
     a.x += ux * hit.dist; a.y += uy * hit.dist; a.z += uz * hit.dist;
     a.stuck = true; a.age = 0;
     game.audio.play('arrow_hit', [a.x, a.y, a.z]);
+    if (game.onProjectileHit) game.onProjectileHit(hit, a.x, a.y, a.z, 'spear'); // a target block answers
     return;
   }
   a.x += a.vx; a.y += a.vy; a.z += a.vz;
