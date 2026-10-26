@@ -382,6 +382,12 @@ export function tooltipHTML(st, extra = '') {
   const lines = enchLines(st);
   let h = `<div class="tt-name${lines.length ? ' ench' : ''}">${esc(d.name)}${esc(extra)}</div>`;
   if (st.label) h += `<div class="tt-label">"${esc(st.label)}"</div>`; // a Name Tag's name
+  if (d.written || d.writable) {
+    // a book names its title and author, or how many pages are written
+    if (st.title) h += `<div class="tt-label">${esc(st.title)}</div>`;
+    if (st.author) h += `<div class="tt-dura">by ${esc(st.author)}</div>`;
+    if (Array.isArray(st.pages) && st.pages.length) h += `<div class="tt-dura">${st.pages.length} page${st.pages.length > 1 ? 's' : ''}</div>`;
+  }
   if (d.bundle) {
     // a Bundle shows what it carries as a little grid of icons, and how full it is
     const list = Array.isArray(st.bundle) ? st.bundle : [];

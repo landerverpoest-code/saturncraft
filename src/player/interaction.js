@@ -5,7 +5,7 @@ import { pairOnPlace } from '../world/chests.js';
 import { hopperPlaceMeta } from '../world/hoppers.js';
 import { dispenserPlaceMeta } from '../world/dispensers.js';
 import { compost, READY, SETTLE_TICKS } from '../world/composter.js';
-import { B, BLOCKS, SOLID, SHAPE, isFluid, CROPS, isFurnace, DOOR_SETS, CANDLES, POTTED, WATERLOGGED_FORM, isPropagule, PROPAGULE_HANGING } from '../world/blocks.js';
+import { B, BLOCKS, SOLID, SHAPE, isFluid, CROPS, isFurnace, DOOR_SETS, CANDLES, POTTED, WATERLOGGED_FORM, isPropagule, PROPAGULE_HANGING, isBox, BOX_COLORS } from '../world/blocks.js';
 import { ITEMS, I, toolOf, isBlockItem, WOOL_ITEMS, POTION_ITEM, isArrow, DISCS } from '../world/items.js';
 import { POTIONS } from '../world/potions.js';
 import { breakProgressPerTick, blockDrops, canHarvest } from '../world/mining.js';
@@ -33,6 +33,8 @@ import { canLeash, leash, unleash, isFencePost, tieToFence, untieFromFence } fro
 import { canName, nameMob } from '../mobs/names.js';
 import { bundleTakeLast } from '../world/bundles.js';
 import { isSuspicious, archaeologyLoot, potDrops } from '../world/archaeology.js';
+import { isBook } from '../world/books.js';
+import { CAKE_SLICES, CAKE_FOOD } from '../world/signalBlocks.js';
 import { sideOf, SIDE_DIRS, DOOR_OPEN, DOOR_UPPER, BED_HEAD, SLAB_TOP, SLAB_DOUBLE, STAIRS_UPSIDE, GATE_OPEN, TRAPDOOR_OPEN, TRAPDOOR_TOP } from '../world/shapes.js';
 
 /** Brightness for block particles: local light, dimmed with the combined sunlight (as the held item). */
@@ -51,7 +53,7 @@ const ORE_XP = {
 };
 const BREAK_DELAY = 5;
 /** Blocks that right-click opens / toggles instead of using the held item. */
-const USABLE_BLOCKS = new Set([B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.CHEST, B.BARREL, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL, B.BREWING_STAND, B.GLOOMSHELL_BOX, B.HOPPER, B.COMPOSTER, B.SWEET_BERRY_BUSH, B.JUKEBOX, B.CAVE_VINES_LIT, B.FLOWER_POT, B.BEACON, B.DISPENSER, B.DROPPER, B.GRINDSTONE, B.STONECUTTER]);
+const USABLE_BLOCKS = new Set([B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.CHEST, B.BARREL, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL, B.BREWING_STAND, B.GLOOMSHELL_BOX, B.HOPPER, B.COMPOSTER, B.SWEET_BERRY_BUSH, B.JUKEBOX, B.CAVE_VINES_LIT, B.FLOWER_POT, B.BEACON, B.DISPENSER, B.DROPPER, B.GRINDSTONE, B.STONECUTTER, B.LECTERN, B.CAKE, ...BOX_COLORS]);
 const CIRCUIT_USE = new Set([B.LEVER, B.STONE_BUTTON, B.REPEATER, B.CHIME_BLOCK, B.COMPARATOR, B.DAYLIGHT_SENSOR]);
 const CIRCUIT_PLACE = new Set([B.LEVER, B.STONE_BUTTON, B.CINNABAR_WIRE, B.REPEATER, B.WOODEN_PRESSURE_PLATE, B.PISTON, B.STICKY_PISTON, B.COMPARATOR, B.OBSERVER, B.DAYLIGHT_SENSOR]);
 const USE_DELAY = 4;
@@ -255,6 +257,11 @@ export class Interaction {
     // Sky Rockets: a boost while gliding, or launched from the clicked block
     if (d && d.rocket && input.rightPressed && !(this.target && USABLE_BLOCKS.has(this.target.id) && !p.sneaking)) {
       if (useSkyRocket(g, this.target)) { if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1); this.swing = SWING_TICKS; }
+      return;
+    }
+    // a Writable Book opens to write in, a Written Book to read (aimed at a lectern, it goes on the desk instead)
+    if (d && (d.writable || d.written) && input.rightPressed && !(this.target && USABLE_BLOCKS.has(this.target.id) && !p.sneaking)) {
+      if (g.ui.openBook) g.ui.openBook(p.inventory.selected);
       return;
     }
     // a blank Name Tag: right-click to write a name on it (then use it on a mob)
@@ -833,7 +840,9 @@ export class Interaction {
         this.swing = SWING_TICKS;
         return true;
       }
-      if (t.id === B.CHEST || t.id === B.BARREL || t.id === B.GLOOMSHELL_BOX || t.id === B.HOPPER || t.id === B.DISPENSER || t.id === B.DROPPER) { g.ui.openChest(t.x, t.y, t.z); g.audio.play('chest_open', [t.x + 0.5, t.y + 0.5, t.z + 0.5]); return true; }
+      if (t.id === B.LECTERN && this.useLectern(t, st)) { this.swing = SWING_TICKS; return true; }
+      if (t.id === B.CAKE && this.eatCake(t)) { this.swing = SWING_TICKS; return true; }
+      if (t.id === B.CHEST || t.id === B.BARREL || isBox(t.id) || t.id === B.HOPPER || t.id === B.DISPENSER || t.id === B.DROPPER) { g.ui.openChest(t.x, t.y, t.z); g.audio.play('chest_open', [t.x + 0.5, t.y + 0.5, t.z + 0.5]); return true; }
     }
     if (t && t.id === B.COMPOSTER && !p.sneaking && this.useComposter(t, st)) { this.swing = SWING_TICKS; return true; }
     if (t && t.id === B.SWEET_BERRY_BUSH && this.useBerryBush(t, st, d)) { this.swing = SWING_TICKS; return true; }
@@ -1010,7 +1019,7 @@ export class Interaction {
     if (placeId === B.GRINDSTONE) meta = Math.abs(ldx) > Math.abs(ldz) ? 1 : 0; // the wheel rolls towards the player
     if (placeId === B.STONECUTTER) meta = Math.abs(ldx) > Math.abs(ldz) ? 0 : 1; // the blade runs towards the player
     if (placeId === B.ANVIL) meta = Math.abs(ldx) > Math.abs(ldz) ? 1 : 0; // the long side faces across the player's view
-    if (placeId === B.DECORATED_POT) { const dx = p.x - (px + 0.5), dz = p.z - (pz + 0.5); meta = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 1 : 3) : (dz > 0 ? 2 : 0); } // its front faces the player
+    if (placeId === B.DECORATED_POT || placeId === B.LECTERN) { const dx = p.x - (px + 0.5), dz = p.z - (pz + 0.5); meta = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 1 : 3) : (dz > 0 ? 2 : 0); } // its front (a lectern's reading side) faces the player
     if (BLOCKS[placeId].crystal || placeId === B.STORM_ROD) {
       // buds point away from the clicked face, spikes up or down, rods stand or hang
       meta = cavePlaceMeta(w, px, py, pz, placeId, t.face);
@@ -1039,7 +1048,7 @@ export class Interaction {
     w.setBlockUrgent(px, py, pz, placeId, meta);
     if (lift) { p.body.y = py + 1; p.body.vy = Math.max(p.body.vy, 0); }
     if (chestPair) w.setBlockUrgent(chestPair.x, chestPair.y, chestPair.z, B.CHEST, chestPair.meta);
-    if (placeId === B.GLOOMSHELL_BOX && g.onBoxPlaced) g.onBoxPlaced(px, py, pz, st); // the box unpacks what it carried
+    if (isBox(placeId) && g.onBoxPlaced) g.onBoxPlaced(px, py, pz, st); // the box unpacks what it carried
     if (placeId === B.DECORATED_POT) g.setPot(px, py, pz, st.sherds || null); // the pot keeps its sherds
     if (CROPS.has(placeId) && g.milestones) g.milestones.event('plant');
     if (isFluid(placeId)) w.scheduleTick(px, py, pz, 5);
@@ -1050,6 +1059,29 @@ export class Interaction {
       p.inventory.changed();
     } else p.inventory.removeFromSlot(p.inventory.selected, 1);
     this.swing = SWING_TICKS;
+    return true;
+  }
+
+  /** Right-click on a Lectern: lay the held book on it, or open the book that lies there. */
+  useLectern(t, st) {
+    const g = this.game, p = g.player, k = `${t.x},${t.y},${t.z}`;
+    if (g.lecterns.get(k)) { g.ui.openLectern(t.x, t.y, t.z); return true; }
+    if (!st || !isBook(st.id)) return false;
+    g.setLectern(t.x, t.y, t.z, { book: { ...st, count: 1 }, page: 0 });
+    if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
+    g.audio.play('page', [t.x + 0.5, t.y + 1, t.z + 0.5]);
+    return true;
+  }
+
+  /** Right-click on a Cake: eat a slice (when hungry); the last one takes the cake away. */
+  eatCake(t) {
+    const g = this.game, p = g.player, w = g.world;
+    if (!p.hunger.canEat() && !p.creative) return false;
+    const bites = (w.getMeta(t.x, t.y, t.z) & 7) + 1;
+    p.hunger.eat(CAKE_FOOD.hunger, CAKE_FOOD.saturation);
+    if (bites >= CAKE_SLICES) w.setBlockUrgent(t.x, t.y, t.z, B.AIR, 0);
+    else w.setBlockUrgent(t.x, t.y, t.z, B.CAKE, bites);
+    g.audio.play('eat', [t.x + 0.5, t.y + 0.5, t.z + 0.5]);
     return true;
   }
 

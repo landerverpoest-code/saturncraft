@@ -91,7 +91,17 @@ const WS_TILES = (() => {
       const ss = 'hush_shrieker_side', bn = all('hush_shrieker_bone');
       return [t(ss, ss, 'hush_shrieker_top', 'hushmoss', ss, ss), bn, bn, bn, bn];
     }),
+    // Lectern (index = has a book): base, post, the desk's two steps, then the open book
+    [B.LECTERN]: [0, 1].map((book) => {
+      const ls = 'lectern_side', desk = t(ls, ls, 'lectern_top', 'oak_planks', ls, ls);
+      const parts = [t(ls, ls, 'lectern_base', 'oak_planks', ls, ls), all('lectern_post'), desk, desk];
+      return book ? [...parts, t('lectern_book_side', 'lectern_book_side', 'lectern_book', 'lectern_book_side', 'lectern_book_side', 'lectern_book_side')] : parts;
+    }),
+    // Cake (index = bitten): the cut side shows the sponge inside
+    [B.CAKE]: [0, 1].map((bitten) => [t('cake_side', bitten ? 'cake_inner' : 'cake_side', 'cake_top', 'cake_bottom', 'cake_side', 'cake_side')]),
   };
+/** Which set of WS_TILES a block uses for its meta. */
+const wsIndex = (id, m) => (id === B.HUSH_SENSOR ? ((m & 15) ? 1 : 0) : id === B.LECTERN ? (m >> 2) & 1 : id === B.CAKE ? ((m & 7) ? 1 : 0) : m & 1);
 })();
 const BERRY_TILES = [0, 1, 2, 3].map((i) => texId('sweet_berry_bush_' + i));
 // Suspicious Sand and Gravel: one tile per brushing stage (meta bits 0-1, world/archaeology.js)
@@ -353,7 +363,7 @@ export function meshSection(sec) {
       for (let d = 0; d < 6; d++) { const l = light[i + FACE_N[d]]; sk = Math.max(sk, l >> 4); bk = Math.max(bk, l & 15); }
       const tiles = [0, 1, 2, 3, 4, 5].map((d) => FACE_TILE[id * 6 + d]);
       if (FRONT_TILE[id] >= 0) tiles[FURNACE_FRONT_DIR[meta[i] & 3]] = FRONT_TILE[id]; // the Wyrm Head's face
-      const ws = WS_TILES[id] && WS_TILES[id][id === B.HUSH_SENSOR ? ((meta[i] & 15) ? 1 : 0) : meta[i] & 1];
+      const ws = WS_TILES[id] && WS_TILES[id][wsIndex(id, meta[i])];
       blockBoxes(id, meta[i]).forEach((b, k) => emitBox(buf, x, y, z, b[0], b[1], b[2], b[3], b[4], b[5], ws ? ws[k] : tiles, sk * 17, bk * 17, 'box'));
       const cb = id === B.COMPOSTER && compostBox(meta[i] & 15);
       if (cb) emitBox(buf, x, y, z, cb[0], cb[1], cb[2], cb[3], cb[4], cb[5], (meta[i] & 15) >= 8 ? COMPOST_READY : COMPOST, sk * 17, bk * 17, 'box');

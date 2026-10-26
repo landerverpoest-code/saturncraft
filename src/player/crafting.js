@@ -1,7 +1,8 @@
 // Shaped/shapeless crafting and furnace smelting recipes.
-import { B, BLOCKS, WOOD_SETS, STONE_SETS, COLOR_BLOCKS, DOOR_SETS, GATE_SETS, CANDLE_IDS } from '../world/blocks.js';
+import { B, BLOCKS, WOOD_SETS, STONE_SETS, COLOR_BLOCKS, DOOR_SETS, GATE_SETS, CANDLE_IDS, BOX_IDS, BOX_COLORS, isBox } from '../world/blocks.js';
 import { I, ITEMS, DYES, WOOL_ITEMS, TIPPED_ARROW, SPLASH_ITEM, SHERD_ITEMS } from '../world/items.js';
 import { potFacesFromGrid } from '../world/archaeology.js';
+import { withExtras } from '../world/enchantments.js';
 import { COLOR } from '../world/colors.js';
 
 const TAGS = {
@@ -11,6 +12,8 @@ const TAGS = {
   wood_slab: WOOD_SETS.map(([, slab]) => slab),
   stand_base: [B.SMOOTH_STONE_SLAB, B.STONE_SLAB, B.SMOOTH_STONE],
   pot_side: [I.BRICK, ...SHERD_ITEMS], // a Decorated Pot's sides: bricks or Pottery Sherds
+  ink: [I.INK_SAC, DYES[COLOR.BLACK]], // a Writable Book's ink
+  box: BOX_IDS, // any Gloomshell Box (dyeing one)
 };
 
 function matches(ing, id) {
@@ -215,7 +218,7 @@ export function craft(grid, w) {
         if (k < 0) { ok = false; break; }
         rem.splice(k, 1);
       }
-      if (ok) return { id: r.result, count: r.count };
+      if (ok) return withBoxContents({ id: r.result, count: r.count }, grid);
       continue;
     }
     const pw = Math.max(...r.pattern.map((row) => row.length)), ph = r.pattern.length;
@@ -231,6 +234,13 @@ export function craft(grid, w) {
     }
   }
   return null;
+}
+
+/** A dyed Gloomshell Box keeps the contents (and name) of the box it was made from. */
+function withBoxContents(out, grid) {
+  if (!isBox(out.id)) return out;
+  const box = grid.find((s) => s && isBox(s.id));
+  return box ? withExtras(out, { contents: box.contents, label: box.label }) : out;
 }
 
 /** A Decorated Pot made with sherds remembers which sherd went on which side (stack.sherds). */
@@ -328,6 +338,12 @@ shaped(['SS ', 'SB ', '  S'], { S: I.STRING, B: I.SLIMEBALL }, I.LEAD, 2);
 shaped(['S', 'L'], { S: I.STRING, L: I.LEATHER }, I.BUNDLE, 1);
 shaped(['SRS', 'R R', 'RRR'], { S: I.STRING, R: I.RABBIT_HIDE }, I.BUNDLE, 1);
 for (const [raw, polished] of [[B.GRANITE, B.POLISHED_GRANITE], [B.DIORITE, B.POLISHED_DIORITE], [B.ANDESITE, B.POLISHED_ANDESITE]]) shaped(['XX', 'XX'], { X: raw }, polished, 4);
+// books you write in and the Lectern (world/books.js), the Target block, the Cake, dyed Gloomshell Boxes
+shapeless([I.BOOK, 'ink', I.FEATHER], I.WRITABLE_BOOK, 1);
+shaped(['SSS', ' B ', ' S '], { S: 'wood_slab', B: B.BOOKSHELF }, B.LECTERN, 1);
+shaped([' R ', 'RHR', ' R '], { R: I.CINNABAR, H: B.HAY_BALE }, B.TARGET, 1);
+shaped(['MMM', 'SES', 'WWW'], { M: I.MILK_BUCKET, S: I.SUGAR, E: I.EGG, W: I.WHEAT }, B.CAKE, 1);
+BOX_COLORS.forEach((id, c) => shapeless(['box', DYES[c] || I.BONE_MEAL], id, 1));
 
 // Smelting: input -> output; 200 ticks per item (10 s)
 export const SMELT_TIME = 200;

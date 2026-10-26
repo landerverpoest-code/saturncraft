@@ -9,7 +9,7 @@ import { newMap, updateMap, MAP_SIZE } from './world/maps.js';
 import { KEEP_BITS, unpairAfterBreak } from './world/chests.js';
 import * as THREE from 'three';
 import { World } from './world/world.js';
-import { B, BLOCKS, SOLID, SHAPE, isFurnace, FURNACE_KIND } from './world/blocks.js';
+import { B, BLOCKS, SOLID, SHAPE, isFurnace, FURNACE_KIND, isBox } from './world/blocks.js';
 import { ITEMS, I, toolOf, heldLightLevel, DISCS } from './world/items.js';
 import { heldLights } from './net/remotePlayer.js';
 import { blockDrops } from './world/mining.js';
@@ -31,6 +31,8 @@ import { SignRenderer } from './render/signs.js';
 import { FrameRenderer } from './render/frames.js';
 import { PotRenderer } from './render/pots.js';
 import { BrushSites, isSuspicious, cleanPotFaces } from './world/archaeology.js';
+import { cleanLectern, lecternMeta } from './world/books.js';
+import { projectileHit } from './world/signalBlocks.js';
 import { Lightning } from './sky/lightning.js';
 import { snowfall } from './world/randomTicks.js';
 import { igniteTNT, PrimedTNT } from './entities/tnt.js';
@@ -107,6 +109,7 @@ export class Game {
     this.signs = new Map();       // "x,y,z" -> four lines of text
     this.frames = new Map();      // "x,y,z" -> the item stack in an item frame
     this.pots = new Map();        // "x,y,z" -> a Decorated Pot's four sides (world/archaeology.js)
+    this.lecterns = new Map();    // "x,y,z" -> { book, page } of a Lectern (world/books.js)
     this.archaeology = new BrushSites(); // digs being brushed (world/archaeology.js)
     this.maps = new Map();        // map id -> filled map (world/maps.js)
     this.brewingStands = new Map(); // "x,y,z" -> Brewing Alembic state (see world/brewing.js)
@@ -646,6 +649,13 @@ export class Game {
       if (st && this.net && this.net.isClient) this.setFrameItem(x, y, z, null, true); // the host drops it when it sees the edit
       else if (st) { this.setFrameItem(x, y, z, null); if (!this.player.creative) this.entities.spawnItem(x + 0.5, y + 0.5, z + 0.5, st); }
     }
+    if (id === B.LECTERN) {
+      // a broken lectern drops its book (on a guest the host drops it when it sees the edit)
+      const l = this.lecterns.get(`${x},${y},${z}`);
+      if (l && this.net && this.net.isClient) this.setLectern(x, y, z, null, true);
+      else if (l) { this.setLectern(x, y, z, null); this.entities.spawnItem(x + 0.5, y + 1, z + 0.5, l.book); }
+      if (l && this.ui.lectern && this.ui.lectern.k === `${x},${y},${z}`) this.ui.close();
+    }
     if (id === B.CHEST) {
       // the other half of a double chest becomes a single chest again
       const u = unpairAfterBreak(this.world, x, y, z, meta);
@@ -662,7 +672,7 @@ export class Game {
       this.chests.delete(k); this.furnaces.delete(k); this.brewingStands.delete(k); this.hoppers.delete(k); this.dispensers.delete(k);
       return;
     }
-    if (id === B.GLOOMSHELL_BOX) this.dropBox(x, y, z);
+    if (isBox(id)) this.dropBox(x, y, z, id);
     if (id === B.HOPPER) {
       const k = `${x},${y},${z}`, h = this.hoppers.get(k);
       if (h) { for (const st of h.slots) if (st) this.entities.spawnItem(x + 0.5, y + 0.5, z + 0.5, st); this.hoppers.delete(k); if (showing(h)) this.ui.close(); }
@@ -693,9 +703,9 @@ export class Game {
   }
 
   /** A broken Gloomshell Box drops itself with everything inside it kept in the item (stack.contents). */
-  dropBox(x, y, z) {
+  dropBox(x, y, z, id = B.GLOOMSHELL_BOX) {
     const k = `${x},${y},${z}`, c = this.chests.get(k);
-    const st = withExtras({ id: B.GLOOMSHELL_BOX, count: 1, damage: 0 }, { contents: c ? c.slots : null });
+    const st = withExtras({ id, count: 1, damage: 0 }, { contents: c ? c.slots : null });
     if (c) { this.chests.delete(k); if (this.ui.chest === c) this.ui.close(); }
     if (st.contents || !this.player.creative) this.entities.spawnItem(x + 0.5, y + 0.5, z + 0.5, st);
   }
@@ -779,7 +789,7 @@ export class Game {
   /** Put an item in a frame, or take it out (null); shared in multiplayer. */
   setFrameItem(x, y, z, st, fromNet = false) {
     const k = `${x},${y},${z}`;
-    if (st) this.frames.set(k, { id: st.id, count: 1, damage: st.damage | 0, ...(st.ench ? { ench: st.ench } : {}) }); else this.frames.delete(k);
+    if (st) this.frames.set(k, withExtras({ id: st.id, count: 1, damage: st.damage | 0 }, st)); else this.frames.delete(k); // (a book in a frame keeps its text)
     if (!fromNet && this.net && this.net.sendFrame) this.net.sendFrame(x, y, z, st ? this.frames.get(k) : null);
   }
 
@@ -788,6 +798,29 @@ export class Game {
     const k = `${x},${y},${z}`, f = cleanPotFaces(faces);
     if (f) this.pots.set(k, f); else this.pots.delete(k);
     if (!fromNet && this.net && this.net.sendPot) this.net.sendPot(x, y, z, f);
+  }
+
+  /**
+   * Put a book on a Lectern, take it off (null) or turn its page (state = { book, page });
+   * shared in multiplayer. The host (or single player) keeps the block's book bit in step
+   * and sends a short cinnabar pulse when the page changes.
+   */
+  setLectern(x, y, z, state, fromNet = false) {
+    const k = `${x},${y},${z}`, before = this.lecterns.get(k), s = cleanLectern(state);
+    if (s) this.lecterns.set(k, s); else this.lecterns.delete(k);
+    const w = this.world;
+    if (!(this.net && this.net.isClient) && w.getBlock(x, y, z) === B.LECTERN) {
+      const m = w.getMeta(x, y, z), nm = lecternMeta(m, before, s); // the book bit, and a pulse for a turned page
+      if (nm !== m) w.setBlock(x, y, z, B.LECTERN, nm);
+    }
+    if (this.ui && this.ui.lectern && this.ui.lectern.k === k && this.ui.lectern.refresh) this.ui.lectern.refresh();
+    if (!fromNet && this.net && this.net.sendLectern) this.net.sendLectern(x, y, z, s);
+  }
+
+  /** A projectile (kind 'arrow', 'spear', 'snowball', 'egg', 'potion') struck a block at the world point x,y,z: a target block answers. */
+  onProjectileHit(hit, x, y, z, kind) {
+    if (this.net && this.net.isClient) return; // the host's arrows hit for everyone
+    projectileHit(this.world, hit, x, y, z, kind);
   }
 
   /** Write on a sign (shared with everyone in multiplayer). */
