@@ -2,7 +2,8 @@
 // typed arrays as base64, compact player / mob snapshots and room codes.
 // Pure functions only, so everything here is unit-testable without a network.
 
-import { cleanEnch, withExtras, sameEnch } from '../world/enchantments.js';
+import { cleanEnch, withExtras, sameEnch, cleanLabel } from '../world/enchantments.js';
+import { equipIds } from '../mobs/equipment.js';
 
 export const PROTOCOL_VERSION = 1;
 export const MAX_PLAYERS = 8;
@@ -141,15 +142,41 @@ export function unpackPlayerState(a) {
 }
 
 // ---- mob snapshots --------------------------------------------------------------
-export const MF = { GROUND: 1, TARGET: 2, ANGRY: 4, BABY: 8, SHEARED: 16, TAMED: 32, SITTING: 64, ENEMY: 128, SPECIAL: 256, CAPTAIN: 512 }; // SPECIAL: a Hexwife drinking, a Shambler about to convert
 /** Second mob flags: SADDLED (Gallopers, Dune Striders), DANCING (a Hoverling by a playing jukebox). */
 export const MF2 = { SADDLED: 1, DANCING: 2 };
-/** [id, type, x, y, z, yaw, headPitch, health, hurtTime, deathTime, flags, woolColor, fuse, profession, beam [x,y,z] | 0, moving, flags2, passenger id | -1, held item id | 0] */
-export function packMob(m) {
+export const MF = { GROUND: 1, TARGET: 2, ANGRY: 4, BABY: 8, SHEARED: 16, TAMED: 32, SITTING: 64, ENEMY: 128, SPECIAL: 256, CAPTAIN: 512, RIDING: 1024 }; // RIDING: a jockey on its Cluckling; SPECIAL: a Hexwife drinking, a Shambler about to convert
+// ---- leads (entities/leash.js) ----------------------------------------------------
+/**
+ * Who holds a mob's lead, for the wire: 0 (nobody), ['p', playerId] (0 = the host) or
+ * ['k', bx, by, bz] (the knot on that fence post). `playerIdOf(holder)` gives a player's id or -1.
+ */
+export function packLeash(h, playerIdOf = () => -1) {
+  if (!h) return 0;
+  if (h.kind === 'knot') return ['k', h.bx | 0, h.by | 0, h.bz | 0];
+  const id = playerIdOf(h);
+  return Number.isInteger(id) && id >= 0 ? ['p', id] : 0;
+}
+/** { player: id } | { knot: [bx, by, bz] } | null */
+export function unpackLeash(a) {
+  if (!Array.isArray(a)) return null;
+  if (a[0] === 'p' && Number.isInteger(a[1]) && a[1] >= 0) return { player: a[1] };
+  if (a[0] === 'k' && a.length === 4 && a.slice(1).every((v) => Number.isInteger(v) && Math.abs(v) < 3e7)) return { knot: [a[1], a[2], a[3]] };
+  return null;
+}
+
+/**
+ * [id, type, x, y, z, yaw, headPitch, health, hurtTime, deathTime, flags, woolColor, fuse, profession, beam [x,y,z] | 0, moving,
+ *  name | 0, lead (packLeash), emerging, digging, equipment [hand, helmet, chest, legs, boots] | 0,
+ *  flags2 (MF2), passenger id | -1 (a Dune Strider's back seat), held item id | 0 (a Hoverling's)]
+ *  (emerging/digging: a Hushkeeper rising out of / sinking into the ground)
+ */
+export function packMob(m, playerIdOf = () => -1) {
   const f = (m.body && m.body.onGround ? MF.GROUND : 0) | (m.target ? MF.TARGET : 0) | (m.angry ? MF.ANGRY : 0) |
-    (m.age < 0 ? MF.BABY : 0) | (m.sheared ? MF.SHEARED : 0) | (m.tamed ? MF.TAMED : 0) | (m.sitting ? MF.SITTING : 0) | (m.enemy ? MF.ENEMY : 0) | (m.special ? MF.SPECIAL : 0) | (m.captain ? MF.CAPTAIN : 0);
+    (m.age < 0 ? MF.BABY : 0) | (m.sheared ? MF.SHEARED : 0) | (m.tamed ? MF.TAMED : 0) | (m.sitting ? MF.SITTING : 0) | (m.enemy ? MF.ENEMY : 0) | (m.special ? MF.SPECIAL : 0) | (m.captain ? MF.CAPTAIN : 0) | (m.mount ? MF.RIDING : 0);
   return [m.id, m.type, r2(m.x), r2(m.y), r2(m.z), r2(m.yaw), r2(m.headPitch || 0), r2(m.health), m.hurtTime | 0, m.deathTime | 0, f, m.woolColor | 0, m.fuse | 0, m.profession || 0,
     m.beam ? [r2(m.beam.x), r2(m.beam.y), r2(m.beam.z)] : 0, m.moving ? 1 : 0, // Deepeye beams (mobs/oceanMobs.js)
+    m.customName || 0, packLeash(m.leashHolder, playerIdOf), m.emerging > 0 ? m.emerging | 0 : 0, m.digging > 0 ? m.digging | 0 : 0,
+    equipIds(m.equip) || 0, // worn armour and held weapon (mobs/equipment.js)
     (m.saddled ? MF2.SADDLED : 0) | (m.dancing ? MF2.DANCING : 0), m.passengerId != null ? m.passengerId : -1, m.held ? m.held.id : 0]; // Dune Strider seats, Hoverling items
 }
 export function unpackMob(a) {
@@ -158,10 +185,12 @@ export function unpackMob(a) {
   return {
     id: a[0], type: a[1], x: a[2], y: a[3], z: a[4], yaw: a[5], headPitch: a[6], health: a[7], hurtTime: a[8], deathTime: a[9],
     onGround: !!(f & MF.GROUND), target: !!(f & MF.TARGET), angry: !!(f & MF.ANGRY), baby: !!(f & MF.BABY),
-    sheared: !!(f & MF.SHEARED), tamed: !!(f & MF.TAMED), sitting: !!(f & MF.SITTING), enemy: !!(f & MF.ENEMY), special: !!(f & MF.SPECIAL), captain: !!(f & MF.CAPTAIN),
+    sheared: !!(f & MF.SHEARED), tamed: !!(f & MF.TAMED), sitting: !!(f & MF.SITTING), enemy: !!(f & MF.ENEMY), special: !!(f & MF.SPECIAL), captain: !!(f & MF.CAPTAIN), riding: !!(f & MF.RIDING),
     woolColor: a[11] | 0, fuse: a[12] | 0, profession: a[13] || null,
     beam: Array.isArray(a[14]) && a[14].length === 3 && a[14].every(Number.isFinite) ? { x: a[14][0], y: a[14][1], z: a[14][2] } : null, moving: !!a[15],
-    saddled: !!((a[16] | 0) & MF2.SADDLED), dancing: !!((a[16] | 0) & MF2.DANCING), passenger: Number.isInteger(a[17]) ? a[17] : -1, heldItem: a[18] | 0,
+    name: cleanLabel(a[16]), leash: unpackLeash(a[17]), emerging: Math.max(0, a[18] | 0), digging: Math.max(0, a[19] | 0),
+    equip: Array.isArray(a[20]) ? a[20].slice(0, 5).map((v) => (Number.isInteger(v) && v > 0 ? v : 0)) : null,
+    saddled: !!((a[21] | 0) & MF2.SADDLED), dancing: !!((a[21] | 0) & MF2.DANCING), passenger: Number.isInteger(a[22]) ? a[22] : -1, heldItem: a[23] | 0,
   };
 }
 
@@ -180,21 +209,24 @@ export function savePlayerName(name) {
 // ---- shared entities (items, orbs, arrows, boats, falling blocks, armour stands, mobs) ---
 /**
  * Compact snapshot of any host entity: [kind, id, x, y, z, ...kind specific].
- * `riderOf(boat)` gives the boat rider's player id (0 = host) or -1.
+ * `riderOf(boat)` gives the boat rider's player id (0 = host) or -1; `playerIdOf(player)` the id of a
+ * player holding a mob's lead (or -1).
  */
-export function packEntity(e, riderOf = () => -1) {
+export function packEntity(e, riderOf = () => -1, playerIdOf = () => -1) {
   switch (e.kind) {
-    case 'mob': return ['m', ...packMob(e)];
+    case 'mob': return ['m', ...packMob(e, playerIdOf)];
     case 'item': return ['i', e.id, r2(e.x), r2(e.y), r2(e.z), e.stack.id, e.stack.count, e.stack.damage | 0, e.pickupDelay > 0 ? 1 : 0, e.stack.ench ? cleanEnch(e.stack.ench) : 0, e.stack.contents || 0, Number.isInteger(e.stack.map) ? [e.stack.map, e.stack.mapX | 0, e.stack.mapZ | 0] : 0, e.stack.sherds || 0];
     case 'xp': return ['x', e.id, r2(e.x), r2(e.y), r2(e.z), e.value];
     case 'arrow': return ['a', e.id, r2(e.x), r2(e.y), r2(e.z), r2(e.vx), r2(e.vy), r2(e.vz), e.stuck ? 1 : 0, e.pickup ? 1 : 0, e.thrown === 'spear' ? 4 : e.thrown === 'potion' ? 3 : e.thrown === 'egg' ? 2 : e.thrown ? 1 : 0, e.potion | 0];
     case 'boat': return ['b', e.id, r2(e.x), r2(e.y), r2(e.z), r2(e.yaw), e.hitTime | 0, riderOf(e), e.cart ? 1 : 0, r2(e.pitch || 0)];
     case 'falling': return ['f', e.id, r2(e.x), r2(e.y), r2(e.z), e.blockId];
     case 'stand': return ['s', e.id, r2(e.x), r2(e.y), r2(e.z), r2(e.yaw), e.hitTime | 0, e.armor.map((st) => (st ? st.id : 0)), e.hand ? e.hand.id : 0];
+    // a lingering elixir's (or the Wyrm's breath) cloud: radius to a tenth so it is resent only every few ticks
+    case 'cloud': return ['c', e.id, r2(e.x), r2(e.y), r2(e.z), Math.round(e.radius * 10) / 10, e.potion | 0, e.breath ? 1 : 0];
     default: return null;
   }
 }
-const ENTITY_KINDS = { m: 'mob', i: 'item', x: 'xp', a: 'arrow', b: 'boat', f: 'falling', s: 'stand' };
+const ENTITY_KINDS = { m: 'mob', i: 'item', x: 'xp', a: 'arrow', b: 'boat', f: 'falling', s: 'stand', c: 'cloud' };
 export function unpackEntity(a) {
   if (!Array.isArray(a) || !ENTITY_KINDS[a[0]]) return null;
   if (a[0] === 'm') { const m = unpackMob(a.slice(1)); return m && { ...m, kind: 'mob' }; }
@@ -206,6 +238,7 @@ export function unpackEntity(a) {
   else if (k === 'a') Object.assign(o, { vx: a[5], vy: a[6], vz: a[7], stuck: !!a[8], pickup: !!a[9], thrown: a[10] === 4 ? 'spear' : a[10] === 3 ? 'potion' : a[10] === 2 ? 'egg' : a[10] === 1 ? 'snowball' : null, potion: a[11] | 0 });
   else if (k === 'b') Object.assign(o, { yaw: a[5], hitTime: a[6] | 0, rider: a[7], cart: !!a[8], pitch: +a[9] || 0 });
   else if (k === 'f') o.blockId = a[5] | 0;
+  else if (k === 'c') Object.assign(o, { radius: Math.max(0, Math.min(16, +a[5] || 0)), potion: a[6] | 0, breath: !!a[7] });
   else if (k === 's') {
     const ids = Array.isArray(a[7]) ? a[7] : [];
     Object.assign(o, { yaw: +a[5] || 0, hitTime: a[6] | 0, armor: [0, 1, 2, 3].map((i) => (ids[i] | 0) || null), hand: (a[8] | 0) || null });
@@ -276,3 +309,42 @@ export function roomFor(slots, st, maxStackOf, stackable = true) {
 /** Chat commands that change the shared world: guests have the host run them. */
 export const WORLD_COMMANDS = new Set(['time', 'weather', 'gamerule', 'summon', 'dimension', 'dim']);
 export function commandName(text) { return (String(text).trim().replace(/^\//, '').split(/\s+/)[0] || '').toLowerCase(); }
+
+// ---- armour stands: a guest's request and the host's answer -------------------------------
+/**
+ * Guest side of an armour stand swap. The item leaves the guest's hand at once (so a slow or lost
+ * answer can never leave it both on the stand and in the hand); the host's answer `{ rid, ok, give }`
+ * either hands back what came off the stand (ok) or returns the guest's own item (refused).
+ */
+export class StandRequests {
+  constructor() { this.seq = 0; this.pending = new Map(); }
+  /** Take the held stack out of `inv` (slot `slot`) and return the message fields to send. */
+  begin(inv, slot, now = 0) {
+    const st = inv.slots[slot] ? copyStack(inv.slots[slot]) : null;
+    const rid = ++this.seq;
+    if (st) inv.slots[slot] = null;
+    this.pending.set(rid, { slot, st, at: now });
+    return { rid, st };
+  }
+  /**
+   * The host answered: put stacks back into `inv`. Returns the stacks that did not fit (to drop).
+   * `addStack(inv, st)` adds a stack and returns how many did not fit.
+   */
+  finish(inv, m, addStack) {
+    const p = this.pending.get(m.rid);
+    this.pending.delete(m.rid);
+    const back = [];
+    const give = m.ok && m.give && Number.isInteger(m.give.id) && m.give.count > 0 ? copyStack(m.give) : null;
+    if (give) back.push(give);
+    if (!m.ok && p && p.st) back.push(p.st); // refused: our own item comes back
+    const left = [];
+    for (const st of back) {
+      if (p && !inv.slots[p.slot]) { inv.slots[p.slot] = st; continue; }
+      const n = addStack(inv, st);
+      if (n > 0) left.push({ ...st, count: n });
+    }
+    return left;
+  }
+  /** Forget requests the host never answered (the connection went): nothing is given back, so nothing doubles. */
+  expire(now, ms = 30000) { for (const [rid, p] of this.pending) if (now - p.at > ms) this.pending.delete(rid); }
+}

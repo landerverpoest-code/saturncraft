@@ -963,8 +963,8 @@ export class UI {
     this.game.input.unlock();
     const g = this.game, inv = g.player.inventory;
     const title = `${mob.profession[0].toUpperCase() + mob.profession.slice(1)} Settler`;
-    // Village Champions pay less (the host prices guests' trades without it)
-    const cut = mob.netProxy ? 0 : championDiscount(g.player.effects);
+    // Village Champions pay less (a guest pays from its own inventory, so its own effect sets the price)
+    const cut = championDiscount(g.player.effects);
     this.showContainer('trade', title, (panel) => {
       const list = el('<div class="trade-list"></div>');
       mob.trades.forEach((o) => {
@@ -978,7 +978,7 @@ export class UI {
         btn.addEventListener('mousedown', (e) => {
           e.preventDefault();
           const times = e.shiftKey ? 64 : 1;
-          if (mob.netProxy) { if (canTrade(o, inv)) g.net.requestTrade(mob, mob.trades.indexOf(o), times); return; } // the host keeps count
+          if (mob.netProxy) { if (canTrade(o, inv, cut)) g.net.requestTrade(mob, mob.trades.indexOf(o), times); return; } // the host keeps count
           let done = 0;
           for (let k = 0; k < times && canTrade(o, inv, cut); k++) {
             const got = doTrade(o, inv, cut);
@@ -1218,7 +1218,7 @@ export class UI {
     const msgs = {
       fall: 'hit the ground too hard', lava: 'tried to swim in lava', fire: 'burned to death', drown: 'drowned',
       starve: 'starved to death', cactus: 'was pricked to death', berry_bush: 'was poked to death by a sweet berry bush', void: 'fell out of the world', explosion: 'was blown up',
-      arrow: 'was shot by a Rattler', poison: 'succumbed to poison', magic: 'was killed by magic',
+      arrow: 'was shot by a Rattler', poison: 'succumbed to poison', magic: 'was killed by magic', wither: 'withered away',
       wall: 'experienced kinetic energy',
     };
     const text = msgs[cause] || (cause && cause.startsWith('mob:') ? `was slain by a ${cause.slice(4)}` : cause && cause.startsWith('player:') ? `was slain by ${cause.slice(7)}` : 'died');

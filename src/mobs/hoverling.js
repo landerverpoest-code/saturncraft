@@ -264,14 +264,14 @@ function hoverlingRender(m, model, alpha, sec) {
     pa.armL.rotation.z = -1.2 - Math.sin(sec * 6) * 0.4; pa.armR.rotation.z = 1.2 + Math.sin(sec * 6) * 0.4;
   } else { pa.head.rotation.z = 0; pa.armL.rotation.z = pa.armR.rotation.z = 0; }
   // the held item, carried in front of it
-  if (model.userData.heldId !== holding) {
-    if (model.userData.held) { model.remove(model.userData.held); model.userData.held.material.dispose(); model.userData.held = null; }
-    model.userData.heldId = holding;
+  if (model.userData.hoverHeldId !== holding) {
+    if (model.userData.hoverHeld) { model.remove(model.userData.hoverHeld); model.userData.hoverHeld.material.dispose(); model.userData.hoverHeld = null; }
+    model.userData.hoverHeldId = holding;
     if (holding && ITEMS[holding] && typeof document !== 'undefined') {
       const s = heldSprite(holding);
       s.position.set(0, 3.5 / 16, -4 / 16);
       model.add(s);
-      model.userData.held = s;
+      model.userData.hoverHeld = s;
     }
   }
 }

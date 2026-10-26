@@ -19,7 +19,9 @@
 // chunks like any persistent mob and keep their raid tag, so a reloaded raid
 // carries on from the wave it was in (a raid whose raiders were lost counts
 // that wave as cleared). Only the single player world or the multiplayer host
-// runs patrols and raids; guests see the raiders but not the raid bar.
+// runs patrols and raids; guests get the raid's status once a second (the
+// raid bar shows for those near the village) and, when they are in the village
+// as it is won, Village Champion too.
 import { villagesNear } from '../world/villages.js';
 import { SOLID, OPAQUE, isFluid } from '../world/blocks.js';
 import { effectLevel } from '../player/effects.js';
@@ -181,6 +183,29 @@ export class RaidState {
     if (r.state === RAID.WAVE && r.wave === 0) r.state = RAID.WAITING;
     return r;
   }
+}
+
+// ---- multiplayer --------------------------------------------------------------------
+
+/** Guests see the raid bar within this distance of the village centre. */
+export const RAID_BAR_DIST = RAID_RADIUS + 24;
+
+/** A raid's status for the wire (null when there is none). */
+export function raidStatus(r) {
+  if (!r) return null;
+  return { id: r.id, cx: Math.round(r.cx), cz: Math.round(r.cz), label: r.label(), progress: Math.round(r.progress() * 1000) / 1000, state: r.state };
+}
+
+/** What a guest's raid bar shows for a status from the host (null: hidden) when standing at (x, z). */
+export function raidBarFor(st, x, z) {
+  if (!st || typeof st !== 'object' || !Number.isFinite(st.cx) || !Number.isFinite(st.cz)) return null;
+  if (Math.hypot(x - st.cx, z - st.cz) > RAID_BAR_DIST) return null;
+  return { label: String(st.label || 'Raid').slice(0, 80), progress: Math.max(0, Math.min(1, +st.progress || 0)), state: st.state };
+}
+
+/** The players (objects with x, z, dead) inside the village of raid `r`: they become Village Champions. */
+export function championsOf(players, r) {
+  return players.filter((p) => p && !p.dead && Math.hypot(p.x - r.cx, p.z - r.cz) < RAID_RADIUS);
 }
 
 // ---- marauder behaviour ------------------------------------------------------------
@@ -345,6 +370,9 @@ export class Raids {
 
   stop() { this.raid = null; this.showBar(null); }
 
+  /** The raid under way (or just finished) for guests: see raidStatus. */
+  status() { return raidStatus(this.raid); }
+
   /** Raiders arrive together at one point on the village edge. */
   spawnWave(r, count) {
     const g = this.game, w = g.world;
@@ -374,6 +402,13 @@ export class Raids {
     if (g.milestones) g.milestones.event('raid');
     if (g.audio) g.audio.play('levelup');
     if (g.entities.spawnXp) g.entities.spawnXp(p.x, p.y + 1, p.z, 20 * r.omenLevel);
+    // guests who fought for the village are its champions too (their own game applies the effect)
+    if (g.net && g.net.isHost) {
+      for (const o of championsOf(g.net.players().slice(1).map((pl) => pl.obj), r)) {
+        if (o.addEffect) o.addEffect('village_champion', CHAMPION_TICKS, r.omenLevel - 1);
+        if (g.entities.spawnXp) g.entities.spawnXp(o.x, o.y + 1, o.z, 20 * r.omenLevel);
+      }
+    }
   }
 
   lost(r) {

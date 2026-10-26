@@ -44,6 +44,13 @@ export const POTIONS = {
   long_weakness:     { name: 'Elixir of Weakness', effects: [['weakness', 4 * M, 0]] },
   slow_falling:      { name: 'Elixir of Slow Falling', effects: [['slow_falling', 1.5 * M, 0]] },
   long_slow_falling: { name: 'Elixir of Slow Falling', effects: [['slow_falling', 4 * M, 0]] },
+  // added later (`late`: items.js registers their vials after the older ones, so item ids stay put)
+  turtle_master:        { name: 'Elixir of the Shellback', effects: [['slowness', 20 * 20, 3], ['resistance', 20 * 20, 2]], color: '#7a5a96', late: true }, // reference: Turtle Master
+  long_turtle_master:   { name: 'Elixir of the Shellback', effects: [['slowness', 40 * 20, 3], ['resistance', 40 * 20, 2]], color: '#7a5a96', late: true },
+  strong_turtle_master: { name: 'Elixir of the Shellback', effects: [['slowness', 20 * 20, 5], ['resistance', 20 * 20, 3]], color: '#7a5a96', late: true },
+  decay:             { name: 'Elixir of Decay', effects: [['wither', 40 * 20, 1]], late: true },
+  luck:              { name: 'Elixir of Luck', effects: [['luck', 5 * M, 0]], late: true },
+  unluck:            { name: 'Elixir of Bad Luck', effects: [['unluck', 5 * M, 0]], late: true },
 };
 export const POTION_KEYS = Object.keys(POTIONS);
 
@@ -55,6 +62,7 @@ export const POTION_KEYS = Object.keys(POTIONS);
  *  - Cinnabar Dust extends (long_), Glowshard Dust strengthens (strong_)
  *  - a Fermented Skitterer Eye corrupts: good effects into their bad twin
  *  - Blast Powder turns any drinkable vial into a splash one (handled in brewing.js)
+ *  - Hollow Breath turns a splash vial into a lingering one (handled in brewing.js)
  */
 export const EFFECT_INGREDIENTS = {
   sugar: 'swiftness',
@@ -67,6 +75,9 @@ export const EFFECT_INGREDIENTS = {
   wraith_tear: 'regeneration',
   slimeball: 'leaping',            // the reference uses a rabbit's foot; there are no rabbits here
   feather: 'slow_falling',         // reference: phantom membrane
+  turtle_shell: 'turtle_master',   // the Shellback Helmet (reference: turtle shell)
+  blight_rose: 'decay',            // reference: the Bedrock-only decay elixir has no brew; here a Blight Rose makes it
+  glimmerfin: 'luck',              // the rare fishing catch
 };
 
 const CORRUPT = {
@@ -76,6 +87,7 @@ const CORRUPT = {
   poison: 'harming', long_poison: 'harming', strong_poison: 'strong_harming',
   night_vision: 'invisibility', long_night_vision: 'long_invisibility',
   water: 'weakness',
+  luck: 'unluck',
 };
 
 /** The base effect kind of a potion kind ("long_swiftness" -> "swiftness"). */
@@ -105,7 +117,7 @@ export function brewKind(kind, ing) {
 }
 
 /** Every ingredient key the alembic accepts. */
-export const BREW_INGREDIENTS = ['cinderroot', 'fermented_spider_eye', 'cinnabar', 'glowshard_dust', 'gunpowder', ...Object.keys(EFFECT_INGREDIENTS)];
+export const BREW_INGREDIENTS = ['cinderroot', 'fermented_spider_eye', 'cinnabar', 'glowshard_dust', 'gunpowder', 'hollow_breath', ...Object.keys(EFFECT_INGREDIENTS)];
 
 /** Elixir colour: the effects' average, or the kind's own (water blue). */
 export function potionColor(kind) {
@@ -119,4 +131,5 @@ const EFFECT_COLORS = {
   speed: '#7cafc6', slowness: '#5a6c81', strength: '#932423', weakness: '#484d48', instant_health: '#f82423',
   instant_damage: '#430a09', jump_boost: '#22ff4c', regeneration: '#cd5cab', poison: '#4e9331', fire_resistance: '#e49a3a',
   water_breathing: '#2e5299', night_vision: '#1f1fa1', invisibility: '#7f8392', slow_falling: '#f3cfb9', haste: '#d9c043',
+  resistance: '#99453a', wither: '#736156', luck: '#59c106', unluck: '#c0a44d',
 };

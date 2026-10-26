@@ -4,6 +4,9 @@
 // Right-clicking a fence with animals in tow ties them to a Fence Knot on that
 // post; right-clicking the post again takes them back. Mobs save who holds
 // them (the player, or the fence post) and find their holder again on load.
+// Multiplayer: the host runs leads for everyone (a guest's lead is held by its
+// stand-in, net/remotePlayer.js); guests see the ropes and knots from the
+// mob snapshots and ask the host to leash, tie and untie (net/session.js).
 import * as THREE from 'three';
 import { BLOCKS, SHAPE } from '../world/blocks.js';
 import { I } from '../world/items.js';
@@ -97,6 +100,8 @@ export class LeashKnot {
 
   tick(game) {
     const tied = this.tied(game);
+    if (this.mirrored) { if (!tied.length) this.dead = true; return; } // a guest's copy: the host decides about the post
+
     if (!isFencePost(game.world.getBlock(this.bx, this.by, this.bz))) {
       // the post is gone: every lead comes loose and drops
       for (const m of tied) unleash(game, m, true);
@@ -144,24 +149,30 @@ export function leash(mob, holder) {
   mob.wander = null; mob.path = null;
 }
 
+/**
+ * Is `p` the player holding this lead? On the host a guest's interaction runs with a stand-in
+ * derived from that guest's target object, so the same guest counts as the same holder.
+ */
+export const isHolder = (h, p) => !!h && !!p && (h === p || (!!p.remote && h.remote === p.remote));
+
 /** Mobs held by the player. */
 export const heldBy = (game, holder) => game.entities.list.filter((e) => e.kind === 'mob' && e.leashHolder === holder && !e.dead);
 
 /** Tie every mob the player leads to the fence post at bx,by,bz. Returns how many were tied. */
-export function tieToFence(game, bx, by, bz) {
-  const mobs = heldBy(game, game.localPlayer || game.player);
+export function tieToFence(game, bx, by, bz, holder = game.localPlayer || game.player) {
+  const mobs = heldBy(game, holder);
   if (!mobs.length) return 0;
   const k = knotAt(game, bx, by, bz, true);
   for (const m of mobs) leash(m, k);
   return mobs.length;
 }
 
-/** Take the mobs tied at the post bx,by,bz back on the player's leads. Returns how many. */
-export function untieFromFence(game, bx, by, bz) {
+/** Take the mobs tied at the post bx,by,bz back on the player's (or `holder`'s) leads. Returns how many. */
+export function untieFromFence(game, bx, by, bz, holder = game.localPlayer || game.player) {
   const k = knotAt(game, bx, by, bz);
   if (!k) return 0;
   const mobs = k.tied(game);
-  for (const m of mobs) leash(m, game.localPlayer || game.player);
+  for (const m of mobs) leash(m, holder);
   k.dead = true;
   return mobs.length;
 }
