@@ -56,7 +56,7 @@ const ORE_XP = {
 };
 const BREAK_DELAY = 5;
 /** Blocks that right-click opens / toggles instead of using the held item. */
-const USABLE_BLOCKS = new Set([B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.CHEST, B.BARREL, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL, B.BREWING_STAND, B.GLOOMSHELL_BOX, B.HOPPER, B.COMPOSTER, B.SWEET_BERRY_BUSH, B.JUKEBOX, B.CAVE_VINES_LIT, B.FLOWER_POT, B.BEACON, B.DISPENSER, B.DROPPER, B.GRINDSTONE, B.STONECUTTER, B.LECTERN, B.CAKE, ...BOX_COLORS]);
+const USABLE_BLOCKS = new Set([B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.CHEST, B.BARREL, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL, B.BREWING_STAND, B.GLOOMSHELL_BOX, B.HOPPER, B.COMPOSTER, B.SWEET_BERRY_BUSH, B.JUKEBOX, B.CAVE_VINES_LIT, B.FLOWER_POT, B.BEACON, B.DISPENSER, B.DROPPER, B.GRINDSTONE, B.STONECUTTER, B.LECTERN, B.CAKE, ...BOX_COLORS, B.VAULT]);
 const CIRCUIT_USE = new Set([B.LEVER, B.STONE_BUTTON, B.REPEATER, B.CHIME_BLOCK, B.COMPARATOR, B.DAYLIGHT_SENSOR]);
 const CIRCUIT_PLACE = new Set([B.LEVER, B.STONE_BUTTON, B.CINNABAR_WIRE, B.REPEATER, B.WOODEN_PRESSURE_PLATE, B.PISTON, B.STICKY_PISTON, B.COMPARATOR, B.OBSERVER, B.DAYLIGHT_SENSOR]);
 const USE_DELAY = 4;
@@ -788,6 +788,8 @@ export class Interaction {
     if (d && d.voidEye) return this.useVoidEye(this.target);
     const t = this.target;
     if (!t) return false;
+    // a Vault takes a Proving Key and throws out its treasure, once per player (world/provingSystem.js)
+    if (t.id === B.VAULT && !(p.sneaking && st) && g.proving) { this.swing = SWING_TICKS; return g.proving.useVault(t.x, t.y, t.z); }
     if ((t.id === B.BEE_NEST || t.id === B.BEEHIVE) && st && (d.shears || st.id === I.GLASS_VIAL) && ((w.getMeta(t.x, t.y, t.z) >> 2) & 7) >= 5) {
       // a full nest: shears cut 3 honeycomb, a vial fills with honey; the bees mind unless a campfire smokes below
       const m = w.getMeta(t.x, t.y, t.z);

@@ -677,6 +677,32 @@ export const BOX_IDS = [B.GLOOMSHELL_BOX, ...BOX_COLORS];
 const BOX_SET = new Set(BOX_IDS);
 export const isBox = (id) => BOX_SET.has(id);
 
+// The Proving Vaults (reference: trial chambers; world/provingVaults.js, world/provingSystem.js): halls of
+// copper-tinted Vault Bricks and Ashstone (cut from Tuff), see-through Copper Grates and Copper Bulbs, which
+// switch on or off at each rising edge of a cinnabar signal (meta bit 0 = the signal was there, see
+// world/circuits.js). Proving Spawner meta: bits 0-3 the mob kind (PROVING_MOBS), bits 4-5 the state it
+// shows (waiting, active, cooling down). Vault meta: bits 0-1 the side its keyhole faces.
+ext('VAULT_BRICKS'); ext('ASHSTONE_BRICKS'); ext('ASHSTONE_TILES'); ext('POLISHED_ASHSTONE');
+ext('ASHSTONE_BRICK_SLAB'); ext('ASHSTONE_BRICK_STAIRS');
+ext('COPPER_GRATE'); ext('COPPER_BULB'); ext('COPPER_BULB_LIT');
+ext('PROVING_SPAWNER'); ext('VAULT');
+{
+  const ashstone = { hardness: 1.5, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD };
+  def(B.VAULT_BRICKS, 'Vault Bricks', { ...copper });
+  def(B.ASHSTONE_BRICKS, 'Ashstone Bricks', ashstone);
+  def(B.ASHSTONE_TILES, 'Ashstone Tiles', ashstone);
+  def(B.POLISHED_ASHSTONE, 'Polished Ashstone', ashstone);
+  const common = { ...ashstone, opaque: false, opacity: 15, tex: { all: 'ashstone_bricks' }, base: B.ASHSTONE_BRICKS };
+  def(B.ASHSTONE_BRICK_SLAB, 'Ashstone Brick Slab', { ...common, shape: SHAPE.SLAB, drops: 'slab' });
+  def(B.ASHSTONE_BRICK_STAIRS, 'Ashstone Brick Stairs', { ...common, shape: SHAPE.STAIRS });
+  STONE_SETS.push([B.ASHSTONE_BRICKS, B.ASHSTONE_BRICK_SLAB, B.ASHSTONE_BRICK_STAIRS, 'Ashstone Brick']);
+  def(B.COPPER_GRATE, 'Copper Grate', { ...copper, opaque: false, layer: LAYER.CUTOUT });
+  def(B.COPPER_BULB, 'Copper Bulb', { ...copper });
+  def(B.COPPER_BULB_LIT, 'Copper Bulb', { ...copper, emit: 15, hidden: true, drops: B.COPPER_BULB, tex: { all: 'copper_bulb_lit' } });
+  def(B.PROVING_SPAWNER, 'Proving Spawner', { hardness: 50, resistance: 50, tool: TOOL.PICKAXE, tier: TIER.WOOD, opaque: false, layer: LAYER.CUTOUT, drops: null, sound: 'metal', tex: { top: 'proving_spawner_top', bottom: 'proving_spawner_top', side: 'proving_spawner_side_0' } });
+  def(B.VAULT, 'Vault', { hardness: 50, resistance: 50, tool: TOOL.PICKAXE, tier: TIER.WOOD, drops: null, sound: 'metal', tex: { top: 'vault_top', bottom: 'vault_top', side: 'vault_side', front: 'vault_front' } });
+}
+
 export const NUM_BLOCKS = BLOCKS.length;
 
 // Flat lookup tables used by hot loops (mesher, lighting, physics) and workers.

@@ -36,12 +36,14 @@ export class Chunk {
     // monster spawner positions (for the spawner logic)
     this.spawners = new Set();
     this.beacons = new Set(); // beacon positions (world/beacons.js)
+    this.provers = new Set(); // Proving Spawner positions (world/provingSystem.js)
     // circuit parts (re-evaluated when the chunk loads: scheduled ticks are not saved)
     this.circuits = new Set();
     for (let i = 0; i < this.blocks.length; i++) {
       const b = this.blocks[i];
       if (b === B.SPAWNER) this.spawners.add(`${cx * 16 + (i & 15)},${MIN_Y + (i >> 8)},${cz * 16 + ((i >> 4) & 15)}`);
       else if (b === B.BEACON) this.beacons.add(`${cx * 16 + (i & 15)},${MIN_Y + (i >> 8)},${cz * 16 + ((i >> 4) & 15)}`);
+      else if (b === B.PROVING_SPAWNER) this.provers.add(`${cx * 16 + (i & 15)},${MIN_Y + (i >> 8)},${cz * 16 + ((i >> 4) & 15)}`);
       else if (CIRCUIT_SETTLE[b]) this.circuits.add(i);
     }
     this.dirty = new Set();
@@ -171,6 +173,8 @@ export class World {
     if (id === B.SPAWNER) c.spawners.add(`${x},${y},${z}`);
     if (old === B.BEACON) c.beacons.delete(`${x},${y},${z}`);
     if (id === B.BEACON) c.beacons.add(`${x},${y},${z}`);
+    if (old === B.PROVING_SPAWNER && id !== B.PROVING_SPAWNER) c.provers.delete(`${x},${y},${z}`);
+    if (id === B.PROVING_SPAWNER) c.provers.add(`${x},${y},${z}`);
     if (CIRCUIT_SETTLE[id]) c.circuits.add(i);
     c.modified = true;
     const s = (y - MIN_Y) >> 4;

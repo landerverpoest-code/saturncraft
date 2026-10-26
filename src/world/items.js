@@ -355,6 +355,10 @@ for (const id of [B.CAKE, ...BOX_COLORS]) ITEMS[id].stack = 1; // a cake is carr
 ITEMS[I.MILK_BUCKET].craftRemainder = I.BUCKET; // the cake's milk leaves its buckets in the grid
 BLOCKS[B.CAKE].iconStyle = [['................', '................', '................', '.......rr.......', '....wwwwwwww....', '..wwwwwwwwwwww..', '..WwwwwwwwwwwW..', '..ssWWwwwwWWss..', '..ssssWWWWssss..', '..hhhhhhhhhhhh..', '..ssssssssssss..', '..hhhhhhhhhhhh..', '..ssssssssssss..', '...hhhhhhhhhh...', '................', '................'], { w: '#f4f0ec', W: '#e0d8d0', s: '#c8884a', h: '#a8683a', r: '#d0283a' }];
 BLOCKS[B.LECTERN].iconStyle = [['................', '................', '..wwwwwwwwwwww..', '..wppppppppppw..', '..wppppppppppw..', '..wwwwwwwwwwww..', '..ssssssssssss..', '......hhhh......', '......hHhh......', '......hHhh......', '......hHhh......', '......hhhh......', '...ssssssssss...', '..hhhhhhhhhhhh..', '..ssssssssssss..', '................'], { w: '#8a6034', p: '#e8dcc0', s: '#6e4a26', h: '#a07a45', H: '#b8905a' }];
+// Proving Key (world/provingSystem.js): beaten Proving Spawner waves throw them out; used on a Vault it
+// opens it once for each player
+const ICON_PROVING_KEY = ['................', '...hhhh.........', '..hHHHHh........', '.hH.kk.Hh.......', '.hH.kk.Hh.......', '..hHHHHhh.......', '...hhhhhhh......', '........hhh.....', '.........hhh....', '..........hhh...', '.........shhh...', '........ss.hhh..', '.........s..hhs.', '.............ss.', '................', '................'];
+item('proving_key', 'Proving Key', { provingKey: true, iconStyle: [ICON_PROVING_KEY, { h: '#c8794a', H: '#f4b27a', s: '#7a4a2c', k: '#2a1a10' }] });
 
 /** Light level (0-15) an item gives when held: a torch, lantern or other light block; 0 for the rest. */
 /** Is this item an arrow a bow can shoot (plain or tipped)? */

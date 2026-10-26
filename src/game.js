@@ -45,6 +45,7 @@ import { effectiveSkyLight, skyState } from './sky/suns.js';
 import { SIDE_DIRS, BED_HEAD } from './world/shapes.js';
 import { CATEGORY } from './mobs/mobTypes.js';
 import { SpawnerBlocks, dungeonLoot } from './mobs/spawnerBlocks.js';
+import { ProvingSystem } from './world/provingSystem.js';
 import { newXp, deathXp } from './player/experience.js';
 import { Player } from './player/player.js';
 import { Interaction } from './player/interaction.js';
@@ -116,6 +117,7 @@ export class Game {
     this.brewingStands = new Map(); // "x,y,z" -> Brewing Alembic state (see world/brewing.js)
     this.hoppers = new Map();     // "x,y,z" -> hopper slots (see world/hoppers.js)
     this.dispensers = new Map();  // "x,y,z" -> dispenser / dropper slots (see world/dispensers.js)
+    this.proving = new ProvingSystem(this); // Proving Spawners and Vaults (world/provingSystem.js)
     this.fps = 0; this.frameCount = 0; this.fpsTime = 0;
     this.net = null;              // multiplayer session (src/net/session.js), null in single-player
   }
@@ -217,6 +219,7 @@ export class Game {
     this.world.on('blockChanged', (x, y, z, old, id) => { if (id === B.HOPPER) this.getHopper(x, y, z); }); // a new hopper starts working
     this.world.on('fireCrackle', (x, y, z) => this.audio.play('fire', [x + 0.5, y + 0.5, z + 0.5]));
     this.initCircuits();
+    this.world.on('blockChanged', (x, y, z, old, id) => { if (old === B.PROVING_SPAWNER || old === B.VAULT) this.proving.blockChanged(x, y, z, old, id); });
     this.world.on('dropItems', (x, y, z, id, meta) => {
       if (this.net && this.net.applyingRemote) return; // the player who made the edit gets the drops
       for (const st of blockDrops(id, toolOf(null), Math.random, meta)) this.entities.spawnItem(x + 0.5, y + 0.3, z + 0.5, st);
@@ -1068,6 +1071,7 @@ export class Game {
     if (p.riding) this.seatPlayer();
     this.spawner.tick();
     if (!this.net || this.net.isHost) this.spawnerBlocks.tick();
+    if (!this.net || this.net.isHost) this.proving.tick(); // Proving Spawner waves (world/provingSystem.js)
     if (!this.net || this.net.isHost) this.raids.tick();
     this.tickMaps();
     if (!this.net || this.net.isHost) { this.tickFurnaces(); this.tickBrewing(); this.tickHoppers(); } // guests see the host's furnaces and alembics
