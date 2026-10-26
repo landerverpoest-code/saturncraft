@@ -62,6 +62,7 @@ import { EnchantBooks } from './render/enchantBooks.js';
 import { newStand, tickStand } from './world/brewing.js';
 import { effectsColor } from './player/effects.js';
 import { changeSound, CIRCUIT_BLOCK } from './world/circuits.js';
+import { onChimeChanged } from './mobs/hoverling.js';
 import { FACING6 } from './world/circuitShapes.js';
 import { findStormRod, lightningCleanCopper } from './world/caves.js';
 import { BeaconBeams } from './render/beaconBeams.js';
@@ -460,8 +461,11 @@ export class Game {
 
   /** Keep the rider on the seat. */
   seatPlayer() {
-    const p = this.player, b = p.riding.body;
-    p.body.setPos(b.x, b.y + (p.riding.seatY ?? -0.3), b.z);
+    const p = this.player, r = p.riding, b = r.body;
+    // a Dune Strider seats two: whoever rides the host's copy steers from the front, a guest sits behind
+    const off = r.def && r.def.seatOffset ? r.def.seatOffset(r, !!r.netProxy) : null;
+    if (off) p.body.setPos(b.x + off[0], b.y + off[1], b.z + off[2]);
+    else p.body.setPos(b.x, b.y + (r.seatY ?? -0.3), b.z);
     p.body.vx = p.body.vy = p.body.vz = 0;
     p.body.fallDistance = 0;
   }
@@ -939,6 +943,10 @@ export class Game {
       if (h) { h.stop(); this.jukeboxes.delete(k); }
       const m = id === B.JUKEBOX ? w.getMeta(x, y, z) : 0, disc = m > 0 && ITEMS[DISCS[m - 1]];
       if (disc) { const nh = this.music.playDisc(disc.disc, x + 0.5, y + 0.5, z + 0.5); if (nh) this.jukeboxes.set(k, nh); }
+    });
+    // a Chime Block that rings is heard by Hoverlings nearby (mobs/hoverling.js); mobs live on the host
+    w.on('blockChanged', (x, y, z, old, id) => {
+      if (id === B.CHIME_BLOCK && old === id && (!this.net || this.net.isHost)) onChimeChanged(this, x, y, z);
     });
     w.on('blockChanged', (x, y, z, old, id) => {
       if (!(CIRCUIT_BLOCK[old] || CIRCUIT_BLOCK[id] || OPENABLE.has(id))) return;

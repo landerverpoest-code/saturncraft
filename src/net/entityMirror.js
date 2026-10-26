@@ -94,6 +94,7 @@ export class EntityMirror {
       e.target = s.target ? 'player' : null;
       e.angry = s.angry; e.sheared = s.sheared; e.tamed = s.tamed; e.sitting = s.sitting; e.enemy = s.enemy ? 'player' : null;
       e.woolColor = s.woolColor; e.fuse = s.fuse; e.special = s.special; e.beam = s.beam; e.moving = s.moving; e.captain = s.captain; // Marauder Captains carry a banner
+      e.saddled = s.saddled; e.dancing = s.dancing; e.passengerId = s.passenger >= 0 ? s.passenger : null; e.heldItemId = ITEMS[s.heldItem] ? s.heldItem : 0; // Dune Striders, Hoverlings
       if (s.profession) e.profession = s.profession;
       if (s.baby !== e.age < 0) e.setBaby(s.baby);
       e.body.onGround = s.onGround;
@@ -122,6 +123,7 @@ export class EntityMirror {
     const g = this.game, s = e.netState, p = g.player;
     this.ticks = g.ticks;
     if (e.kind === 'boat' && p.riding === e) { this.tickRiddenBoat(e); return; }
+    if (e.kind === 'mob' && p.riding === e) this.checkSeat(e);
     e.prev = [e.x, e.y, e.z];
     if (e.kind === 'mob') { e.prevYaw = e.yaw; e.prevFuse = e.fuse; if (e.hurtTime > 0) e.hurtTime--; }
     if (e.kind === 'boat') e.prevYaw = e.yaw;
@@ -141,6 +143,13 @@ export class EntityMirror {
     }
     if (e.kind === 'xp' && e.age !== undefined) e.age++;
     this.tryPickup(e);
+  }
+
+  /** We sit behind on the host's Dune Strider: get off again if the host gave the seat to someone else (or never gave it). */
+  checkSeat(e) {
+    const mine = e.netState && e.netState.passenger === this.session.id;
+    e.seatWait = mine ? 0 : (e.seatWait || 0) + 1;
+    if (e.seatWait > 40) { e.seatWait = 0; this.game.dismount(); }
   }
 
   /** We sit in this boat: steer it here (the host takes our word for where it is). */
