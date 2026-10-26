@@ -5,6 +5,7 @@
 import { splashParticles } from '../entities/splash.js';
 import { Mob } from '../mobs/mob.js';
 import { MOBS } from '../mobs/mobTypes.js';
+import { equipFromIds } from '../mobs/equipment.js';
 import { ItemEntity, XPOrb, Arrow, Boat, Minecart, FallingBlock } from '../entities/entities.js';
 import { ArmorStand } from '../entities/armorStand.js';
 import { AreaCloud } from '../entities/areaCloud.js';
@@ -102,6 +103,9 @@ export class EntityMirror {
       e.customName = s.name || undefined; // a Name Tag's label
       e.leashHolder = this.leashHolder(s.leash);
       e.emerging = s.emerging; e.digging = s.digging; // a Hushkeeper rising / sinking (drawn by its customRender)
+      e.netRiding = s.riding; // a jockey: seated pose (the host places it on its mount)
+      const ek = s.equip ? s.equip.join(',') : '';
+      if (e.equipKey !== ek) { e.equipKey = ek; e.equip = equipFromIds(s.equip); } // shown only; the host keeps the real gear
       if (s.baby !== e.age < 0) e.setBaby(s.baby);
       e.body.onGround = s.onGround;
     } else if (e.kind === 'item') {
