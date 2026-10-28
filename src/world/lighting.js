@@ -73,7 +73,7 @@ const DIRS = [[1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], [0, 1, 0], [0, -1, 0
 /**
  * World-level light engine operating across chunk boundaries.
  * `world` must provide getBlock(x,y,z), getLight(x,y,z) -> packed,
- * setLight(x,y,z,packed) and isLoaded(x,z).
+ * setLight(x,y,z,packed) and isLoaded(x,z) (and getChunk(cx,cz) for stitchChunk).
  */
 export class LightEngine {
   constructor(world) {
@@ -175,8 +175,12 @@ export class LightEngine {
     const sides = [
       [-1, 0], [1, 0], [0, -1], [0, 1],
     ];
+    const own = w.getChunk(cx, cz);
     for (const [dx, dz] of sides) {
-      if (!w.isChunkLoaded(cx + dx, cz + dz)) continue;
+      const other = w.getChunk(cx + dx, cz + dz);
+      if (!other) continue;
+      // read both light arrays directly (going through getLight would swap the chunk cache every cell)
+      const A = own ? own.light : null, Bl = other.light;
       for (let k = 0; k < 16; k++) {
         // cells on both sides of the shared face
         let ax, az, bx, bz;
@@ -184,8 +188,10 @@ export class LightEngine {
         else if (dx === 1) { ax = x0 + 15; az = z0 + k; bx = x0 + 16; bz = az; }
         else if (dz === -1) { ax = x0 + k; az = z0; bx = ax; bz = z0 - 1; }
         else { ax = x0 + k; az = z0 + 15; bx = ax; bz = z0 + 16; }
+        const ia = (ax & 15) | ((az & 15) << 4), ib = (bx & 15) | ((bz & 15) << 4);
         for (let y = MIN_Y; y < MIN_Y + WORLD_HEIGHT; y++) {
-          const la = w.getLight(ax, y, az), lb = w.getLight(bx, y, bz);
+          const o = (y - MIN_Y) << 8;
+          const la = A ? A[ia | o] : 0xf0, lb = Bl[ib | o];
           if (la === lb) continue;
           if (((la >> 4) > 1 && (la >> 4) - 1 > (lb >> 4)) || ((la & 15) > 1 && (la & 15) - 1 > (lb & 15))) this.addQ.push(ax, y, az);
           if (((lb >> 4) > 1 && (lb >> 4) - 1 > (la >> 4)) || ((lb & 15) > 1 && (lb & 15) - 1 > (la & 15))) this.addQ.push(bx, y, bz);

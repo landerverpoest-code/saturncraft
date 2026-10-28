@@ -475,6 +475,7 @@ export class EntityManager {
     const a = this.add(new Arrow(x, y, z, vx, vy, vz, shooter, crit, thrown, potion));
     a.power = power | 0; // Strongdraw level of the bow
     a.item = item;
+    if (this.game.hush) this.game.hush.vibrate(x, y, z, 'shoot', null); // (world/vibrations.js; the host's world)
     if (item && !thrown) a.setTip(item.id);
     if (thrown === 'spear') { a.pickup = !!item; a.creativeThrow = !!(item && shooter && shooter.creative); }
     return a;
@@ -610,9 +611,10 @@ export class EntityManager {
       let m = this.meshes.get(e.id);
       // entity render distance (64 blocks for mobs, 32 for small entities)
       const maxD = e.kind === 'mob' ? (e.def.boss ? 320 : ENTITY_RENDER_DIST) : ENTITY_RENDER_DIST / 2;
-      if (dist2 > maxD * maxD) { if (m) m.visible = false; continue; }
+      // hidden models also skip the per-frame matrix update of all their parts
+      if (dist2 > maxD * maxD) { if (m) m.visible = m.matrixWorldAutoUpdate = false; continue; }
       if (!m) { m = this.createMesh(e); if (!m) continue; this.meshes.set(e.id, m); this.scene.add(m); }
-      m.visible = true;
+      m.visible = m.matrixWorldAutoUpdate = true;
       if (e.kind === 'mob') {
         const shadow = dist2 < SHADOW_CAST_DIST * SHADOW_CAST_DIST;
         if (m.userData.castShadow !== shadow) { m.userData.castShadow = shadow; m.traverse((o) => { if (o.isMesh) o.castShadow = shadow; }); }

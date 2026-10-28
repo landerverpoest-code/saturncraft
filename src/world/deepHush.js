@@ -144,8 +144,8 @@ function stampRuins(seed, blocks, meta, cx, cz, tops) {
 
 /** How far a Hush Sensor hears (blocks, straight-line distance). */
 export const VIBRATION_RANGE = 8;
-/** Ticks a sensor's pulse lasts and how long it then rests before it can hear again. */
-export const SENSOR_PULSE = 40, SENSOR_REST = 10;
+/** Ticks a sensor's pulse lasts (reference: 30) and how long it then rests before it can hear again (10). */
+export const SENSOR_PULSE = 30, SENSOR_REST = 10;
 /** Warning: one step per shriek / sensor alarm at most every 10 s; at 4 a Hushkeeper comes; one step fades every 10 minutes. */
 export const WARNING_MAX = 4, WARNING_COOLDOWN = 200, WARNING_DECAY = 12000;
 /** Darkness from a shrieker: 12 s, felt within 40 blocks. */

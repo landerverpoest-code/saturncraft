@@ -66,16 +66,19 @@ export function sectionHasSky(light) {
  * direction it already took, which keeps it from leaking around corners.
  * Calls onVisible(cx, sy, cz) once per reachable section.
  */
+let _visited = null, _q = null; // reused between walks (this runs often while chunks stream in)
 export function floodVisible(camCx, camSy, camCz, radius, getVis, onVisible) {
-  const W = radius * 2 + 1;
-  const visited = new Uint8Array(W * W * SECTION_COUNT);
+  const W = radius * 2 + 1, cells = W * W * SECTION_COUNT;
+  if (!_visited || _visited.length < cells) { _visited = new Uint8Array(cells); _q = new Int32Array(cells * 5); }
+  const visited = _visited, q = _q;
+  visited.fill(0, 0, cells);
   const slot = (cx, sy, cz) => ((cx - camCx + radius) + (cz - camCz + radius) * W) * SECTION_COUNT + sy;
-  const q = [];
   const sy0 = Math.max(0, Math.min(SECTION_COUNT - 1, camSy));
   visited[slot(camCx, sy0, camCz)] = 1;
   onVisible(camCx, sy0, camCz);
-  q.push(camCx, sy0, camCz, -1, 0);
-  for (let h = 0; h < q.length; h += 5) {
+  let tail = 0;
+  q[tail++] = camCx; q[tail++] = sy0; q[tail++] = camCz; q[tail++] = -1; q[tail++] = 0;
+  for (let h = 0; h < tail; h += 5) {
     const cx = q[h], sy = q[h + 1], cz = q[h + 2], entry = q[h + 3], dirs = q[h + 4];
     const vis = entry < 0 ? ALL_OPEN : getVis(cx, sy, cz);
     for (let d = 0; d < 6; d++) {
@@ -89,7 +92,7 @@ export function floodVisible(camCx, camSy, camCz, radius, getVis, onVisible) {
       if (getVis(nx, ny, nz) < 0) continue;
       visited[k] = 1;
       onVisible(nx, ny, nz);
-      q.push(nx, ny, nz, d ^ 1, dirs | (1 << d));
+      q[tail++] = nx; q[tail++] = ny; q[tail++] = nz; q[tail++] = d ^ 1; q[tail++] = dirs | (1 << d);
     }
   }
 }

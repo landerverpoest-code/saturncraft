@@ -27,6 +27,8 @@ import * as THREE from 'three';
 
 import { conversionStep, newConversion } from './hostileVariants.js'; // registers the Hexwife and the Shambler / Rattler variants
 import { outOfMeleeReach } from './duneStrider.js'; // registers the Dune Strider
+import { companionAI, companionSave, companionLoad } from './companions.js'; // tame Vixlings and Cragbucks
+import { babySpeedFactor, babyAttackFactor, babyHealth, babyExplosion, babyXp, babyLoot } from './babies.js'; // spiderlings, Fizzlets, Brute cubs
 import './hoverling.js'; // registers the Hoverling
 import { EFFECTS, addEffect, tickEffects, speedFactor, periodicActions, instantAmount, effectsColor, visibilityFactor, resistanceFactor } from '../player/effects.js';
 
@@ -109,7 +111,7 @@ export class Mob {
     this.squish = 0;
   }
 
-  get maxHealth() { return this.maxHp || (this.tamed ? this.def.tamedHealth : this.def.health); }
+  get maxHealth() { return this.maxHp || (this.tamed ? this.def.tamedHealth : this.baby && this.def.babyStats ? babyHealth(this.def) : this.def.health); }
 
   tame(g) {
     this.tamed = true; this.sitting = true; this.enemy = null; this.target = null; this.path = null; this.wander = null;
@@ -129,7 +131,7 @@ export class Mob {
   }
 
   /** State kept when the mob is saved with its chunk. */
-  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor, profession: this.profession, trades: this.trades, home: this.home, lastRestock: this.lastRestock, jobSite: this.jobSite || undefined, traded: this.traded || undefined, size: this.size, coat: this.coat, temper: this.temper, saddled: this.saddled, maxHp: this.maxHp, playerMade: this.playerMade, tamed: this.tamed, sitting: this.sitting, ownerName: this.ownerName, horns: this.horns, hive: this.hive, nectar: this.nectar, beach: this.beach, pregnant: this.pregnant, captain: this.captain || undefined, raider: this.raider || undefined, raidId: this.raidId || undefined, customName: this.customName || undefined, leash: leashSaveData(this), equip: this.equip || undefined, equipPicked: this.equipPicked || undefined, canPickUp: this.canPickUp || undefined, ...(this.def.saveExtra ? this.def.saveExtra(this) : {}) }; }
+  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor, profession: this.profession, trades: this.trades, home: this.home, lastRestock: this.lastRestock, jobSite: this.jobSite || undefined, traded: this.traded || undefined, size: this.size, coat: this.coat, temper: this.temper, saddled: this.saddled, maxHp: this.maxHp, playerMade: this.playerMade, tamed: this.tamed, sitting: this.sitting, ownerName: this.ownerName, horns: this.horns, hive: this.hive, nectar: this.nectar, beach: this.beach, pregnant: this.pregnant, captain: this.captain || undefined, raider: this.raider || undefined, raidId: this.raidId || undefined, customName: this.customName || undefined, leash: leashSaveData(this), equip: this.equip || undefined, equipPicked: this.equipPicked || undefined, canPickUp: this.canPickUp || undefined, ...(this.def.companion ? companionSave(this) : {}), ...(this.def.saveExtra ? this.def.saveExtra(this) : {}) }; }
   loadData(s) {
     this.health = s.health; this.yaw = s.yaw;
     if (s.age < 0) { this.setBaby(true); this.age = s.age; } else { if (this.age < 0) this.setBaby(false); this.age = s.age || 0; }
@@ -144,6 +146,7 @@ export class Mob {
     if (s.size) { this.setSize(s.size); this.health = s.health; }
     if (this.type === 'galloper') { if (s.coat !== undefined) this.coat = s.coat; this.temper = s.temper || 0; this.saddled = !!s.saddled; if (s.maxHp) this.maxHp = s.maxHp; }
     if (s.tamed) { this.tamed = true; this.sitting = !!s.sitting; if (s.ownerName) this.ownerName = s.ownerName; }
+    if (this.def.companion) companionLoad(this, s); // a Vixling's gift timer
     if (this.def.loadExtra) this.def.loadExtra(this, s); // Dune Striders' saddles, Hoverlings' items
     if (s.customName && typeof s.customName === 'string') { this.customName = s.customName.slice(0, 32); this.persistent = true; } // named with a Name Tag: never despawns
     if (s.leash && (s.leash.player || Array.isArray(s.leash.knot))) { this.leashPending = s.leash; this.persistent = true; } // its holder is found again on its first tick (entities/leash.js)
@@ -280,7 +283,7 @@ export class Mob {
     baby.setBaby(true);
     baby.woolColor = Math.random() < 0.5 ? this.woolColor : mate.woolColor; // (the reference blends dye colours)
     baby.yaw = this.yaw;
-    if (this.tamed) { baby.tamed = true; baby.health = baby.def.tamedHealth; baby.persistent = true; } // pups of tame Howlers are tame
+    if (this.tamed) { baby.tamed = true; baby.health = baby.def.tamedHealth; baby.persistent = true; baby.ownerName = this.ownerName; } // pups of tame Howlers are tame and keep the owner
     for (const m of [this, mate]) { m.loveTicks = 0; m.age = 6000; m.breedTime = 0; }
     this.hearts(g, 7);
     g.entities.spawnXp(this.x, this.y + 0.5, this.z, 1 + Math.floor(Math.random() * 7));
@@ -357,6 +360,10 @@ export class Mob {
       if (foe && foe !== this && g && !this.stung) Mob.angerBees(g, this.x, this.y, this.z, foe);
     } else if (this.def.feline) {
       this.sitting = false; this.panicTicks = 60 + Math.floor(Math.random() * 40);
+    } else if (this.def.companion && this.tamed) {
+      // a tame Vixling or Cragbuck stands up and fights back (never at its owner or another pet)
+      this.sitting = false;
+      if (attacker && attacker !== this && attacker.kind === 'mob' && !attacker.tamed) this.enemy = attacker;
     } else if (this.def.tameable) {
       // a hurt Howler stands up and fights back; a wild one calls its pack
       this.sitting = false;
@@ -396,7 +403,9 @@ export class Mob {
     for (const st of equipmentDrops(this.equip, { killedByPlayer, plunder: source === 'player' ? this.plunder | 0 : 0, picked: this.equipPicked })) g.entities.spawnItem(this.x, this.y + 0.5, this.z, st);
     if (this.age < 0 && this.def.category !== CATEGORY.MONSTER) { this.killedByPlayer = false; return; } // baby animals drop nothing
     const plunder = source === 'player' ? this.plunder | 0 : 0; // set by the player's melee hit
-    for (const d of rollDrops(this.type, { killedByPlayer, onFire: this.fireTicks > 0, sheared: this.sheared, plunder })) {
+    let drops = rollDrops(this.type, { killedByPlayer, onFire: this.fireTicks > 0, sheared: this.sheared, plunder });
+    if (this.age < 0 && this.def.babyStats) drops = babyLoot(drops, this.def.babyStats.loot); // spiderlings, Fizzlets and cubs leave less
+    for (const d of drops) {
       if (d.id === B.WOOL) d.id = WOOL_ITEMS[this.woolColor || 0];
       g.entities.spawnItem(this.x, this.y + 0.5, this.z, d);
     }
@@ -426,7 +435,7 @@ export class Mob {
   speed() {
     let s = this.def.speed;
     if (this.type === 'voidwalker' && this.angry) s += 0.15;
-    if (this.age < 0 && this.def.babyChance) s *= 1.5; // baby Shamblers are half again as fast
+    if (this.age < 0 && this.def.babyChance) s *= babySpeedFactor(this.def); // baby Shamblers are half again as fast, other babies as their stats say
     return s * speedFactor(this.effects);
   }
 
@@ -497,7 +506,7 @@ export class Mob {
         // a Hush Catalyst nearby drinks in the experience of the dead and spreads Hushmoss (world/hushSystem.js)
         const absorbed = g.hush ? g.hush.onMobDeath(this) : false;
         // experience when killed by the player: monsters 5, animals 1-3
-        if (this.killedByPlayer && !absorbed) g.entities.spawnXp(this.x, this.y + 0.3, this.z, this.def.xp || (this.def.category === 'monster' ? (this.age < 0 ? 12 : 5) : 1 + Math.floor(Math.random() * 3)));
+        if (this.killedByPlayer && !absorbed) g.entities.spawnXp(this.x, this.y + 0.3, this.z, this.def.xp || (this.def.category === 'monster' ? (this.age < 0 ? babyXp(this.def) : 5) : 1 + Math.floor(Math.random() * 3)));
         g.particles.smoke(this.x, this.y + this.height / 2, this.z, 14, this.width);
       }
       return;
@@ -701,6 +710,7 @@ export class Mob {
   ai(g, p, pdist) {
     if (this.def.ownAI) return this.def.ownAI(this, g, p, pdist); // Dune Striders, Hoverlings
     if (this.def.villager) return this.settlerAI(g, p, pdist);
+    if (this.def.companion && this.tamed) return companionAI(this, g, p, pdist); // tame Vixlings and Cragbucks (mobs/companions.js)
     if (this.def.parrot) return this.parrotAI(g, p, pdist);
     if (this.def.feline) return this.catAI(g, p, pdist);
     if (this.def.goat) return this.goatAI(g, p, pdist);
@@ -1487,7 +1497,7 @@ export class Mob {
   }
 
   /** Melee damage: the mob's own plus a held weapon's bonus (an iron sword +5, an iron shovel +3.5). */
-  attackDamage() { return (this.def.attack || 0) + (this.equip ? weaponBonus(this.equip.hand) : 0); }
+  attackDamage() { return (this.def.attack || 0) * (this.age < 0 ? babyAttackFactor(this.def) : 1) + (this.equip ? weaponBonus(this.equip.hand) : 0); }
 
   meleeReachSq(p) { const w = this.width * 2; return w * w + 0.6; }
 
@@ -1599,7 +1609,7 @@ export class Mob {
     if (dir > 0 && this.fuse === 0) g.audio.play('hiss', [this.x, this.y + 1, this.z]);
     this.fuse = Math.max(0, this.fuse + dir);
     if (this.fuse >= this.def.fuse) {
-      g.explode(this.x, this.y + this.height / 2, this.z, this.def.explosionPower, this);
+      g.explode(this.x, this.y + this.height / 2, this.z, babyExplosion(this.def, this.age < 0), this);
       this.removed = true; this.dead = true;
       return;
     }
@@ -1764,6 +1774,16 @@ export class Mob {
     if (parts && this.type === 'cragbuck') {
       for (const k of ['beard', 'hornL', 'hornR', 'earL', 'earR']) parts[k].rotation.x = parts.head.rotation.x;
       parts.hornL.visible = (this.horns ?? 2) >= 1; parts.hornR.visible = (this.horns ?? 2) >= 2;
+    }
+    if (parts && parts.band && this.def.companion) {
+      // tame Vixlings and Cragbucks wear a band; sitting ones lie down (legs tucked, body lowered)
+      parts.band.visible = this.tamed;
+      const sit = this.tamed && this.sitting && this.deathTime === 0;
+      if (sit) {
+        m.position.y = py - (this.type === 'cragbuck' ? 0.34 : 0.14) * m.scale.y;
+        for (const k of ['legFL', 'legFR', 'legBL', 'legBR']) parts[k].rotation.x = this.type === 'cragbuck' ? 1.45 : (k.startsWith('legB') ? 1.3 : -0.25);
+        if (parts.tail) parts.tail.rotation.x = 0.9;
+      }
     }
     if (parts && parts.collar) {
       parts.collar.visible = this.tamed;

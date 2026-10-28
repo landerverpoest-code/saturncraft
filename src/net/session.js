@@ -15,7 +15,7 @@
 //   tickNear(entity), remoteTargets(proj), raycastPlayers(...), playerNames(),
 //   requestSpawn(kind, data), interactMob(mob), hitBoat(boat), ride(boat, on),
 //   openContainer / closeContainer / uiBefore / uiAfter, requestTrade(...),
-//   sendCommand(text), requestTravel(dim, arrival), requestExplosion(...),
+//   sendCommand(text), requestTravel(dim, arrival), requestExplosion(...), sendVibration(k, x, y, z),
 //   onSwitchDimension(dim, pos), onArrived(x, y, z), respawnNearHost(), useFence(x, y, z)
 import { doubleChestHalves, doubleChestView } from '../world/chests.js';
 import { igniteTNT, PrimedTNT } from '../entities/tnt.js';
@@ -37,6 +37,7 @@ import { chunkKey } from '../world/world.js';
 import { B, isFurnace, isBox, BOX_COLORS } from '../world/blocks.js';
 import { I, ITEMS } from '../world/items.js';
 import { withExtras } from '../world/enchantments.js';
+import { GUEST_KINDS } from '../world/vibrations.js';
 import { rayAABB } from '../entities/entities.js';
 import { canPickUpSpear } from '../entities/tidespear.js';
 import { runRandomTicks } from '../world/randomTicks.js';
@@ -332,6 +333,9 @@ export class HostSession extends Session {
         g.dims.switchTo(m.dim, { ...a, mode: ['rift', 'safe', 'spawn', 'hollowArrival'].includes(a.mode) ? a.mode : 'safe', x: +a.x || s.x, y: +a.y || s.y, z: +a.z || s.z });
         break;
       }
+      case 'vib': // a guest ate, opened a door, flipped a lever or tossed an item: the host's sensors hear it (world/vibrations.js)
+        if (g.hush && GUEST_KINDS.has(m.k) && this.near(c, m.x, m.y, m.z, 8)) g.hush.vibrate(m.x, m.y, m.z, m.k, c.rp.target);
+        break;
       case 'boom': if (this.near(c, m.x, m.y, m.z, 8) && m.power > 0 && m.power <= 6) g.explode(m.x, m.y, m.z, m.power, null); break;
       case 'bye': this.drop(c, 'left the game'); break;
       default: break;
@@ -1221,6 +1225,9 @@ export class ClientSession extends Session {
   }
 
   requestExplosion(x, y, z, power) { this.send({ t: 'boom', x, y, z, power }); }
+
+  /** Something we did makes a vibration: the host's sensors listen (world/hushSystem.js emit). */
+  sendVibration(k, x, y, z) { this.send({ t: 'vib', k, x, y, z }); }
 
   /** Respawning away from the overworld: back next to the host (the group stays together). */
   respawnNearHost() {

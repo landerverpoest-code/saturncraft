@@ -6,7 +6,7 @@ import { HostSession, ClientSession } from '../src/net/session.js';
 import { EntityMirror } from '../src/net/entityMirror.js';
 import { LeashKnot, knotAt, isHolder, heldBy, leash } from '../src/entities/leash.js';
 import { HushSystem, remoteVibration, REMOTE_STEP_EVERY } from '../src/world/hushSystem.js';
-import { DARKNESS_TICKS } from '../src/world/deepHush.js';
+import { DARKNESS_TICKS, SHRIEKER_CAN_SUMMON } from '../src/world/deepHush.js';
 import { RaidState, RAID, Raids, raidStatus, raidBarFor, championsOf, RAID_RADIUS, RAID_BAR_DIST, CHAMPION_TICKS } from '../src/mobs/raids.js';
 import { I } from '../src/world/items.js';
 import { B } from '../src/world/blocks.js';
@@ -212,6 +212,7 @@ describe('the Deep Hush hears guests', () => {
   it('raises the warning of the guest who walked by a sensor, not the host', () => {
     const { g, world, c } = hushGame();
     world.set(23, 60, 0, B.HUSH_SENSOR, 0);
+    world.set(22, 60, 3, B.HUSH_SHRIEKER, SHRIEKER_CAN_SUMMON); // (a world-grown shrieker raises the warning)
     g.hush.tick(); // first state seen
     g.ticks++;
     c.rp.state = { x: 21, y: 60, z: 0.5 };

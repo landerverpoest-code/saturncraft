@@ -1,6 +1,7 @@
 // Player interaction with the world: mining (with break progress), placing,
 // attacking with the attack cooldown, eating, buckets and containers.
 import { Mob } from '../mobs/mob.js';
+import { canTameWith, companionFoods, mayCommand, TAME_CHANCE } from '../mobs/companions.js';
 import { pairOnPlace } from '../world/chests.js';
 import { hopperPlaceMeta } from '../world/hoppers.js';
 import { dispenserPlaceMeta } from '../world/dispensers.js';
@@ -23,6 +24,7 @@ import { igniteTNT } from '../entities/tnt.js';
 import { scaffoldDistance, scaffoldColumnTop, SCAFFOLD_MAX } from '../world/scaffolding.js';
 import { updateRails } from '../world/rails.js';
 import { placeMeta as circuitPlaceMeta, useMeta as circuitUseMeta } from '../world/circuits.js';
+import { ON as CIRCUIT_ON } from '../world/circuitShapes.js';
 import { choosePainting, placePainting } from '../world/paintings.js';
 import { standYaw, standAt, useStand, punchStand } from '../entities/armorStand.js';
 import { tryLightRift, findHollowRing, fillHollowGate } from '../world/dimensions/portal.js';
@@ -446,10 +448,17 @@ export class Interaction {
     this.swing = SWING_TICKS;
   }
 
+  /** A vibration the Deep Hush's sensors can hear, from the block (cell corner) at x, y, z (world/vibrations.js). */
+  shake(kind, x, y, z) {
+    const g = this.game;
+    if (g.hush) g.hush.emit(kind, x + 0.5, y + 0.5, z + 0.5, g.player);
+  }
+
   eat(st) {
     const g = this.game, p = g.player;
     const f = ITEMS[st.id].food;
     p.hunger.eat(f.hunger, f.saturation);
+    this.shake('eat', p.x - 0.5, p.y + 0.5, p.z - 0.5);
     if (f.effect && Math.random() < f.effect.chance) p.addEffect(f.effect.type, f.effect.ticks);
     for (const [type, ticks, amp] of f.effects || []) p.addEffect(type, ticks, amp); // a Gilded Apple's sure effects
     p.inventory.removeFromSlot(p.inventory.selected, 1);
@@ -471,6 +480,7 @@ export class Interaction {
   /** Finish drinking: an elixir's effects (glass vial back) or milk (clears all effects, bucket back). */
   drink(st) {
     const g = this.game, p = g.player, d = ITEMS[st.id];
+    this.shake('drink', p.x - 0.5, p.y + 0.5, p.z - 0.5);
     if (d.milk) p.clearEffects();
     else if (d.potion) for (const [type, ticks, amp] of POTIONS[d.potion.kind].effects) p.applyEffect(type, ticks, amp);
     if (!p.creative) {
@@ -838,6 +848,7 @@ export class Interaction {
         if (um >= 0) {
           w.setBlockUrgent(t.x, t.y, t.z, t.id, um);
           g.audio.play(t.id === B.CHIME_BLOCK ? 'chime_' + (um & 31) : 'click', [t.x + 0.5, t.y + 0.5, t.z + 0.5]);
+          if (t.id === B.LEVER || t.id === B.STONE_BUTTON) this.shake(um & CIRCUIT_ON ? 'activate' : 'deactivate', t.x, t.y, t.z);
         }
         this.swing = SWING_TICKS;
         return true;
@@ -846,6 +857,7 @@ export class Interaction {
         const m = w.getMeta(t.x, t.y, t.z);
         w.setBlockUrgent(t.x, t.y, t.z, t.id, m ^ TRAPDOOR_OPEN);
         g.audio.play(m & TRAPDOOR_OPEN ? 'door_close' : 'door_open', [t.x + 0.5, t.y + 0.5, t.z + 0.5]);
+        this.shake(m & TRAPDOOR_OPEN ? 'close' : 'open', t.x, t.y, t.z);
         this.swing = SWING_TICKS;
         return true;
       }
@@ -853,6 +865,7 @@ export class Interaction {
         const m = w.getMeta(t.x, t.y, t.z);
         w.setBlockUrgent(t.x, t.y, t.z, t.id, m ^ GATE_OPEN);
         g.audio.play(m & GATE_OPEN ? 'door_close' : 'door_open', [t.x + 0.5, t.y + 0.5, t.z + 0.5]);
+        this.shake(m & GATE_OPEN ? 'close' : 'open', t.x, t.y, t.z);
         this.swing = SWING_TICKS;
         return true;
       }
@@ -861,12 +874,13 @@ export class Interaction {
         const m = w.getMeta(t.x, t.y, t.z), by = m & DOOR_UPPER ? t.y - 1 : t.y;
         for (const yy of [by, by + 1]) if (w.getBlock(t.x, yy, t.z) === t.id) w.setBlockUrgent(t.x, yy, t.z, t.id, w.getMeta(t.x, yy, t.z) ^ DOOR_OPEN, false);
         g.audio.play(m & DOOR_OPEN ? 'door_close' : 'door_open', [t.x + 0.5, by + 1, t.z + 0.5]);
+        this.shake(m & DOOR_OPEN ? 'close' : 'open', t.x, by, t.z);
         this.swing = SWING_TICKS;
         return true;
       }
       if (t.id === B.LECTERN && this.useLectern(t, st)) { this.swing = SWING_TICKS; return true; }
       if (t.id === B.CAKE && this.eatCake(t)) { this.swing = SWING_TICKS; return true; }
-      if (t.id === B.CHEST || t.id === B.BARREL || isBox(t.id) || t.id === B.HOPPER || t.id === B.DISPENSER || t.id === B.DROPPER) { g.ui.openChest(t.x, t.y, t.z); g.audio.play('chest_open', [t.x + 0.5, t.y + 0.5, t.z + 0.5]); return true; }
+      if (t.id === B.CHEST || t.id === B.BARREL || isBox(t.id) || t.id === B.HOPPER || t.id === B.DISPENSER || t.id === B.DROPPER) { g.ui.openChest(t.x, t.y, t.z); g.audio.play('chest_open', [t.x + 0.5, t.y + 0.5, t.z + 0.5]); this.shake('open', t.x, t.y, t.z); return true; }
     }
     if (t && t.id === B.COMPOSTER && !p.sneaking && this.useComposter(t, st)) { this.swing = SWING_TICKS; return true; }
     if (t && t.id === B.SWEET_BERRY_BUSH && this.useBerryBush(t, st, d)) { this.swing = SWING_TICKS; return true; }
@@ -1103,6 +1117,7 @@ export class Interaction {
     if (!p.hunger.canEat() && !p.creative) return false;
     const bites = (w.getMeta(t.x, t.y, t.z) & 7) + 1;
     p.hunger.eat(CAKE_FOOD.hunger, CAKE_FOOD.saturation);
+    this.shake('eat', t.x, t.y, t.z);
     if (bites >= CAKE_SLICES) w.setBlockUrgent(t.x, t.y, t.z, B.AIR, 0);
     else w.setBlockUrgent(t.x, t.y, t.z, B.CAKE, bites);
     g.audio.play('eat', [t.x + 0.5, t.y + 0.5, t.z + 0.5]);
@@ -1185,23 +1200,29 @@ export class Interaction {
   }
 
   /** Feed / breed / shear a passive mob. Returns true if something happened. */
-  /** Howlers (bones) and Purrlings (fish): tame a wild one (1 in 3), heal/breed a tame one with meat, otherwise sit/stand. */
+  /**
+   * Howlers (bones), Purrlings (fish), Squawklets (seeds) and the companions of mobs/companions.js (Vixlings with
+   * berries, Cragbucks with bread): tame a wild one (1 in 3), heal/breed a tame one with its food, otherwise sit/stand.
+   */
   interactHowler(mob, st, d) {
     const g = this.game, p = g.player;
     const use = () => { if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1); this.swing = SWING_TICKS; };
+    const companion = !!mob.def.companion;
     if (!mob.tamed) {
-      if (!st || !(mob.def.tameFood || [I.BONE]).includes(st.id) || mob.target) return false;
+      if (!st || mob.target || mob.ram) return false;
+      if (companion ? !canTameWith(mob.def, st.id) : !(mob.def.tameFood || [I.BONE]).includes(st.id)) return false;
       use();
-      if (Math.random() < 1 / 3) {
+      if (Math.random() < (companion ? TAME_CHANCE : 1 / 3)) {
         mob.tame(g);
       } else g.particles.smoke(mob.x, mob.y + mob.height, mob.z, 7, 0.4);
       return true;
     }
-    if (d && d.food && mob.def.food.includes(st.id)) {
-      if (mob.health < mob.maxHealth) { mob.health = Math.min(mob.maxHealth, mob.health + d.food.hunger); use(); g.audio.play('eat', [mob.x, mob.y + 0.5, mob.z]); mob.hearts(g, 2, true); return true; }
-      if (mob.feed(g)) { use(); return true; }
+    if (st && (companion ? companionFoods(mob.def) : mob.def.food).includes(st.id)) {
+      if (mob.health < mob.maxHealth) { mob.health = Math.min(mob.maxHealth, mob.health + (d && d.food ? d.food.hunger : 2)); use(); g.audio.play('eat', [mob.x, mob.y + 0.5, mob.z]); mob.hearts(g, 2, true); return true; }
+      if (mob.def.food && mob.def.food.includes(st.id) && mob.feed(g)) { use(); return true; }
+      if (companion) return false; // full and not in the mood: a snack in hand is no sit command
     }
-    if (mob.ownerName && p.netName && mob.ownerName !== p.netName) return false; // only its owner tells it to sit
+    if (!mayCommand(mob, p)) return false; // only its owner tells it to sit
     mob.sitting = !mob.sitting;
     mob.path = null; mob.wander = null; mob.target = null;
     return true;
@@ -1247,7 +1268,7 @@ export class Interaction {
     if (mob.netProxy && guestWantsSeat(mob, p, st)) { g.mount(mob); this.swing = SWING_TICKS; return true; }
     if (mob.netProxy) return g.net.interactMob(mob); // multiplayer guest: the host feeds, shears, tames or trades
     if (mob.def.villager && mob.deathTime === 0 && mob.trades.length && !(d && d.food && mob.def.food)) { g.ui.openTrade(mob); g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); return true; }
-    if (mob.def.tameable && mob.deathTime === 0 && this.interactHowler(mob, st, d)) return true;
+    if ((mob.def.tameable || mob.def.companion) && mob.deathTime === 0 && this.interactHowler(mob, st, d)) return true;
     const useOne = () => { if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1); this.swing = SWING_TICKS; };
     if (mob.def.strider) return interactStrider(g, mob, p, st, useOne); // saddle, cactus, climb on
     if (mob.def.hoverling) return interactHoverling(g, mob, p, st, useOne); // give it an item, take it back
