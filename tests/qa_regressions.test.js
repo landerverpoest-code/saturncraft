@@ -8,6 +8,7 @@ import { B } from '../src/world/blocks.js';
 import { TerrainGenerator } from '../src/world/generator.js';
 import { cidx } from '../src/world/constants.js';
 import { DimensionManager } from '../src/world/dimensions/manager.js';
+import { Player } from '../src/player/player.js';
 
 describe('Cinderdeep monster spawning', () => {
   // a cavern: floor at y 40, roof from y 120 up (the heightmap reads the roof)
@@ -82,5 +83,16 @@ describe('a Void Wyrm outside the Hollow', () => {
     expect(toasts.length).toBe(0);
     dm.onCrystalDestroyed({ crystalIndex: 0 });
     expect(dm.hollow.crystals[0]).toBe(true);
+  });
+});
+
+describe('/kill under Resistance V', () => {
+  it('kills instead of leaving the health NaN', () => {
+    const p = new Player();
+    p.applyEffect('resistance', 600, 4);
+    p.hurt(Infinity, 'kill');
+    expect(Number.isNaN(p.health)).toBe(false);
+    expect(p.health).toBe(0);
+    expect(p.dead).toBe(true);
   });
 });

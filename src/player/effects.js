@@ -137,7 +137,7 @@ export function witherInterval(amp) { return Math.max(1, 40 >> amp); }
 /** Damage multiplier from Resistance: a fifth less per level, none left from level V (the void ignores it). */
 export function resistanceFactor(map, source = 'generic') {
   const lv = effectLevel(map, 'resistance');
-  return lv && source !== 'void' ? Math.max(0, 1 - 0.2 * lv) : 1;
+  return lv && source !== 'void' && source !== 'kill' ? Math.max(0, 1 - 0.2 * lv) : 1; // (/kill goes through, or Infinity * 0 left NaN health)
 }
 
 /** Luck for loot rolls: +1 per Luck level, -1 per Bad Luck level. */
