@@ -121,6 +121,8 @@ export const DIMENSION_MOBS = {
     health: 24, speed: 0.24, width: 0.8, height: 2.1, attack: 5, followRange: 24, armor: 4, sound: 'grunt',
     fireImmune: true, customAI: (m, g, p, pd) => m.meleeAI(g, p, pd),
     drops: [{ id: I.GOLD_INGOT, min: 0, max: 1 }, { id: I.ROTTEN_FLESH, min: 0, max: 1 }],
+    // 5 % are cubs: half size, 40 % faster, half the health, a weaker blow and nothing to loot
+    babyChance: 0.05, babyStats: { speed: 1.4, attack: 0.6, health: 0.5, loot: 'none', xp: 4 },
   },
   ember_lord: {
     name: 'Ember Lord', role: 'blaze', category: CATEGORY.MONSTER,

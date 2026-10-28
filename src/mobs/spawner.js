@@ -19,6 +19,7 @@ import { hutsNear, hutAt } from '../world/swampHuts.js';
 import { igloosNear, basementLayout } from '../world/igloos.js';
 import { HUT_MONSTERS, isNewtPoolFloor } from './spawnRules.js';
 import { soddenSpawnChance } from './hostileVariants.js';
+import { babyHealth } from './babies.js';
 import { SEA_LEVEL } from '../world/constants.js';
 import { tickMonumentSpawns, spawnElders } from './oceanMobs.js';
 import { spawnVillageStrider, desertChunkSpawn } from './duneStrider.js';
@@ -55,7 +56,7 @@ export class MobSpawner {
   spawnMob(type, x, y, z, { fresh = true } = {}) {
     const m = new Mob(type, x, y, z);
     m._game = this.game;
-    if (fresh && m.def.babyChance && Math.random() < m.def.babyChance) m.setBaby(true); // 5 % of Shamblers are babies (for good)
+    if (fresh && m.def.babyChance && Math.random() < m.def.babyChance) { m.setBaby(true); if (m.def.babyStats) m.health = babyHealth(m.def); } // 5 % of Shamblers are babies (for good); so are some spiderlings, Fizzlets and Brute cubs
     if (m.def.onSpawn) m.def.onSpawn(m);
     if (fresh && EQUIP_KINDS[type]) {
       // armour and weapons, likelier the longer the world has run and players have stayed here (mobs/equipment.js)

@@ -8,7 +8,7 @@
 // The pure rules (elixir choice, drink choice, the underwater conversion timer)
 // are exported for the tests. Numbers follow the reference game.
 import { MOBS, MOB_KEYS, CATEGORY } from './mobTypes.js';
-import { I, SPLASH_ITEM } from '../world/items.js';
+import { I, SPLASH_ITEM, TIPPED_ARROW } from '../world/items.js';
 import { POTIONS } from '../world/potions.js';
 
 const TAU = Math.PI * 2;
@@ -220,7 +220,8 @@ export const VARIANT_MOBS = {
     burnsInSun: true, sound: 'rattle', needsSky: true,
     arrowEffect: ['slowness', 600, 0], // 30 s of Slowness per hit
     customAI: (m, g, p, pd) => m.rangedAI(g, p, pd),
-    drops: MOBS.rattler.drops,
+    // plain Rattler loot, and (killed by a player) 0-1 Arrows of Slowness, the tip they shoot with
+    drops: [...MOBS.rattler.drops, { id: TIPPED_ARROW.slowness, min: 0, max: 1, playerOnly: true }],
   },
 };
 

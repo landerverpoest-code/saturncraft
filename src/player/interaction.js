@@ -1,6 +1,7 @@
 // Player interaction with the world: mining (with break progress), placing,
 // attacking with the attack cooldown, eating, buckets and containers.
 import { Mob } from '../mobs/mob.js';
+import { canTameWith, companionFoods, mayCommand, TAME_CHANCE } from '../mobs/companions.js';
 import { pairOnPlace } from '../world/chests.js';
 import { hopperPlaceMeta } from '../world/hoppers.js';
 import { dispenserPlaceMeta } from '../world/dispensers.js';
@@ -1199,23 +1200,29 @@ export class Interaction {
   }
 
   /** Feed / breed / shear a passive mob. Returns true if something happened. */
-  /** Howlers (bones) and Purrlings (fish): tame a wild one (1 in 3), heal/breed a tame one with meat, otherwise sit/stand. */
+  /**
+   * Howlers (bones), Purrlings (fish), Squawklets (seeds) and the companions of mobs/companions.js (Vixlings with
+   * berries, Cragbucks with bread): tame a wild one (1 in 3), heal/breed a tame one with its food, otherwise sit/stand.
+   */
   interactHowler(mob, st, d) {
     const g = this.game, p = g.player;
     const use = () => { if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1); this.swing = SWING_TICKS; };
+    const companion = !!mob.def.companion;
     if (!mob.tamed) {
-      if (!st || !(mob.def.tameFood || [I.BONE]).includes(st.id) || mob.target) return false;
+      if (!st || mob.target || mob.ram) return false;
+      if (companion ? !canTameWith(mob.def, st.id) : !(mob.def.tameFood || [I.BONE]).includes(st.id)) return false;
       use();
-      if (Math.random() < 1 / 3) {
+      if (Math.random() < (companion ? TAME_CHANCE : 1 / 3)) {
         mob.tame(g);
       } else g.particles.smoke(mob.x, mob.y + mob.height, mob.z, 7, 0.4);
       return true;
     }
-    if (d && d.food && mob.def.food.includes(st.id)) {
-      if (mob.health < mob.maxHealth) { mob.health = Math.min(mob.maxHealth, mob.health + d.food.hunger); use(); g.audio.play('eat', [mob.x, mob.y + 0.5, mob.z]); mob.hearts(g, 2, true); return true; }
-      if (mob.feed(g)) { use(); return true; }
+    if (st && (companion ? companionFoods(mob.def) : mob.def.food).includes(st.id)) {
+      if (mob.health < mob.maxHealth) { mob.health = Math.min(mob.maxHealth, mob.health + (d && d.food ? d.food.hunger : 2)); use(); g.audio.play('eat', [mob.x, mob.y + 0.5, mob.z]); mob.hearts(g, 2, true); return true; }
+      if (mob.def.food && mob.def.food.includes(st.id) && mob.feed(g)) { use(); return true; }
+      if (companion) return false; // full and not in the mood: a snack in hand is no sit command
     }
-    if (mob.ownerName && p.netName && mob.ownerName !== p.netName) return false; // only its owner tells it to sit
+    if (!mayCommand(mob, p)) return false; // only its owner tells it to sit
     mob.sitting = !mob.sitting;
     mob.path = null; mob.wander = null; mob.target = null;
     return true;
@@ -1261,7 +1268,7 @@ export class Interaction {
     if (mob.netProxy && guestWantsSeat(mob, p, st)) { g.mount(mob); this.swing = SWING_TICKS; return true; }
     if (mob.netProxy) return g.net.interactMob(mob); // multiplayer guest: the host feeds, shears, tames or trades
     if (mob.def.villager && mob.deathTime === 0 && mob.trades.length && !(d && d.food && mob.def.food)) { g.ui.openTrade(mob); g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); return true; }
-    if (mob.def.tameable && mob.deathTime === 0 && this.interactHowler(mob, st, d)) return true;
+    if ((mob.def.tameable || mob.def.companion) && mob.deathTime === 0 && this.interactHowler(mob, st, d)) return true;
     const useOne = () => { if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1); this.swing = SWING_TICKS; };
     if (mob.def.strider) return interactStrider(g, mob, p, st, useOne); // saddle, cactus, climb on
     if (mob.def.hoverling) return interactHoverling(g, mob, p, st, useOne); // give it an item, take it back
