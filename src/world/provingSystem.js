@@ -6,6 +6,10 @@
 // Keys, arrows, food, beryl) and rests for 30 minutes. Its sides show whether it waits, fights or rests
 // (meta bits 4-5, so guests see it through the ordinary block edits).
 //
+// An ominous Proving Spawner (some of the hall's spawners are, and an ordinary one woken by a player with
+// Dark Omen turns into one, using the omen up) calls a bigger, faster wave of mobs that come armed and
+// enchanted, and throws out two reward rolls per player (rules: provingVaults.js WAVE_RULES).
+//
 // Vaults: right-click one holding a Proving Key and it takes the key and throws out one roll of
 // treasure; it remembers every player it rewarded (by name) and opens for each of them only once.
 //
@@ -15,14 +19,17 @@
 import { B, SOLID } from './blocks.js';
 import { I } from './items.js';
 import {
-  PROVING_RANGE, SPAWNER_STATE, VaultLedger, newSpawnerState, spawnerStep, spawnerSpawned, spawnerKind, spawnerShown, spawnerMeta,
+  PROVING_RANGE, SPAWNER_STATE, isProver, VaultLedger, newSpawnerState, spawnerStep, spawnerSpawned, spawnerKind, spawnerShown, spawnerMeta,
   saveSpawnerStates, loadSpawnerStates,
 } from './provingVaults.js';
 import { spawnerRewards, vaultRoll } from './provingLoot.js';
 import { SIDE_DIRS } from './shapes.js';
+import { spawnGear } from '../mobs/equipment.js';
 
 /** A wave's mob that strays this far from its spawner no longer counts. */
 export const STRAY_RANGE = 48;
+/** Chance that an ominous spawner's armed mob (Shamblers, Rattlers...) wears armour. */
+export const OMINOUS_ARMOR_CHANCE = 0.65;
 const key = (x, y, z) => `${x},${y},${z}`;
 
 export class ProvingSystem {
@@ -68,19 +75,38 @@ export class ProvingSystem {
     }
     for (const k of near) {
       const [x, y, z] = k.split(',').map(Number);
-      if (w.getBlock(x, y, z) !== B.PROVING_SPAWNER) continue;
+      let id = w.getBlock(x, y, z);
+      if (!isProver(id)) continue;
       let s = this.spawners.get(k);
       if (!s) { s = newSpawnerState(); this.spawners.set(k, s); }
       const cx = x + 0.5, cy = y + 0.5, cz = z + 0.5;
-      const players = hostile ? fighters.filter((o) => Math.hypot(o.x - cx, o.y + 0.9 - cy, o.z - cz) <= PROVING_RANGE).length : 0;
-      const r = spawnerStep(s, players, this.alive(k, [cx, cy, cz]));
+      const inRange = fighters.filter((o) => Math.hypot(o.x - cx, o.y + 0.9 - cy, o.z - cz) <= PROVING_RANGE);
+      const players = hostile ? inRange.length : 0;
+      // a waiting spawner woken by someone carrying Dark Omen turns ominous; the omen is used up
+      if (id === B.PROVING_SPAWNER && players > 0 && s.state === SPAWNER_STATE.IDLE && this.consumeOmen(inRange)) {
+        w.setBlock(x, y, z, B.OMINOUS_SPAWNER, w.getMeta(x, y, z));
+        id = B.OMINOUS_SPAWNER;
+        if (g.particles) for (let n = 0; n < 20; n++) g.particles.emit(cx, cy + 0.3, cz, (Math.random() - 0.5) * 0.15, 0.05 + Math.random() * 0.08, (Math.random() - 0.5) * 0.15, 0.6, 0.25, 0.9, 30, 0);
+        if (g.audio) g.audio.play('scream', [cx, cy, cz], 0.5);
+      }
+      const ominous = id === B.OMINOUS_SPAWNER;
+      const r = spawnerStep(s, players, this.alive(k, [cx, cy, cz]), ominous);
       const m = w.getMeta(x, y, z);
-      if (r.spawn && this.spawnOne(x, y, z, spawnerKind(m), k)) spawnerSpawned(s);
-      if (r.eject) this.eject(x, y, z, r.eject);
+      if (r.spawn && this.spawnOne(x, y, z, spawnerKind(m), k, ominous)) spawnerSpawned(s);
+      if (r.eject) this.eject(x, y, z, r.eject, ominous);
       if (s.state === SPAWNER_STATE.ACTIVE && g.particles && Math.random() < 0.3) g.particles.flame(x + Math.random(), y + Math.random(), z + Math.random());
-      if (spawnerShown(m) !== s.state) w.setBlock(x, y, z, B.PROVING_SPAWNER, spawnerMeta(m & 15, s.state));
+      if (spawnerShown(m) !== s.state) w.setBlock(x, y, z, id, spawnerMeta(m & 15, s.state));
       if (s.state === SPAWNER_STATE.IDLE && !r.changed) { this.spawners.delete(k); this.waves.delete(k); }
     }
+  }
+
+  /** Use up the Dark Omen of the local player if they are among `near` (guests' omens are not tracked). Returns true if one was used. */
+  consumeOmen(near) {
+    const p = this.game.player;
+    if (!p || !near.includes(p) || !p.effects || !p.effects.dark_omen) return false;
+    delete p.effects.dark_omen;
+    for (const f of (p.listeners && p.listeners.effect) || []) f(null);
+    return true;
   }
 
   /** How many of a spawner's wave are still about (dropping the dead and those that strayed off). */
@@ -93,7 +119,7 @@ export class ProvingSystem {
   }
 
   /** Call one mob of the wave within 4 blocks of the spawner, on solid ground with room to stand. */
-  spawnOne(x, y, z, kind, k) {
+  spawnOne(x, y, z, kind, k, ominous = false) {
     const g = this.game, w = g.world;
     if (!g.spawner) return null;
     for (let t = 0; t < 12; t++) {
@@ -103,6 +129,7 @@ export class ProvingSystem {
       const m = g.spawner.spawnMob(kind, sx + 0.5, sy, sz + 0.5);
       if (!m) return null;
       if (kind === 'wobbler' && m.setSize) m.setSize(2);
+      if (ominous) { m.equip = spawnGear(kind, 1, g.difficulty, Math.random, { armorChance: OMINOUS_ARMOR_CHANCE }); m.canPickUp = false; }
       m.provingSpawner = k;
       const list = this.waves.get(k) || [];
       list.push(m);
@@ -115,9 +142,9 @@ export class ProvingSystem {
   }
 
   /** A beaten wave: the spawner throws out its rewards. */
-  eject(x, y, z, players) {
+  eject(x, y, z, players, ominous = false) {
     const g = this.game;
-    for (const st of spawnerRewards(players)) {
+    for (const st of spawnerRewards(players, Math.random, ominous)) {
       g.entities.spawnItem(x + 0.5, y + 1.1, z + 0.5, st, [(Math.random() - 0.5) * 0.16, 0.32, (Math.random() - 0.5) * 0.16]);
     }
     if (g.particles) for (let k = 0; k < 16; k++) g.particles.emit(x + 0.5, y + 1, z + 0.5, (Math.random() - 0.5) * 0.12, 0.08 + Math.random() * 0.08, (Math.random() - 0.5) * 0.12, 1, 0.75, 0.35, 24, 0.004);
@@ -165,7 +192,8 @@ export class ProvingSystem {
   blockChanged(x, y, z, old, id) {
     if (old === id) return;
     const k = key(x, y, z);
-    if (old === B.PROVING_SPAWNER) { this.spawners.delete(k); this.waves.delete(k); }
+    if (isProver(old) && isProver(id)) return; // an ordinary spawner turned ominous keeps its wave
+    if (isProver(old)) { this.spawners.delete(k); this.waves.delete(k); }
     if (old === B.VAULT && this.authority) this.vaults.remove(k);
   }
 

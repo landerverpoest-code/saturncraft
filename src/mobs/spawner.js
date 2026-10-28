@@ -24,7 +24,7 @@ import { SEA_LEVEL } from '../world/constants.js';
 import { tickMonumentSpawns, spawnElders } from './oceanMobs.js';
 import { spawnVillageStrider, desertChunkSpawn } from './duneStrider.js';
 import { CAGE, forestChunkSpawn, hollowSpawnTick } from './hoverling.js';
-import { EQUIP_KINDS, rollEquipment, rollCanPickUp, localDifficulty, clampedDifficulty, jockeyRoll } from './equipment.js';
+import { EQUIP_KINDS, spawnGear, rollCanPickUp, localDifficulty, clampedDifficulty, jockeyRoll } from './equipment.js';
 
 const INHABITED_MAX = 3600000; // the local difficulty stops growing after 50 hours
 
@@ -92,7 +92,7 @@ export class MobSpawner {
     if (fresh && EQUIP_KINDS[type]) {
       // armour and weapons, likelier the longer the world has run and players have stayed here (mobs/equipment.js)
       const clamped = clampedDifficulty(this.localDifficulty(x, z));
-      m.equip = rollEquipment(type, clamped, this.game.difficulty);
+      m.equip = spawnGear(type, clamped, this.game.difficulty); // armour, weapons and, rarely, enchantments
       m.canPickUp = rollCanPickUp(clamped);
     }
     this.game.entities.add(m);

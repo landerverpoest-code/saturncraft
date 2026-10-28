@@ -1,7 +1,7 @@
 // Keyboard + mouse input with pointer lock.
 export const KEYS = {
   forward: ['KeyW', 'ArrowUp'], back: ['KeyS', 'ArrowDown'], left: ['KeyA', 'ArrowLeft'], right: ['KeyD', 'ArrowRight'],
-  jump: ['Space'], sneak: ['ShiftLeft', 'ShiftRight'], sprint: ['ControlLeft', 'ControlRight', 'KeyR'],
+  jump: ['Space'], sneak: ['ShiftLeft', 'ShiftRight'], crawl: ['KeyC'], sprint: ['ControlLeft', 'ControlRight', 'KeyR'],
   inventory: ['KeyE'], drop: ['KeyQ'], debug: ['F3'], hud: ['F1'], pause: ['Escape'], perspective: ['F5'], shaders: ['F7'],
 };
 
@@ -91,6 +91,7 @@ export class Input {
       strafe: (this.is('right') ? 1 : 0) - (this.is('left') ? 1 : 0),
       jump: this.is('jump'),
       sneak: this.is('sneak'),
+      crawl: this.is('crawl'),
       sprint: this.is('sprint') || this.doubleTapSprint,
     };
   }

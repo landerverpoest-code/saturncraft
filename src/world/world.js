@@ -28,7 +28,7 @@ function chunkScanTable() {
   scanTable = new Uint8Array(BLOCK_LIMIT);
   for (let id = 0; id < BLOCK_LIMIT; id++) if (CIRCUIT_SETTLE[id]) scanTable[id] = 4;
   for (let id = 0; id < BLOCK_LIMIT; id++) if (LISTENS[id]) scanTable[id] |= 8;
-  scanTable[B.SPAWNER] = 1; scanTable[B.BEACON] = 2; scanTable[B.PROVING_SPAWNER] = 3;
+  scanTable[B.SPAWNER] = 1; scanTable[B.BEACON] = 2; scanTable[B.PROVING_SPAWNER] = 3; scanTable[B.OMINOUS_SPAWNER] = 3;
   return scanTable;
 }
 
@@ -193,8 +193,8 @@ export class World {
     if (id === B.SPAWNER) c.spawners.add(`${x},${y},${z}`);
     if (old === B.BEACON) c.beacons.delete(`${x},${y},${z}`);
     if (id === B.BEACON) c.beacons.add(`${x},${y},${z}`);
-    if (old === B.PROVING_SPAWNER && id !== B.PROVING_SPAWNER) c.provers.delete(`${x},${y},${z}`);
-    if (id === B.PROVING_SPAWNER) c.provers.add(`${x},${y},${z}`);
+    if ((old === B.PROVING_SPAWNER || old === B.OMINOUS_SPAWNER) && id !== B.PROVING_SPAWNER && id !== B.OMINOUS_SPAWNER) c.provers.delete(`${x},${y},${z}`);
+    if (id === B.PROVING_SPAWNER || id === B.OMINOUS_SPAWNER) c.provers.add(`${x},${y},${z}`);
     if (CIRCUIT_SETTLE[id]) c.circuits.add(i);
     if (LISTENS[id]) c.listeners.add(i); else if (LISTENS[old]) c.listeners.delete(i);
     c.modified = true;

@@ -174,6 +174,7 @@ export class Body {
     const yaw = input.yaw || 0;
     let fwd = (input.forward || 0) * PHYS.INPUT_SCALE, str = (input.strafe || 0) * PHYS.INPUT_SCALE;
     if (input.sneak) { fwd *= PHYS.SNEAK_MULTIPLIER; str *= PHYS.SNEAK_MULTIPLIER; }
+    if (input.crawl) { fwd *= PHYS.CRAWL_MULTIPLIER; str *= PHYS.CRAWL_MULTIPLIER; } // crawling is as slow (no ledge stop)
     let speed = (input.speed ?? PHYS.WALK_SPEED) * (input.sprint ? PHYS.SPRINT_MULTIPLIER : 1);
     if (this.inBerry && !this.inWeb) { this.vx *= 0.8; this.vz *= 0.8; this.vy = Math.max(this.vy, -0.25); } // pushing through a berry bush
     if (this.inWeb) { this.vx *= 0.25; this.vy *= 0.05; this.vz *= 0.25; this.fallDistance = 0; speed *= 0.25; } // stuck in a cobweb

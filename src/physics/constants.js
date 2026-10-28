@@ -20,6 +20,9 @@ export const PHYS = {
   PLAYER_SNEAK_HEIGHT: 1.5,
   PLAYER_EYE: 1.62,
   PLAYER_SNEAK_EYE: 1.27,
+  PLAYER_CRAWL_HEIGHT: 0.6, // crawling (player/crawl.js): as low as swimming
+  PLAYER_CRAWL_EYE: 0.4,
+  CRAWL_MULTIPLIER: 0.3,    // crawl speed (as slow as sneaking)
   WATER_ACCEL: 0.02,
   WATER_DRAG: 0.8,
   WATER_SPRINT_DRAG: 0.9,

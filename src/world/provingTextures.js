@@ -47,7 +47,7 @@ function copperFrame(c, h, width = 2) {
   }
 }
 
-function cage(c, h, glow) {
+function cage(c, h, glow, barColor = '#7a4a2c', hiColor = '#e09a62') {
   for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
   // a dim heart behind the bars shows the spawner's mood
   if (glow) for (let y = 5; y < 11; y++) for (let x = 5; x < 11; x++) {
@@ -55,7 +55,7 @@ function cage(c, h, glow) {
     if (d < 3.2) c.set(x, y, h.mix(h.hex(glow), [255, 255, 230], Math.max(0, 0.5 - d / 6)));
   }
   copperFrame(c, h, 2);
-  const bar = h.hex('#7a4a2c'), hi = h.hex('#e09a62');
+  const bar = h.hex(barColor), hi = h.hex(hiColor);
   for (let i = 2; i < 14; i++) for (const k of [5, 10]) { c.set(k, i, i % 3 ? bar : hi); c.set(i, k, i % 3 ? bar : hi); }
 }
 
@@ -91,6 +91,11 @@ export const PROVING_TEX = {
   proving_spawner_side_0: (c, h) => cage(c, h, '#4a3a30'),  // waiting
   proving_spawner_side_1: (c, h) => cage(c, h, '#ff8a2a'),  // a wave under way
   proving_spawner_side_2: (c, h) => cage(c, h, '#3a6a8a'),  // cooling down
+  // the ominous Proving Spawner: darker bars, a violet heart
+  ominous_spawner_top: (c, h) => cage(c, h, null, '#4a3258', '#a77ad0'),
+  ominous_spawner_side_0: (c, h) => cage(c, h, '#5a3a78', '#4a3258', '#a77ad0'),  // waiting
+  ominous_spawner_side_1: (c, h) => cage(c, h, '#d040ff', '#4a3258', '#a77ad0'),  // a wave under way
+  ominous_spawner_side_2: (c, h) => cage(c, h, '#3a4a9a', '#4a3258', '#a77ad0'),  // cooling down
   vault_top: (c, h) => {
     plate(c, h, ASH, 16, '#45483f');
     copperFrame(c, h, 2);

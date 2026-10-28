@@ -38,6 +38,7 @@ import { bundleTakeLast } from '../world/bundles.js';
 import { isSuspicious, archaeologyLoot, potDrops } from '../world/archaeology.js';
 import { interactStrider, guestWantsSeat } from '../mobs/duneStrider.js';
 import { interactHoverling } from '../mobs/hoverling.js';
+import { galeLeap } from '../mobs/gustling.js';
 import { isBook } from '../world/books.js';
 import { CAKE_SLICES, CAKE_FOOD } from '../world/signalBlocks.js';
 import { sideOf, SIDE_DIRS, DOOR_OPEN, DOOR_UPPER, BED_HEAD, SLAB_TOP, SLAB_DOUBLE, STAIRS_UPSIDE, GATE_OPEN, TRAPDOOR_OPEN, TRAPDOOR_TOP } from '../world/shapes.js';
@@ -262,6 +263,13 @@ export class Interaction {
     // Sky Rockets: a boost while gliding, or launched from the clicked block
     if (d && d.rocket && input.rightPressed && !(this.target && USABLE_BLOCKS.has(this.target.id) && !p.sneaking)) {
       if (useSkyRocket(g, this.target)) { if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1); this.swing = SWING_TICKS; }
+      return;
+    }
+    // a Gale Rod: burst upwards (mobs/gustling.js)
+    if (d && d.galeRod && input.rightPressed && !(this.target && USABLE_BLOCKS.has(this.target.id) && !p.sneaking)) {
+      galeLeap(g);
+      if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
+      this.swing = SWING_TICKS;
       return;
     }
     // a Writable Book opens to write in, a Written Book to read (aimed at a lectern, it goes on the desk instead)

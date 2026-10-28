@@ -7,10 +7,17 @@
 // its attack bonus, every piece has an 8.5 % chance (+1 % per Plunder level) to
 // drop, worn, when a player kills the mob, and mobs allowed to pick up loot take
 // better gear lying on the ground (that gear always drops).
+// Enchanted gear (reference: enchantSpawnedArmor / enchantSpawnedWeapon): each worn piece has a
+// 50 % x clamped difficulty chance to come enchanted as if at an enchanting table of level
+// 5 + rnd(18 x clamped); a held weapon (or bow) 25 % x clamped. Enchantments count in the fight
+// (Bulwark cuts the damage the mob takes, Keen adds to its blows, Strongdraw to its arrows),
+// show as a glint on the worn piece (also for guests), survive when the piece drops (the dropped
+// stack is enchanted) and each enchanted piece adds experience to the mob's kill (gearXp).
 // Also here: the chicken jockey roll for baby Shamblers.
 // Pure rules (all random rolls take an rng) are exported for the tests.
 import { I, ITEMS } from '../world/items.js';
 import { armorReduce, armorTotals, BYPASSES_ARMOR } from '../player/armor.js';
+import { selectEnchantments, protectionFactor, protectionReduce, hasEnch, enchLevel, cleanEnch } from '../world/enchantments.js';
 
 /** Which mobs roll equipment: melee ones may get a sword or shovel, archers always hold a bow. */
 export const EQUIP_KINDS = { shambler: 'melee', dune_shambler: 'melee', rattler: 'archer', rime_rattler: 'archer' };
@@ -63,13 +70,13 @@ export function rollArmorTier(rng = Math.random) {
  * helmet) unless a 25 % (Hard: 10 %) stop chance hits. Melee mobs: 1 % (Hard 5 %) a weapon,
  * one in three an iron sword, otherwise an iron shovel.
  */
-export function rollEquipment(type, clamped, difficulty = 'normal', rng = Math.random) {
+export function rollEquipment(type, clamped, difficulty = 'normal', rng = Math.random, { armorChance = 0.15 * clamped } = {}) {
   const kind = EQUIP_KINDS[type];
   if (!kind) return null;
   const eq = { hand: null, armor: [null, null, null, null] };
   if (kind === 'archer') eq.hand = { id: I.BOW, count: 1, damage: 0 };
   const hard = difficulty === 'hard';
-  if (rng() < 0.15 * clamped) {
+  if (rng() < armorChance) {
     const tier = rollArmorTier(rng), stop = hard ? 0.1 : 0.25;
     for (let slot = 3, first = true; slot >= 0; slot--, first = false) {
       if (!first && rng() < stop) break;
@@ -80,6 +87,45 @@ export function rollEquipment(type, clamped, difficulty = 'normal', rng = Math.r
     eq.hand = { id: Math.floor(rng() * 3) === 0 ? I.IRON_SWORD : I.IRON_SHOVEL, count: 1, damage: 0 };
   }
   return eq;
+}
+
+export const ENCHANT_ARMOR_CHANCE = 0.5, ENCHANT_WEAPON_CHANCE = 0.25;
+
+/** The enchantment level of spawned gear: 5 + rnd(18 x clamped difficulty), at most 22. */
+export const gearEnchantLevel = (clamped, rng = Math.random) => 5 + Math.floor(rng() * 18 * clamped);
+
+/** Enchant one stack as at an enchanting table of `level`; returns the stack (unchanged if nothing fits). */
+export function enchantStack(st, level, rng = Math.random) {
+  const list = selectEnchantments(rng, st.id, level);
+  if (list.length) { st.ench = {}; for (const [k, l] of list) st.ench[k] = l; }
+  return st;
+}
+
+/**
+ * Roll enchantments onto the gear of a fresh mob (mutates and returns `eq`): every worn piece with
+ * chance 0.5 x clamped, the held weapon or bow with 0.25 x clamped. Nothing at clamped difficulty 0.
+ */
+export function enchantEquipment(eq, clamped, rng = Math.random) {
+  if (!eq || !(clamped > 0)) return eq;
+  for (const st of eq.armor) if (st && rng() < ENCHANT_ARMOR_CHANCE * clamped) enchantStack(st, gearEnchantLevel(clamped, rng), rng);
+  if (eq.hand && rng() < ENCHANT_WEAPON_CHANCE * clamped) enchantStack(eq.hand, gearEnchantLevel(clamped, rng), rng);
+  return eq;
+}
+
+/** The gear of a freshly spawned mob: armour and weapon rolls, then their enchantments (null for mobs that wear nothing). */
+export function spawnGear(type, clamped, difficulty = 'normal', rng = Math.random, opts = {}) {
+  return enchantEquipment(rollEquipment(type, clamped, difficulty, rng, opts), clamped, rng);
+}
+
+/** Does any piece of the gear carry enchantments? */
+export const hasEnchantedGear = (eq) => !!eq && [eq.hand, ...eq.armor].some(hasEnch);
+
+/** Experience a kill by a player adds for the gear: 1-3 per worn or held piece, 3-7 when it is enchanted. */
+export function gearXp(eq, rng = Math.random) {
+  if (!eq) return 0;
+  let xp = 0;
+  for (const st of [eq.hand, ...eq.armor]) if (st) xp += hasEnch(st) ? 3 + Math.floor(rng() * 5) : 1 + Math.floor(rng() * 3);
+  return xp;
 }
 
 /** Reference: a mob may pick up loot with chance 0.55 x clamped difficulty. */
@@ -95,14 +141,23 @@ export function equipArmor(eq) { return eq ? armorTotals(eq.armor) : { points: 0
 export function mobDamageTaken(dmg, natural = 0, eq = null, source = 'player') {
   const worn = BYPASSES_ARMOR.has(source) ? { points: 0, toughness: 0 } : equipArmor(eq);
   const points = natural + worn.points;
-  return points > 0 ? armorReduce(dmg, points, worn.toughness) : dmg;
+  let taken = points > 0 ? armorReduce(dmg, points, worn.toughness) : dmg;
+  // Bulwark and Featherstep on worn pieces (as for the player: not the void, kills or starving)
+  const epf = eq ? protectionFactor(eq.armor, source) : 0;
+  if (epf > 0) taken = protectionReduce(taken, epf);
+  return taken;
 }
 
 /** Attack bonus of a held weapon (its damage beyond the bare hand's 1; bows add nothing in melee). */
 export function weaponBonus(st) {
   const t = st && ITEMS[st.id] && ITEMS[st.id].tool;
-  return t ? Math.max(0, t.damage - 1) : 0;
+  if (!t) return 0;
+  const keen = enchLevel(st, 'keen'); // a Keen blade cuts deeper: 0.5 x level + 0.5
+  return Math.max(0, t.damage - 1) + (keen ? 0.5 * keen + 0.5 : 0);
 }
+
+/** Strongdraw level of the bow in a mob's hand (it adds to its arrows' damage). */
+export const bowPower = (eq) => (eq && eq.hand ? enchLevel(eq.hand, 'strongdraw') : 0);
 
 /** The damage a dropped piece carries (reference: max - rnd(1 + rnd(max(max - 3, 1)))). */
 export function dropDamage(id, rng = Math.random) {
@@ -166,17 +221,28 @@ export function helmetShadesSun(eq, rng = Math.random) {
 }
 
 /** Equipment ids for the network / the model: [hand, helmet, chest, legs, boots] (0 = none). */
-export const equipIds = (eq) => (eq ? [eq.hand, ...eq.armor].map((s) => (s ? s.id : 0)) : null);
+export const GLINT_BIT = 0x1000;
+/** (An enchanted piece sets GLINT_BIT on its id, so guests can show its glint.) */
+export const equipIds = (eq) => (eq ? [eq.hand, ...eq.armor].map((s) => (s ? s.id | (hasEnch(s) ? GLINT_BIT : 0) : 0)) : null);
 /** Rebuild display-only equipment from ids (guests only need to see it). */
 export function equipFromIds(ids) {
   if (!Array.isArray(ids)) return null;
-  const st = (id) => (Number.isInteger(id) && id && ITEMS[id] ? { id, count: 1, damage: 0 } : null);
+  const st = (v) => {
+    const id = Number.isInteger(v) ? v & ~GLINT_BIT : 0;
+    return id && ITEMS[id] ? { id, count: 1, damage: 0, ...(v & GLINT_BIT ? { ench: { keen: 1 } } : {}) } : null; // the enchantment itself stays with the host: a stand-in shows the glint
+  };
   return { hand: st(ids[0]), armor: [1, 2, 3, 4].map((i) => st(ids[i])) };
 }
 /** Clean equipment from a save (stacks validated). */
 export function equipFromSave(s) {
   if (!s || typeof s !== 'object') return null;
-  const st = (x) => (x && Number.isInteger(x.id) && ITEMS[x.id] ? { ...x, count: 1, damage: x.damage | 0 } : null);
+  const st = (x) => {
+    if (!x || !Number.isInteger(x.id) || !ITEMS[x.id]) return null;
+    const out = { ...x, count: 1, damage: x.damage | 0 };
+    const e = cleanEnch(x.ench);
+    if (e) out.ench = e; else delete out.ench;
+    return out;
+  };
   return { hand: st(s.hand), armor: [0, 1, 2, 3].map((i) => st(Array.isArray(s.armor) ? s.armor[i] : null)) };
 }
 

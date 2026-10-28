@@ -18,6 +18,7 @@ import { rollStack, spawnerRewards, vaultRoll, SPAWNER_REWARDS, VAULT_LOOT } fro
 import { dungeonLoot } from '../src/mobs/spawnerBlocks.js';
 import { MOBS } from '../src/mobs/mobTypes.js';
 import '../src/mobs/hostileVariants.js';
+import '../src/mobs/gustling.js';
 import { craft } from '../src/player/crafting.js';
 import { stonecutterOutputs } from '../src/world/workstations.js';
 
@@ -99,7 +100,7 @@ describe('Proving Vaults layout', () => {
     const count = {};
     for (const { v } of list) for (const p of v.pieces) for (const [, , , id, m] of p.decor) {
       count[id] = (count[id] || 0) + 1;
-      if (id === B.PROVING_SPAWNER) expect(PROVING_MOBS).toContain(spawnerKind(m));
+      if (id === B.PROVING_SPAWNER || id === B.OMINOUS_SPAWNER) expect(PROVING_MOBS).toContain(spawnerKind(m));
       if (id === B.CHEST) expect(m >> 4).toBe(VAULTS_LOOT);
     }
     for (const id of [B.PROVING_SPAWNER, B.VAULT, B.CHEST, B.DECORATED_POT, B.COPPER_BULB_LIT, B.COPPER_GRATE, B.ASHSTONE_BRICK_STAIRS]) expect(count[id] || 0).toBeGreaterThan(list.length);

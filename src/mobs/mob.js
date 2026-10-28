@@ -20,9 +20,10 @@ import { villagesNear } from '../world/villages.js';
 import { findJobSite, claimedSites, takeJobSite, checkJobSite, cleanJobSite, siteKey, SEARCH_TICKS, CHECK_TICKS } from './jobSites.js';
 import { marauderAI } from './raids.js';
 import { leashTick, leashSaveData, unleash } from '../entities/leash.js';
-import { mobDamageTaken, weaponBonus, equipmentDrops, equipFromSave, slotFor, isBetter, helmetShadesSun } from './equipment.js';
+import { mobDamageTaken, weaponBonus, equipmentDrops, equipFromSave, slotFor, isBetter, helmetShadesSun, gearXp, bowPower } from './equipment.js';
 import { wearArmor as wearArmorModel, lightArmor } from '../render/armorModel.js';
 import { itemCanvas } from '../ui/icons.js';
+import { hasEnch } from '../world/enchantments.js';
 import * as THREE from 'three';
 
 import { conversionStep, newConversion } from './hostileVariants.js'; // registers the Hexwife and the Shambler / Rattler variants
@@ -30,6 +31,7 @@ import { outOfMeleeReach } from './duneStrider.js'; // registers the Dune Stride
 import { companionAI, companionSave, companionLoad } from './companions.js'; // tame Vixlings and Cragbucks
 import { babySpeedFactor, babyAttackFactor, babyHealth, babyExplosion, babyXp, babyLoot } from './babies.js'; // spiderlings, Fizzlets, Brute cubs
 import './hoverling.js'; // registers the Hoverling
+import './gustling.js'; // registers the Gustling (Proving Vaults)
 import { EFFECTS, addEffect, tickEffects, speedFactor, periodicActions, instantAmount, effectsColor, visibilityFactor, resistanceFactor } from '../player/effects.js';
 
 let nextMobId = 1_000_000;
@@ -506,7 +508,7 @@ export class Mob {
         // a Hush Catalyst nearby drinks in the experience of the dead and spreads Hushmoss (world/hushSystem.js)
         const absorbed = g.hush ? g.hush.onMobDeath(this) : false;
         // experience when killed by the player: monsters 5, animals 1-3
-        if (this.killedByPlayer && !absorbed) g.entities.spawnXp(this.x, this.y + 0.3, this.z, this.def.xp || (this.def.category === 'monster' ? (this.age < 0 ? babyXp(this.def) : 5) : 1 + Math.floor(Math.random() * 3)));
+        if (this.killedByPlayer && !absorbed) g.entities.spawnXp(this.x, this.y + 0.3, this.z, (this.def.xp || (this.def.category === 'monster' ? (this.age < 0 ? babyXp(this.def) : 5) : 1 + Math.floor(Math.random() * 3))) + gearXp(this.equip)); // worn and enchanted gear adds to it (mobs/equipment.js)
         g.particles.smoke(this.x, this.y + this.height / 2, this.z, 14, this.width);
       }
       return;
@@ -1584,7 +1586,7 @@ export class Mob {
     const inacc = 6 * 0.0075; // 14 - difficulty*4 on Normal
     const vx = dx / l + gaussian() * inacc, vy = dy / l + gaussian() * inacc, vz = dz / l + gaussian() * inacc;
     const vl = Math.hypot(vx, vy, vz);
-    const a = g.entities.spawnArrow(sx, sy, sz, vx / vl * 1.6, vy / vl * 1.6, vz / vl * 1.6, this, false);
+    const a = g.entities.spawnArrow(sx, sy, sz, vx / vl * 1.6, vy / vl * 1.6, vz / vl * 1.6, this, false, null, bowPower(this.equip)); // an enchanted bow's Strongdraw
     if (a && this.def.arrowEffect) a.effect = this.def.arrowEffect; // Rime Rattlers: Slowness
     g.audio.play('bow', [sx, sy, sz]);
   }
@@ -1681,16 +1683,18 @@ export class Mob {
   renderEquip(m, L) {
     const ud = m.userData, parts = ud.parts, eq = this.equip;
     if (!parts || !parts.body) return;
-    wearArmorModel(m, eq ? eq.armor.map((st) => (st ? st.id : null)) : [null, null, null, null]);
+    wearArmorModel(m, eq ? eq.armor.map((st) => (st ? st.id : null)) : [null, null, null, null], eq ? eq.armor.map(hasEnch) : null);
     lightArmor(m, L);
     const flash = this.hurtTime > 0 || this.deathTime > 0 ? 0.45 : 0;
-    for (const mat of ud.armorMats || []) mat.emissive.setRGB(flash, 0, 0);
+    const pulse = 0.16 + 0.1 * Math.sin(Date.now() / 260); // enchanted pieces shimmer violet
+    for (const mat of ud.armorMats || []) mat.emissive.setRGB(flash + (mat.userData.glint ? pulse * 0.7 : 0), mat.userData.glint ? pulse * 0.2 : 0, mat.userData.glint ? pulse : 0);
     const hand = eq && eq.hand && !(parts.bow && ITEMS[eq.hand.id] && ITEMS[eq.hand.id].bow) ? eq.hand.id : null;
-    if (ud.heldId !== hand) {
-      ud.heldId = hand;
+    const handKey = hand ? hand + (hasEnch(eq.hand) ? 'g' : '') : null; // the held item's glint too
+    if (ud.heldId !== handKey) {
+      ud.heldId = handKey;
       if (ud.held) { ud.held.parent.remove(ud.held); ud.held.geometry.dispose(); ud.held.material.map.dispose(); ud.held.material.dispose(); ud.held = null; }
       if (hand && parts.armR) {
-        const tex = new THREE.CanvasTexture(itemCanvas(hand));
+        const tex = new THREE.CanvasTexture(itemCanvas(hand, hasEnch(eq.hand)));
         tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter; tex.colorSpace = THREE.SRGBColorSpace;
         const held = new THREE.Mesh(new THREE.PlaneGeometry(0.45, 0.45), new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.3, side: THREE.DoubleSide }));
         held.position.set(0, -0.62, -0.18);

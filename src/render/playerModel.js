@@ -59,6 +59,7 @@ export class PlayerModel {
     this.root.position.set(x, y - (p.sneaking ? 0.12 : 0) + (p.sleeping ? 0 : 0), z);
     this.root.rotation.set(0, this.bodyYaw, 0);
     if (p.sleeping) this.root.rotation.set(-Math.PI / 2, p.yaw, 0, 'YXZ');
+    if (p.crawling && !p.sleeping && !p.swimming) { this.root.rotation.set(-Math.PI / 2, p.yaw, 0, 'YXZ'); this.root.position.y += 0.2; this.bodyYaw = p.yaw; } // crawling: prone, head first (player/crawl.js)
     if (p.swimming) { this.root.rotation.set(-Math.PI / 2 - p.pitch, p.yaw, 0, 'YXZ'); this.root.position.y += 0.3; } // flat, head first
     if (p.gliding) { this.root.rotation.set(-Math.PI / 2 - p.pitch * 0.8, p.yaw, 0, 'YXZ'); this.root.position.y += 0.3; this.bodyYaw = p.yaw; } // Voidwing: stretched out along the flight
     this.anim.hurtTime = p.hurtTime;

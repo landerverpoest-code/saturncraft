@@ -710,6 +710,12 @@ def(B.LOOM, 'Loom', { hardness: 2.5, resistance: 2.5, tool: TOOL.AXE, sound: 'wo
 ext('FLETCHING_TABLE');
 def(B.FLETCHING_TABLE, 'Fletching Table', { hardness: 2.5, resistance: 2.5, tool: TOOL.AXE, sound: 'wood', flammable: true, tex: { top: 'fletching_table_top', bottom: 'birch_planks', side: 'fletching_table_side', front: 'fletching_table_front' } });
 
+// The ominous Proving Spawner (world/provingVaults.js): the same cage, but violet-hearted. It calls bigger,
+// faster waves of better armed mobs and rewards twice as many rolls; meta bits as for the Proving Spawner.
+// A player carrying Dark Omen who wakes an ordinary spawner turns it into this one (the omen is used up).
+ext('OMINOUS_SPAWNER');
+def(B.OMINOUS_SPAWNER, 'Ominous Proving Spawner', { ...BLOCKS[B.PROVING_SPAWNER], tex: { top: 'ominous_spawner_top', bottom: 'ominous_spawner_top', side: 'ominous_spawner_side_0' } });
+
 export const NUM_BLOCKS = BLOCKS.length;
 
 // Flat lookup tables used by hot loops (mesher, lighting, physics) and workers.
