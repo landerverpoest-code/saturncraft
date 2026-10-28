@@ -3,6 +3,7 @@ import { B, BLOCKS, WOOD_SETS, STONE_SETS, COLOR_BLOCKS, DOOR_SETS, GATE_SETS, C
 import { I, ITEMS, DYES, WOOL_ITEMS, TIPPED_ARROW, SPLASH_ITEM, SHERD_ITEMS, LINGERING_ITEM } from '../world/items.js';
 import { potFacesFromGrid } from '../world/archaeology.js';
 import { withExtras } from '../world/enchantments.js';
+import { bookCopy } from '../world/books.js';
 import { COLOR } from '../world/colors.js';
 
 const TAGS = {
@@ -198,6 +199,8 @@ shaped([' R ', 'CCC'], { R: I.EMBER_ROD, C: 'stone_mat' }, B.BREWING_STAND, 1);
  * @returns {{id:number,count:number}|null}
  */
 export function craft(grid, w) {
+  const copy = bookCopy(grid); // a Written Book with Writable Books: copies (world/books.js)
+  if (copy) return copy.result;
   const h = grid.length / w;
   const ids = grid.map((s) => (s ? s.id : null));
   // bounding box of used cells
@@ -236,6 +239,21 @@ export function craft(grid, w) {
     }
   }
   return null;
+}
+
+/**
+ * Use up one of each ingredient in the grid after crafting (in place): a milk bucket leaves its empty
+ * bucket, and the Written Book a copy was made from stays.
+ */
+export function consumeCraft(grid) {
+  const copy = bookCopy(grid);
+  for (let i = 0; i < grid.length; i++) {
+    const s = grid[i];
+    if (!s || (copy && i === copy.keep)) continue;
+    const rest = ITEMS[s.id] && ITEMS[s.id].craftRemainder;
+    s.count--;
+    if (s.count <= 0) grid[i] = rest ? { id: rest, count: 1, damage: 0 } : null;
+  }
 }
 
 /** A dyed Gloomshell Box keeps the contents (and name) of the box it was made from. */

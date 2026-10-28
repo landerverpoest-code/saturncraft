@@ -475,6 +475,7 @@ export class EntityManager {
     const a = this.add(new Arrow(x, y, z, vx, vy, vz, shooter, crit, thrown, potion));
     a.power = power | 0; // Strongdraw level of the bow
     a.item = item;
+    if (this.game.hush) this.game.hush.vibrate(x, y, z, 'shoot', null); // (world/vibrations.js; the host's world)
     if (item && !thrown) a.setTip(item.id);
     if (thrown === 'spear') { a.pickup = !!item; a.creativeThrow = !!(item && shooter && shooter.creative); }
     return a;

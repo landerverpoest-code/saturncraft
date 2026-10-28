@@ -9,7 +9,7 @@ import { bundleInsert, bundleTakeLast } from '../world/bundles.js';
 import { isBook, bookPages, cleanPage, cleanPages, cleanTitle, signBook, BOOK_MAX_PAGES, PAGE_MAX, TITLE_MAX } from '../world/books.js';
 import { spendLevels } from '../player/experience.js';
 import { mulberry32 } from '../world/noise.js';
-import { craft, RECIPES, recipeLayout, chooseIngredients } from '../player/crafting.js';
+import { craft, consumeCraft, RECIPES, recipeLayout, chooseIngredients } from '../player/crafting.js';
 import { B, BLOCKS, isBox } from '../world/blocks.js';
 import { canTrade, doTrade, offerPrice, MAX_USES } from '../mobs/trades.js';
 import { championDiscount } from '../mobs/raids.js';
@@ -81,7 +81,10 @@ export class UI {
     this.renderCursor();
     this.open = null;
     if ((this.chest || this.furnace || this.brewing) && g.net && g.net.isClient) g.net.closeContainer();
-    if (this.chest) this.game.audio.play('chest_close', [this.chest.x + 0.5, this.chest.y + 0.5, this.chest.z + 0.5]);
+    if (this.chest) {
+      this.game.audio.play('chest_close', [this.chest.x + 0.5, this.chest.y + 0.5, this.chest.z + 0.5]);
+      if (this.game.hush) this.game.hush.emit('close', this.chest.x + 0.5, this.chest.y + 0.5, this.chest.z + 0.5); // a vibration (world/vibrations.js)
+    }
     this.furnace = null;
     this.brewing = null;
     this.fxRefresh = null;
@@ -260,8 +263,8 @@ export class UI {
     box.appendChild(grid);
     box.appendChild(el('<div class="arrow">➜</div>'));
     const result = () => craft(this.craftGrid, w);
-    // (a milk bucket leaves its empty bucket behind in the grid)
-    const consume = () => { for (let i = 0; i < this.craftGrid.length; i++) { const s = this.craftGrid[i]; if (s) { const rest = ITEMS[s.id] && ITEMS[s.id].craftRemainder; s.count--; if (s.count <= 0) this.craftGrid[i] = rest ? { id: rest, count: 1, damage: 0 } : null; } } };
+    // (a milk bucket leaves its empty bucket behind in the grid, a copied book stays)
+    const consume = () => consumeCraft(this.craftGrid);
     this.side = this.recipeBook(w);
     box.appendChild(this.makeSlot(result, () => {}, {
       onClick: (e) => {

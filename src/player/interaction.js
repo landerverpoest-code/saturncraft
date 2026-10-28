@@ -23,6 +23,7 @@ import { igniteTNT } from '../entities/tnt.js';
 import { scaffoldDistance, scaffoldColumnTop, SCAFFOLD_MAX } from '../world/scaffolding.js';
 import { updateRails } from '../world/rails.js';
 import { placeMeta as circuitPlaceMeta, useMeta as circuitUseMeta } from '../world/circuits.js';
+import { ON as CIRCUIT_ON } from '../world/circuitShapes.js';
 import { choosePainting, placePainting } from '../world/paintings.js';
 import { standYaw, standAt, useStand, punchStand } from '../entities/armorStand.js';
 import { tryLightRift, findHollowRing, fillHollowGate } from '../world/dimensions/portal.js';
@@ -446,10 +447,17 @@ export class Interaction {
     this.swing = SWING_TICKS;
   }
 
+  /** A vibration the Deep Hush's sensors can hear, from the block (cell corner) at x, y, z (world/vibrations.js). */
+  shake(kind, x, y, z) {
+    const g = this.game;
+    if (g.hush) g.hush.emit(kind, x + 0.5, y + 0.5, z + 0.5, g.player);
+  }
+
   eat(st) {
     const g = this.game, p = g.player;
     const f = ITEMS[st.id].food;
     p.hunger.eat(f.hunger, f.saturation);
+    this.shake('eat', p.x - 0.5, p.y + 0.5, p.z - 0.5);
     if (f.effect && Math.random() < f.effect.chance) p.addEffect(f.effect.type, f.effect.ticks);
     for (const [type, ticks, amp] of f.effects || []) p.addEffect(type, ticks, amp); // a Gilded Apple's sure effects
     p.inventory.removeFromSlot(p.inventory.selected, 1);
@@ -471,6 +479,7 @@ export class Interaction {
   /** Finish drinking: an elixir's effects (glass vial back) or milk (clears all effects, bucket back). */
   drink(st) {
     const g = this.game, p = g.player, d = ITEMS[st.id];
+    this.shake('drink', p.x - 0.5, p.y + 0.5, p.z - 0.5);
     if (d.milk) p.clearEffects();
     else if (d.potion) for (const [type, ticks, amp] of POTIONS[d.potion.kind].effects) p.applyEffect(type, ticks, amp);
     if (!p.creative) {
@@ -835,6 +844,7 @@ export class Interaction {
         if (um >= 0) {
           w.setBlockUrgent(t.x, t.y, t.z, t.id, um);
           g.audio.play(t.id === B.CHIME_BLOCK ? 'chime_' + (um & 31) : 'click', [t.x + 0.5, t.y + 0.5, t.z + 0.5]);
+          if (t.id === B.LEVER || t.id === B.STONE_BUTTON) this.shake(um & CIRCUIT_ON ? 'activate' : 'deactivate', t.x, t.y, t.z);
         }
         this.swing = SWING_TICKS;
         return true;
@@ -843,6 +853,7 @@ export class Interaction {
         const m = w.getMeta(t.x, t.y, t.z);
         w.setBlockUrgent(t.x, t.y, t.z, t.id, m ^ TRAPDOOR_OPEN);
         g.audio.play(m & TRAPDOOR_OPEN ? 'door_close' : 'door_open', [t.x + 0.5, t.y + 0.5, t.z + 0.5]);
+        this.shake(m & TRAPDOOR_OPEN ? 'close' : 'open', t.x, t.y, t.z);
         this.swing = SWING_TICKS;
         return true;
       }
@@ -850,6 +861,7 @@ export class Interaction {
         const m = w.getMeta(t.x, t.y, t.z);
         w.setBlockUrgent(t.x, t.y, t.z, t.id, m ^ GATE_OPEN);
         g.audio.play(m & GATE_OPEN ? 'door_close' : 'door_open', [t.x + 0.5, t.y + 0.5, t.z + 0.5]);
+        this.shake(m & GATE_OPEN ? 'close' : 'open', t.x, t.y, t.z);
         this.swing = SWING_TICKS;
         return true;
       }
@@ -858,12 +870,13 @@ export class Interaction {
         const m = w.getMeta(t.x, t.y, t.z), by = m & DOOR_UPPER ? t.y - 1 : t.y;
         for (const yy of [by, by + 1]) if (w.getBlock(t.x, yy, t.z) === t.id) w.setBlockUrgent(t.x, yy, t.z, t.id, w.getMeta(t.x, yy, t.z) ^ DOOR_OPEN, false);
         g.audio.play(m & DOOR_OPEN ? 'door_close' : 'door_open', [t.x + 0.5, by + 1, t.z + 0.5]);
+        this.shake(m & DOOR_OPEN ? 'close' : 'open', t.x, by, t.z);
         this.swing = SWING_TICKS;
         return true;
       }
       if (t.id === B.LECTERN && this.useLectern(t, st)) { this.swing = SWING_TICKS; return true; }
       if (t.id === B.CAKE && this.eatCake(t)) { this.swing = SWING_TICKS; return true; }
-      if (t.id === B.CHEST || t.id === B.BARREL || isBox(t.id) || t.id === B.HOPPER || t.id === B.DISPENSER || t.id === B.DROPPER) { g.ui.openChest(t.x, t.y, t.z); g.audio.play('chest_open', [t.x + 0.5, t.y + 0.5, t.z + 0.5]); return true; }
+      if (t.id === B.CHEST || t.id === B.BARREL || isBox(t.id) || t.id === B.HOPPER || t.id === B.DISPENSER || t.id === B.DROPPER) { g.ui.openChest(t.x, t.y, t.z); g.audio.play('chest_open', [t.x + 0.5, t.y + 0.5, t.z + 0.5]); this.shake('open', t.x, t.y, t.z); return true; }
     }
     if (t && t.id === B.COMPOSTER && !p.sneaking && this.useComposter(t, st)) { this.swing = SWING_TICKS; return true; }
     if (t && t.id === B.SWEET_BERRY_BUSH && this.useBerryBush(t, st, d)) { this.swing = SWING_TICKS; return true; }
@@ -1100,6 +1113,7 @@ export class Interaction {
     if (!p.hunger.canEat() && !p.creative) return false;
     const bites = (w.getMeta(t.x, t.y, t.z) & 7) + 1;
     p.hunger.eat(CAKE_FOOD.hunger, CAKE_FOOD.saturation);
+    this.shake('eat', t.x, t.y, t.z);
     if (bites >= CAKE_SLICES) w.setBlockUrgent(t.x, t.y, t.z, B.AIR, 0);
     else w.setBlockUrgent(t.x, t.y, t.z, B.CAKE, bites);
     g.audio.play('eat', [t.x + 0.5, t.y + 0.5, t.z + 0.5]);

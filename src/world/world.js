@@ -13,6 +13,7 @@ import { LEAVES as LEAVES_SET } from './trees.js';
 import { railSupported } from './rails.js';
 import { spongeUpdate } from './sponge.js';
 import { paintingIntact } from './paintings.js';
+import { LISTENS } from './vibrations.js';
 import { Circuits, CIRCUIT_BLOCK, CIRCUIT_REACT, CIRCUIT_SETTLE, supported as circuitSupported } from './circuits.js';
 import { updateSpike, crystalSupported } from './caves.js';
 import { scaffoldTick } from './scaffolding.js';
@@ -38,8 +39,10 @@ export class Chunk {
     this.beacons = new Set(); // beacon positions (world/beacons.js)
     // circuit parts (re-evaluated when the chunk loads: scheduled ticks are not saved)
     this.circuits = new Set();
+    this.listeners = new Set(); // blocks that hear vibrations: Hush Sensors and Shriekers (world/vibrations.js)
     for (let i = 0; i < this.blocks.length; i++) {
       const b = this.blocks[i];
+      if (LISTENS[b]) this.listeners.add(i);
       if (b === B.SPAWNER) this.spawners.add(`${cx * 16 + (i & 15)},${MIN_Y + (i >> 8)},${cz * 16 + ((i >> 4) & 15)}`);
       else if (b === B.BEACON) this.beacons.add(`${cx * 16 + (i & 15)},${MIN_Y + (i >> 8)},${cz * 16 + ((i >> 4) & 15)}`);
       else if (CIRCUIT_SETTLE[b]) this.circuits.add(i);
@@ -172,6 +175,7 @@ export class World {
     if (old === B.BEACON) c.beacons.delete(`${x},${y},${z}`);
     if (id === B.BEACON) c.beacons.add(`${x},${y},${z}`);
     if (CIRCUIT_SETTLE[id]) c.circuits.add(i);
+    if (LISTENS[id]) c.listeners.add(i); else if (LISTENS[old]) c.listeners.delete(i);
     c.modified = true;
     const s = (y - MIN_Y) >> 4;
     if (!old && id) c.sectionNonAir[s]++;
