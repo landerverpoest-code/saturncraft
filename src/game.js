@@ -219,7 +219,7 @@ export class Game {
     this.world.on('blockChanged', (x, y, z, old, id) => { if (id === B.HOPPER) this.getHopper(x, y, z); }); // a new hopper starts working
     this.world.on('fireCrackle', (x, y, z) => this.audio.play('fire', [x + 0.5, y + 0.5, z + 0.5]));
     this.initCircuits();
-    this.world.on('blockChanged', (x, y, z, old, id) => { if (old === B.PROVING_SPAWNER || old === B.VAULT) this.proving.blockChanged(x, y, z, old, id); });
+    this.world.on('blockChanged', (x, y, z, old, id) => { if (old === B.PROVING_SPAWNER || old === B.OMINOUS_SPAWNER || old === B.VAULT) this.proving.blockChanged(x, y, z, old, id); });
     this.world.on('dropItems', (x, y, z, id, meta) => {
       if (this.net && this.net.applyingRemote) return; // the player who made the edit gets the drops
       for (const st of blockDrops(id, toolOf(null), Math.random, meta)) this.entities.spawnItem(x + 0.5, y + 0.3, z + 0.5, st);
@@ -1201,7 +1201,10 @@ export class Game {
     const x = p.prev.x + (b.x - p.prev.x) * alpha;
     const y = p.prev.y + (b.y - p.prev.y) * alpha;
     const z = p.prev.z + (b.z - p.prev.z) * alpha;
-    const eye = p.sleeping ? 0.3 : p.eyeHeight;
+    // the eyes ease down into a crawl (and up out of it) instead of jumping
+    const eyeTarget = p.sleeping ? 0.3 : p.eyeHeight;
+    this.eyeShown = this.eyeShown === undefined || Math.abs(eyeTarget - this.eyeShown) > 1.5 || p.dead ? eyeTarget : this.eyeShown + (eyeTarget - this.eyeShown) * 0.3;
+    const eye = Math.abs(eyeTarget - this.eyeShown) < 0.005 ? eyeTarget : this.eyeShown;
     // view bobbing while walking
     const speed = Math.hypot(b.vx, b.vz);
     const bob = b.onGround ? Math.sin(sec * 9) * Math.min(0.06, speed * 0.25) : 0;

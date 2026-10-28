@@ -30,10 +30,14 @@ const SHELLS = [
   [['legR', [4.9, 4.4, 4.9], [0, -10, 0]], ['legL', [4.9, 4.4, 4.9], [0, -10, 0]]],
 ];
 
-/** Make the model wear `ids` (four item ids or null). Returns the shell materials (for lighting). */
-export function wearArmor(root, ids) {
+/**
+ * Make the model wear `ids` (four item ids or null). `glints` (optional, four booleans): which pieces are
+ * enchanted; their shells are marked (`material.userData.glint`) so the caller can make them shimmer.
+ * Returns the shell materials (for lighting).
+ */
+export function wearArmor(root, ids, glints = null) {
   const ud = root.userData;
-  const key = ids.map((i) => i || 0).join(',');
+  const key = ids.map((i) => i || 0).join(',') + (glints ? ':' + glints.map((g) => (g ? 1 : 0)).join('') : '');
   if (ud.armorKey === key) return ud.armorMats || [];
   ud.armorKey = key;
   for (const m of ud.armorMeshes || []) { m.parent.remove(m); m.geometry.dispose(); }
@@ -44,6 +48,7 @@ export function wearArmor(root, ids) {
     if (a.glider) { addWings(ud, a); return; } // a Voidwing: two membrane wings on the back
     const mat = new THREE.MeshLambertMaterial({ map: armorTexture(ARMOR_MATERIALS[a.material].color) });
     mat.userData.base = new THREE.Color(0xffffff);
+    mat.userData.glint = !!(glints && glints[slot]);
     ud.armorMats.push(mat);
     for (const [part, size, off] of SHELLS[slot]) {
       const parent = ud.parts[part];

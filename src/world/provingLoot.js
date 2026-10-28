@@ -8,6 +8,11 @@ export const SPAWNER_REWARDS = [
   [I.PROVING_KEY, 1, 1, 40], [I.ARROW, 4, 10, 12], [I.BREAD, 1, 3, 10], [I.BAKED_POTATO, 2, 4, 8], [I.COOKED_CHICKEN, 1, 3, 8],
   [I.BERYL, 1, 3, 10], [I.HONEY_BOTTLE, 1, 2, 6], [I.IRON_INGOT, 1, 2, 6],
 ];
+/** What an ominous Proving Spawner throws out (two rolls for each player): keys more often, richer food and metals. */
+export const OMINOUS_REWARDS = [
+  [I.PROVING_KEY, 1, 2, 50], [I.ARROW, 8, 16, 10], [I.GILDED_CARROT, 2, 5, 10], [I.COOKED_CHICKEN, 2, 4, 6],
+  [I.BERYL, 2, 5, 10], [I.GOLD_INGOT, 1, 3, 8], [I.IRON_INGOT, 2, 4, 8], [I.DIAMOND, 1, 1, 6], [I.GILDED_APPLE, 1, 1, 4],
+];
 export const VAULT_LOOT = [
   [I.BERYL, 3, 8, 14], [I.IRON_INGOT, 3, 6, 10], [I.GOLD_INGOT, 2, 5, 8], [I.DIAMOND, 1, 2, 5], [I.GILDED_APPLE, 1, 1, 4],
   [I.GILDED_CARROT, 3, 6, 6], [I.ARROW, 12, 24, 8], [I.CROSSBOW, 1, 1, 4], [I.SHIELD, 1, 1, 4], [I.DIAMOND_AXE, 1, 1, 2],
@@ -31,10 +36,10 @@ export function rollStack(table, rng = Math.random) {
   return { id: e[0], count: e[1] + Math.floor(rng() * (e[2] - e[1] + 1)), damage: 0 };
 }
 
-/** A beaten wave's rewards: one roll for each player who fought it (at least one). */
-export function spawnerRewards(players, rng = Math.random) {
-  const out = [];
-  for (let k = 0; k < Math.max(1, players); k++) out.push(rollStack(SPAWNER_REWARDS, rng));
+/** A beaten wave's rewards: one roll for each player who fought it (at least one), two from an ominous spawner. */
+export function spawnerRewards(players, rng = Math.random, ominous = false) {
+  const out = [], rolls = ominous ? 2 : 1;
+  for (let k = 0; k < Math.max(1, players) * rolls; k++) out.push(rollStack(ominous ? OMINOUS_REWARDS : SPAWNER_REWARDS, rng));
   return out;
 }
 

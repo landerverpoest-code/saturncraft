@@ -10,6 +10,7 @@ import { MIN_Y } from '../world/constants.js';
 import { armorReduce, armorTotals, wearArmor, BYPASSES_ARMOR } from './armor.js';
 import { newXp } from './experience.js';
 import { protectionFactor, protectionReduce } from '../world/enchantments.js';
+import { crawlNext } from './crawl.js';
 import { gliderUsable, canStartGliding, glideStep, rocketBoost, wallDamage, wearsThisTick } from './glider.js';
 import { EFFECTS, addEffect as stackEffect, tickEffects, effectLevel, speedFactor, jumpBonus, fallDamageWithEffects, periodicActions, instantAmount, resistanceFactor } from './effects.js';
 
@@ -31,6 +32,7 @@ export class Player {
     this.inventory = new Inventory(36);
     this.sprinting = false;
     this.sneaking = false;
+    this.crawling = false;      // the 0.6-high crawl pose (player/crawl.js)
     this.dead = false;
     this.spawn = { x: 0.5, y: 80, z: 0.5 };
     this.jumpCooldown = 0;
@@ -45,7 +47,7 @@ export class Player {
   }
 
   get x() { return this.body.x; } get y() { return this.body.y; } get z() { return this.body.z; }
-  get eyeHeight() { return this.swimming || this.gliding ? 0.4 : this.sneaking ? PHYS.PLAYER_SNEAK_EYE : PHYS.PLAYER_EYE; }
+  get eyeHeight() { return this.swimming || this.gliding ? 0.4 : this.crawling ? PHYS.PLAYER_CRAWL_EYE : this.sneaking ? PHYS.PLAYER_SNEAK_EYE : PHYS.PLAYER_EYE; }
   get food() { return this.hunger.food; }
 
   setPosition(x, y, z) {
@@ -214,10 +216,17 @@ export class Player {
     if (this.gamemode === 'spectator') { this.flying = true; b.noclip = true; } // spectators always fly, through anything
     else if (this.flying && ((b.onGround && !this.flyGrace) || !this.creative)) this.flying = false; // landing ends flight
     const wantSneak = !!input.sneak && !this.flying; // sneak descends while flying
-    if (!wantSneak && this.sneaking) {
+    // Crawling (player/crawl.js): the crawl key, or walking into a gap too low to sneak through; it
+    // takes the place of sneaking while it lasts
+    this.crawling = crawlNext(world, b, {
+      crawling: this.crawling, key: !!input.crawl, forward: input.forward || 0, strafe: input.strafe || 0, yaw: this.yaw,
+      blocked: this.swimming || this.gliding || this.flying || !!this.riding || !!this.sleeping || b.inWater || b.inLava,
+    });
+    if (this.crawling) this.sneaking = false;
+    else if (!wantSneak && this.sneaking) {
       if (!world.boxCollides(b.x - 0.3, b.y, b.z - 0.3, b.x + 0.3, b.y + PHYS.PLAYER_HEIGHT, b.z + 0.3)) this.sneaking = false;
     } else this.sneaking = wantSneak;
-    b.height = this.sneaking ? PHYS.PLAYER_SNEAK_HEIGHT : PHYS.PLAYER_HEIGHT;
+    b.height = this.crawling ? PHYS.PLAYER_CRAWL_HEIGHT : this.sneaking ? PHYS.PLAYER_SNEAK_HEIGHT : PHYS.PLAYER_HEIGHT;
 
     b.updateFluidState(world, this.eyeHeight);
     // Sprint-swimming: sprinting with your head under water lays you flat (0.6 high) and you swim where you look;
@@ -227,7 +236,7 @@ export class Player {
     if (this.swimming) b.height = 0.6;
 
     // Sprint rules
-    const canSprint = (this.creative || this.hunger.food >= SPRINT_MIN_FOOD) && !this.sneaking && input.forward > 0 && !this.effects.blindness;
+    const canSprint = (this.creative || this.hunger.food >= SPRINT_MIN_FOOD) && !this.sneaking && !this.crawling && input.forward > 0 && !this.effects.blindness;
     const fx = this.effects;
     if (input.sprint && canSprint) this.sprinting = true;
     if (!canSprint || (b.horizontalCollision && !b.inWater)) this.sprinting = false;
@@ -247,8 +256,8 @@ export class Player {
     else b.travel(world, {
       // raising a shield slows you to a fifth, like sneaking
       forward: input.forward * (this.blocking ? 0.2 : 1), strafe: input.strafe * (this.blocking ? 0.2 : 1), yaw: this.yaw,
-      jump: input.jump && (this.jumpCooldown === 0 || b.inWater || b.inLava),
-      sprint: this.sprinting, sneak: this.sneaking, swim: this.swimming, pitch: this.pitch,
+      jump: input.jump && !this.crawling && (this.jumpCooldown === 0 || b.inWater || b.inLava),
+      sprint: this.sprinting, sneak: this.sneaking, crawl: this.crawling, swim: this.swimming, pitch: this.pitch,
       flying: this.flying, descend: this.flying && !!input.sneak,
       speed: PHYS.WALK_SPEED * speedFactor(fx),
       jumpFactor: 1 + jumpBonus(fx) / PHYS.JUMP_VELOCITY,

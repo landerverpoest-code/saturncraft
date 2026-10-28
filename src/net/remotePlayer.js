@@ -132,6 +132,7 @@ export class RemotePlayer {
     this.root.position.set(cur.x, cur.y - (s.sneaking ? 0.12 : 0), cur.z);
     this.root.rotation.set(0, this.bodyYaw, 0);
     if (s.sleeping) this.root.rotation.set(-Math.PI / 2, cur.yaw, 0, 'YXZ');
+    if (s.crawling && !s.sleeping) { this.root.rotation.set(-Math.PI / 2, cur.yaw, 0, 'YXZ'); this.root.position.y += 0.2; this.bodyYaw = cur.yaw; } // prone, head first (player/crawl.js)
     this.anim.hurtTime = s.hurt ? 5 : 0;
     this.anim.headPitch = cur.pitch;
     const L = lightAt(game, cur.x, cur.y + 1.6, cur.z);
@@ -169,9 +170,10 @@ function makeTarget(rp) {
     get creative() { return !!st().creative; },
     get sneaking() { return !!st().sneaking; },
     get invisible() { return !!st().invisible; },
-    get eyeHeight() { return st().sneaking ? PHYS.PLAYER_SNEAK_EYE : PHYS.PLAYER_EYE; },
-    width: 0.6, height: PHYS.PLAYER_HEIGHT,
-    body: { height: PHYS.PLAYER_HEIGHT, width: PHYS.PLAYER_WIDTH, vx: 0, vy: 0, vz: 0, onGround: true },
+    get crawling() { return !!st().crawling; },
+    get eyeHeight() { return st().crawling ? PHYS.PLAYER_CRAWL_EYE : st().sneaking ? PHYS.PLAYER_SNEAK_EYE : PHYS.PLAYER_EYE; },
+    width: 0.6, get height() { return st().crawling ? PHYS.PLAYER_CRAWL_HEIGHT : PHYS.PLAYER_HEIGHT; }, // a crawler is a low target
+    body: { get height() { return st().crawling ? PHYS.PLAYER_CRAWL_HEIGHT : PHYS.PLAYER_HEIGHT; }, width: PHYS.PLAYER_WIDTH, vx: 0, vy: 0, vz: 0, onGround: true },
     lastHurtBy: null, lastAttacked: null,
     stats: { kills: 0, blocksMined: 0 },
     inventory: { get selectedStack() { const h = st().held; return h == null ? null : { id: h, count: 1 }; } },

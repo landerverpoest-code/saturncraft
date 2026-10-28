@@ -26,7 +26,11 @@ export const VAULTS_MIN_FLOOR = -52, VAULTS_MAX_FLOOR = -8;
 /** Chest loot kind of the store rooms and galleries (chest meta bits 4-7, see mobs/spawnerBlocks.js). */
 export const VAULTS_LOOT = 11;
 /** Mob kinds a Proving Spawner can be set to (its meta bits 0-3 index this list). */
-export const PROVING_MOBS = ['shambler', 'rattler', 'skitterer', 'wobbler', 'dune_shambler', 'rime_rattler'];
+export const PROVING_MOBS = ['shambler', 'rattler', 'skitterer', 'wobbler', 'dune_shambler', 'rime_rattler', 'gustling'];
+/** Is this block a Proving Spawner (the ordinary or the ominous one)? */
+export const isProver = (id) => id === B.PROVING_SPAWNER || id === B.OMINOUS_SPAWNER;
+/** One spawner in this many in the halls is ominous from the start (decided from its position and the seed alone). */
+export const OMINOUS_CHANCE = 0.18;
 /** Proving Spawner meta: bits 0-3 mob kind, bits 4-5 the state it shows (SPAWNER_STATE). */
 export const spawnerMeta = (kind, state = 0) => (kind & 15) | ((state & 3) << 4);
 export const spawnerKind = (meta) => PROVING_MOBS[(meta & 15) % PROVING_MOBS.length];
@@ -159,7 +163,11 @@ const put = (p, x, y, z, id, meta = 0) => p.decor.push([x, y, z, id, meta]);
 const chestMeta = (facing) => (facing & 3) | 8 | (VAULTS_LOOT << 4);
 /** Facing (SIDE_DIRS index) from (dx, dz) towards the middle of a room. */
 const faceIn = (dx, dz) => (Math.abs(dx) >= Math.abs(dz) ? (dx > 0 ? 3 : 1) : (dz > 0 ? 0 : 2));
-const spawnerAt = (p, x, y, z, rng) => put(p, x, y, z, B.PROVING_SPAWNER, spawnerMeta(Math.floor(rng() * PROVING_MOBS.length)));
+const spawnerAt = (p, x, y, z, rng) => {
+  const kind = Math.floor(rng() * PROVING_MOBS.length);
+  // a few are ominous from the start; hashed from the position so the plan's random stream is untouched
+  put(p, x, y, z, hash4(x, y, z, 6113) / 4294967296 < OMINOUS_CHANCE ? B.OMINOUS_SPAWNER : B.PROVING_SPAWNER, spawnerMeta(kind));
+};
 
 /** A solid flight of stairs from the floor (y = f) rising `n` blocks along `dir`, starting at (x, z). */
 function stairs(p, x, z, f, n, dir, width = 1) {
@@ -354,24 +362,35 @@ export const SPAWN_INTERVAL = 40, COOLDOWN_TICKS = 30 * 60 * 20;
 /** With nobody near for this long a running wave is called off (the spawner waits again). */
 export const GIVE_UP_TICKS = 600;
 
-export const waveSize = (players) => WAVE_BASE + WAVE_PER_PLAYER * Math.max(0, players - 1);
+/**
+ * The numbers of a wave. The ominous spawner calls 10 mobs for one player and 3 more for each other
+ * player, up to 5 about at once and one every 28 ticks (its mobs also come armed, see world/provingSystem.js),
+ * and throws out two reward rolls for each player instead of one.
+ */
+export const WAVE_RULES = {
+  normal: { base: WAVE_BASE, perPlayer: WAVE_PER_PLAYER, maxAlive: MAX_ALIVE, interval: SPAWN_INTERVAL, rewardRolls: 1 },
+  ominous: { base: 10, perPlayer: 3, maxAlive: 5, interval: 28, rewardRolls: 2 },
+};
+export const waveRules = (ominous) => (ominous ? WAVE_RULES.ominous : WAVE_RULES.normal);
+
+export const waveSize = (players, ominous = false) => { const r = waveRules(ominous); return r.base + r.perPlayer * Math.max(0, players - 1); };
 export const newSpawnerState = () => ({ state: SPAWNER_STATE.IDLE, total: 0, spawned: 0, delay: 0, cooldown: 0, away: 0, players: 0 });
 
 /**
  * One tick of a Proving Spawner's state `s` with `players` players in range and `alive` of its
- * mobs still about. Returns { spawn, eject, changed }: spawn = try to call one mob now (report
- * success with spawnerSpawned), eject = the wave was beaten (throw out one reward roll per player
- * who took part), changed = the visible state changed.
+ * mobs still about (`ominous`: the ominous spawner's rules). Returns { spawn, eject, changed }:
+ * spawn = try to call one mob now (report success with spawnerSpawned), eject = the wave was beaten
+ * (throw out the rewards for this many players), changed = the visible state changed.
  */
-export function spawnerStep(s, players, alive) {
-  const out = { spawn: false, eject: 0, changed: false };
+export function spawnerStep(s, players, alive, ominous = false) {
+  const out = { spawn: false, eject: 0, changed: false }, rules = waveRules(ominous);
   switch (s.state) {
     case SPAWNER_STATE.COOLDOWN:
       if (--s.cooldown <= 0) { s.state = SPAWNER_STATE.IDLE; s.cooldown = 0; out.changed = true; }
       break;
     case SPAWNER_STATE.IDLE:
       if (players > 0) {
-        Object.assign(s, { state: SPAWNER_STATE.ACTIVE, total: waveSize(players), spawned: 0, delay: SPAWN_INTERVAL / 2, away: 0, players });
+        Object.assign(s, { state: SPAWNER_STATE.ACTIVE, total: waveSize(players, ominous), spawned: 0, delay: rules.interval / 2, away: 0, players });
         out.changed = true;
       }
       break;
@@ -382,14 +401,14 @@ export function spawnerStep(s, players, alive) {
       }
       s.away = 0;
       // more players joining grows the wave
-      if (players > s.players) { s.players = players; s.total = Math.max(s.total, waveSize(players)); }
+      if (players > s.players) { s.players = players; s.total = Math.max(s.total, waveSize(players, ominous)); }
       if (s.spawned >= s.total && alive === 0) {
         out.eject = s.players;
         Object.assign(s, newSpawnerState(), { state: SPAWNER_STATE.COOLDOWN, cooldown: COOLDOWN_TICKS });
         out.changed = true;
         break;
       }
-      if (s.spawned < s.total && alive < MAX_ALIVE && --s.delay <= 0) { out.spawn = true; s.delay = SPAWN_INTERVAL; }
+      if (s.spawned < s.total && alive < rules.maxAlive && --s.delay <= 0) { out.spawn = true; s.delay = rules.interval; }
       break;
   }
   return out;

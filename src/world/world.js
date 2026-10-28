@@ -46,7 +46,7 @@ export class Chunk {
       if (LISTENS[b]) this.listeners.add(i);
       if (b === B.SPAWNER) this.spawners.add(`${cx * 16 + (i & 15)},${MIN_Y + (i >> 8)},${cz * 16 + ((i >> 4) & 15)}`);
       else if (b === B.BEACON) this.beacons.add(`${cx * 16 + (i & 15)},${MIN_Y + (i >> 8)},${cz * 16 + ((i >> 4) & 15)}`);
-      else if (b === B.PROVING_SPAWNER) this.provers.add(`${cx * 16 + (i & 15)},${MIN_Y + (i >> 8)},${cz * 16 + ((i >> 4) & 15)}`);
+      else if (b === B.PROVING_SPAWNER || b === B.OMINOUS_SPAWNER) this.provers.add(`${cx * 16 + (i & 15)},${MIN_Y + (i >> 8)},${cz * 16 + ((i >> 4) & 15)}`);
       else if (CIRCUIT_SETTLE[b]) this.circuits.add(i);
     }
     this.dirty = new Set();
@@ -176,8 +176,8 @@ export class World {
     if (id === B.SPAWNER) c.spawners.add(`${x},${y},${z}`);
     if (old === B.BEACON) c.beacons.delete(`${x},${y},${z}`);
     if (id === B.BEACON) c.beacons.add(`${x},${y},${z}`);
-    if (old === B.PROVING_SPAWNER && id !== B.PROVING_SPAWNER) c.provers.delete(`${x},${y},${z}`);
-    if (id === B.PROVING_SPAWNER) c.provers.add(`${x},${y},${z}`);
+    if ((old === B.PROVING_SPAWNER || old === B.OMINOUS_SPAWNER) && id !== B.PROVING_SPAWNER && id !== B.OMINOUS_SPAWNER) c.provers.delete(`${x},${y},${z}`);
+    if (id === B.PROVING_SPAWNER || id === B.OMINOUS_SPAWNER) c.provers.add(`${x},${y},${z}`);
     if (CIRCUIT_SETTLE[id]) c.circuits.add(i);
     if (LISTENS[id]) c.listeners.add(i); else if (LISTENS[old]) c.listeners.delete(i);
     c.modified = true;
