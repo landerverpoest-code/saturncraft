@@ -606,6 +606,11 @@ Code: `src/world/dimensions/` (registry and scaling, generators, portal logic, s
 * Generation (~15 ms/chunk) and meshing (~1.5 ms/section) run in a worker pool
   (`hardwareConcurrency − 1`, 2–6 workers); main-thread chunk work is budgeted to
   ~6 ms per frame; the simulation tick costs ~0.1–1 ms.
+* Cave carvers (`src/world/carvers.js`) record each source chunk's tunnel paths once and keep them
+  in a bounded LRU instead of replaying all 17×17 neighbours per chunk (carving ~6 ms → ~1 ms per
+  chunk, output byte-identical). The mob spawner backs off to a rotating quarter of the chunks
+  per tick while a sweep keeps finding nothing (e.g. the daylight surface pass) and caches its chunk
+  list; the creative catalogue draws icons only for the rows in view (`src/ui/lazyIcons.js`).
 * Shadows: three 1024² maps over a ±44-block area. The brightest sun's map is
   redrawn every 3rd frame and the others every 6th (the suns move ~0.3°/s;
   all three are redrawn right after a block edit). The shadow pass only draws
