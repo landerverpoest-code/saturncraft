@@ -1,8 +1,9 @@
 // Workstations: the Grindstone (repair two of a kind, strip enchantments for a
-// little experience) and the Stonecutter (one stone block into one of its cut
-// shapes). Pure functions, unit tested; the screens live in ui/screens.js.
-import { B, BLOCKS, SHAPE, STONE_SETS, TOOL } from './blocks.js';
-import { ITEMS, I } from './items.js';
+// little experience), the Stonecutter (one stone block into one of its cut
+// shapes) and the Loom (one dye recolours up to eight wool or carpets). Pure
+// functions, unit tested; the screens live in ui/screens.js.
+import { B, BLOCKS, SHAPE, STONE_SETS, TOOL, COLOR_BLOCKS } from './blocks.js';
+import { ITEMS, I, DYES, WOOL_ITEMS } from './items.js';
 import { ENCHANTS } from './enchantments.js';
 
 // ---- grindstone ---------------------------------------------------------------
@@ -107,3 +108,34 @@ export function stonecutterOutputs(id) {
 /** Inputs the stonecutter has anything for. */
 export const STONECUTTER_INPUTS = BLOCKS.filter((b) => b && b.tool === TOOL.PICKAXE && b.shape === SHAPE.CUBE && stonecutterOutputs(b.id).length).map((b) => b.id);
 export const stonecutterAccepts = (st) => !!st && stonecutterOutputs(st.id).length > 0;
+
+// ---- loom ---------------------------------------------------------------------
+/** Cloth the loom recolours: [colour-indexed item ids] for wool and for carpets. */
+const CLOTH = [WOOL_ITEMS, COLOR_BLOCKS.carpet];
+/** Colour (0-15) a dye gives at the loom; Bone Meal bleaches to white. -1 if not a dye. */
+export function loomDyeColor(id) {
+  if (id === I.BONE_MEAL) return 0;
+  const c = DYES.indexOf(id);
+  return c > 0 ? c : -1;
+}
+/** [kind, colour] of a cloth item, or null. */
+function clothOf(id) {
+  for (let k = 0; k < CLOTH.length; k++) { const c = CLOTH[k].indexOf(id); if (c >= 0) return [k, c]; }
+  return null;
+}
+export const loomAcceptsCloth = (st) => !!st && !!clothOf(st.id);
+export const loomAcceptsDye = (st) => !!st && loomDyeColor(st.id) >= 0;
+/** Cloth one dye recolours at a time. */
+export const LOOM_BATCH = 8;
+/**
+ * Loom result for a stack of cloth and a dye, or null: up to eight of the cloth
+ * in the dye's colour, using one dye. Cloth already that colour is not taken.
+ * Returns { result, cloth } - cloth is how many of the input are used.
+ */
+export function loomResult(cloth, dye) {
+  if (!cloth || !dye || !(cloth.count > 0) || !(dye.count > 0)) return null;
+  const k = clothOf(cloth.id), col = loomDyeColor(dye.id);
+  if (!k || col < 0 || k[1] === col) return null;
+  const n = Math.min(LOOM_BATCH, cloth.count);
+  return { result: { id: CLOTH[k[0]][col], count: n, damage: 0 }, cloth: n };
+}

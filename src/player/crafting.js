@@ -353,6 +353,9 @@ shaped(['SSS', ' B ', ' S '], { S: 'wood_slab', B: B.BOOKSHELF }, B.LECTERN, 1);
 shaped([' R ', 'RHR', ' R '], { R: I.CINNABAR, H: B.HAY_BALE }, B.TARGET, 1);
 shaped(['MMM', 'SES', 'WWW'], { M: I.MILK_BUCKET, S: I.SUGAR, E: I.EGG, W: I.WHEAT }, B.CAKE, 1);
 BOX_COLORS.forEach((id, c) => shapeless(['box', DYES[c] || I.BONE_MEAL], id, 1));
+// job-site blocks for shepherds and fletchers (mobs/jobSites.js)
+shaped(['SS', 'PP'], { S: I.STRING, P: 'planks' }, B.LOOM, 1);
+shaped(['FF', 'PP', 'PP'], { F: I.FLINT, P: 'planks' }, B.FLETCHING_TABLE, 1);
 
 // Smelting: input -> output; 200 ticks per item (10 s)
 export const SMELT_TIME = 200;

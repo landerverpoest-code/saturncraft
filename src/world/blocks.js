@@ -703,6 +703,13 @@ ext('PROVING_SPAWNER'); ext('VAULT');
   def(B.VAULT, 'Vault', { hardness: 50, resistance: 50, tool: TOOL.PICKAXE, tier: TIER.WOOD, drops: null, sound: 'metal', tex: { top: 'vault_top', bottom: 'vault_top', side: 'vault_side', front: 'vault_front' } });
 }
 
+// Job-site blocks still missing for two trades (mobs/jobSites.js): the Loom (shepherds; recolours wool
+// and carpets, world/workstations.js) and the Fletching Table (fletchers). Their front faces the player.
+ext('LOOM');
+def(B.LOOM, 'Loom', { hardness: 2.5, resistance: 2.5, tool: TOOL.AXE, sound: 'wood', flammable: true, tex: { top: 'loom_top', bottom: 'loom_bottom', side: 'loom_side', front: 'loom_front' } });
+ext('FLETCHING_TABLE');
+def(B.FLETCHING_TABLE, 'Fletching Table', { hardness: 2.5, resistance: 2.5, tool: TOOL.AXE, sound: 'wood', flammable: true, tex: { top: 'fletching_table_top', bottom: 'birch_planks', side: 'fletching_table_side', front: 'fletching_table_front' } });
+
 export const NUM_BLOCKS = BLOCKS.length;
 
 // Flat lookup tables used by hot loops (mesher, lighting, physics) and workers.

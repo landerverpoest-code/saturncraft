@@ -15,7 +15,7 @@ import { canTrade, doTrade, offerPrice, MAX_USES } from '../mobs/trades.js';
 import { championDiscount } from '../mobs/raids.js';
 import { MILESTONES } from '../player/milestones.js';
 import { loadPlayerName } from '../net/protocol.js';
-import { grindstoneAccepts, grindstoneResult, grindstoneXp, stonecutterOutputs, stonecutterAccepts } from '../world/workstations.js';
+import { grindstoneAccepts, grindstoneResult, grindstoneXp, stonecutterOutputs, stonecutterAccepts, loomResult, loomAcceptsCloth, loomAcceptsDye, LOOM_BATCH } from '../world/workstations.js';
 import { BEACON_POWERS, POWER_LEVEL, SECONDARY, BEACON_PAYMENT, beaconLevel, beamColor, beaconMeta, beaconRange } from '../world/beacons.js';
 
 function el(html) { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstChild; }
@@ -854,6 +854,55 @@ export class UI {
     g.audio.play('grind', [x + 0.5, y + 0.5, z + 0.5]);
   }
 
+  /** Loom: wool or carpets and a dye in, up to eight of the cloth in the dye's colour out. */
+  openLoom(x, y, z) {
+    this.game.input.unlock();
+    const g = this.game, inv = g.player.inventory;
+    this.work = [null, null]; // [cloth, dye]
+    const result = () => (this.work ? loomResult(this.work[0], this.work[1]) : null);
+    const take = (shift) => {
+      const r = result();
+      if (!r) return;
+      if (shift) { const left = inv.add({ ...r.result }); if (left) g.entities.spawnItem(g.player.x, g.player.y + 1, g.player.z, { ...r.result, count: left }); }
+      else if (!this.cursor) this.cursor = { ...r.result };
+      else if (canStack(this.cursor, r.result) && this.cursor.count + r.result.count <= maxStack(r.result.id)) this.cursor.count += r.result.count;
+      else return;
+      if ((this.work[0].count -= r.cloth) <= 0) this.work[0] = null;
+      if (--this.work[1].count <= 0) this.work[1] = null;
+      g.audio.play('shear', [x + 0.5, y + 0.5, z + 0.5]);
+    };
+    this.showContainer('loom', 'Loom', (panel) => {
+      const top = el('<div class="inv-top grind-top loom-top"></div>');
+      const ins = el('<div class="grind-ins"></div>');
+      const cloth = this.workSlot(0, { filter: loomAcceptsCloth }), dye = this.workSlot(1, { filter: loomAcceptsDye });
+      cloth.title = 'Wool or carpets'; dye.title = 'A dye (Bone Meal bleaches)';
+      ins.append(cloth, dye);
+      top.append(ins, el('<div class="arrow">➜</div>'));
+      top.appendChild(this.makeSlot(() => { const r = result(); return r ? r.result : null; }, () => {}, { onClick: (e) => take(e.shiftKey) }));
+      panel.appendChild(top);
+      const hint = el('<div class="recipes-hint grind-hint"></div>');
+      panel.appendChild(hint);
+      this.refreshers.push(() => {
+        const w = this.work || [];
+        hint.textContent = result() ? `One dye recolours up to ${LOOM_BATCH}` : w[0] && w[1] ? 'Already that colour' : 'Wool or carpets above, a dye below';
+      });
+      panel.appendChild(this.inventoryGrid({
+        accept: (st) => {
+          const i = loomAcceptsCloth(st) ? 0 : loomAcceptsDye(st) ? 1 : -1;
+          if (i < 0) return false;
+          if (!this.work[i]) { this.work[i] = st; return true; }
+          if (canStack(this.work[i], st)) {
+            const n = Math.min(st.count, maxStack(st.id) - this.work[i].count);
+            this.work[i].count += n; st.count -= n;
+            return st.count <= 0 ? true : n ? 'partial' : false;
+          }
+          return false;
+        },
+      }));
+    });
+    this.refreshAll();
+  }
+
   /** Stonecutter: one stone block in, pick one of the shapes it cuts into. */
   openStonecutter(x, y, z) {
     this.game.input.unlock();
@@ -989,7 +1038,7 @@ export class UI {
             if (left) g.entities.spawnItem(g.player.x, g.player.y + 1, g.player.z, { ...got, count: left });
             done++;
           }
-          if (done) { g.milestones.event('trade'); g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); g.entities.spawnXp(g.player.x, g.player.y + 1, g.player.z, 3 * done); }
+          if (done) { mob.traded = true; g.milestones.event('trade'); g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); g.entities.spawnXp(g.player.x, g.player.y + 1, g.player.z, 3 * done); }
           this.refreshAll();
         });
         this.refreshers.push(() => {
