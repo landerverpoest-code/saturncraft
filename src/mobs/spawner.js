@@ -242,7 +242,7 @@ export class MobSpawner {
       // surface empty at night. Half the cap is reserved for packs on the open surface;
       // in daylight the light test rejects these attempts. (The Cinderdeep and the Hollow have
       // no open surface to count: under the Cinderdeep's roof no monster ever counted as
-      // "on the surface", so this pass used to spawn without end there.)
+      // "on the surface", so this pass used to spawn without limit there.)
       const overworld = !w.dimension || w.dimension === 'overworld';
       if (overworld && surface < Math.ceil(cap / 2) && monsters < cap * 2) {
         for (const [cx, cz] of chunks) surface += this.attempt(cx, cz, CATEGORY.MONSTER, true);

@@ -37,7 +37,7 @@ describe('Cinderdeep monster spawning', () => {
     return { spawner, list };
   }
 
-  it('stays near the monster cap instead of spawning without end', () => {
+  it('stays near the monster cap instead of spawning without limit', () => {
     const { spawner, list } = cinderWorld();
     for (let i = 0; i < 400; i++) spawner.tick();
     const monsters = list.filter((e) => e.def.category === CATEGORY.MONSTER).length;
