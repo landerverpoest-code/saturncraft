@@ -1,28 +1,37 @@
 // The Deep Hush at run time (rules in world/deepHush.js): players make
 // vibrations (walking without sneaking, landing, placing and breaking
-// blocks). A Hush Sensor within 8 blocks hears one, sends a cinnabar pulse
-// (power 15 close by down to 1 at the edge) and raises that player's warning
-// level; a Hush Shrieker grown by the world near the alarm (or stepped on)
-// shrieks, raising the warning and pulsing Darkness over everyone within 40
-// blocks. At warning 4 a Hushkeeper (mobs/hushkeeper.js) digs up out of the
-// ground nearby. A Hush Catalyst drinks in the experience of creatures dying
-// within 8 blocks and spreads Hushmoss from where they fell. The recent noises
-// are kept for the Hushkeeper, which hunts by sound. Simulated on the host
-// (or in single player): guests' footsteps and landings are worked out from
-// the positions they send (remoteVibration), the blocks they place and break
-// come with their edits (net/session.js), each player has a warning level of
-// their own, and a shriek's Darkness reaches guests as an effect message.
-// Guests see the block changes and the mob (rising / sinking included).
+// blocks, opening doors and chests, flipping levers, eating, tossing items),
+// and so do creatures walking about, arrows landing, explosions and deaths
+// (world/vibrations.js lists the kinds and their frequencies). A Hush Sensor
+// within 8 blocks hears one unless wool blocks the line, sends a cinnabar
+// pulse (power 15 close by down to 1 at the edge) for 30 ticks, then rests 10;
+// a comparator reads the vibration's frequency while it pulses. When a
+// player's vibration sets a sensor off, Hush Shriekers near it shriek; a
+// world-grown one raises that player's warning level and pulses Darkness over
+// everyone within 40 blocks (a stepped-on shrieker shrieks too). At warning 4
+// a Hushkeeper (mobs/hushkeeper.js) digs up out of the ground nearby. A Hush
+// Catalyst drinks in the experience of creatures dying within 8 blocks and
+// spreads Hushmoss from where they fell. The recent noises are kept for the
+// Hushkeeper, which hunts by sound. Simulated on the host (or in single
+// player): guests' footsteps and landings are worked out from the positions
+// they send (remoteVibration), the blocks they place and break come with
+// their edits, the rest (eating, doors, levers, chests, dropped items) as a
+// 'vib' message (net/session.js); each player has a warning level of their
+// own, and a shriek's Darkness reaches guests as an effect message. Guests see
+// the block changes and the mob (rising / sinking included).
 import { B, SOLID } from './blocks.js';
 import { HUSHKEEPER } from '../mobs/hushkeeper.js';
 import {
   VIBRATION_RANGE, SENSOR_PULSE, SENSOR_REST, WARNING_MAX, DARKNESS_TICKS, DARKNESS_RANGE, SHRIEKER_CAN_SUMMON,
   WarningLevels, sensorPower, sensorHears, quietStep, deathCharge, spreadHushmoss, findEmergeSpot, findNear,
 } from './deepHush.js';
+import { vibrationFrequency, sensorMeta, occluded, findListeners, GUEST_KINDS } from './vibrations.js';
 
 const LISTENERS = new Set([B.HUSH_SENSOR, B.HUSH_SHRIEKER]);
 const CATALYSTS = new Set([B.HUSH_CATALYST]);
 export const NOISE_MEMORY = 60, SHRIEK_REST = 90, KEEPER_RANGE = 48;
+/** Creatures walking about shake the ground too: one step per MOB_STEP_EVERY ticks at most each. */
+export const MOB_STEP_EVERY = 10;
 /** A guest's step: at least this far (blocks) between two of their states, at most every REMOTE_STEP_EVERY ticks. */
 export const REMOTE_STEP_MOVE = 0.1, REMOTE_STEP_EVERY = 8;
 
@@ -69,7 +78,9 @@ export class HushSystem {
     if (this.noises.length && now - this.noises[0].t > NOISE_MEMORY) this.noises = this.noises.filter((n) => now - n.t <= NOISE_MEMORY);
     if (now % 20 === 0) this.warnings.decay(now);
     if (g.net && g.net.isHost) this.tickRemote();
-    if (!p || p.dead || p.spectator || (g.net && g.net.isClient)) return;
+    if (g.net && g.net.isClient) return;
+    this.tickMobs();
+    if (!p || p.dead || p.spectator) return;
     const b = p.body;
     const below = g.world.getBlock(Math.floor(b.x), Math.floor(b.y - 0.2), Math.floor(b.z));
     if (p.landedFrom > 0.5) this.vibrate(b.x, b.y, b.z, 'land', p);
@@ -77,6 +88,31 @@ export class HushSystem {
       this.lastStep = now;
       this.vibrate(b.x, b.y, b.z, 'step', p, below === B.HUSH_SHRIEKER ? [Math.floor(b.x), Math.floor(b.y - 0.2), Math.floor(b.z)] : null);
     }
+  }
+
+  /** Footsteps of creatures walking on the ground (not the Hushkeeper's own: it treads softly). */
+  tickMobs() {
+    const g = this.game, w = g.world, now = this.now, list = g.entities ? g.entities.list : [];
+    for (const e of list) {
+      if (e.kind !== 'mob' || e.dead || e.deathTime || e.type === 'hushkeeper' || ((now + e.id) % MOB_STEP_EVERY) !== 0) continue;
+      const b = e.body;
+      if (!b || !b.onGround || Math.hypot(b.vx, b.vz) < 0.03 || e.mount) continue;
+      if (quietStep(!!e.sneaking, w.getBlock(Math.floor(b.x), Math.floor(b.y - 0.2), Math.floor(b.z)))) continue;
+      this.vibrate(b.x, b.y, b.z, 'step', null);
+    }
+  }
+
+  /**
+   * Something a player did shakes the ground (eating, a door, a lever, a dropped item...). On a
+   * multiplayer guest it goes to the host as a 'vib' message (only the host's sensors listen).
+   */
+  emit(kind, x, y, z, player = this.game.player) {
+    const g = this.game;
+    if (g.net && g.net.isClient) {
+      if (player === g.player && GUEST_KINDS.has(kind) && g.net.sendVibration) g.net.sendVibration(kind, x, y, z);
+      return null;
+    }
+    return this.vibrate(x, y, z, kind, player);
   }
 
   /** Multiplayer host: the guests' footsteps and landings, from each new state they sent. */
@@ -98,7 +134,7 @@ export class HushSystem {
   }
 
   /**
-   * A vibration at (x, y, z) made by `player` (null for other sources). Returns what reacted:
+   * A vibration of `kind` at (x, y, z) made by `player` (null for other sources). Returns what reacted:
    * { sensors: [...], shrieked: [...], level } (level = the player's warning level after it, -1 if unchanged).
    */
   vibrate(x, y, z, kind, player = null, steppedOn = null) {
@@ -107,35 +143,36 @@ export class HushSystem {
     if (this.noises.length > 48) this.noises.shift();
     const out = { sensors: [], shrieked: [], level: -1 };
     if (g.net && g.net.isClient) return out;
-    const near = findNear(w, x, y, z, VIBRATION_RANGE, LISTENERS);
+    const near = findListeners(w, x, y, z, VIBRATION_RANGE, LISTENERS);
     if (!near.length) return out;
+    const freq = vibrationFrequency(kind), getBlock = (a, b, c) => w.getBlock(a, b, c);
     for (const s of near) {
       if (s.id !== B.HUSH_SENSOR) continue;
       const k = `${s.x},${s.y},${s.z}`;
       if (!sensorHears(s.d, w.getMeta(s.x, s.y, s.z), this.rest.get(k) || 0, now)) continue;
+      if (occluded(getBlock, x, y, z, s.x + 0.5, s.y + 0.5, s.z + 0.5)) continue; // wool in the way
       this.rest.set(k, now + SENSOR_PULSE + SENSOR_REST);
-      w.setBlock(s.x, s.y, s.z, B.HUSH_SENSOR, sensorPower(s.d));
+      w.setBlock(s.x, s.y, s.z, B.HUSH_SENSOR, sensorMeta(sensorPower(s.d), freq));
       if (w.scheduleTick) w.scheduleTick(s.x, s.y, s.z, SENSOR_PULSE);
       out.sensors.push(s);
       this.pulseFx(x, y, z, s);
     }
     if (!player) return out;
-    const alarm = out.sensors.length > 0 || !!steppedOn;
-    if (!alarm) return out;
-    const name = this.playerName(player);
-    out.level = this.warnings.raise(name, now);
-    // shriekers: the one stepped on, or those near the alarm; the world's own shriek only when the warning rose
-    const shriekers = near.filter((s) => s.id === B.HUSH_SHRIEKER && (out.sensors.length || (steppedOn && s.x === steppedOn[0] && s.y === steppedOn[1] && s.z === steppedOn[2])));
+    // shriekers: the one stepped on, or those near a sensor the player set off
+    const stepped = (s) => !!steppedOn && s.x === steppedOn[0] && s.y === steppedOn[1] && s.z === steppedOn[2];
+    const shriekers = near.filter((s) => s.id === B.HUSH_SHRIEKER && (out.sensors.length || stepped(s)) && (this.rest.get(`${s.x},${s.y},${s.z}`) || 0) <= now);
+    if (!shriekers.length) return out;
+    // only a world-grown shrieker raises the warning (a placed one only shrieks)
+    const summons = (s) => (w.getMeta(s.x, s.y, s.z) & SHRIEKER_CAN_SUMMON) !== 0;
+    if (shriekers.some(summons)) out.level = this.warnings.raise(this.playerName(player), now);
     let calledOut = false;
     for (const s of shriekers) {
-      const k = `${s.x},${s.y},${s.z}`;
-      if ((this.rest.get(k) || 0) > now) continue;
-      const summons = (w.getMeta(s.x, s.y, s.z) & SHRIEKER_CAN_SUMMON) !== 0;
-      if (summons && (out.level < 0 || calledOut)) continue;
-      this.rest.set(k, now + SHRIEK_REST);
-      this.shriek(s, player, summons);
+      const can = summons(s);
+      if (can && (out.level < 0 || calledOut)) continue;
+      this.rest.set(`${s.x},${s.y},${s.z}`, now + SHRIEK_REST);
+      this.shriek(s, player, can);
       out.shrieked.push(s);
-      if (summons) calledOut = true;
+      if (can) calledOut = true;
     }
     if (out.level >= WARNING_MAX) this.summon(player);
     return out;
@@ -202,6 +239,7 @@ export class HushSystem {
   onMobDeath(mob) {
     const g = this.game;
     if (g.net && g.net.isClient) return false;
+    this.vibrate(mob.x, mob.y + 0.5, mob.z, 'death', null);
     const charge = deathCharge(mob.def, mob.age < 0);
     if (!charge) return false;
     const cats = findNear(g.world, mob.x, mob.y + 0.5, mob.z, 8, CATALYSTS);

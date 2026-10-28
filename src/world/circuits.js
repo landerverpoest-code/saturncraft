@@ -31,6 +31,7 @@ import {
 import { comparatorOutput, daylightLevel } from './comparators.js';
 import { LECTERN_POWERED, LECTERN_PULSE_TICKS } from './books.js';
 import { TARGET_TICKS_STUCK } from './signalBlocks.js';
+import { SENSOR_PULSE } from './deepHush.js';
 
 export const MAX_PUSH = 12;
 export const BUTTON_TICKS = 20;
@@ -454,7 +455,7 @@ export class Circuits {
         break;
       }
       case B.STONE_BUTTON: if (m & ON) w.scheduleTick(x, y, z, BUTTON_TICKS); break;
-      case B.HUSH_SENSOR: if (m & 15) w.scheduleTick(x, y, z, 40); break; // (a pulse left over from before a reload ends too)
+      case B.HUSH_SENSOR: if (m & 15) w.scheduleTick(x, y, z, SENSOR_PULSE); break; // (a pulse left over from before a reload ends too)
       case B.TARGET: if (m & 15) w.scheduleTick(x, y, z, Math.max(1, (this.targetUntil.get(key(x, y, z)) ?? w.tickCount + TARGET_TICKS_STUCK) - w.tickCount)); break;
       case B.LECTERN: if (m & LECTERN_POWERED) w.scheduleTick(x, y, z, LECTERN_PULSE_TICKS); break;
       case B.WOODEN_PRESSURE_PLATE: if (m & 1) w.scheduleTick(x, y, z, PLATE_TICKS); break;

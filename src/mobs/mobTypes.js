@@ -45,11 +45,15 @@ export const MOBS = {
     health: 20, speed: 0.25, width: 0.6, height: 1.7, followRange: 16, explosive: true, sound: 'hiss',
     fuse: 30, explosionPower: 3,
     drops: [{ id: I.GUNPOWDER, min: 0, max: 2 }],
+    // 4 % are Fizzlets: half size, quicker, a small bang (half the blast radius), half the powder
+    babyChance: 0.04, babyStats: { speed: 1.4, health: 0.5, explosion: 0.5, loot: 'half', xp: 3 },
   },
   skitterer: {
     name: 'Skitterer', role: 'spider', category: CATEGORY.MONSTER,
     health: 16, speed: 0.3, width: 1.4, height: 0.9, attack: 2, followRange: 16, climbs: true, sound: 'skitter',
     drops: [{ id: I.STRING, min: 0, max: 2 }, { id: I.SPIDER_EYE, min: -1, max: 1, playerOnly: true }],
+    // 6 % hatch as spiderlings: half size, a third faster, half the health, a weak bite, half the loot
+    babyChance: 0.06, babyStats: { speed: 1.35, attack: 0.5, health: 0.5, loot: 'half', xp: 3 },
   },
   wobbler: {
     name: 'Wobbler', role: 'slime', category: CATEGORY.MONSTER, sound: 'squish', followRange: 16, noFallDamage: true,
@@ -90,6 +94,8 @@ export const MOBS = {
     name: 'Cragbuck', role: 'goat', category: CATEGORY.CREATURE, goat: true, sound: 'bleat', noFallDamage: true,
     health: 10, speed: 0.3, width: 0.9, height: 1.3, attack: 2, panicSpeed: 2,
     drops: [], food: [I.WHEAT],
+    // tame with bread (1 in 3): follows, sits on command, and rams monsters that come near its owner (mobs/companions.js)
+    tamedHealth: 16, tamedAttack: 3, companion: { tameFood: [I.BREAD], perk: 'guard' },
   },
   purrling: {
     name: 'Purrling', role: 'cat', category: CATEGORY.CREATURE, tameable: true, feline: true, noFallDamage: true,
@@ -181,6 +187,8 @@ export const MOBS = {
     name: 'Vixling', role: 'fox', category: CATEGORY.CREATURE, fox: true, sound: 'squeak',
     health: 10, speed: 0.3, width: 0.6, height: 0.7, attack: 2, panicSpeed: 1.8,
     drops: [], food: [I.APPLE],
+    // sneak up and offer sweet or glow berries (1 in 3): follows, sits on command, bites what threatens its owner and now and then digs up a gift (mobs/companions.js)
+    tamedHealth: 14, tamedAttack: 3, companion: { tameFood: [I.SWEET_BERRIES, I.GLOW_BERRIES], perk: 'forager' },
   },
   settler: {
     name: 'Settler', role: 'villager', category: CATEGORY.CREATURE, villager: true,

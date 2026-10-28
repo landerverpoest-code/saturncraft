@@ -300,6 +300,7 @@ MODELS.cragbuck = {
   parts: [
     ['body', [9, 10, 16], [0, 15, 1], [0, 0, 0], '#e8e4da'],
     ['head', [5, 7, 10], [0, 20, -7], [0, 1, -4], '#ecebe4', { face: 'cragbuck' }],
+    ['band', [9.6, 10.6, 1.6], [0, 15, -6], [0, 0, 0], '#d8822a'], // a tame Cragbuck's harness band
     ['beard', [2, 4, 2], [0, 20, -7], [0, -4, -7], '#d8d0c0'],
     ['hornL', [1.6, 7, 1.6], [0, 20, -7], [1.6, 7, -2], '#b8ac90'],
     ['hornR', [1.6, 7, 1.6], [0, 20, -7], [-1.6, 7, -2], '#b8ac90'],
@@ -332,6 +333,7 @@ MODELS.vixling = {
   parts: [
     ['body', [6, 6, 11], [0, 7, 1], [0, 0, 0], '#e07a2a'],
     ['head', [7, 6, 5], [0, 9, -5], [0, 0, -2], '#e07a2a', { face: 'vixling' }],
+    ['band', [6.6, 6.6, 1.4], [0, 7, -4], [0, 0, 0], '#3aa860'], // a tame Vixling's green scarf
     ['snout', [3, 2, 3], [0, 9, -5], [0, -1.5, -5.5], '#f4ece0'],
     ['earL', [2, 3, 1], [0, 9, -5], [2, 4, -1.5], '#2a1a10'],
     ['earR', [2, 3, 1], [0, 9, -5], [-2, 4, -1.5], '#2a1a10'],
@@ -784,7 +786,8 @@ export function animateModel(root, mob, alpha, L, sec, glow = null) {
   if (mob.type === 'fizzler') {
     const f = (mob.prevFuse + (mob.fuse - mob.prevFuse) * alpha) / mob.def.fuse;
     const s = 1 + f * 0.25 + Math.sin(f * 100) * f * 0.02;
-    root.scale.set(s * (1 + f * 0.1), s / (1 + f * 0.1), s * (1 + f * 0.1));
+    const k = mob.age < 0 ? 0.5 : 1; // a Fizzlet swells from its half size
+    root.scale.set(k * s * (1 + f * 0.1), k * s / (1 + f * 0.1), k * s * (1 + f * 0.1));
     if (f > 0 && Math.floor(f * 10) % 2 === 0) flash = f;
   }
   for (const m of mats) {

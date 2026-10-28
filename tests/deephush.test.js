@@ -89,7 +89,7 @@ describe('Hush Sensors', () => {
     world.set(5, 60, 0, B.HUSH_SENSOR, 0); world.set(0, 60, 9, B.HUSH_SENSOR, 0);
     const r = g.hush.vibrate(0.5, 60, 0.5, 'step', player);
     expect(r.sensors.map((s) => s.x)).toEqual([5]);
-    const power = world.getMeta(5, 60, 0);
+    const power = world.getMeta(5, 60, 0) & 15; // (bits 4-7: the vibration's frequency, world/vibrations.js)
     expect(power).toBe(sensorPower(Math.hypot(5, 0.5)));
     expect(power).toBeGreaterThan(0); expect(power).toBeLessThan(15);
     expect(world.getMeta(0, 60, 9)).toBe(0); // out of range
@@ -124,9 +124,10 @@ describe('Hush Sensors', () => {
 });
 
 describe('warning levels and the Hushkeeper', () => {
-  it('climb one step per alarm at most every 10 s, fade with time and call a Hushkeeper at 4', () => {
+  it('climb one step per shriek at most every 10 s, fade with time and call a Hushkeeper at 4', () => {
     const { g, world, player, spawned } = makeGame();
     world.set(3, 60, 0, B.HUSH_SENSOR, 0);
+    world.set(-3, 60, 0, B.HUSH_SHRIEKER, SHRIEKER_CAN_SUMMON); // only a world-grown shrieker raises the warning
     const levels = [];
     for (let k = 0; k < 4; k++) {
       world.set(3, 60, 0, B.HUSH_SENSOR, 0);

@@ -13,6 +13,7 @@ import { LEAVES as LEAVES_SET } from './trees.js';
 import { railSupported } from './rails.js';
 import { spongeUpdate } from './sponge.js';
 import { paintingIntact } from './paintings.js';
+import { LISTENS } from './vibrations.js';
 import { Circuits, CIRCUIT_BLOCK, CIRCUIT_REACT, CIRCUIT_SETTLE, supported as circuitSupported } from './circuits.js';
 import { updateSpike, crystalSupported } from './caves.js';
 import { scaffoldTick } from './scaffolding.js';
@@ -20,12 +21,13 @@ import { SIDE_DIRS, selectionBox, collisionBoxes, SHAPED_COLLISION, DOOR_UPPER, 
 
 export function chunkKey(cx, cz) { return (cx + 32768) * 65536 + (cz + 32768); }
 
-// What a loading chunk notes about a block id: 1 spawner, 2 beacon, 3 proving spawner, 4 circuit part
+// What a loading chunk notes about a block id: 1 spawner, 2 beacon, 3 proving spawner, 4 circuit part, +8 hears vibrations
 let scanTable = null;
 function chunkScanTable() {
   if (scanTable) return scanTable;
   scanTable = new Uint8Array(BLOCK_LIMIT);
   for (let id = 0; id < BLOCK_LIMIT; id++) if (CIRCUIT_SETTLE[id]) scanTable[id] = 4;
+  for (let id = 0; id < BLOCK_LIMIT; id++) if (LISTENS[id]) scanTable[id] |= 8;
   scanTable[B.SPAWNER] = 1; scanTable[B.BEACON] = 2; scanTable[B.PROVING_SPAWNER] = 3;
   return scanTable;
 }
@@ -43,6 +45,7 @@ export class Chunk {
     this.provers = new Set(); // Proving Spawner positions (world/provingSystem.js)
     // circuit parts (re-evaluated when the chunk loads: scheduled ticks are not saved)
     this.circuits = new Set();
+    this.listeners = new Set(); // blocks that hear vibrations: Hush Sensors and Shriekers (world/vibrations.js)
     // one pass over the blocks: count each section's non-air blocks and note the special ones
     const blocks = this.blocks, special = chunkScanTable();
     for (let s = 0; s < SECTION_COUNT; s++) {
@@ -52,7 +55,10 @@ export class Chunk {
         const b = blocks[i];
         if (!b) continue;
         n++;
-        const k = special[b];
+        let k = special[b];
+        if (!k) continue;
+        if (k & 8) this.listeners.add(i);
+        k &= 7;
         if (!k) continue;
         if (k === 4) { this.circuits.add(i); continue; }
         const pos = `${cx * 16 + (i & 15)},${MIN_Y + (i >> 8)},${cz * 16 + ((i >> 4) & 15)}`;
@@ -190,6 +196,7 @@ export class World {
     if (old === B.PROVING_SPAWNER && id !== B.PROVING_SPAWNER) c.provers.delete(`${x},${y},${z}`);
     if (id === B.PROVING_SPAWNER) c.provers.add(`${x},${y},${z}`);
     if (CIRCUIT_SETTLE[id]) c.circuits.add(i);
+    if (LISTENS[id]) c.listeners.add(i); else if (LISTENS[old]) c.listeners.delete(i);
     c.modified = true;
     const s = (y - MIN_Y) >> 4;
     if (!old && id) c.sectionNonAir[s]++;

@@ -8,6 +8,7 @@ import { hasEnch, enchLines } from '../world/enchantments.js';
 import { POTIONS } from '../world/potions.js';
 import { bundleFill, bundleWeight, BUNDLE_CAPACITY } from '../world/bundles.js';
 import { SHERDS } from '../world/sherds.js';
+import { BOOK_GENERATIONS, bookGeneration } from '../world/books.js';
 import { EFFECTS, effectLabel, formatTicks, LINGER_DURATION_FACTOR } from '../player/effects.js';
 import { TOOL_TEMPLATES, GEAR_TEMPLATES, paintTemplate, materialRamp, ramp, WOOD_HANDLE } from './toolArt.js';
 
@@ -388,6 +389,7 @@ export function tooltipHTML(st, extra = '') {
     // a book names its title and author, or how many pages are written
     if (st.title) h += `<div class="tt-label">${esc(st.title)}</div>`;
     if (st.author) h += `<div class="tt-dura">by ${esc(st.author)}</div>`;
+    if (d.written) h += `<div class="tt-dura">${BOOK_GENERATIONS[bookGeneration(st)]}</div>`; // original, copy, copy of a copy
     if (Array.isArray(st.pages) && st.pages.length) h += `<div class="tt-dura">${st.pages.length} page${st.pages.length > 1 ? 's' : ''}</div>`;
   }
   if (d.bundle) {

@@ -118,7 +118,7 @@ describe('Shambler and Rattler variants', () => {
     expect(d.burnsInSun).toBe(true);
     expect(d.arrowEffect).toEqual(['slowness', 600, 0]);
     expect(d.needsSky).toBe(true);
-    expect(d.drops).toEqual(MOBS.rattler.drops);
+    expect(d.drops.slice(0, MOBS.rattler.drops.length)).toEqual(MOBS.rattler.drops); // plus the tipped arrows (see companions_babies.test.js)
   });
   it('Sodden Shamblers burn, sink, and drop copper 11 % (+2 % per Plunder level) on player kills', () => {
     const d = MOBS.sodden_shambler;
@@ -143,9 +143,9 @@ describe('Shambler and Rattler variants', () => {
     expect(river / N).toBeCloseTo(1 / 15, 2);
     for (let i = 0; i < 2000; i++) expect(soddenSpawnChance('ocean', SEA_LEVEL - 5, SEA_LEVEL, r)).toBe(false);
   });
-  it('5 % of Shambler-kin spawn as babies; other monsters never', () => {
+  it('5 % of Shambler-kin spawn as babies; skeletons, witches and illagers never (spiderlings, Fizzlets and cubs: see companions_babies.test.js)', () => {
     for (const k of ['shambler', 'dune_shambler', 'sodden_shambler']) { expect(MOBS[k].babyChance).toBe(0.05); expect(MOBS[k].shamblerKin).toBe(true); }
-    for (const k of ['rattler', 'rime_rattler', 'hexwife', 'skitterer']) expect(MOBS[k].babyChance).toBeUndefined();
+    for (const k of ['rattler', 'rime_rattler', 'hexwife', 'marauder', 'voidwalker']) expect(MOBS[k].babyChance).toBeUndefined();
   });
 });
 

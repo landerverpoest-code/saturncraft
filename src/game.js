@@ -831,6 +831,7 @@ export class Game {
   onProjectileHit(hit, x, y, z, kind) {
     if (this.net && this.net.isClient) return; // the host's arrows hit for everyone
     projectileHit(this.world, hit, x, y, z, kind);
+    if (this.hush) this.hush.vibrate(x, y, z, 'projectile', null); // a landing projectile shakes the ground
   }
 
   /** Write on a sign (shared with everyone in multiplayer). */
@@ -940,11 +941,13 @@ export class Game {
     const near = (e) => Math.hypot(e.x - (x + 0.5), e.y - y, e.z - (z + 0.5)) < 3;
     for (const e of this.entities.list) if (e.kind === 'mob' && e.deathTime === 0 && near(e)) { e.fireTicks = Math.max(e.fireTicks, 160); e.hurt(5, 'lightning', null, 0); }
     if (!p.dead && near(p) && !p.creative) { p.fireTicks = Math.max(p.fireTicks, 160); p.hurt(5, 'lightning'); }
+    if (this.hush) this.hush.vibrate(x + 0.5, y, z + 0.5, 'lightning', null); // (only the host's sensors listen)
   }
 
   explode(x, y, z, power, source) {
     if (this.net && this.net.isClient) { this.net.requestExplosion(x, y, z, power); return; } // the host's world blows up
     explode(this, x, y, z, power, source);
+    if (this.hush) this.hush.vibrate(x, y, z, 'explode', null); // sensors within 8 blocks hear it (world/vibrations.js)
   }
 
   /** Open this world to friends (peer-to-peer); resolves to the host session with its room code. */
@@ -1144,6 +1147,7 @@ export class Game {
         const [dx, dy, dz] = p.lookDir();
         const e = this.entities.spawnItem(p.x, p.y + p.eyeHeight - 0.3, p.z, st, [dx * 0.3, dy * 0.3 + 0.1, dz * 0.3]);
         if (e) e.pickupDelay = 40;
+        this.hush.emit('drop', p.x, p.y + 0.5, p.z); // tossing an item shakes the ground (world/vibrations.js)
       }
     } else inp.consumeMouse();
     inp.endFrame();
