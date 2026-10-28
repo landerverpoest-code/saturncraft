@@ -6,15 +6,16 @@ import { isIngredient, isVial, VIAL_SLOTS, INGREDIENT_SLOT, FUEL_SLOT, BREW_TICK
 import { ITEMS, I, maxStack } from '../world/items.js';
 import { canStack, hasEnch, isEnchantable, countBookshelves, tableOffers, rollOffer, applyOffer, enchName, anvilCombine, ANVIL_MAX_COST, cleanLabel, LABEL_MAX } from '../world/enchantments.js';
 import { bundleInsert, bundleTakeLast } from '../world/bundles.js';
+import { isBook, bookPages, cleanPage, cleanPages, cleanTitle, signBook, BOOK_MAX_PAGES, PAGE_MAX, TITLE_MAX } from '../world/books.js';
 import { spendLevels } from '../player/experience.js';
 import { mulberry32 } from '../world/noise.js';
 import { craft, RECIPES, recipeLayout, chooseIngredients } from '../player/crafting.js';
-import { B, BLOCKS } from '../world/blocks.js';
+import { B, BLOCKS, isBox } from '../world/blocks.js';
 import { canTrade, doTrade, offerPrice, MAX_USES } from '../mobs/trades.js';
 import { championDiscount } from '../mobs/raids.js';
 import { MILESTONES } from '../player/milestones.js';
 import { loadPlayerName } from '../net/protocol.js';
-import { grindstoneAccepts, grindstoneResult, grindstoneXp, stonecutterOutputs, stonecutterAccepts } from '../world/workstations.js';
+import { grindstoneAccepts, grindstoneResult, grindstoneXp, stonecutterOutputs, stonecutterAccepts, loomResult, loomAcceptsCloth, loomAcceptsDye, LOOM_BATCH } from '../world/workstations.js';
 import { BEACON_POWERS, POWER_LEVEL, SECONDARY, BEACON_PAYMENT, beaconLevel, beamColor, beaconMeta, beaconRange } from '../world/beacons.js';
 
 function el(html) { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstChild; }
@@ -85,6 +86,7 @@ export class UI {
     this.brewing = null;
     this.fxRefresh = null;
     this.chest = null;
+    this.lectern = null;
     this.enchTick = null;
     this.refreshers = []; this.slotRefs = [];
     this.clear();
@@ -258,7 +260,8 @@ export class UI {
     box.appendChild(grid);
     box.appendChild(el('<div class="arrow">➜</div>'));
     const result = () => craft(this.craftGrid, w);
-    const consume = () => { for (let i = 0; i < this.craftGrid.length; i++) { const s = this.craftGrid[i]; if (s) { s.count--; if (s.count <= 0) this.craftGrid[i] = null; } } };
+    // (a milk bucket leaves its empty bucket behind in the grid)
+    const consume = () => { for (let i = 0; i < this.craftGrid.length; i++) { const s = this.craftGrid[i]; if (s) { const rest = ITEMS[s.id] && ITEMS[s.id].craftRemainder; s.count--; if (s.count <= 0) this.craftGrid[i] = rest ? { id: rest, count: 1, damage: 0 } : null; } } };
     this.side = this.recipeBook(w);
     box.appendChild(this.makeSlot(result, () => {}, {
       onClick: (e) => {
@@ -275,8 +278,8 @@ export class UI {
           }
         } else {
           const c = this.cursor;
-          if (!c) this.cursor = { id: r.id, count: r.count, damage: 0 };
-          else if (c.id === r.id && c.count + r.count <= maxStack(r.id)) c.count += r.count;
+          if (!c) this.cursor = { ...r, damage: 0 }; // (keeps a box's contents, a pot's sherds)
+          else if (canStack(c, r) && c.count + r.count <= maxStack(r.id)) c.count += r.count;
           else return;
           consume();
         }
@@ -539,9 +542,9 @@ export class UI {
       return left;
     };
     // a Gloomshell Box holds anything but other boxes
-    const box = this.game.world.getBlock(x, y, z) === B.GLOOMSHELL_BOX;
-    const fits = (st) => !box || st.id !== B.GLOOMSHELL_BOX;
-    this.showContainer('chest', disp ? (here === B.DISPENSER ? 'Dispenser' : 'Dropper') : hopper ? 'Hopper' : box ? 'Gloomshell Box' : halves ? 'Large Chest' : this.game.world.getBlock(x, y, z) === B.BARREL ? 'Barrel' : 'Chest', (panel) => {
+    const box = isBox(this.game.world.getBlock(x, y, z));
+    const fits = (st) => !box || !isBox(st.id);
+    this.showContainer('chest', disp ? (here === B.DISPENSER ? 'Dispenser' : 'Dropper') : hopper ? 'Hopper' : box ? BLOCKS[this.game.world.getBlock(x, y, z)].name : halves ? 'Large Chest' : this.game.world.getBlock(x, y, z) === B.BARREL ? 'Barrel' : 'Chest', (panel) => {
       const grid = el(`<div class="grid" style="grid-template-columns:repeat(${disp ? 3 : Math.min(9, n)},var(--slot));margin:0 auto 12px;width:max-content"></div>`);
       for (let i = 0; i < n; i++) {
         grid.appendChild(this.makeSlot(() => c.slots[i], (v) => { c.slots[i] = v; }, {
@@ -851,6 +854,55 @@ export class UI {
     g.audio.play('grind', [x + 0.5, y + 0.5, z + 0.5]);
   }
 
+  /** Loom: wool or carpets and a dye in, up to eight of the cloth in the dye's colour out. */
+  openLoom(x, y, z) {
+    this.game.input.unlock();
+    const g = this.game, inv = g.player.inventory;
+    this.work = [null, null]; // [cloth, dye]
+    const result = () => (this.work ? loomResult(this.work[0], this.work[1]) : null);
+    const take = (shift) => {
+      const r = result();
+      if (!r) return;
+      if (shift) { const left = inv.add({ ...r.result }); if (left) g.entities.spawnItem(g.player.x, g.player.y + 1, g.player.z, { ...r.result, count: left }); }
+      else if (!this.cursor) this.cursor = { ...r.result };
+      else if (canStack(this.cursor, r.result) && this.cursor.count + r.result.count <= maxStack(r.result.id)) this.cursor.count += r.result.count;
+      else return;
+      if ((this.work[0].count -= r.cloth) <= 0) this.work[0] = null;
+      if (--this.work[1].count <= 0) this.work[1] = null;
+      g.audio.play('shear', [x + 0.5, y + 0.5, z + 0.5]);
+    };
+    this.showContainer('loom', 'Loom', (panel) => {
+      const top = el('<div class="inv-top grind-top loom-top"></div>');
+      const ins = el('<div class="grind-ins"></div>');
+      const cloth = this.workSlot(0, { filter: loomAcceptsCloth }), dye = this.workSlot(1, { filter: loomAcceptsDye });
+      cloth.title = 'Wool or carpets'; dye.title = 'A dye (Bone Meal bleaches)';
+      ins.append(cloth, dye);
+      top.append(ins, el('<div class="arrow">➜</div>'));
+      top.appendChild(this.makeSlot(() => { const r = result(); return r ? r.result : null; }, () => {}, { onClick: (e) => take(e.shiftKey) }));
+      panel.appendChild(top);
+      const hint = el('<div class="recipes-hint grind-hint"></div>');
+      panel.appendChild(hint);
+      this.refreshers.push(() => {
+        const w = this.work || [];
+        hint.textContent = result() ? `One dye recolours up to ${LOOM_BATCH}` : w[0] && w[1] ? 'Already that colour' : 'Wool or carpets above, a dye below';
+      });
+      panel.appendChild(this.inventoryGrid({
+        accept: (st) => {
+          const i = loomAcceptsCloth(st) ? 0 : loomAcceptsDye(st) ? 1 : -1;
+          if (i < 0) return false;
+          if (!this.work[i]) { this.work[i] = st; return true; }
+          if (canStack(this.work[i], st)) {
+            const n = Math.min(st.count, maxStack(st.id) - this.work[i].count);
+            this.work[i].count += n; st.count -= n;
+            return st.count <= 0 ? true : n ? 'partial' : false;
+          }
+          return false;
+        },
+      }));
+    });
+    this.refreshAll();
+  }
+
   /** Stonecutter: one stone block in, pick one of the shapes it cuts into. */
   openStonecutter(x, y, z) {
     this.game.input.unlock();
@@ -986,7 +1038,7 @@ export class UI {
             if (left) g.entities.spawnItem(g.player.x, g.player.y + 1, g.player.z, { ...got, count: left });
             done++;
           }
-          if (done) { g.milestones.event('trade'); g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); g.entities.spawnXp(g.player.x, g.player.y + 1, g.player.z, 3 * done); }
+          if (done) { mob.traded = true; g.milestones.event('trade'); g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); g.entities.spawnXp(g.player.x, g.player.y + 1, g.player.z, 3 * done); }
           this.refreshAll();
         });
         this.refreshers.push(() => {
@@ -1193,6 +1245,138 @@ export class UI {
     s.querySelector('button').onclick = done;
     this.layer.appendChild(s);
     setTimeout(() => inputs[0].focus(), 0);
+  }
+
+  /**
+   * A book in hotbar slot `slot`: a Writable Book opens to write in (pages turn, a new page is added past
+   * the last one, up to 50; Sign gives it a title and makes it a Written Book), a Written Book to read.
+   */
+  openBook(slot) {
+    this.clear();
+    this.open = 'book';
+    const g = this.game, inv = g.player.inventory;
+    g.input.unlock();
+    const st = inv.slots[slot];
+    if (!st || !isBook(st.id)) { this.open = null; return; }
+    const writable = st.id === I.WRITABLE_BOOK;
+    const pages = bookPages(st).slice();
+    let page = 0;
+    const s = el(`<div class="screen book-screen"><div class="book"><div class="book-head"></div>${writable ? `<textarea class="book-page" maxlength="${PAGE_MAX}" spellcheck="false"></textarea>` : '<div class="book-page book-read"></div>'}
+      <div class="book-nav"><button class="btn book-prev">&lt;</button><span class="book-num"></span><button class="btn book-next">&gt;</button></div></div>
+      <div class="book-actions">${writable ? '<button class="btn book-sign">Sign</button>' : ''}<button class="btn book-done">Done</button></div></div>`);
+    const head = s.querySelector('.book-head'), text = s.querySelector('.book-page'), num = s.querySelector('.book-num');
+    const prev = s.querySelector('.book-prev'), next = s.querySelector('.book-next');
+    const current = () => { const cur = inv.slots[slot]; return cur && cur.id === st.id ? cur : null; };
+    const save = () => {
+      // the text lives on the stack (cleaned like anything that reaches a save or the network)
+      const cur = current();
+      if (!cur) return;
+      const clean = cleanPages(pages);
+      if (clean) cur.pages = clean; else delete cur.pages;
+      inv.changed();
+    };
+    const show = () => {
+      head.textContent = writable ? 'Writable Book' : `${st.title || 'Untitled'}${st.author ? ' by ' + st.author : ''}`;
+      if (writable) text.value = pages[page]; else text.textContent = pages[page];
+      num.textContent = `Page ${page + 1} of ${pages.length}`;
+      prev.disabled = page === 0;
+      next.disabled = writable ? page >= BOOK_MAX_PAGES - 1 : page >= pages.length - 1;
+    };
+    const close = () => { save(); this.open = null; this.clear(); g.onUIClosed(); };
+    const turn = (d) => {
+      const to = page + d;
+      if (to < 0 || to >= BOOK_MAX_PAGES || (!writable && to >= pages.length)) return;
+      if (to >= pages.length) pages.push(''); // writing past the last page starts a new one
+      page = to;
+      g.audio.play('page');
+      show();
+      if (writable) text.focus();
+    };
+    prev.onclick = () => turn(-1);
+    next.onclick = () => turn(1);
+    s.querySelector('.book-done').onclick = close;
+    if (writable) {
+      text.oninput = () => { pages[page] = cleanPage(text.value); if (text.value !== pages[page]) text.value = pages[page]; save(); };
+      text.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Escape') close(); if (e.key === 'PageDown') turn(1); if (e.key === 'PageUp') turn(-1); };
+      s.querySelector('.book-sign').onclick = () => this.signBookScreen(slot, pages);
+    }
+    this.layer.appendChild(s);
+    show();
+    if (writable) setTimeout(() => text.focus(), 0);
+  }
+
+  /** Signing a Writable Book: a title, the author (this player's name), and it becomes a Written Book. */
+  signBookScreen(slot, pages) {
+    this.clear();
+    this.open = 'book';
+    const g = this.game, inv = g.player.inventory;
+    const author = cleanTitle(g.player.netName || loadPlayerName()) || 'Unknown';
+    const s = el(`<div class="screen book-screen"><div class="book book-signing"><div class="book-head">Sign the book</div><input class="nametag-input book-title" maxlength="${TITLE_MAX}" spellcheck="false" placeholder="Title"><p class="sub">by ${author.replace(/[<>&"]/g, '')}</p><p class="sub">Once signed, the book can only be read.</p></div>
+      <div class="book-actions"><button class="btn book-ok" disabled>Sign and Close</button><button class="btn book-cancel">Cancel</button></div></div>`);
+    const inp = s.querySelector('input'), ok = s.querySelector('.book-ok');
+    inp.oninput = () => { ok.disabled = !cleanTitle(inp.value); };
+    const finish = () => {
+      const cur = inv.slots[slot];
+      const signed = cur && cur.id === I.WRITABLE_BOOK ? signBook({ ...cur, pages }, inp.value, author) : null;
+      if (!signed) return;
+      inv.slots[slot] = signed;
+      inv.changed();
+      g.audio.play('page');
+      this.open = null; this.clear(); g.onUIClosed();
+    };
+    ok.onclick = finish;
+    s.querySelector('.book-cancel').onclick = () => this.openBook(slot);
+    inp.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') finish(); if (e.key === 'Escape') this.openBook(slot); };
+    this.layer.appendChild(s);
+    setTimeout(() => inp.focus(), 0);
+  }
+
+  /** Read the book on a Lectern: turning its pages is shared (and pulses); Take Book puts it in the inventory. */
+  openLectern(x, y, z) {
+    this.clear();
+    this.open = 'lectern';
+    const g = this.game, k = `${x},${y},${z}`;
+    g.input.unlock();
+    const s = el(`<div class="screen book-screen"><div class="book"><div class="book-head"></div><div class="book-page book-read"></div>
+      <div class="book-nav"><button class="btn book-prev">&lt;</button><span class="book-num"></span><button class="btn book-next">&gt;</button></div></div>
+      <div class="book-actions"><button class="btn book-take">Take Book</button><button class="btn book-done">Done</button></div></div>`);
+    const head = s.querySelector('.book-head'), text = s.querySelector('.book-page'), num = s.querySelector('.book-num');
+    const prev = s.querySelector('.book-prev'), next = s.querySelector('.book-next');
+    const close = () => { this.lectern = null; this.open = null; this.clear(); g.onUIClosed(); };
+    const refresh = () => {
+      const l = g.lecterns.get(k);
+      if (!l) { close(); return; } // someone else took the book
+      const pages = bookPages(l.book);
+      head.textContent = l.book.id === I.WRITTEN_BOOK ? `${l.book.title || 'Untitled'}${l.book.author ? ' by ' + l.book.author : ''}` : 'Writable Book';
+      text.textContent = pages[l.page] || '';
+      num.textContent = `Page ${l.page + 1} of ${pages.length}`;
+      prev.disabled = l.page === 0;
+      next.disabled = l.page >= pages.length - 1;
+    };
+    const turn = (d) => {
+      const l = g.lecterns.get(k);
+      if (!l) return;
+      const to = l.page + d;
+      if (to < 0 || to >= bookPages(l.book).length) return;
+      g.setLectern(x, y, z, { book: l.book, page: to }); // (the page turn pulses on the host)
+      g.audio.play('page', [x + 0.5, y + 1, z + 0.5]);
+      refresh();
+    };
+    prev.onclick = () => turn(-1);
+    next.onclick = () => turn(1);
+    s.querySelector('.book-take').onclick = () => {
+      const l = g.lecterns.get(k);
+      if (l) {
+        g.setLectern(x, y, z, null);
+        const book = { ...l.book, count: 1 };
+        if (g.player.inventory.add(book)) g.entities.spawnItem(x + 0.5, y + 1.1, z + 0.5, book, [0, 0.15, 0]);
+      }
+      close();
+    };
+    s.querySelector('.book-done').onclick = close;
+    this.lectern = { k, refresh };
+    this.layer.appendChild(s);
+    refresh();
   }
 
   showMilestones() {

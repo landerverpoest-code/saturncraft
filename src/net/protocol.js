@@ -4,6 +4,8 @@
 
 import { cleanEnch, withExtras, sameEnch, cleanLabel } from '../world/enchantments.js';
 import { equipIds } from '../mobs/equipment.js';
+import { sameBook } from '../world/books.js';
+import { PROFESSIONS } from '../world/villages.js';
 
 export const PROTOCOL_VERSION = 1;
 export const MAX_PLAYERS = 8;
@@ -142,6 +144,8 @@ export function unpackPlayerState(a) {
 }
 
 // ---- mob snapshots --------------------------------------------------------------
+/** Second mob flags: SADDLED (Gallopers, Dune Striders), DANCING (a Hoverling by a playing jukebox). */
+export const MF2 = { SADDLED: 1, DANCING: 2 };
 export const MF = { GROUND: 1, TARGET: 2, ANGRY: 4, BABY: 8, SHEARED: 16, TAMED: 32, SITTING: 64, ENEMY: 128, SPECIAL: 256, CAPTAIN: 512, RIDING: 1024 }; // RIDING: a jockey on its Cluckling; SPECIAL: a Hexwife drinking, a Shambler about to convert
 // ---- leads (entities/leash.js) ----------------------------------------------------
 /**
@@ -164,7 +168,8 @@ export function unpackLeash(a) {
 
 /**
  * [id, type, x, y, z, yaw, headPitch, health, hurtTime, deathTime, flags, woolColor, fuse, profession, beam [x,y,z] | 0, moving,
- *  name | 0, lead (packLeash), emerging, digging, equipment [hand, helmet, chest, legs, boots] | 0]
+ *  name | 0, lead (packLeash), emerging, digging, equipment [hand, helmet, chest, legs, boots] | 0,
+ *  flags2 (MF2), passenger id | -1 (a Dune Strider's back seat), held item id | 0 (a Hoverling's)]
  *  (emerging/digging: a Hushkeeper rising out of / sinking into the ground)
  */
 export function packMob(m, playerIdOf = () => -1) {
@@ -173,7 +178,8 @@ export function packMob(m, playerIdOf = () => -1) {
   return [m.id, m.type, r2(m.x), r2(m.y), r2(m.z), r2(m.yaw), r2(m.headPitch || 0), r2(m.health), m.hurtTime | 0, m.deathTime | 0, f, m.woolColor | 0, m.fuse | 0, m.profession || 0,
     m.beam ? [r2(m.beam.x), r2(m.beam.y), r2(m.beam.z)] : 0, m.moving ? 1 : 0, // Deepeye beams (mobs/oceanMobs.js)
     m.customName || 0, packLeash(m.leashHolder, playerIdOf), m.emerging > 0 ? m.emerging | 0 : 0, m.digging > 0 ? m.digging | 0 : 0,
-    equipIds(m.equip) || 0]; // worn armour and held weapon (mobs/equipment.js)
+    equipIds(m.equip) || 0, // worn armour and held weapon (mobs/equipment.js)
+    (m.saddled ? MF2.SADDLED : 0) | (m.dancing ? MF2.DANCING : 0), m.passengerId != null ? m.passengerId : -1, m.held ? m.held.id : 0]; // Dune Strider seats, Hoverling items
 }
 export function unpackMob(a) {
   if (!Array.isArray(a) || a.length < 13) return null;
@@ -182,10 +188,11 @@ export function unpackMob(a) {
     id: a[0], type: a[1], x: a[2], y: a[3], z: a[4], yaw: a[5], headPitch: a[6], health: a[7], hurtTime: a[8], deathTime: a[9],
     onGround: !!(f & MF.GROUND), target: !!(f & MF.TARGET), angry: !!(f & MF.ANGRY), baby: !!(f & MF.BABY),
     sheared: !!(f & MF.SHEARED), tamed: !!(f & MF.TAMED), sitting: !!(f & MF.SITTING), enemy: !!(f & MF.ENEMY), special: !!(f & MF.SPECIAL), captain: !!(f & MF.CAPTAIN), riding: !!(f & MF.RIDING),
-    woolColor: a[11] | 0, fuse: a[12] | 0, profession: a[13] || null,
+    woolColor: a[11] | 0, fuse: a[12] | 0, profession: PROFESSIONS.includes(a[13]) ? a[13] : null,
     beam: Array.isArray(a[14]) && a[14].length === 3 && a[14].every(Number.isFinite) ? { x: a[14][0], y: a[14][1], z: a[14][2] } : null, moving: !!a[15],
     name: cleanLabel(a[16]), leash: unpackLeash(a[17]), emerging: Math.max(0, a[18] | 0), digging: Math.max(0, a[19] | 0),
     equip: Array.isArray(a[20]) ? a[20].slice(0, 5).map((v) => (Number.isInteger(v) && v > 0 ? v : 0)) : null,
+    saddled: !!((a[21] | 0) & MF2.SADDLED), dancing: !!((a[21] | 0) & MF2.DANCING), passenger: Number.isInteger(a[22]) ? a[22] : -1, heldItem: a[23] | 0,
   };
 }
 
@@ -210,7 +217,7 @@ export function savePlayerName(name) {
 export function packEntity(e, riderOf = () => -1, playerIdOf = () => -1) {
   switch (e.kind) {
     case 'mob': return ['m', ...packMob(e, playerIdOf)];
-    case 'item': return ['i', e.id, r2(e.x), r2(e.y), r2(e.z), e.stack.id, e.stack.count, e.stack.damage | 0, e.pickupDelay > 0 ? 1 : 0, e.stack.ench ? cleanEnch(e.stack.ench) : 0, e.stack.contents || 0, Number.isInteger(e.stack.map) ? [e.stack.map, e.stack.mapX | 0, e.stack.mapZ | 0] : 0, e.stack.sherds || 0];
+    case 'item': return ['i', e.id, r2(e.x), r2(e.y), r2(e.z), e.stack.id, e.stack.count, e.stack.damage | 0, e.pickupDelay > 0 ? 1 : 0, e.stack.ench ? cleanEnch(e.stack.ench) : 0, e.stack.contents || 0, Number.isInteger(e.stack.map) ? [e.stack.map, e.stack.mapX | 0, e.stack.mapZ | 0] : 0, e.stack.sherds || 0, e.stack.pages || e.stack.title ? { p: e.stack.pages, t: e.stack.title, a: e.stack.author } : 0];
     case 'xp': return ['x', e.id, r2(e.x), r2(e.y), r2(e.z), e.value];
     case 'arrow': return ['a', e.id, r2(e.x), r2(e.y), r2(e.z), r2(e.vx), r2(e.vy), r2(e.vz), e.stuck ? 1 : 0, e.pickup ? 1 : 0, e.thrown === 'spear' ? 4 : e.thrown === 'potion' ? 3 : e.thrown === 'egg' ? 2 : e.thrown ? 1 : 0, e.potion | 0];
     case 'boat': return ['b', e.id, r2(e.x), r2(e.y), r2(e.z), r2(e.yaw), e.hitTime | 0, riderOf(e), e.cart ? 1 : 0, r2(e.pitch || 0)];
@@ -228,7 +235,7 @@ export function unpackEntity(a) {
   const [k, id, x, y, z] = a;
   if (![x, y, z].every(Number.isFinite)) return null;
   const o = { kind: ENTITY_KINDS[k], id, x, y, z };
-  if (k === 'i') Object.assign(o, { stack: withExtras({ id: a[5] | 0, count: a[6] | 0, damage: a[7] | 0 }, { ench: a[9], contents: a[10], sherds: a[12], ...(Array.isArray(a[11]) ? { map: a[11][0] | 0, mapX: a[11][1], mapZ: a[11][2] } : {}) }), delayed: !!a[8] });
+  if (k === 'i') Object.assign(o, { stack: withExtras({ id: a[5] | 0, count: a[6] | 0, damage: a[7] | 0 }, { ench: a[9], contents: a[10], sherds: a[12], ...(a[13] && typeof a[13] === 'object' ? { pages: a[13].p, title: a[13].t, author: a[13].a } : {}), ...(Array.isArray(a[11]) ? { map: a[11][0] | 0, mapX: a[11][1], mapZ: a[11][2] } : {}) }), delayed: !!a[8] });
   else if (k === 'x') o.value = a[5] | 0;
   else if (k === 'a') Object.assign(o, { vx: a[5], vy: a[6], vz: a[7], stuck: !!a[8], pickup: !!a[9], thrown: a[10] === 4 ? 'spear' : a[10] === 3 ? 'potion' : a[10] === 2 ? 'egg' : a[10] === 1 ? 'snowball' : null, potion: a[11] | 0 });
   else if (k === 'b') Object.assign(o, { yaw: a[5], hitTime: a[6] | 0, rider: a[7], cart: !!a[8], pitch: +a[9] || 0 });
@@ -251,7 +258,7 @@ export function setContainerSlot(kind, c, i, st) {
 }
 export function sameStack(a, b) {
   if (!a || !b) return !a && !b;
-  return a.id === b.id && a.count === b.count && (a.damage | 0) === (b.damage | 0) && sameEnch(a.ench, b.ench) && (a.rw | 0) === (b.rw | 0) && String(a.sherds || '') === String(b.sherds || '');
+  return a.id === b.id && a.count === b.count && (a.damage | 0) === (b.damage | 0) && sameEnch(a.ench, b.ench) && (a.rw | 0) === (b.rw | 0) && String(a.sherds || '') === String(b.sherds || '') && sameBook(a, b);
 }
 /** A clean copy of a stack (id, count, damage, enchantments and anvil prior work only). */
 export const copyStack = (s) => (s ? withExtras({ id: s.id, count: s.count, damage: s.damage | 0 }, s) : null);

@@ -1,6 +1,6 @@
 // Natural mob spawning around the player, chunk-generation animal herds,
 // passive-mob persistence across chunk unloads and mob caps.
-import { villagesNear, houseHome } from '../world/villages.js';
+import { villagesNear, houseHome, houseJobSite } from '../world/villages.js';
 import { makeTrades } from './trades.js';
 import { Mob, HUT_CAT_COAT } from './mob.js';
 import { MOBS, CATEGORY } from './mobTypes.js';
@@ -21,6 +21,8 @@ import { HUT_MONSTERS, isNewtPoolFloor } from './spawnRules.js';
 import { soddenSpawnChance } from './hostileVariants.js';
 import { SEA_LEVEL } from '../world/constants.js';
 import { tickMonumentSpawns, spawnElders } from './oceanMobs.js';
+import { spawnVillageStrider, desertChunkSpawn } from './duneStrider.js';
+import { CAGE, forestChunkSpawn, hollowSpawnTick } from './hoverling.js';
 import { EQUIP_KINDS, rollEquipment, rollCanPickUp, localDifficulty, clampedDifficulty, jockeyRoll } from './equipment.js';
 
 const INHABITED_MAX = 3600000; // the local difficulty stops growing after 50 hours
@@ -245,6 +247,7 @@ export class MobSpawner {
         for (const [cx, cz] of chunks) surface += this.attempt(cx, cz, CATEGORY.MONSTER, true);
       }
     }
+    hollowSpawnTick(this); // Hoverlings drifting through Hollow Cities
     if (g.ticks % CREATURE_SPAWN_INTERVAL === 0 && creatures < scaledCap(CATEGORY.CREATURE, chunks.length)) {
       for (const [cx, cz] of chunks) creatures += this.attempt(cx, cz, CATEGORY.CREATURE);
     }
@@ -268,6 +271,7 @@ export class MobSpawner {
         if (Math.floor(h.x / 16) !== cx || Math.floor(h.z / 16) !== cz) continue;
         const m = this.spawnMob('settler', h.x, h.y, h.z);
         m.profession = p.profession; m.home = h; m.trades = makeTrades(p.profession); m.lastRestock = this.game.time;
+        m.jobSite = houseJobSite(p); // bound to the job-site block built beside the door (mobs/jobSites.js)
       }
     }
     // Marauders guard their outposts
@@ -277,6 +281,12 @@ export class MobSpawner {
         const m = this.spawnMob('marauder', o.cx + dx + 0.5, dy ? o.y + dy : this.game.world.heightAt(o.cx + dx, o.cz + dz) + 1, o.cz + dz + 0.5);
         if (m) m.persistent = true;
       }
+    }
+    // a Hoverling waits in the cage beside each outpost (world/temples.js)
+    for (const o of outpostsNear(this.game.world.gen, cx * 16, cz * 16, cx * 16 + 15, cz * 16 + 15)) {
+      if (Math.floor((o.cx + CAGE.dx) / 16) !== cx || Math.floor((o.cz + CAGE.dz) / 16) !== cz) continue;
+      const m = this.spawnMob('hoverling', o.cx + CAGE.dx + 0.5, o.y + 0.3, o.cz + CAGE.dz + 0.5);
+      if (m) m.persistent = true;
     }
     // a Hexwife lives in each swamp hut
     for (const h of hutsNear(this.game.world.gen, cx * 16, cz * 16, cx * 16 + 15, cz * 16 + 15)) {
@@ -304,6 +314,7 @@ export class MobSpawner {
     for (const v of villagesNear(this.game.world.gen, cx * 16, cz * 16, cx * 16 + 15, cz * 16 + 15)) {
       if (Math.floor((v.cx + 3) / 16) !== cx || Math.floor(v.cz / 16) !== cz) continue;
       this.spawnMob('ironguard', v.cx + 3.5, this.game.world.heightAt(v.cx + 3, v.cz) + 1, v.cz + 0.5);
+      if (v.style === 'desert') spawnVillageStrider(this, v); // and a Dune Strider by the well of a desert village
       // and a few stray Purrlings roam the village
       for (let k = 0; k < 2; k++) {
         const x = v.cx + Math.floor(Math.random() * 13) - 6, z = v.cz + Math.floor(Math.random() * 13) - 6;
@@ -327,6 +338,9 @@ export class MobSpawner {
     }
     // Herds placed at chunk generation time
     const w = this.game.world;
+    // rare finds: a Dune Strider in the open desert, a Hoverling in a forest
+    desertChunkSpawn(this, cx, cz);
+    forestChunkSpawn(this, cx, cz);
     // Inklings in deep ocean water
     if (Math.random() < 0.15) {
       const bx = cx * 16 + 2 + Math.floor(Math.random() * 12), bz = cz * 16 + 2 + Math.floor(Math.random() * 12);

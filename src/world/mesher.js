@@ -92,11 +92,23 @@ const WS_TILES = (() => {
       const ss = 'hush_shrieker_side', bn = all('hush_shrieker_bone');
       return [t(ss, ss, 'hush_shrieker_top', 'hushmoss', ss, ss), bn, bn, bn, bn];
     }),
+    // Lectern (index = has a book): base, post, the desk's two steps, then the open book
+    [B.LECTERN]: [0, 1].map((book) => {
+      const ls = 'lectern_side', desk = t(ls, ls, 'lectern_top', 'oak_planks', ls, ls);
+      const parts = [t(ls, ls, 'lectern_base', 'oak_planks', ls, ls), all('lectern_post'), desk, desk];
+      return book ? [...parts, t('lectern_book_side', 'lectern_book_side', 'lectern_book', 'lectern_book_side', 'lectern_book_side', 'lectern_book_side')] : parts;
+    }),
+    // Cake (index = bitten): the cut side shows the sponge inside
+    [B.CAKE]: [0, 1].map((bitten) => [t('cake_side', bitten ? 'cake_inner' : 'cake_side', 'cake_top', 'cake_bottom', 'cake_side', 'cake_side')]),
   };
 })();
+/** Which set of WS_TILES a block uses for its meta. */
+const wsIndex = (id, m) => (id === B.HUSH_SENSOR ? ((m & 15) ? 1 : 0) : id === B.LECTERN ? (m >> 2) & 1 : id === B.CAKE ? ((m & 7) ? 1 : 0) : m & 1);
 const BERRY_TILES = [0, 1, 2, 3].map((i) => texId('sweet_berry_bush_' + i));
 // Suspicious Sand and Gravel: one tile per brushing stage (meta bits 0-1, world/archaeology.js)
 const SUS_TILES = { [B.SUSPICIOUS_SAND]: [0, 1, 2, 3].map((i) => texId('suspicious_sand_' + i)), [B.SUSPICIOUS_GRAVEL]: [0, 1, 2, 3].map((i) => texId('suspicious_gravel_' + i)) };
+// Proving Spawners show their state on the sides (meta bits 4-5: waiting, active, cooling down; world/provingVaults.js)
+const PROVING_SIDES = [0, 1, 2].map((i) => texId('proving_spawner_side_' + i));
 
 class Buf {
   constructor(cap = 16384) { this.alloc(cap); this.n = 0; this.ni = 0; this.yBase = 0; }
@@ -203,6 +215,7 @@ export function meshSection(sec) {
         }
         else if (id === B.FARMLAND && d === 2 && meta[i] > 0) tile = FARMLAND_MOIST;
         else if (SUS_TILES[id]) tile = SUS_TILES[id][meta[i] & 3];
+        else if (id === B.PROVING_SPAWNER && d !== 2 && d !== 3) tile = PROVING_SIDES[((meta[i] >> 4) & 3) % 3];
         let r = 255, g = 255, b2 = 255;
         if ((id === B.GRASS && d === 2)) { r = colors[ci]; g = colors[ci + 1]; b2 = colors[ci + 2]; }
         else if (FOLIAGE_BIOME[id]) { r = colors[ci + 3]; g = colors[ci + 4]; b2 = colors[ci + 5]; }
@@ -356,7 +369,7 @@ export function meshSection(sec) {
       for (let d = 0; d < 6; d++) { const l = light[i + FACE_N[d]]; sk = Math.max(sk, l >> 4); bk = Math.max(bk, l & 15); }
       const tiles = [0, 1, 2, 3, 4, 5].map((d) => FACE_TILE[id * 6 + d]);
       if (FRONT_TILE[id] >= 0) tiles[FURNACE_FRONT_DIR[meta[i] & 3]] = FRONT_TILE[id]; // the Wyrm Head's face
-      const ws = WS_TILES[id] && WS_TILES[id][id === B.HUSH_SENSOR ? ((meta[i] & 15) ? 1 : 0) : meta[i] & 1];
+      const ws = WS_TILES[id] && WS_TILES[id][wsIndex(id, meta[i])];
       blockBoxes(id, meta[i]).forEach((b, k) => emitBox(buf, x, y, z, b[0], b[1], b[2], b[3], b[4], b[5], ws ? ws[k] : tiles, sk * 17, bk * 17, 'box'));
       const cb = id === B.COMPOSTER && compostBox(meta[i] & 15);
       if (cb) emitBox(buf, x, y, z, cb[0], cb[1], cb[2], cb[3], cb[4], cb[5], (meta[i] & 15) >= 8 ? COMPOST_READY : COMPOST, sk * 17, bk * 17, 'box');

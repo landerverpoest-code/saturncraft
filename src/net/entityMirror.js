@@ -99,7 +99,11 @@ export class EntityMirror {
       e.target = s.target ? 'player' : null;
       e.angry = s.angry; e.sheared = s.sheared; e.tamed = s.tamed; e.sitting = s.sitting; e.enemy = s.enemy ? 'player' : null;
       e.woolColor = s.woolColor; e.fuse = s.fuse; e.special = s.special; e.beam = s.beam; e.moving = s.moving; e.captain = s.captain; // Marauder Captains carry a banner
-      if (s.profession) e.profession = s.profession;
+      e.saddled = s.saddled; e.dancing = s.dancing; e.passengerId = s.passenger >= 0 ? s.passenger : null; e.heldItemId = ITEMS[s.heldItem] ? s.heldItem : 0; // Dune Striders, Hoverlings
+      if (e.def && e.def.villager) { // a settler's trade (robe colour) follows the host's, including losing it; a new one shows the green burst
+        if (e.netProfSeen && s.profession && s.profession !== e.profession) e.jobBurst(this.game);
+        e.profession = s.profession; e.netProfSeen = true;
+      } else if (s.profession) e.profession = s.profession;
       e.customName = s.name || undefined; // a Name Tag's label
       e.leashHolder = this.leashHolder(s.leash);
       e.emerging = s.emerging; e.digging = s.digging; // a Hushkeeper rising / sinking (drawn by its customRender)
@@ -149,6 +153,7 @@ export class EntityMirror {
     const g = this.game, s = e.netState, p = g.player;
     this.ticks = g.ticks;
     if (e.kind === 'boat' && p.riding === e) { this.tickRiddenBoat(e); return; }
+    if (e.kind === 'mob' && p.riding === e) this.checkSeat(e);
     e.prev = [e.x, e.y, e.z];
     if (e.kind === 'mob') {
       e.prevYaw = e.yaw; e.prevFuse = e.fuse; if (e.hurtTime > 0) e.hurtTime--;
@@ -175,6 +180,13 @@ export class EntityMirror {
     if (e.kind === 'xp' && e.age !== undefined) e.age++;
     if (e.proxyTick) e.proxyTick(g); // a lingering cloud's specks
     this.tryPickup(e);
+  }
+
+  /** We sit behind on the host's Dune Strider: get off again if the host gave the seat to someone else (or never gave it). */
+  checkSeat(e) {
+    const mine = e.netState && e.netState.passenger === this.session.id;
+    e.seatWait = mine ? 0 : (e.seatWait || 0) + 1;
+    if (e.seatWait > 40) { e.seatWait = 0; this.game.dismount(); }
   }
 
   /** We sit in this boat: steer it here (the host takes our word for where it is). */

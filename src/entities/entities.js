@@ -420,11 +420,12 @@ export class Arrow {
       this.vx *= -0.1; this.vy *= -0.1; this.vz *= -0.1;
       return;
     }
-    if (hit && this.thrown) { this.x += this.vx / speed * hit.dist; this.y += this.vy / speed * hit.dist; this.z += this.vz / speed * hit.dist; this.shatter(game); return; }
+    if (hit && this.thrown) { this.x += this.vx / speed * hit.dist; this.y += this.vy / speed * hit.dist; this.z += this.vz / speed * hit.dist; if (game.onProjectileHit) game.onProjectileHit(hit, this.x, this.y, this.z, this.thrown); this.shatter(game); return; }
     if (hit) {
       this.x += this.vx / speed * hit.dist; this.y += this.vy / speed * hit.dist; this.z += this.vz / speed * hit.dist;
       this.stuck = true; this.age = 0;
       game.audio.play('arrow_hit', [this.x, this.y, this.z]);
+      if (game.onProjectileHit) game.onProjectileHit(hit, this.x, this.y, this.z, 'arrow'); // a target block answers
       return;
     }
     this.x += this.vx; this.y += this.vy; this.z += this.vz;

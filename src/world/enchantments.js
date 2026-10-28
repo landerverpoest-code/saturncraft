@@ -8,6 +8,7 @@ import { ITEMS, I } from './items.js';
 import { B, BLOCKS, SHAPE } from './blocks.js';
 import { mulberry32 } from './noise.js';
 import { cleanPotFaces } from './archaeology.js';
+import { copyBookFields, sameBook } from './books.js';
 
 const lin = (base, per) => (l) => base + (l - 1) * per;
 
@@ -118,7 +119,7 @@ export function sameEnch(a, b) {
 
 /** Can two stacks be merged into one? Never for durability items, nor enchanted with plain. */
 export function canStack(a, b) {
-  return !!a && !!b && a.id === b.id && !(ITEMS[a.id] && ITEMS[a.id].durability) && sameEnch(a.ench, b.ench) && (a.rw | 0) === (b.rw | 0) && a.map === b.map && (a.label || '') === (b.label || '') && String(a.sherds || '') === String(b.sherds || '');
+  return !!a && !!b && a.id === b.id && !(ITEMS[a.id] && ITEMS[a.id].durability) && sameEnch(a.ench, b.ench) && (a.rw | 0) === (b.rw | 0) && a.map === b.map && (a.label || '') === (b.label || '') && String(a.sherds || '') === String(b.sherds || '') && sameBook(a, b);
 }
 
 /** A cleaned copy of an enchantment map from untrusted data (network, saves). */
@@ -132,7 +133,7 @@ export function cleanEnch(e) {
   return out;
 }
 
-/** Copy the extra stack data (enchantments, prior work, a Gloomshell Box's contents) from `src` onto `dst`; returns dst. */
+/** Copy the extra stack data (enchantments, prior work, a Gloomshell Box's contents, a book's text) from `src` onto `dst`; returns dst. */
 export function withExtras(dst, src) {
   const e = src && cleanEnch(src.ench);
   if (e) dst.ench = e;
@@ -146,6 +147,7 @@ export function withExtras(dst, src) {
   if (bundle) dst.bundle = bundle; // a Bundle's contents (world/bundles.js)
   const f = src && src.sherds && cleanPotFaces(src.sherds); // a Decorated Pot's sides (world/archaeology.js)
   if (f) dst.sherds = f;
+  copyBookFields(dst, src); // a book's pages, title and author (world/books.js)
   return dst;
 }
 
@@ -171,6 +173,7 @@ export function cleanBundle(list) {
     const l = cleanLabel(s.label);
     if (l) st.label = l;
     if (Array.isArray(s.bundle)) { const b = cleanBundle(s.bundle); if (b) st.bundle = b; }
+    copyBookFields(st, s); // a book keeps its text
     out.push(st);
   }
   return out.length ? out : null;
@@ -191,6 +194,9 @@ export function cleanContents(list) {
     const e = cleanEnch(s.ench);
     if (e) st.ench = e;
     if (s.rw > 0) st.rw = s.rw | 0;
+    const l = cleanLabel(s.label);
+    if (l) st.label = l;
+    copyBookFields(st, s); // a book keeps its text
     out[i] = st; any = true;
   }
   return any ? out : null;

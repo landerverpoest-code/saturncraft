@@ -7,6 +7,7 @@ import { ITEMS } from '../world/items.js';
 import { armorTotals } from '../player/armor.js';
 import { xpToNextLevel } from '../player/experience.js';
 import { PlayerMarkers } from './playerMarkers.js';
+import { dashGauge } from '../mobs/duneStrider.js';
 
 const svg = (inner) => `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" shape-rendering="crispEdges">${inner}</svg>`)}`;
 const heartPath = 'M9 16 L2 9 Q0 6 2 3.5 Q4.5 1 7 3 L9 5 L11 3 Q13.5 1 16 3.5 Q18 6 16 9 Z';
@@ -52,6 +53,7 @@ export class HUD {
         <div id="bars3" style="width:calc(var(--slot) * 9 + 8px);display:none"><div class="bar" id="absorb"></div></div>
         <div id="bars2" style="width:calc(var(--slot) * 9 + 8px);display:flex;justify-content:space-between"><div class="bar" id="armor"></div><div class="bar right" id="air"></div></div>
         <div id="bars"><div class="bar" id="health"></div><div class="bar right" id="food"></div></div>
+        <div id="dashbar" class="hidden" title="Dash"><div></div></div>
         <div id="xpbar"><div id="xpfill"></div><span id="xplevel"></span></div>
         <div class="hotbar" id="hotbar"></div>
       </div>`;
@@ -215,6 +217,16 @@ export class HUD {
     const cd = g.interaction ? g.interaction.attackCooldownProgress() : 1;
     this.attackEl.classList.toggle('hidden', cd >= 1);
     this.attackEl.firstChild.style.width = `${cd * 100}%`;
+    // riding a Dune Strider: the dash charging (gold) and its cooldown (grey until ready)
+    const mount = p.riding && p.riding.def && p.riding.def.strider && !p.riding.netProxy ? p.riding : null;
+    const dashEl = this.dashEl || (this.dashEl = this.root.querySelector('#dashbar'));
+    dashEl.classList.toggle('hidden', !mount);
+    if (mount) {
+      const gge = dashGauge(mount.dash);
+      dashEl.firstChild.style.width = `${Math.round((gge.charging ? gge.charge : gge.ready) * 100)}%`;
+      dashEl.classList.toggle('charging', gge.charging);
+      dashEl.classList.toggle('cooling', !gge.charging && gge.ready < 1);
+    }
     // overlays
     const b = p.body;
     this.ov.water.classList.toggle('hidden', !b.eyeInWater);

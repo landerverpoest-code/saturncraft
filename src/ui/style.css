@@ -280,3 +280,25 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 .tooltip .tt-bslot img { width: 22px; height: 22px; margin: 2px; image-rendering: pixelated; }
 .tooltip .tt-bslot span { position: absolute; right: 1px; bottom: -2px; font-size: 11px; text-shadow: 1px 1px 0 #000; }
 .nametag-input { display: block; margin: 10px auto; width: 280px; font: inherit; font-size: 18px; padding: 6px 8px; background: #1a1424; color: #fff; border: 2px solid #6a5a8a; }
+
+/* Dune Strider dash gauge (above the experience bar while riding one) */
+#dashbar { width: calc(var(--slot) * 9 + 8px); height: 6px; background: rgba(0,0,0,.55); border: 1px solid #000; box-sizing: border-box; }
+#dashbar.hidden { display: none; }
+#dashbar > div { height: 100%; width: 100%; background: linear-gradient(#e8d28a, #b08a3a); }
+#dashbar.charging > div { background: linear-gradient(#ffe070, #e09a20); }
+#dashbar.cooling > div { background: linear-gradient(#9a9a9a, #5a5a5a); }
+/* Books and Lecterns: a page of paper with page turning, and the signing screen */
+.book-screen { gap: 10px; }
+.book { width: min(340px, calc(100vw - 32px)); padding: 14px 16px 10px; background: linear-gradient(#f4ecd8, #e6dabe); border: 3px solid #6a4a28; border-radius: 4px; box-shadow: 4px 4px 0 rgba(0,0,0,.4); color: #2a1e12; box-sizing: border-box; }
+.book-head { font-weight: bold; text-align: center; margin-bottom: 8px; color: #4a2e16; overflow-wrap: anywhere; }
+.book-page { display: block; width: 100%; height: 230px; box-sizing: border-box; font: 15px/1.45 monospace; color: #1a120a; background: transparent; border: 1px dashed rgba(106,74,40,.35); outline: none; resize: none; padding: 6px; white-space: pre-wrap; overflow-wrap: anywhere; overflow-y: auto; text-align: left; }
+.book-page:focus { background: rgba(255,255,255,.25); }
+.book-read { border-color: transparent; }
+.book-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+.book-nav .btn { min-width: 40px; padding: 4px 10px; }
+.book-nav .btn:disabled { opacity: .35; cursor: default; }
+.book-num { font-size: 13px; color: #6a4a28; }
+.book-actions { display: flex; gap: 10px; justify-content: center; }
+.screen .book-signing p.sub { color: #4a3a2a; text-align: center; margin: 4px 0; }
+.book-ok:disabled { opacity: .5; cursor: default; }
+.book-actions .btn { min-width: 140px; }

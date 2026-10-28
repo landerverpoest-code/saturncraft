@@ -10,6 +10,7 @@ import { BIOME } from './biomes.js';
 import { SEA_LEVEL, MIN_Y, WORLD_HEIGHT, cidx } from './constants.js';
 import { mulberry32, hash4 } from './noise.js';
 import { SIDE_DIRS, DOOR_UPPER, BED_HEAD } from './shapes.js';
+import { jobSiteBlock } from '../mobs/jobSites.js';
 
 export const VILLAGE_REGION = 320;
 const REACH = 56; // how far buildings may reach from the centre
@@ -79,7 +80,7 @@ function planVillage(gen, rx, rz) {
       p.y = gy;
       // facing: side index pointing from the building towards the road
       p.facing = alongX ? (side > 0 ? 0 : 2) : (side > 0 ? 3 : 1);
-      if (type === 'house') p.profession = PROFESSIONS[(houseNo++ + Math.floor(rng() * 5)) % 5];
+      if (type === 'house') p.profession = PROFESSIONS[(houseNo++ + Math.floor(rng() * 5)) % PROFESSIONS.length];
       p.seed = Math.floor(rng() * 1e9);
       pieces.push(p);
     }
@@ -101,6 +102,23 @@ export function villagesNear(gen, x0, z0, x1, z1) {
 
 /** Interior spot (feet) where a house's settler lives. */
 export function houseHome(p) { return { x: Math.floor((p.x0 + p.x1) / 2) + 0.5, y: p.y, z: Math.floor((p.z0 + p.z1) / 2) + 0.5 }; }
+
+/** The house's front door cell (in the middle of the wall facing the road). */
+function houseDoor(p) {
+  const [fx, , fz] = SIDE_DIRS[p.facing];
+  const mx = Math.floor((p.x0 + p.x1) / 2), mz = Math.floor((p.z0 + p.z1) / 2);
+  return [fx > 0 ? p.x1 : fx < 0 ? p.x0 : mx, fz > 0 ? p.z1 : fz < 0 ? p.z0 : mz];
+}
+
+/**
+ * Where the job-site block of a house's settler stands (mobs/jobSites.js): inside, in the
+ * front corner to the right of the door as you come in. The settler spawned there claims it.
+ */
+export function houseJobSite(p) {
+  const [fx, , fz] = SIDE_DIRS[p.facing], [rx, , rz] = SIDE_DIRS[(p.facing + 3) & 3];
+  const [dx, dz] = houseDoor(p);
+  return { x: dx - fx + rx, y: p.y, z: dz - fz + rz };
+}
 
 // ---- stamping ----------------------------------------------------------------
 
@@ -196,7 +214,7 @@ const BUILDERS = {
     }
     // front door in the middle of the wall facing the road
     const mx = Math.floor((p.x0 + p.x1) / 2), mz = Math.floor((p.z0 + p.z1) / 2);
-    const dx = fx > 0 ? p.x1 : fx < 0 ? p.x0 : mx, dz = fz > 0 ? p.z1 : fz < 0 ? p.z0 : mz;
+    const [dx, dz] = houseDoor(p);
     const door = st.door || B.DOOR;
     set(dx, y, dz, door, f); set(dx, y + 1, dz, door, f | DOOR_UPPER);
     set(dx + fx, y - 1, dz + fz, B.DIRT_PATH);
@@ -215,6 +233,9 @@ const BUILDERS = {
     set(hx - bx, y, hz - bz, B.BED, back);
     const sideCell = bx ? [hx, hz - 1] : [hx - 1, hz];
     set(sideCell[0], y, sideCell[1], rng() < 0.5 ? B.WORKBENCH : B.CHEST, f);
+    // the settler's job-site block beside the door, its working side towards the room
+    const job = jobSiteBlock(p.profession);
+    if (job) { const js = houseJobSite(p); set(js.x, js.y, js.z, job, job === B.COMPOSTER || job === B.BREWING_STAND ? 0 : back); }
     const tside = left, [tx, , tz] = SIDE_DIRS[tside];
     set(mx + tx * (Math.floor((p.x1 - p.x0) / 2) - 1), y + 2, mz + tz * (Math.floor((p.z1 - p.z0) / 2) - 1), B.TORCH, 1 + tside);
   },

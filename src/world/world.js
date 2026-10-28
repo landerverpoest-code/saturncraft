@@ -36,12 +36,14 @@ export class Chunk {
     // monster spawner positions (for the spawner logic)
     this.spawners = new Set();
     this.beacons = new Set(); // beacon positions (world/beacons.js)
+    this.provers = new Set(); // Proving Spawner positions (world/provingSystem.js)
     // circuit parts (re-evaluated when the chunk loads: scheduled ticks are not saved)
     this.circuits = new Set();
     for (let i = 0; i < this.blocks.length; i++) {
       const b = this.blocks[i];
       if (b === B.SPAWNER) this.spawners.add(`${cx * 16 + (i & 15)},${MIN_Y + (i >> 8)},${cz * 16 + ((i >> 4) & 15)}`);
       else if (b === B.BEACON) this.beacons.add(`${cx * 16 + (i & 15)},${MIN_Y + (i >> 8)},${cz * 16 + ((i >> 4) & 15)}`);
+      else if (b === B.PROVING_SPAWNER) this.provers.add(`${cx * 16 + (i & 15)},${MIN_Y + (i >> 8)},${cz * 16 + ((i >> 4) & 15)}`);
       else if (CIRCUIT_SETTLE[b]) this.circuits.add(i);
     }
     this.dirty = new Set();
@@ -171,6 +173,8 @@ export class World {
     if (id === B.SPAWNER) c.spawners.add(`${x},${y},${z}`);
     if (old === B.BEACON) c.beacons.delete(`${x},${y},${z}`);
     if (id === B.BEACON) c.beacons.add(`${x},${y},${z}`);
+    if (old === B.PROVING_SPAWNER && id !== B.PROVING_SPAWNER) c.provers.delete(`${x},${y},${z}`);
+    if (id === B.PROVING_SPAWNER) c.provers.add(`${x},${y},${z}`);
     if (CIRCUIT_SETTLE[id]) c.circuits.add(i);
     c.modified = true;
     const s = (y - MIN_Y) >> 4;
@@ -278,7 +282,7 @@ export class World {
     if (id === B.OAK_WALL_SIGN) { const [dx, , dz] = SIDE_DIRS[(metaIn ?? this.getMeta(x, y, z)) & 3]; return !!SOLID[this.getBlock(x + dx, y, z + dz)]; }
     if (id === B.OAK_SIGN) return !!SOLID[below];
     if (id === B.PAINTING || id === B.PAINTING_B) return paintingIntact(this, x, y, z, id, metaIn ?? this.getMeta(x, y, z));
-    if (BLOCKS[id].carpet || BLOCKS[id].candle) return !!SOLID[below];
+    if (BLOCKS[id].carpet || BLOCKS[id].candle || id === B.CAKE) return !!SOLID[below];
     if (id === B.SNOW_LAYER) return (!!SOLID[below] && !!OPAQUE[below]) || LEAVES_SET.has(below) || (below === B.SNOW_LAYER && (this.getMeta(x, y - 1, z) & 7) === 7);
     if (id === B.DEAD_BUSH) return below === B.SAND || below === B.RED_SAND || below === B.DIRT || below === B.GRASS || (below >= B.TERRACOTTA && below <= B.LIGHT_GRAY_TERRACOTTA);
     if (CROPS.has(id)) return below === B.FARMLAND;

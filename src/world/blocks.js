@@ -648,12 +648,67 @@ def(B.SUSPICIOUS_GRAVEL, 'Suspicious Gravel', { hardness: 0.25, resistance: 0.25
 // player/interaction.js: whole with a tool in hand, else it shatters into its sherds.
 ext('DECORATED_POT');
 def(B.DECORATED_POT, 'Decorated Pot', { hardness: 0, resistance: 0, sound: 'stone', opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, drops: null, tex: { top: 'decorated_pot_top', bottom: 'decorated_pot_bottom', side: 'decorated_pot_side' } });
-
 // Blight Rose (reference: wither rose): a black flower of the Cinderdeep's floors; touching it gives Wither
 // (player/player.js, mobs/mob.js), and it brews the Elixir of Decay. Grows on Cinderstone, Mournsand and soil.
 ext('BLIGHT_ROSE');
 def(B.BLIGHT_ROSE, 'Blight Rose', { ...plant, blight: true });
 POTTED.push(B.BLIGHT_ROSE); // appended: pot metas index this list
+// Lectern (world/books.js): a reading desk on a post. Meta bits 0-1 = the side its reader stands on
+// (SIDE_DIRS), bit 2 = a book lies on it (drawn), bit 3 = the short cinnabar pulse of a turned page.
+// The book and the open page are kept per position in game.lecterns.
+ext('LECTERN');
+def(B.LECTERN, 'Lectern', { hardness: 2.5, resistance: 2.5, tool: TOOL.AXE, sound: 'wood', flammable: true, opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, tex: { top: 'lectern_top', bottom: 'oak_planks', side: 'lectern_side' } });
+// Target block: hit by an arrow or anything thrown it sends out a signal (meta bits 0-3) that is
+// stronger the closer the hit was to the middle of the face (world/signalBlocks.js)
+ext('TARGET');
+def(B.TARGET, 'Target', { hardness: 0.5, resistance: 0.5, tool: TOOL.HOE, sound: 'grass', tex: { top: 'target_top', bottom: 'target_top', side: 'target_side' } });
+// Cake: meta = slices eaten (0-6); a comparator reads the slices left
+ext('CAKE');
+def(B.CAKE, 'Cake', { hardness: 0.5, resistance: 0.5, sound: 'wool', opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, drops: null, needsSupport: true, tex: { top: 'cake_top', bottom: 'cake_bottom', side: 'cake_side' } });
+// Gloomshell Boxes in the sixteen dye colours (a box dyed at the workbench keeps what it holds)
+export const BOX_COLORS = [];
+for (const [key, name] of COLORS) {
+  const K = key.toUpperCase() + '_GLOOMSHELL_BOX';
+  BOX_COLORS.push(ext(K));
+  def(B[K], `${name} Gloomshell Box`, { ...BLOCKS[B.GLOOMSHELL_BOX], tex: { top: key + '_gloomshell_box_top', bottom: key + '_gloomshell_box_top', side: key + '_gloomshell_box_side' } });
+}
+/** Every Gloomshell Box: the plain one, then the sixteen colours. */
+export const BOX_IDS = [B.GLOOMSHELL_BOX, ...BOX_COLORS];
+const BOX_SET = new Set(BOX_IDS);
+export const isBox = (id) => BOX_SET.has(id);
+
+// The Proving Vaults (reference: trial chambers; world/provingVaults.js, world/provingSystem.js): halls of
+// copper-tinted Vault Bricks and Ashstone (cut from Tuff), see-through Copper Grates and Copper Bulbs, which
+// switch on or off at each rising edge of a cinnabar signal (meta bit 0 = the signal was there, see
+// world/circuits.js). Proving Spawner meta: bits 0-3 the mob kind (PROVING_MOBS), bits 4-5 the state it
+// shows (waiting, active, cooling down). Vault meta: bits 0-1 the side its keyhole faces.
+ext('VAULT_BRICKS'); ext('ASHSTONE_BRICKS'); ext('ASHSTONE_TILES'); ext('POLISHED_ASHSTONE');
+ext('ASHSTONE_BRICK_SLAB'); ext('ASHSTONE_BRICK_STAIRS');
+ext('COPPER_GRATE'); ext('COPPER_BULB'); ext('COPPER_BULB_LIT');
+ext('PROVING_SPAWNER'); ext('VAULT');
+{
+  const ashstone = { hardness: 1.5, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD };
+  def(B.VAULT_BRICKS, 'Vault Bricks', { ...copper });
+  def(B.ASHSTONE_BRICKS, 'Ashstone Bricks', ashstone);
+  def(B.ASHSTONE_TILES, 'Ashstone Tiles', ashstone);
+  def(B.POLISHED_ASHSTONE, 'Polished Ashstone', ashstone);
+  const common = { ...ashstone, opaque: false, opacity: 15, tex: { all: 'ashstone_bricks' }, base: B.ASHSTONE_BRICKS };
+  def(B.ASHSTONE_BRICK_SLAB, 'Ashstone Brick Slab', { ...common, shape: SHAPE.SLAB, drops: 'slab' });
+  def(B.ASHSTONE_BRICK_STAIRS, 'Ashstone Brick Stairs', { ...common, shape: SHAPE.STAIRS });
+  STONE_SETS.push([B.ASHSTONE_BRICKS, B.ASHSTONE_BRICK_SLAB, B.ASHSTONE_BRICK_STAIRS, 'Ashstone Brick']);
+  def(B.COPPER_GRATE, 'Copper Grate', { ...copper, opaque: false, layer: LAYER.CUTOUT });
+  def(B.COPPER_BULB, 'Copper Bulb', { ...copper });
+  def(B.COPPER_BULB_LIT, 'Copper Bulb', { ...copper, emit: 15, hidden: true, drops: B.COPPER_BULB, tex: { all: 'copper_bulb_lit' } });
+  def(B.PROVING_SPAWNER, 'Proving Spawner', { hardness: 50, resistance: 50, tool: TOOL.PICKAXE, tier: TIER.WOOD, opaque: false, layer: LAYER.CUTOUT, drops: null, sound: 'metal', tex: { top: 'proving_spawner_top', bottom: 'proving_spawner_top', side: 'proving_spawner_side_0' } });
+  def(B.VAULT, 'Vault', { hardness: 50, resistance: 50, tool: TOOL.PICKAXE, tier: TIER.WOOD, drops: null, sound: 'metal', tex: { top: 'vault_top', bottom: 'vault_top', side: 'vault_side', front: 'vault_front' } });
+}
+
+// Job-site blocks still missing for two trades (mobs/jobSites.js): the Loom (shepherds; recolours wool
+// and carpets, world/workstations.js) and the Fletching Table (fletchers). Their front faces the player.
+ext('LOOM');
+def(B.LOOM, 'Loom', { hardness: 2.5, resistance: 2.5, tool: TOOL.AXE, sound: 'wood', flammable: true, tex: { top: 'loom_top', bottom: 'loom_bottom', side: 'loom_side', front: 'loom_front' } });
+ext('FLETCHING_TABLE');
+def(B.FLETCHING_TABLE, 'Fletching Table', { hardness: 2.5, resistance: 2.5, tool: TOOL.AXE, sound: 'wood', flammable: true, tex: { top: 'fletching_table_top', bottom: 'birch_planks', side: 'fletching_table_side', front: 'fletching_table_front' } });
 
 export const NUM_BLOCKS = BLOCKS.length;
 
