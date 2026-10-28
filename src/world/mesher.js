@@ -41,6 +41,11 @@ for (const f of FACES) {
   }
   FACE_AO.push(corners);
 }
+// the same tables flattened for the cube loop: per face 4 corners x [side1, side2, corner] offsets,
+// and per face 4 corners x the corner's position inside the block
+const FACE_AO_FLAT = new Int32Array(FACE_AO.flat(2));
+const FACE_VERT = new Int8Array(FACES.flatMap((f) => CORNERS.flatMap(([s, t]) => [0, 1, 2].map((a) => f.o[a] + s * f.u[a] + t * f.v[a]))));
+const CORNER_U = [0, 1, 1, 0], CORNER_V = [1, 1, 0, 0]; // (s, 1 - t) per corner
 
 const FOLIAGE_FIXED = { [B.BIRCH_LEAVES]: [128, 167, 85], [B.SPRUCE_LEAVES]: [97, 153, 97] };
 // blocks tinted with the biome's foliage colour (leaves, vines)
@@ -189,10 +194,10 @@ export function meshSection(sec) {
         if (OPAQUE[nb]) continue;
         if (translucent && nb === id && !LEAVES.has(id) && !LATTICE[id]) continue;
         // smooth light + AO
-        const corners = FACE_AO[d];
+        const cb = d * 12;
         const fl = light[ni];
         for (let k = 0; k < 4; k++) {
-          const [a, b, c] = corners[k];
+          const a = FACE_AO_FLAT[cb + k * 3], b = FACE_AO_FLAT[cb + k * 3 + 1], c = FACE_AO_FLAT[cb + k * 3 + 2];
           const oa = OPAQUE[blocks[i + a]], ob = OPAQUE[blocks[i + b]];
           const oc = (oa && ob) ? 1 : OPAQUE[blocks[i + c]];
           ao[k] = (oa && ob) ? 3 : oa + ob + oc;
@@ -223,11 +228,11 @@ export function meshSection(sec) {
         else if (id === B.WOOL && meta[i]) [r, g, b2] = WOOL_RGB[meta[i] & 15];
         const f = FACES[d];
         buf.ensure(4);
+        const fn = f.n, under = nb === B.WATER ? UNDERWATER : 0;
         for (let k = 0; k < 4; k++) {
-          const [s, t] = CORNERS[k];
-          buf.vert(
-            x + f.o[0] + s * f.u[0] + t * f.v[0], y + f.o[1] + s * f.u[1] + t * f.v[1], z + f.o[2] + s * f.u[2] + t * f.v[2],
-            f.n[0], f.n[1], f.n[2], s, 1 - t, r, g, b2, sk[k], bl[k], ao[k] + leafWave + (nb === B.WATER ? UNDERWATER : 0), tile);
+          const vo = cb + k * 3;
+          buf.vert(x + FACE_VERT[vo], y + FACE_VERT[vo + 1], z + FACE_VERT[vo + 2],
+            fn[0], fn[1], fn[2], CORNER_U[k], CORNER_V[k], r, g, b2, sk[k], bl[k], ao[k] + leafWave + under, tile);
         }
         buf.quad(ao[0] + ao[2] > ao[1] + ao[3]);
       }

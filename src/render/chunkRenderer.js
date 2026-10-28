@@ -11,6 +11,8 @@ import { createTerrainMaterials, createTerrainDepthMaterial } from './terrainMat
 
 const LAYER_NAMES = ['opaque', 'cutout', 'trans'];
 const _frustum = new THREE.Frustum(), _m4 = new THREE.Matrix4(), _box = new THREE.Box3();
+const PAD_AREA = 18 * 18; // one step in y in a padded section (mesher.js pidx)
+const _near = new Array(9).fill(null);
 /** Shadow pass: draw only the visible surface-layer sections inside the light's frustum. */
 function shadowRange(r, o, c, sc, g) {
   const s = o.userData.shadow;
@@ -103,21 +105,22 @@ export class ChunkRenderer {
     const blocks = new Uint16Array(PAD_VOL), light = new Uint8Array(PAD_VOL), meta = new Uint8Array(PAD_VOL);
     const w = this.world;
     const yBase = MIN_Y + sy * 16;
+    // the 3x3 chunks around this one, looked up once (index (ox+1) + (oz+1)*3)
+    const near = _near;
+    for (let oz = -1; oz <= 1; oz++) for (let ox = -1; ox <= 1; ox++) near[ox + 1 + (oz + 1) * 3] = ox || oz ? w.getChunk(c.cx + ox, c.cz + oz) : c;
     for (let dz = -1; dz <= 16; dz++) for (let dx = -1; dx <= 16; dx++) {
-      let ch = c, lx = dx, lz = dz;
-      if (dx < 0 || dx > 15 || dz < 0 || dz > 15) {
-        ch = w.getChunk(c.cx + (dx < 0 ? -1 : dx > 15 ? 1 : 0), c.cz + (dz < 0 ? -1 : dz > 15 ? 1 : 0));
-        lx = dx & 15; lz = dz & 15;
-      }
-      for (let dy = -1; dy <= 16; dy++) {
+      const ch = near[(dx < 0 ? 0 : dx > 15 ? 2 : 1) + (dz < 0 ? 0 : dz > 15 ? 2 : 1) * 3];
+      const col = (dx & 15) | ((dz & 15) << 4);
+      let p = pidx(dx, -1, dz);
+      for (let dy = -1; dy <= 16; dy++, p += PAD_AREA) {
         const y = yBase + dy;
-        const p = pidx(dx, dy, dz);
         if (y < MIN_Y) { light[p] = 0; blocks[p] = 6; continue; }
         if (y >= MIN_Y + 384 || !ch) { light[p] = 0xf0; continue; }
-        const i = cidx(lx, y, lz);
+        const i = col | ((y - MIN_Y) << 8);
         blocks[p] = ch.blocks[i]; light[p] = ch.light[i]; meta[p] = ch.meta[i];
       }
     }
+    near.fill(null);
     return { blocks, light, meta, colors: c.colors, biomes: c.biomes, yBase };
   }
 
@@ -164,12 +167,14 @@ export class ChunkRenderer {
     const w = this.world;
 
     // Unload far chunks
-    for (const c of [...w.chunks.values()]) {
-      if (Math.max(Math.abs(c.cx - pcx), Math.abs(c.cz - pcz)) > R + 2 && !this.nearExtra(c.cx, c.cz, 2)) {
-        this.disposeChunk(c);
-        w.removeChunk(c.cx, c.cz);
-        if (this.onChunkUnloaded) this.onChunkUnloaded(c.cx, c.cz);
-      }
+    let far = null; // (collected first: the chunk map must not change while it is walked)
+    for (const c of w.chunks.values()) {
+      if (Math.max(Math.abs(c.cx - pcx), Math.abs(c.cz - pcz)) > R + 2 && !this.nearExtra(c.cx, c.cz, 2)) (far || (far = [])).push(c);
+    }
+    if (far) for (const c of far) {
+      this.disposeChunk(c);
+      w.removeChunk(c.cx, c.cz);
+      if (this.onChunkUnloaded) this.onChunkUnloaded(c.cx, c.cz);
     }
 
     // Request generation, nearest first
@@ -249,12 +254,22 @@ export class ChunkRenderer {
     // Rebuild merged geometry for chunks that have received sections
     for (const c of this.rebuild) {
       if (performance.now() - t0 > frameBudgetMs + 4) break;
-      this.rebuild.delete(c);
-      if (w.getChunk(c.cx, c.cz) !== c) continue;
+      if (w.getChunk(c.cx, c.cz) !== c) { this.rebuild.delete(c); continue; }
       // wait until no section of this chunk is pending to avoid partial chunks flickering
+      // (and rebuilding the whole chunk once per arriving section)
+      if (this.meshPending(c)) continue;
+      this.rebuild.delete(c);
       this.buildChunkGeometry(c);
     }
     this.stats.chunks = w.chunks.size;
+  }
+
+  /** Is a worker still meshing one of this chunk's sections? */
+  meshPending(c) {
+    if (!this.pendingMesh.size) return false;
+    const base = chunkKey(c.cx, c.cz) * 32;
+    for (let sy = 0; sy < SECTION_COUNT; sy++) if (this.pendingMesh.has(base + sy)) return true;
+    return false;
   }
 
   buildChunkGeometry(c) {
@@ -329,24 +344,30 @@ export class ChunkRenderer {
     if (!this.visDirty && key === this.visKey) return;
     this.visDirty = false; this.visKey = key;
     const w = this.world;
-    const lo = new Map(), hi = new Map();
+    // the loaded chunks of the walk's square, looked up once instead of per section
+    const R = this.renderDistance + 1, W = R * 2 + 1, n = W * W;
+    if (!this._visCols || this._visCols.length !== n) { this._visCols = new Array(n).fill(null); this._visLo = new Int8Array(n); this._visHi = new Int8Array(n); }
+    const cols = this._visCols, lo = this._visLo, hi = this._visHi;
+    for (let dz = -R; dz <= R; dz++) for (let dx = -R; dx <= R; dx++) cols[(dx + R) + (dz + R) * W] = w.getChunk(ccx + dx, ccz + dz) || null;
+    lo.fill(-1); hi.fill(-1);
     let count = 0;
-    floodVisible(ccx, csy, ccz, this.renderDistance + 1, (cx, sy, cz) => {
-      const c = w.getChunk(cx, cz);
+    floodVisible(ccx, csy, ccz, R, (cx, sy, cz) => {
+      const c = cols[(cx - ccx + R) + (cz - ccz + R) * W];
       if (!c) return -1;
       return c.render ? c.render.vis[sy] : ALL_OPEN;
     }, (cx, sy, cz) => {
-      const k = chunkKey(cx, cz);
-      const a = lo.get(k);
-      if (a === undefined || sy < a) lo.set(k, sy);
-      if (!(hi.get(k) >= sy)) hi.set(k, sy);
+      const k = (cx - ccx + R) + (cz - ccz + R) * W;
+      if (lo[k] < 0 || sy < lo[k]) lo[k] = sy;
+      if (sy > hi[k]) hi[k] = sy;
       count++;
     });
+    cols.fill(null); // (no references to unloaded chunks kept)
     this.stats.visibleSections = count;
     for (const c of w.chunks.values()) {
       if (!c.render) continue;
-      const k = chunkKey(c.cx, c.cz);
-      const s0 = lo.get(k), s1 = hi.get(k);
+      const ox = c.cx - ccx, oz = c.cz - ccz;
+      const k = Math.abs(ox) <= R && Math.abs(oz) <= R ? (ox + R) + (oz + R) * W : -1;
+      const s0 = k >= 0 && lo[k] >= 0 ? lo[k] : undefined, s1 = k >= 0 ? hi[k] : -1;
       for (const layer of LAYER_NAMES) {
         const mesh = c.render[layer];
         if (!mesh) continue;
@@ -364,8 +385,10 @@ export class ChunkRenderer {
           let sFirst = first;
           while (sFirst <= last && !c.render.sky[sFirst]) sFirst++;
           if (sFirst > first) sFirst--;
-          mesh.userData.view = [start, end - start];
-          mesh.userData.shadow = [sFirst, last];
+          const v = mesh.userData.view || (mesh.userData.view = [0, 0]);
+          v[0] = start; v[1] = end - start;
+          const sh = mesh.userData.shadow || (mesh.userData.shadow = [0, 0]);
+          sh[0] = sFirst; sh[1] = last;
         }
         const y0 = MIN_Y + first * 16, y1 = MIN_Y + last * 16 + 16, hy = (y1 - y0) / 2;
         g.boundingSphere.center.set(8, (y0 + y1) / 2, 8);

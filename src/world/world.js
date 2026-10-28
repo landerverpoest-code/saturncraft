@@ -1,6 +1,6 @@
 // Main-thread authoritative world: chunk storage, block/light access,
 // edits with light updates, scheduled block ticks and raycasting.
-import { B, BLOCKS, SOLID, OPAQUE, SHAPE, isFluid, CROPS, isPropagule, PROPAGULE_HANGING } from './blocks.js';
+import { B, BLOCKS, SOLID, OPAQUE, SHAPE, BLOCK_LIMIT, isFluid, CROPS, isPropagule, PROPAGULE_HANGING } from './blocks.js';
 import { LightEngine } from './lighting.js';
 import { MIN_Y, MAX_Y, WORLD_HEIGHT, SECTION_COUNT, cidx } from './constants.js';
 import { TerrainGenerator } from './generator.js';
@@ -20,6 +20,16 @@ import { SIDE_DIRS, selectionBox, collisionBoxes, SHAPED_COLLISION, DOOR_UPPER, 
 
 export function chunkKey(cx, cz) { return (cx + 32768) * 65536 + (cz + 32768); }
 
+// What a loading chunk notes about a block id: 1 spawner, 2 beacon, 3 proving spawner, 4 circuit part
+let scanTable = null;
+function chunkScanTable() {
+  if (scanTable) return scanTable;
+  scanTable = new Uint8Array(BLOCK_LIMIT);
+  for (let id = 0; id < BLOCK_LIMIT; id++) if (CIRCUIT_SETTLE[id]) scanTable[id] = 4;
+  scanTable[B.SPAWNER] = 1; scanTable[B.BEACON] = 2; scanTable[B.PROVING_SPAWNER] = 3;
+  return scanTable;
+}
+
 export class Chunk {
   constructor(cx, cz, d) {
     this.cx = cx; this.cz = cz;
@@ -27,24 +37,28 @@ export class Chunk {
     this.biomes = d.biomes; this.colors = d.colors; this.heightmap = d.heightmap;
     this.modified = !!d.modified;
     this.sectionNonAir = new Uint16Array(SECTION_COUNT);
-    for (let s = 0; s < SECTION_COUNT; s++) {
-      let n = 0;
-      const base = s * 4096;
-      for (let i = 0; i < 4096; i++) if (this.blocks[base + i]) n++;
-      this.sectionNonAir[s] = n;
-    }
     // monster spawner positions (for the spawner logic)
     this.spawners = new Set();
     this.beacons = new Set(); // beacon positions (world/beacons.js)
     this.provers = new Set(); // Proving Spawner positions (world/provingSystem.js)
     // circuit parts (re-evaluated when the chunk loads: scheduled ticks are not saved)
     this.circuits = new Set();
-    for (let i = 0; i < this.blocks.length; i++) {
-      const b = this.blocks[i];
-      if (b === B.SPAWNER) this.spawners.add(`${cx * 16 + (i & 15)},${MIN_Y + (i >> 8)},${cz * 16 + ((i >> 4) & 15)}`);
-      else if (b === B.BEACON) this.beacons.add(`${cx * 16 + (i & 15)},${MIN_Y + (i >> 8)},${cz * 16 + ((i >> 4) & 15)}`);
-      else if (b === B.PROVING_SPAWNER) this.provers.add(`${cx * 16 + (i & 15)},${MIN_Y + (i >> 8)},${cz * 16 + ((i >> 4) & 15)}`);
-      else if (CIRCUIT_SETTLE[b]) this.circuits.add(i);
+    // one pass over the blocks: count each section's non-air blocks and note the special ones
+    const blocks = this.blocks, special = chunkScanTable();
+    for (let s = 0; s < SECTION_COUNT; s++) {
+      let n = 0;
+      const end = (s + 1) * 4096;
+      for (let i = s * 4096; i < end; i++) {
+        const b = blocks[i];
+        if (!b) continue;
+        n++;
+        const k = special[b];
+        if (!k) continue;
+        if (k === 4) { this.circuits.add(i); continue; }
+        const pos = `${cx * 16 + (i & 15)},${MIN_Y + (i >> 8)},${cz * 16 + ((i >> 4) & 15)}`;
+        (k === 1 ? this.spawners : k === 2 ? this.beacons : this.provers).add(pos);
+      }
+      this.sectionNonAir[s] = n;
     }
     this.dirty = new Set();
     for (let s = 0; s < SECTION_COUNT; s++) this.dirty.add(s);
