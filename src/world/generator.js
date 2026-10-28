@@ -2,6 +2,7 @@
 // but is a pure module so it can be unit-tested and used for spawn search.
 import { stampVillages } from './villages.js';
 import { stampMineshafts } from './mineshafts.js';
+import { stampProvingVaults } from './provingVaults.js';
 import { stampTemples, stampOutposts } from './temples.js';
 import { stampWrecks } from './shipwrecks.js';
 import { stampIgloos } from './igloos.js';
@@ -461,6 +462,7 @@ export class TerrainGenerator {
     for (let k = 0; k < 14; k++) this.tryDungeon(blocks, meta, rng); // 10 + 4 attempts like the reference
     if (!this.noStructures) stampMineshafts(this.seed, blocks, meta, cx, cz);
     stampCaveFeatures(this, blocks, meta, cx, cz, heightmap); // Violite geodes, Seepstone caves (caveGen.js)
+    if (!this.noStructures) stampProvingVaults(this.seed, blocks, meta, cx, cz); // the Proving Vaults, deep down (world/provingVaults.js)
 
     // 7. Water
     for (let z = 0; z < 16; z++) for (let x = 0; x < 16; x++) {

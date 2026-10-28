@@ -320,6 +320,13 @@ shapeless([B.COPPER_BLOCK], I.COPPER_INGOT, 9);
 [[B.COPPER_BLOCK, B.WAXED_COPPER_BLOCK], [B.DULLED_COPPER, B.WAXED_DULLED_COPPER], [B.TARNISHED_COPPER, B.WAXED_TARNISHED_COPPER], [B.VERDIGRIS_COPPER, B.WAXED_VERDIGRIS_COPPER]]
   .forEach(([plain, waxed]) => shapeless([plain, I.HONEYCOMB], waxed, 1));
 shaped(['C', 'C', 'C'], { C: I.COPPER_INGOT }, B.STORM_ROD, 1);
+// the Proving Vaults' blocks: Ashstone from Tuff, Vault Bricks, Copper Grates and Copper Bulbs
+shaped(['TT', 'TT'], { T: B.TUFF }, B.POLISHED_ASHSTONE, 4);
+shaped(['PP', 'PP'], { P: B.POLISHED_ASHSTONE }, B.ASHSTONE_BRICKS, 4);
+shaped(['BB', 'BB'], { B: B.ASHSTONE_BRICKS }, B.ASHSTONE_TILES, 4);
+shaped(['CB', 'BC'], { C: I.COPPER_INGOT, B: B.ASHSTONE_BRICKS }, B.VAULT_BRICKS, 2);
+shaped([' C ', 'C C', ' C '], { C: B.COPPER_BLOCK }, B.COPPER_GRATE, 4);
+shaped([' C ', 'CTC', ' R '], { C: B.COPPER_BLOCK, T: B.TORCH, R: I.CINNABAR }, B.COPPER_BULB, 4);
 shaped(['SS', 'SS'], { S: I.VIOLITE_SHARD }, B.VIOLITE_BLOCK, 1);
 shaped([' S ', 'SGS', ' S '], { S: I.VIOLITE_SHARD, G: B.GLASS }, B.SHADED_GLASS, 2);
 shaped(['S', 'C', 'C'], { S: I.VIOLITE_SHARD, C: I.COPPER_INGOT }, I.FARGLASS, 1);
@@ -364,6 +371,9 @@ shaped(['SSS', ' B ', ' S '], { S: 'wood_slab', B: B.BOOKSHELF }, B.LECTERN, 1);
 shaped([' R ', 'RHR', ' R '], { R: I.CINNABAR, H: B.HAY_BALE }, B.TARGET, 1);
 shaped(['MMM', 'SES', 'WWW'], { M: I.MILK_BUCKET, S: I.SUGAR, E: I.EGG, W: I.WHEAT }, B.CAKE, 1);
 BOX_COLORS.forEach((id, c) => shapeless(['box', DYES[c] || I.BONE_MEAL], id, 1));
+// job-site blocks for shepherds and fletchers (mobs/jobSites.js)
+shaped(['SS', 'PP'], { S: I.STRING, P: 'planks' }, B.LOOM, 1);
+shaped(['FF', 'PP', 'PP'], { F: I.FLINT, P: 'planks' }, B.FLETCHING_TABLE, 1);
 
 // Smelting: input -> output; 200 ticks per item (10 s)
 export const SMELT_TIME = 200;

@@ -15,8 +15,9 @@ import { buildModel, animateModel, addCaptainBanner } from './models.js';
 import { entityGlow } from '../render/entityLight.js';
 import { randomSheepColor, WOOL_RGB } from '../world/colors.js';
 import { WOOL_ITEMS } from '../world/items.js';
-import { RESTOCK_TICKS, makeTrades } from './trades.js';
-import { villagesNear, PROFESSIONS } from '../world/villages.js';
+import { RESTOCK_TICKS } from './trades.js';
+import { villagesNear } from '../world/villages.js';
+import { findJobSite, claimedSites, takeJobSite, checkJobSite, cleanJobSite, siteKey, SEARCH_TICKS, CHECK_TICKS } from './jobSites.js';
 import { marauderAI } from './raids.js';
 import { leashTick, leashSaveData, unleash } from '../entities/leash.js';
 import { mobDamageTaken, weaponBonus, equipmentDrops, equipFromSave, slotFor, isBetter, helmetShadesSun } from './equipment.js';
@@ -87,6 +88,7 @@ export class Mob {
     this.woolColor = type === 'fleecer' ? randomSheepColor() : type === 'purrling' ? Math.floor(Math.random() * CAT_COATS.length) : type === 'squawklet' ? Math.floor(Math.random() * PARROT_COLORS.length) : type === 'gillnewt' ? (Math.random() < 1 / 120 ? 4 : Math.floor(Math.random() * 4)) : 0; // (Purrlings keep their coat here)
     // settlers: profession, trade offers and the house they live in
     this.profession = null; this.trades = []; this.home = null; this.lastRestock = 0;
+    this.jobSite = null; this.traded = false; // the job-site block it has claimed (mobs/jobSites.js); traded with: keeps its trade
     // Howlers: tamed by the player (owner), sitting, current enemy
     this.tamed = false; this.sitting = false; this.enemy = null;
     // Gallopers: coat colour, temper (rises with every failed ride), saddle
@@ -127,7 +129,7 @@ export class Mob {
   }
 
   /** State kept when the mob is saved with its chunk. */
-  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor, profession: this.profession, trades: this.trades, home: this.home, lastRestock: this.lastRestock, size: this.size, coat: this.coat, temper: this.temper, saddled: this.saddled, maxHp: this.maxHp, playerMade: this.playerMade, tamed: this.tamed, sitting: this.sitting, ownerName: this.ownerName, horns: this.horns, hive: this.hive, nectar: this.nectar, beach: this.beach, pregnant: this.pregnant, captain: this.captain || undefined, raider: this.raider || undefined, raidId: this.raidId || undefined, customName: this.customName || undefined, leash: leashSaveData(this), equip: this.equip || undefined, equipPicked: this.equipPicked || undefined, canPickUp: this.canPickUp || undefined, ...(this.def.saveExtra ? this.def.saveExtra(this) : {}) }; }
+  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor, profession: this.profession, trades: this.trades, home: this.home, lastRestock: this.lastRestock, jobSite: this.jobSite || undefined, traded: this.traded || undefined, size: this.size, coat: this.coat, temper: this.temper, saddled: this.saddled, maxHp: this.maxHp, playerMade: this.playerMade, tamed: this.tamed, sitting: this.sitting, ownerName: this.ownerName, horns: this.horns, hive: this.hive, nectar: this.nectar, beach: this.beach, pregnant: this.pregnant, captain: this.captain || undefined, raider: this.raider || undefined, raidId: this.raidId || undefined, customName: this.customName || undefined, leash: leashSaveData(this), equip: this.equip || undefined, equipPicked: this.equipPicked || undefined, canPickUp: this.canPickUp || undefined, ...(this.def.saveExtra ? this.def.saveExtra(this) : {}) }; }
   loadData(s) {
     this.health = s.health; this.yaw = s.yaw;
     if (s.age < 0) { this.setBaby(true); this.age = s.age; } else { if (this.age < 0) this.setBaby(false); this.age = s.age || 0; }
@@ -147,7 +149,8 @@ export class Mob {
     if (s.leash && (s.leash.player || Array.isArray(s.leash.knot))) { this.leashPending = s.leash; this.persistent = true; } // its holder is found again on its first tick (entities/leash.js)
     this.equip = equipFromSave(s.equip); this.equipPicked = s.equipPicked | 0; this.canPickUp = !!s.canPickUp;
     if (this.mount) this.dismount(true); // (a fresh spawn's jockey roll does not apply to a loaded mob)
-    if (s.profession) { this.profession = s.profession; this.trades = s.trades || []; this.home = s.home || null; this.lastRestock = s.lastRestock || 0; }
+    if (s.profession) { this.profession = s.profession; this.trades = s.trades || []; this.lastRestock = s.lastRestock || 0; }
+    if (this.def.villager) { this.home = s.home || null; this.jobSite = cleanJobSite(s.jobSite); this.traded = !!s.traded; }
   }
 
   /** Settlers flee Shamblers, keep near their house (inside it at night), restock, and watch nearby players. */
@@ -157,6 +160,7 @@ export class Mob {
     // now and then two adults by day make a child, if the village has a free bed
     if (this.age === 0 && this.home && g.ticks % 200 === this.id % 200 && Math.random() < 0.05 && g.sky.state.aboveCount > 0) this.trySettlerBreed(g);
     if (g.time - this.lastRestock > RESTOCK_TICKS) { this.lastRestock = g.time; for (const o of this.trades) o.uses = 0; }
+    if (this.age >= 0) this.tickJobSite(g);
     const h = this.home;
     // raiders in the village: settlers run home and stay inside (a hit only makes them hurry)
     const raid = !!(g.raids && h && g.raids.activeNear(h.x, h.z));
@@ -204,12 +208,38 @@ export class Mob {
     this.hearts(g, 6);
   }
 
-  /** A settler child takes up a trade when it grows up. */
+  /** A settler child grown up has no trade yet: it looks for a free job-site block straight away. */
   growUp(g) {
     if (!this.def.villager || this.profession) return;
-    this.profession = PROFESSIONS[Math.floor(Math.random() * PROFESSIONS.length)];
-    this.trades = makeTrades(this.profession);
-    this.lastRestock = g.time;
+    this.jobSearchAt = 0;
+  }
+
+  /**
+   * Job sites (mobs/jobSites.js): now and then a settler checks its claimed block is still
+   * there, and one without a block looks for the nearest free one (of its own trade, if it
+   * kept one) within 48 blocks.
+   */
+  tickJobSite(g) {
+    if (this.jobSite) {
+      if ((g.ticks + this.id) % CHECK_TICKS === 0) checkJobSite(this, g.world);
+      return;
+    }
+    if (this.jobSearchAt > g.ticks) return;
+    this.jobSearchAt = g.ticks + SEARCH_TICKS + (this.id % 20);
+    const claimed = claimedSites(g.entities.list, this);
+    if (g.spawner && g.spawner.savedMobs) for (const list of g.spawner.savedMobs.values()) for (const s of list) if (s.jobSite) claimed.add(siteKey(s.jobSite)); // settlers in unloaded chunks keep theirs
+    const site = findJobSite(g.world, this.x, this.y, this.z, claimed, { profession: this.profession });
+    if (site && takeJobSite(this, site, g.time)) this.jobBurst(g);
+  }
+
+  /** A small green burst over the head: this settler has just taken up a trade. */
+  jobBurst(g) {
+    if (!g.particles) return;
+    for (let k = 0; k < 12; k++) {
+      const a = (k / 12) * Math.PI * 2;
+      g.particles.emit(this.x + Math.cos(a) * 0.3, this.y + this.height + 0.2 + Math.random() * 0.3, this.z + Math.sin(a) * 0.3,
+        Math.cos(a) * 0.04, 0.03 + Math.random() * 0.02, Math.sin(a) * 0.04, 0.35, 1, 0.35, 18, -0.002);
+    }
   }
 
   /** Fed its breeding food: babies grow 10 % faster, adults fall in love. */
@@ -1673,9 +1703,9 @@ export class Mob {
     m.scale.setScalar(this.age < 0 ? 0.5 : 1);
     if (this.size) { const q = this.squish || 0; m.scale.set(this.size * (1 - q * 0.15), this.size * (1 + q * 0.3), this.size * (1 - q * 0.15)); }
     const parts = m.userData.parts;
-    if (parts && parts.robe && this.profession && m.userData.prof !== this.profession) {
-      m.userData.prof = this.profession;
-      const col = { farmer: '#8a6a3a', librarian: '#e4dccb', smith: '#34343a', shepherd: '#9a9a88', butcher: '#c8c4b4', fletcher: '#6a7a3a', cleric: '#7a3a8a' }[this.profession];
+    if (parts && parts.robe && this.def.villager && m.userData.prof !== (this.profession || 'none')) {
+      m.userData.prof = this.profession || 'none';
+      const col = { farmer: '#8a6a3a', librarian: '#e4dccb', smith: '#34343a', shepherd: '#9a9a88', butcher: '#c8c4b4', fletcher: '#6a7a3a', cleric: '#7a3a8a' }[this.profession] || '#a8987a'; // no trade: a plain undyed smock
       parts.robe.children[0].material.userData.base.set(col);
     }
     if (parts && parts.wool) {

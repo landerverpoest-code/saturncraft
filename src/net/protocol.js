@@ -5,6 +5,7 @@
 import { cleanEnch, withExtras, sameEnch, cleanLabel } from '../world/enchantments.js';
 import { equipIds } from '../mobs/equipment.js';
 import { sameBook } from '../world/books.js';
+import { PROFESSIONS } from '../world/villages.js';
 
 export const PROTOCOL_VERSION = 1;
 export const MAX_PLAYERS = 8;
@@ -187,7 +188,7 @@ export function unpackMob(a) {
     id: a[0], type: a[1], x: a[2], y: a[3], z: a[4], yaw: a[5], headPitch: a[6], health: a[7], hurtTime: a[8], deathTime: a[9],
     onGround: !!(f & MF.GROUND), target: !!(f & MF.TARGET), angry: !!(f & MF.ANGRY), baby: !!(f & MF.BABY),
     sheared: !!(f & MF.SHEARED), tamed: !!(f & MF.TAMED), sitting: !!(f & MF.SITTING), enemy: !!(f & MF.ENEMY), special: !!(f & MF.SPECIAL), captain: !!(f & MF.CAPTAIN), riding: !!(f & MF.RIDING),
-    woolColor: a[11] | 0, fuse: a[12] | 0, profession: a[13] || null,
+    woolColor: a[11] | 0, fuse: a[12] | 0, profession: PROFESSIONS.includes(a[13]) ? a[13] : null,
     beam: Array.isArray(a[14]) && a[14].length === 3 && a[14].every(Number.isFinite) ? { x: a[14][0], y: a[14][1], z: a[14][2] } : null, moving: !!a[15],
     name: cleanLabel(a[16]), leash: unpackLeash(a[17]), emerging: Math.max(0, a[18] | 0), digging: Math.max(0, a[19] | 0),
     equip: Array.isArray(a[20]) ? a[20].slice(0, 5).map((v) => (Number.isInteger(v) && v > 0 ? v : 0)) : null,

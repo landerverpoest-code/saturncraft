@@ -1,6 +1,6 @@
 // Natural mob spawning around the player, chunk-generation animal herds,
 // passive-mob persistence across chunk unloads and mob caps.
-import { villagesNear, houseHome } from '../world/villages.js';
+import { villagesNear, houseHome, houseJobSite } from '../world/villages.js';
 import { makeTrades } from './trades.js';
 import { Mob, HUT_CAT_COAT } from './mob.js';
 import { MOBS, CATEGORY } from './mobTypes.js';
@@ -268,6 +268,7 @@ export class MobSpawner {
         if (Math.floor(h.x / 16) !== cx || Math.floor(h.z / 16) !== cz) continue;
         const m = this.spawnMob('settler', h.x, h.y, h.z);
         m.profession = p.profession; m.home = h; m.trades = makeTrades(p.profession); m.lastRestock = this.game.time;
+        m.jobSite = houseJobSite(p); // bound to the job-site block built beside the door (mobs/jobSites.js)
       }
     }
     // Marauders guard their outposts

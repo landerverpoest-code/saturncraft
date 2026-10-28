@@ -278,6 +278,7 @@ export class HostSession extends Session {
         this.broadcast({ t: 'lectern', x: m.x | 0, y: m.y | 0, z: m.z | 0, s: g.lecterns.get(`${m.x | 0},${m.y | 0},${m.z | 0}`) || null }, c);
         break;
       }
+      case 'vault': this.remoteVault(c, m); break;
       case 'sign': {
         if (!finite(m.x, m.y, m.z) || !this.near(c, m.x, m.y, m.z, 12) || !Array.isArray(m.l)) break;
         g.setSignText(m.x | 0, m.y | 0, m.z | 0, m.l, true);
@@ -358,6 +359,7 @@ export class HostSession extends Session {
       worldSpawn: g.worldSpawn, pos: { x: p.x, y: p.y, z: p.z, yaw: p.yaw },
       player: g.netPlayers[name] || null,
       signs: [...g.signs], frames: [...g.frames], pots: [...g.pots], lecterns: [...g.lecterns],
+      vaults: g.proving ? g.proving.vaults.save() : [], // who opened which Vault (world/provingSystem.js)
       players: [{ id: 0, name: this.name }, ...this.joined().map((o) => ({ id: o.id, name: o.name }))],
       chunks: chunks.length,
     });
@@ -534,6 +536,18 @@ export class HostSession extends Session {
     }
   }
 
+  /** A guest used a Vault holding `m.st`: the host's ledger decides; the key goes on 'used', a refusal comes back as 'vaultno'. */
+  remoteVault(c, m) {
+    const g = this.game, s = c.rp.state;
+    if (!finite(m.x, m.y, m.z) || !s || s.dead || !this.near(c, m.x + 0.5, m.y + 0.5, m.z + 0.5, 8) || !g.proving) return;
+    const x = m.x | 0, y = m.y | 0, z = m.z | 0;
+    if (g.world.getBlock(x, y, z) !== B.VAULT) return;
+    const held = m.st && ITEMS[m.st.id] ? { id: m.st.id | 0, count: 1, damage: 0 } : null;
+    const r = g.proving.openVault(x, y, z, c.name, held);
+    if (r.ok) c.ch.send({ t: 'used', ok: 1, item: I.PROVING_KEY, consume: 1, damage: 0 });
+    else c.ch.send({ t: 'vaultno', m: r.msg });
+  }
+
   /** Right-click on a mob by a guest: run the normal interaction with the guest standing in for us. */
   remoteInteract(c, m) {
     const g = this.game, mob = this.entity(m.id), s = c.rp.state;
@@ -568,6 +582,7 @@ export class HostSession extends Session {
     if (!o) return;
     const n = Math.max(0, Math.min(m.n | 0, MAX_USES - o.uses));
     o.uses += n;
+    if (n > 0) mob.traded = true; // it keeps its trade now even if its job-site block goes (mobs/jobSites.js)
     c.ch.send({ t: 'traded', id: mob.id, i: m.i | 0, n, trades: mob.trades });
   }
 
@@ -897,6 +912,7 @@ export class ClientSession extends Session {
     for (const [k, st] of w.frames || []) game.frames.set(k, st);
     for (const [k, f] of w.pots || []) { const [x, y, z] = String(k).split(',').map(Number); if (finite(x, y, z)) game.setPot(x, y, z, f, true); }
     for (const [k, l] of w.lecterns || []) { const [x, y, z] = String(k).split(',').map(Number); if (finite(x, y, z)) game.setLectern(x, y, z, l, true); }
+    if (game.proving) game.proving.vaults.load(w.vaults);
     if (typeof w.dl === 'boolean') game.settings.daylightCycle = w.dl;
     if (typeof w.df === 'string') game.settings.difficulty = w.df;
     game.spawner.enabled = false;
@@ -938,6 +954,8 @@ export class ClientSession extends Session {
       case 'frame': g.setFrameItem(m.x | 0, m.y | 0, m.z | 0, m.st || null, true); break;
       case 'pot': g.setPot(m.x | 0, m.y | 0, m.z | 0, m.f || null, true); break;
       case 'lectern': g.setLectern(m.x | 0, m.y | 0, m.z | 0, m.s || null, true); break;
+      case 'vaultset': if (g.proving && typeof m.k === 'string' && /^-?\d+,-?\d+,-?\d+$/.test(m.k)) g.proving.vaults.set(m.k, m.n); break;
+      case 'vaultno': if (g.hud) g.hud.toast(String(m.m || '').slice(0, 80)); break;
       case 'cmdout': for (const l of m.lines || []) g.chat.add(String(l)); break;
       case 'env':
         if (Math.abs(g.time - m.time) > 2) g.time = m.time;
@@ -1181,6 +1199,8 @@ export class ClientSession extends Session {
   sendFrame(x, y, z, st) { this.send({ t: 'frame', x, y, z, st }); }
   sendPot(x, y, z, f) { this.send({ t: 'pot', x, y, z, f }); }
   sendLectern(x, y, z, s) { this.send({ t: 'lectern', x, y, z, s }); }
+  /** Use the Vault at x,y,z with the held stack `st` (the host checks its ledger). */
+  useVault(x, y, z, st) { this.send({ t: 'vault', x, y, z, st: st ? { id: st.id, count: 1 } : null }); }
 
   /** We stepped through a portal: the host takes the whole group there. */
   requestTravel(dim, arrival) {
