@@ -135,6 +135,9 @@ export class Game {
     this.postfx = new PostFX(this.renderer);
     this.postfx.enabled = s.shaders !== false;
     this.scene = new THREE.Scene();
+    // the scene itself never moves: without this every object's world matrix is recomputed every frame,
+    // including the hundreds of static chunk meshes
+    this.scene.matrixAutoUpdate = false;
     this.beaconBeams = new BeaconBeams(this.scene);
     this.camera = new THREE.PerspectiveCamera(s.fov, window.innerWidth / window.innerHeight, 0.05, 1200);
     this.scene.add(this.camera);
