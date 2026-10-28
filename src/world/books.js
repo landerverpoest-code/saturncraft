@@ -6,6 +6,9 @@
 //   Written Book that can only be read - a signed book is never edited again
 //   (reference behaviour). Written copies with the same text, title, author
 //   and generation stack (up to 16); writable books never stack.
+// * Tattered Books: a copy of a copy is a Tattered Book (its own item; generation 2) instead of a Written Book. It
+//   keeps its pages, title and author and is read like a Written Book (also on a lectern), but is never
+//   a source for copying and cannot be written in.
 // * Copying (crafting grid): a Written Book with one or more Writable Books
 //   gives as many copies, and the book itself stays in the grid. Each copy is
 //   one generation further (stack.gen: 0 original, 1 copy of original, 2 copy
@@ -25,9 +28,14 @@ export const TITLE_MAX = 32; // as long as a Name Tag's name
 export const LECTERN_HAS_BOOK = 4, LECTERN_POWERED = 8;
 export const LECTERN_PULSE_TICKS = 2;
 
-export const isBook = (id) => id === I.WRITABLE_BOOK || id === I.WRITTEN_BOOK;
+export const isBook = (id) => id === I.WRITABLE_BOOK || id === I.WRITTEN_BOOK || id === I.TATTERED_BOOK;
+/** A book that is read but never written in or copied: a Written Book or a Tattered Book. */
+export const isReadOnlyBook = (id) => id === I.WRITTEN_BOOK || id === I.TATTERED_BOOK;
 
-/** Generations of a written book (stack.gen), as the tooltip names them. Only originals and first copies can be copied. */
+/**
+ * Generations of a written book (stack.gen), as the tooltip names them. Only originals and first copies can be
+ * copied; a copy of a copy (generation 2) is made as a Tattered Book, which can be read but not copied.
+ */
 export const BOOK_GENERATIONS = ['Original', 'Copy of original', 'Copy of a copy', 'Tattered'];
 export const MAX_COPY_GEN = 1;
 /** Generation of a book stack (0 = original). */
@@ -112,6 +120,7 @@ export function bookCopy(grid) {
   if (gen > MAX_COPY_GEN) return null;
   const result = copyBookFields({ id: I.WRITTEN_BOOK, count: blanks, damage: 0 }, book);
   result.gen = gen + 1;
+  if (result.gen > MAX_COPY_GEN) result.id = I.TATTERED_BOOK; // a copy of a copy is tattered
   return { result, keep: src };
 }
 

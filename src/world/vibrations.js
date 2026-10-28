@@ -12,9 +12,52 @@
 // * Listening blocks (sensors and shriekers) are indexed per chunk
 //   (Chunk.listeners, kept by World.setBlock) so a vibration only looks at the
 //   few listeners of at most four chunks instead of scanning 17^3 blocks.
+// * Vibrations take time to travel: one that reaches a sensor `d` blocks away arrives
+//   ceil(d) ticks later (TRAVEL_TICKS_PER_BLOCK; VibrationQueue below holds the ones in flight and
+//   world/hushSystem.js hands each over when it is due). Whether a sensor is idle, and for a calibrated
+//   one which frequency it is tuned to, is decided on arrival.
+// * A Calibrated Hush Sensor (HushSystem.tuning reads its signal; crafted from a Hush Sensor and three Hush Shards) is tuned by the cinnabar
+//   signal fed into it from any side: it only hears vibrations whose frequency equals that signal
+//   (no signal: everything), and it hears up to 16 blocks away instead of 8.
 import { B, BLOCK_LIMIT } from './blocks.js';
 import { MIN_Y } from './constants.js';
-import { findNear } from './deepHush.js';
+import { findNear, VIBRATION_RANGE } from './deepHush.js';
+
+/** Ticks a vibration needs per block of distance before a sensor hears it (0 = instantly). */
+export const TRAVEL_TICKS_PER_BLOCK = 1;
+/** How far a Calibrated Hush Sensor hears (blocks). */
+export const CALIBRATED_RANGE = 16;
+/** Ticks until a vibration `dist` blocks away arrives. */
+export function travelTicks(dist, perBlock = TRAVEL_TICKS_PER_BLOCK) {
+  return perBlock > 0 ? Math.max(0, Math.ceil(dist * perBlock - 1e-9)) : 0;
+}
+/** How far the sensor block `id` hears. */
+export const sensorRange = (id) => (id === B.CALIBRATED_HUSH_SENSOR ? CALIBRATED_RANGE : VIBRATION_RANGE);
+/** Does a calibrated sensor tuned to `tuning` hear a vibration of frequency `freq`? An untuned one hears them all. */
+export function calibratedHears(freq, tuning) { return !tuning || freq === tuning; }
+
+/** Vibrations in flight: { due, ... } entries kept ordered by the tick they arrive. */
+export class VibrationQueue {
+  constructor(max = 512) { this.items = []; this.max = max; }
+  get size() { return this.items.length; }
+  /** Schedule `item` (any object) to arrive at tick `due`. The oldest are dropped past `max` entries. */
+  add(due, item) {
+    const e = { due, item }, a = this.items;
+    let i = a.length;
+    while (i > 0 && a[i - 1].due > due) i--;
+    a.splice(i, 0, e);
+    if (a.length > this.max) a.shift();
+    return e;
+  }
+  /** Remove and return (in arrival order) the items due at or before tick `now`. */
+  take(now) {
+    const a = this.items;
+    let n = 0;
+    while (n < a.length && a[n].due <= now) n++;
+    return n ? a.splice(0, n).map((e) => e.item) : [];
+  }
+  clear() { this.items.length = 0; }
+}
 
 /** Frequency of each kind of vibration (after the reference's grouping: movement low, destruction and death high). */
 export const FREQUENCY = Object.freeze({
@@ -49,6 +92,7 @@ export function sensorFrequency(meta) { return (meta & 15) ? (meta >> 4) & 15 : 
 /** Blocks that listen for vibrations (indexed per chunk). */
 export const LISTENS = new Uint8Array(BLOCK_LIMIT);
 LISTENS[B.HUSH_SENSOR] = 1;
+LISTENS[B.CALIBRATED_HUSH_SENSOR] = 1;
 LISTENS[B.HUSH_SHRIEKER] = 1;
 
 /** Blocks a vibration cannot pass through (wool, whatever its colour). */

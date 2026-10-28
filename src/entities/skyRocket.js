@@ -1,18 +1,29 @@
-// Sky Rockets (reference: firework rockets without stars). Launched from a
-// block they climb faster and faster (x1.15 sideways, +0.04 up per tick) for
-// 20-31 ticks and burst into a ring of coloured sparks (decoration only).
+// Sky Rockets (reference: firework rockets). Launched from a block they climb
+// faster and faster (x1.15 sideways, +0.04 up per tick) for 20-31 ticks and
+// burst into a ball of coloured sparks (a plain rocket: one random colour,
+// decoration only). A Star Rocket (made with a Firework Star, world/items.js)
+// bursts in its star's colour and hurts the mobs within STAR_RANGE blocks of
+// the burst; only the host (or a single player) deals that damage.
 // Used while gliding they ride along with the player and push the Voidwing
 // (Player.boostTicks, see player/glider.js rocketBoost), trailing sparks.
 import * as THREE from 'three';
 import { SOLID } from '../world/blocks.js';
 import { rocketLifetime } from '../player/glider.js';
+import { COLORS } from '../world/colors.js';
+
+/** Mobs within this many blocks of a Star Rocket's burst take STAR_DAMAGE (reference: 5 blocks, 5 + 2 per star). */
+export const STAR_RANGE = 5, STAR_DAMAGE = 7;
+/** Damage a Star Rocket's burst deals at distance `dist` blocks. */
+export const starDamage = (dist) => (dist <= STAR_RANGE ? STAR_DAMAGE : 0);
+/** Spark colour (0-1 rgb) of a Firework Star colour index. */
+export const starColor = (c) => (COLORS[c] ? COLORS[c][2].map((v) => v / 255) : null);
 
 let nextId = 7_000_000;
 const PALETTES = [[1, 0.35, 0.3], [0.4, 0.8, 1], [1, 0.85, 0.3], [0.7, 0.45, 1], [0.45, 1, 0.55], [1, 0.55, 0.9]];
 
 export class SkyRocket {
-  /** `rider`: the gliding player it pushes (or null for a free rocket). */
-  constructor(x, y, z, rider = null, rng = Math.random) {
+  /** `rider`: the gliding player it pushes (or null for a free rocket); `star`: a Firework Star colour index (a Star Rocket). */
+  constructor(x, y, z, rider = null, rng = Math.random, star = null) {
     this.id = nextId++;
     this.kind = 'rocket';
     this.x = x; this.y = y; this.z = z;
@@ -21,7 +32,8 @@ export class SkyRocket {
     this.vx = (rng() - 0.5) * 0.023; this.vz = (rng() - 0.5) * 0.023; this.vy = 0.05;
     this.life = rocketLifetime(1, rng);
     this.age = 0; this.dead = false;
-    this.color = PALETTES[Math.floor(rng() * PALETTES.length)];
+    this.star = star;
+    this.color = starColor(star) || PALETTES[Math.floor(rng() * PALETTES.length)];
   }
 
   tick(game) {
@@ -52,6 +64,19 @@ export class SkyRocket {
       game.particles.emit(this.x, this.y, this.z, Math.cos(a) * s * sp, u * sp, Math.sin(a) * s * sp, cr * w, cg * w, cb * w, 30 + Math.random() * 15, 0.004);
     }
     game.audio.play('rocket_burst', [this.x, this.y, this.z]);
+    if (this.star != null) this.hurtNearby(game);
+  }
+
+  /** A Star Rocket's burst hurts the mobs close to it (only where the mobs are simulated: single player and the host). */
+  hurtNearby(game) {
+    if (game.net && game.net.isClient) return 0;
+    let n = 0;
+    for (const e of game.entities.list) {
+      if (e.kind !== 'mob' || e.dead || e.deathTime > 0) continue;
+      const dmg = starDamage(Math.hypot(e.x - this.x, e.y + e.height / 2 - this.y, e.z - this.z));
+      if (dmg > 0 && e.hurt(dmg, 'firework', null, 0)) n++;
+    }
+    return n;
   }
 
   createMesh() {
@@ -70,7 +95,7 @@ export class SkyRocket {
  * Use a Sky Rocket: while gliding it boosts the glider; aimed at a block it
  * launches from that face. Returns true if one was used.
  */
-export function useSkyRocket(game, target) {
+export function useSkyRocket(game, target, star = null) {
   const p = game.player;
   if (p.gliding) {
     const r = game.entities.add(new SkyRocket(p.x, p.y, p.z, p));
@@ -80,7 +105,7 @@ export function useSkyRocket(game, target) {
   }
   if (!target) return false;
   const x = target.x + 0.5 + target.face[0] * 0.6, y = target.y + 0.5 + target.face[1] * 0.6, z = target.z + 0.5 + target.face[2] * 0.6;
-  game.entities.add(new SkyRocket(x, y, z, null));
+  game.entities.add(new SkyRocket(x, y, z, null, Math.random, star));
   game.audio.play('rocket', [x, y, z]);
   return true;
 }

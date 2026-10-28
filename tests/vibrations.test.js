@@ -32,13 +32,14 @@ function flatChunk() {
 const Y = 64;
 
 /** A real world (3x3 chunks of flat stone) with the Deep Hush running over it. */
-function setup() {
+function setup(travel = 0) {
   const world = new World(1);
   for (let cx = -1; cx <= 1; cx++) for (let cz = -1; cz <= 1; cz++) world.addChunk(cx, cz, flatChunk());
   world.tick();
   const player = { x: 0.5, y: Y, z: 0.5, netName: 'tester', effects: {}, dead: false, body: { x: 0.5, y: Y, z: 0.5, vx: 0, vz: 0, onGround: true }, addEffect(t, ticks) { this.effects[t] = { ticks }; return true; } };
   const g = { ticks: 1000, world, player, net: null, entities: { list: [] }, spawner: { spawnMob: () => null } };
   g.hush = new HushSystem(g);
+  g.hush.travel = travel; // 0: sensors hear at once (most tests); 1: a tick per block
   world.circuits.containerSignal = (x, y, z) => containerSignal(g, x, y, z);
   return { g, world, player };
 }
