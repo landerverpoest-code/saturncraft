@@ -38,7 +38,7 @@ for (const id of [B.STONE, B.DEEPSTONE, B.GRANITE, B.DIORITE, B.ANDESITE, B.TUFF
 const RUIN_STONE = [B.STONE_BRICKS, B.STONE_BRICKS, B.CRACKED_STONE_BRICKS, B.CRACKED_STONE_BRICKS, B.COBBLED_DEEPSTONE, B.CHISELED_STONE_BRICKS];
 
 /** The Hush blocks the runtime looks out for. */
-export const HUSH_IDS = new Set([B.HUSHMOSS, B.HUSH_VEIN, B.HUSH_SENSOR, B.HUSH_SHRIEKER, B.HUSH_CATALYST]);
+export const HUSH_IDS = new Set([B.HUSHMOSS, B.HUSH_VEIN, B.HUSH_SENSOR, B.HUSH_SHRIEKER, B.HUSH_CATALYST, B.CALIBRATED_HUSH_SENSOR]);
 /** Shrieker meta bit: grown by the world (it can call a Hushkeeper); placed or spread ones only shriek. */
 export const SHRIEKER_CAN_SUMMON = 1;
 
@@ -152,13 +152,13 @@ export const WARNING_MAX = 4, WARNING_COOLDOWN = 200, WARNING_DECAY = 12000;
 export const DARKNESS_TICKS = 260, DARKNESS_RANGE = 40;
 
 /** Cinnabar power of a sensor's pulse: 15 for a sound at the sensor, falling to 1 at the edge of its hearing. */
-export function sensorPower(dist) {
-  return Math.max(1, Math.min(15, 15 - Math.floor(dist * 14 / VIBRATION_RANGE)));
+export function sensorPower(dist, range = VIBRATION_RANGE) {
+  return Math.max(1, Math.min(15, 15 - Math.floor(dist * 14 / range)));
 }
 
 /** Does a sensor at distance `dist` pick up a vibration? (it must be idle, and close enough) */
-export function sensorHears(dist, sensorMeta, restingUntil = 0, now = 0) {
-  return dist <= VIBRATION_RANGE && (sensorMeta & 15) === 0 && now >= restingUntil;
+export function sensorHears(dist, sensorMeta, restingUntil = 0, now = 0, range = VIBRATION_RANGE) {
+  return dist <= range && (sensorMeta & 15) === 0 && now >= restingUntil;
 }
 
 /** A footstep makes no vibration when sneaking or when walking on wool or a carpet. */

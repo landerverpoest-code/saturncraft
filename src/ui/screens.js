@@ -1,5 +1,6 @@
 // Menus and container screens (inventory, workbench, furnace).
 import { doubleChestHalves, doubleChestView } from '../world/chests.js';
+import { createLazyRenderer } from './lazyIcons.js';
 import { iconURL, stackHTML, stackIconURL, tooltipHTML, effectIconURL } from './icons.js';
 import { EFFECTS, effectLabel, formatTicks } from '../player/effects.js';
 import { isIngredient, isVial, VIAL_SLOTS, INGREDIENT_SLOT, FUEL_SLOT, BREW_TICKS, BREWS_PER_POWDER } from '../world/brewing.js';
@@ -64,7 +65,7 @@ export class UI {
 
   get blocking() { return this.open !== null; }
 
-  clear() { this.layer.innerHTML = ''; this.tooltipEl.classList.add('hidden'); }
+  clear() { if (this.lazy) { this.lazy.dispose(); this.lazy = null; } this.layer.innerHTML = ''; this.tooltipEl.classList.add('hidden'); }
 
   close() {
     if (this.open === 'death') return;
@@ -112,7 +113,7 @@ export class UI {
     const s = document.createElement('div');
     s.className = 'slot';
     const refresh = () => { s.innerHTML = this.slotHTML(get()); };
-    refresh();
+    if (!opts.lazy) refresh();
     const ref = { get, set, opts };
     (this.slotRefs = this.slotRefs || []).push(ref);
     s.addEventListener('mousedown', (e) => {
@@ -143,7 +144,8 @@ export class UI {
       if (st) this.showTooltip(tooltipHTML(st));
     });
     s.addEventListener('mouseleave', () => this.tooltipEl.classList.add('hidden'));
-    this.refreshers.push(refresh);
+    if (opts.lazy) opts.lazy.add(s, refresh); // static catalogue slot: drawn when scrolled into view, never refreshed
+    else this.refreshers.push(refresh);
     return s;
   }
 
@@ -979,6 +981,7 @@ export class UI {
   openCreative() {
     this.game.input.unlock();
     const g = this.game, inv = g.player.inventory;
+    const CREATIVE_FIRST_ROWS = 6; // rows drawn at once on opening; the rest follow as they scroll into view
     const hidden = new Set([B.AIR, B.CINDERROOT, B.WATER, B.LAVA, B.FURNACE_LIT, B.SMOKER_LIT, B.BLAST_FURNACE_LIT, B.WHEAT, B.CARROTS, B.POTATOES, B.BEETROOTS, B.MELON_STEM, B.PUMPKIN_STEM, B.DOOR, B.BED, B.FIRE, B.PAINTING, B.PAINTING_B, B.OAK_WALL_SIGN, B.COCOA]);
     for (const b of BLOCKS) if (b && b.doorItem) hidden.add(b.id); // doors are placed from their door items
     const all = ITEMS.filter((d) => d && d.id && !hidden.has(d.id) && !(d.block && BLOCKS[d.block] && BLOCKS[d.block].hidden));
@@ -987,12 +990,16 @@ export class UI {
       search.addEventListener('keydown', (e) => e.stopPropagation());
       search.addEventListener('keyup', (e) => e.stopPropagation());
       const grid = el('<div class="grid creative-grid" style="grid-template-columns:repeat(9,var(--slot))"></div>');
+      const lazy = this.lazy = createLazyRenderer({ root: grid }); // icons are drawn only for the rows in view
       const fill = () => {
+        lazy.reset();
+        this.slotRefs = this.slotRefs.filter((r) => !r.opts.catalog);
         grid.innerHTML = '';
         const q = search.value.trim().toLowerCase();
         for (const d of all) {
           if (q && !d.name.toLowerCase().includes(q)) continue;
           grid.appendChild(this.makeSlot(() => ({ id: d.id, count: 1 }), () => {}, {
+            lazy, catalog: true,
             onClick: (e) => {
               if (this.cursor) { this.cursor = null; return; } // clicking the catalogue deletes the held stack
               const st = { id: d.id, count: e.button === 2 ? 1 : maxStack(d.id), damage: 0 };
@@ -1001,8 +1008,9 @@ export class UI {
             },
           }));
         }
+        lazy.flush(CREATIVE_FIRST_ROWS * 9);
       };
-      search.addEventListener('input', () => { this.refreshers = this.refreshers.filter((r) => !r.catalog); fill(); this.refreshAll(); });
+      search.addEventListener('input', () => { fill(); this.refreshAll(); });
       fill();
       panel.appendChild(search);
       panel.appendChild(grid);
@@ -1350,7 +1358,7 @@ export class UI {
       const l = g.lecterns.get(k);
       if (!l) { close(); return; } // someone else took the book
       const pages = bookPages(l.book);
-      head.textContent = l.book.id === I.WRITTEN_BOOK ? `${l.book.title || 'Untitled'}${l.book.author ? ' by ' + l.book.author : ''}` : 'Writable Book';
+      head.textContent = l.book.id !== I.WRITABLE_BOOK ? `${l.book.title || 'Untitled'}${l.book.author ? ' by ' + l.book.author : ''}` : 'Writable Book';
       text.textContent = pages[l.page] || '';
       num.textContent = `Page ${l.page + 1} of ${pages.length}`;
       prev.disabled = l.page === 0;

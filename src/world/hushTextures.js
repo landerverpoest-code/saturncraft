@@ -43,6 +43,15 @@ export const HUSH_TEX = {
       else if (r < 4.2 && c.h(x, y, 58) < 0.5) c.set(x, y, h.hex(SPECK));
     }
   },
+  // calibrated sensor: the same top with four violet tuning studs at its corners and a bright rim on the ring
+  calibrated_sensor_top: (c, h) => {
+    HUSH_TEX.hush_sensor_top(c, h);
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const stud = (x < 4 || x > 11) && (y < 4 || y > 11) && Math.hypot((x < 8 ? 1.5 : 14.5) - x, (y < 8 ? 1.5 : 14.5) - y) < 2.1;
+      if (stud) c.set(x, y, h.shade(h.hex('#b27aff'), 0.85 + c.h(x, y, 66) * 0.3));
+      else if (Math.abs(Math.hypot(x - 7.5, y - 7.5) - 5.2) < 0.55) c.set(x, y, h.hex('#7a4fc8'));
+    }
+  },
   hush_sensor_side: (c, h) => {
     moss(c, h, 0.06);
     for (let x = 0; x < 16; x++) { c.set(x, 8, h.hex('#14424a')); if (x % 3 === 1) c.set(x, 9, h.hex(SPECK_LO)); }
@@ -79,4 +88,4 @@ export const HUSH_TEX = {
 };
 
 /** Tiles whose bright specks pulse in the terrain shader. */
-export const HUSH_PULSE = ['hushmoss', 'hush_vein', 'hush_sensor_top', 'hush_sensor_side', 'hush_shrieker_side', 'hush_shrieker_top', 'hush_tendril', 'hush_catalyst_side', 'hush_catalyst_top', 'hush_catalyst_bottom'];
+export const HUSH_PULSE = ['hushmoss', 'hush_vein', 'hush_sensor_top', 'calibrated_sensor_top', 'hush_sensor_side', 'hush_shrieker_side', 'hush_shrieker_top', 'hush_tendril', 'hush_catalyst_side', 'hush_catalyst_top', 'hush_catalyst_bottom'];

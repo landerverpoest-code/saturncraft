@@ -33,6 +33,13 @@ const INHABITED_MAX = 3600000; // the local difficulty stops growing after 50 ho
 
 const NO_MONSTER_FLOOR = new Set([B.BEDROCK, B.GLASS, ...LEAVES, B.ICE, B.CACTUS]);
 const MAX_PER_CHUNK = 4;
+// Chunk sweeps that keep finding nothing (every attempt of a daylight surface pass fails the light test)
+// back off: after BACKOFF_AFTER fruitless sweeps only every BACKOFF_STRIDE-th chunk is tried per tick,
+// each chunk therefore once every BACKOFF_STRIDE ticks. One success returns the pass to full speed,
+// so the spawn rate while anything can spawn is the same as before.
+export const BACKOFF_AFTER = 40;
+export const BACKOFF_STRIDE = 4;
+const CHUNK_LIST_REFRESH = 20; // ticks
 
 export class MobSpawner {
   constructor(game) {
@@ -41,6 +48,30 @@ export class MobSpawner {
     this.generated = new Set();
     this.inhabited = new Map(); // chunk key -> ticks a player spent nearby (local difficulty)
     this.enabled = true;
+    this.sweeps = 0; // number of monster sweeps made (rotates the throttled slices)
+    this.pass = { monster: { idle: 0 }, surface: { idle: 0 } };
+    this._near = null; // cached list of loaded chunks around the player
+  }
+
+  /** Loaded chunks within `R` of chunk (pcx, pcz); rebuilt when the player or the loaded set changes, else every second. */
+  nearbyChunks(pcx, pcz, R) {
+    const g = this.game, w = g.world;
+    const size = w.chunks ? w.chunks.size : -1;
+    const c = this._near;
+    if (c && c.pcx === pcx && c.pcz === pcz && c.R === R && c.size === size && c.dim === w.dimension && g.ticks - c.tick < CHUNK_LIST_REFRESH && g.ticks >= c.tick) return c.list;
+    const list = [];
+    for (let dx = -R; dx <= R; dx++) for (let dz = -R; dz <= R; dz++) if (w.isChunkLoaded(pcx + dx, pcz + dz)) list.push([pcx + dx, pcz + dz]);
+    this._near = { pcx, pcz, R, size, dim: w.dimension, tick: g.ticks, list };
+    return list;
+  }
+
+  /** One spawn sweep over the chunks; throttled to a rotating slice while `state` has been fruitless for a while. */
+  sweep(state, chunks, category, surface) {
+    const stride = state.idle >= BACKOFF_AFTER ? BACKOFF_STRIDE : 1;
+    let n = 0;
+    for (let i = stride === 1 ? 0 : (this.sweeps + (surface ? 1 : 0)) % stride; i < chunks.length; i += stride) n += this.attempt(chunks[i][0], chunks[i][1], category, surface);
+    state.idle = n ? 0 : state.idle + 1;
+    return n;
   }
 
   /** Hostile mobs can be switched off in the settings (/gamerule doHostileSpawning). */
@@ -185,8 +216,7 @@ export class MobSpawner {
     if (!this.enabled || p.dead) return;
     const R = Math.min(8, g.chunks.renderDistance);
     const pcx = Math.floor(p.x / 16), pcz = Math.floor(p.z / 16);
-    const chunks = [];
-    for (let dx = -R; dx <= R; dx++) for (let dz = -R; dz <= R; dz++) if (w.isChunkLoaded(pcx + dx, pcz + dz)) chunks.push([pcx + dx, pcz + dz]);
+    const chunks = this.nearbyChunks(pcx, pcz, R);
     let monsters = 0, creatures = 0, surface = 0, ambient = 0, fish = 0;
     for (const e of g.entities.list) {
       if (e.kind !== 'mob' || e.dead) continue;
@@ -238,7 +268,7 @@ export class MobSpawner {
     }
     if (this.hostileEnabled()) {
       if (monsters < cap) {
-        for (const [cx, cz] of chunks) monsters += this.attempt(cx, cz, CATEGORY.MONSTER);
+        monsters += this.sweep(this.pass.monster, chunks, CATEGORY.MONSTER, false);
       }
       monsters += tickMonumentSpawns(this, monsters, cap); // Deepeyes in Tide Citadels
       // Monsters in caves fill the cap quickly in this deep world, which would leave the
@@ -248,8 +278,9 @@ export class MobSpawner {
       // "on the surface", so this pass used to spawn without limit there.)
       const overworld = !w.dimension || w.dimension === 'overworld';
       if (overworld && surface < Math.ceil(cap / 2) && monsters < cap * 2) {
-        for (const [cx, cz] of chunks) surface += this.attempt(cx, cz, CATEGORY.MONSTER, true);
+        surface += this.sweep(this.pass.surface, chunks, CATEGORY.MONSTER, true);
       }
+      this.sweeps++;
     }
     hollowSpawnTick(this); // Hoverlings drifting through Hollow Cities
     if (g.ticks % CREATURE_SPAWN_INTERVAL === 0 && creatures < scaledCap(CATEGORY.CREATURE, chunks.length)) {

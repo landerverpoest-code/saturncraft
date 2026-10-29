@@ -16,7 +16,7 @@ import { spearDamage } from '../entities/tidespear.js';
 import { PHYS } from '../physics/constants.js';
 import { Body } from '../physics/body.js';
 import { EXHAUSTION } from './survival.js';
-import { meleeWithEffects } from './effects.js';
+import { meleeWithEffects, attackSpeedFactor } from './effects.js';
 import { lightAt } from '../entities/entities.js';
 import { canLight, FIRE_DELAY } from '../world/fire.js';
 import { Bobber } from '../entities/bobber.js';
@@ -55,7 +55,7 @@ const ORE_XP = {
   [B.COAL_ORE]: [0, 2], [B.DEEP_COAL_ORE]: [0, 2], [B.DIAMOND_ORE]: [3, 7], [B.DEEP_DIAMOND_ORE]: [3, 7],
   [B.BERYL_ORE]: [3, 7], [B.AZURITE_ORE]: [2, 5], [B.DEEP_AZURITE_ORE]: [2, 5],
   [B.CINNABAR_ORE]: [1, 5], [B.DEEP_CINNABAR_ORE]: [1, 5], [B.SPAWNER]: [15, 43],
-  [B.HUSHMOSS]: [1, 1], [B.HUSH_SENSOR]: [5, 5], [B.HUSH_SHRIEKER]: [5, 5], [B.HUSH_CATALYST]: [5, 5],
+  [B.HUSHMOSS]: [1, 1], [B.HUSH_SENSOR]: [5, 5], [B.CALIBRATED_HUSH_SENSOR]: [5, 5], [B.HUSH_SHRIEKER]: [5, 5], [B.HUSH_CATALYST]: [5, 5],
 };
 const BREAK_DELAY = 5;
 /** Blocks that right-click opens / toggles instead of using the held item. */
@@ -81,7 +81,7 @@ export class Interaction {
 
   attackCooldownTicks() {
     const tool = toolOf(this.game.player.inventory.selectedStack);
-    return 20 / tool.attackSpeed;
+    return 20 / (tool.attackSpeed * attackSpeedFactor(this.game.player.effects)); // Haste / Mining Fatigue change the swing rate
   }
   attackCooldownProgress() {
     const p = this.game.player;
@@ -262,7 +262,7 @@ export class Interaction {
     }
     // Sky Rockets: a boost while gliding, or launched from the clicked block
     if (d && d.rocket && input.rightPressed && !(this.target && USABLE_BLOCKS.has(this.target.id) && !p.sneaking)) {
-      if (useSkyRocket(g, this.target)) { if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1); this.swing = SWING_TICKS; }
+      if (useSkyRocket(g, this.target, d.rocketStar ?? null)) { if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1); this.swing = SWING_TICKS; }
       return;
     }
     // a Gale Rod: burst upwards (mobs/gustling.js)

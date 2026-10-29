@@ -80,6 +80,7 @@ function makeGame() {
   const player = { x: 0.5, y: 60, z: 0.5, netName: 'tester', effects: {}, dead: false, body: { x: 0.5, y: 60, z: 0.5, vx: 0, vz: 0, onGround: true }, addEffect(t, ticks) { this.effects[t] = { ticks, amp: 0 }; return true; } };
   const g = { ticks: 1000, world, player, net: null, entities: { list: [] }, spawner: { spawnMob(type, x, y, z) { const m = { type, x, y, z, dead: false, deathTime: 0 }; spawned.push(m); return m; } } };
   g.hush = new HushSystem(g);
+  g.hush.travel = 0; // these tests check the reaction itself: sensors hear at once (travel is tested in calibrated_sensors.test.js)
   return { g, world, player, spawned };
 }
 
