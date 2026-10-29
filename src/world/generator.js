@@ -17,6 +17,9 @@ import { carveChunk } from './carvers.js';
 import { stampRuins } from './ruinedPortals.js';
 import { stampSmallFeatures } from './smallFeatures.js';
 import { stampBuriedRuins } from './buriedRuins.js';
+import { stampSunkenRuins } from './sunkenRuins.js';
+import { stampSunTombs } from './sunTombs.js';
+import { stampSkywatches } from './skywatch.js';
 import { BIOME, BIOMES } from './biomes.js';
 import { MIN_Y, WORLD_HEIGHT, SEA_LEVEL, CHUNK_VOLUME, cidx } from './constants.js';
 import { grassColor, foliageColor } from './textures.js';
@@ -489,6 +492,9 @@ export class TerrainGenerator {
     stampSmallFeatures(this, blocks, meta, cx, cz, heightmap, biomes); // desert wells, fossils
     stampBuriedRuins(this, blocks, meta, cx, cz); // Buried Ruins for brushing (world/buriedRuins.js)
     stampSanctums(this, blocks, meta, cx, cz); // Hollow Sanctums (world/dimensions/sanctum.js)
+    stampSunkenRuins(this, blocks, meta, cx, cz); // Sunken Ruins on deep ocean floors (world/sunkenRuins.js)
+    stampSunTombs(this, blocks, meta, cx, cz);    // Sun Tombs in deserts and badlands (world/sunTombs.js)
+    stampSkywatches(this, blocks, meta, cx, cz);  // Skywatch Towers on mountain summits (world/skywatch.js)
 
     // Final heightmap: highest non-air block
     for (let z = 0; z < 16; z++) for (let x = 0; x < 16; x++) {

@@ -3,7 +3,7 @@
 // their kind are already close. Mobs need light 11 or lower and room to stand.
 // Also rolls the loot of dungeon chests.
 import { B, SOLID } from '../world/blocks.js';
-import { I, DISCS } from '../world/items.js';
+import { I, DISCS, SHERD_ITEMS } from '../world/items.js';
 import { hollowCityLoot, LOOT_CITY, LOOT_SHIP } from '../world/dimensions/hollowCity.js';
 import { VAULTS_CHEST } from '../world/provingLoot.js';
 import { VAULTS_LOOT } from '../world/provingVaults.js';
@@ -91,6 +91,12 @@ const STRUCTURE_LOOT = {
   // the ruins of the Deep Hush (world/deepHush.js HUSH_LOOT)
   [LOOT.DEEP_HUSH]: [[[I.HUSH_SHARD, 1, 3, 12], [B.CANDLE, 1, 4, 15], [I.BONE, 2, 6, 15], [I.IRON_INGOT, 1, 4, 10], [I.AZURITE, 2, 6, 8], [I.DIAMOND, 1, 2, 4], [I.GILDED_APPLE, 1, 1, 3], [I.GOLD_INGOT, 1, 3, 6], [B.HUSHMOSS, 4, 10, 8], [I.DISC_HOLLOW, 1, 1, 2]], 3, 7],
 };
+
+// Sun Tomb chambers and Sunken Ruin chests (the free chest-meta kinds 10 and 15, world/sunTombs.js, world/sunkenRuins.js)
+LOOT.TOMB = 10;
+LOOT.SUNKEN = 15;
+STRUCTURE_LOOT[LOOT.TOMB] = [[[I.GOLD_INGOT, 2, 8, 20], [I.GOLD_NUGGET, 3, 12, 15], [I.BERYL, 1, 4, 15], [I.DIAMOND, 1, 2, 4], [I.GILDED_APPLE, 1, 1, 6], [I.IRON_INGOT, 1, 5, 12], [I.BONE, 3, 8, 25], [I.ROTTEN_FLESH, 3, 8, 20], [I.SPIDER_EYE, 1, 3, 12], [I.SADDLE, 1, 1, 5], [I.GOLD_CHESTPLATE, 1, 1, 3], [SHERD_ITEMS[0], 1, 1, 3], [SHERD_ITEMS[1], 1, 1, 3], [I.GUNPOWDER, 2, 5, 12]], 3, 6, [[I.GOLD_INGOT, 1, 3]]];
+STRUCTURE_LOOT[LOOT.SUNKEN] = [[[I.TIDE_CRYSTAL, 1, 4, 20], [I.TIDE_SHARD, 2, 6, 20], [I.BERYL, 1, 4, 12], [I.AZURITE, 2, 8, 12], [I.DIAMOND, 1, 2, 5], [I.GOLD_INGOT, 1, 4, 10], [I.IRON_NUGGET, 2, 8, 15], [I.SCUTE, 1, 2, 5], [I.TIDESPEAR, 1, 1, 2], [I.DRIED_KELP, 2, 8, 12], [I.INK_SAC, 1, 3, 10], [I.GILDED_APPLE, 1, 1, 3], [I.BOOK, 1, 2, 6]], 3, 6, [[I.TIDE_CRYSTAL, 1, 2]]];
 
 // the store rooms and galleries of the Proving Vaults (world/provingVaults.js)
 LOOT.PROVING_VAULTS = VAULTS_LOOT;
