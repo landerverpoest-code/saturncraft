@@ -1,5 +1,5 @@
 // Regression tests for bugs found in a play-through QA pass.
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { MobSpawner } from '../src/mobs/spawner.js';
 import { MOBS, CATEGORY } from '../src/mobs/mobTypes.js';
 import { scaledCap } from '../src/mobs/spawnRules.js';
@@ -45,6 +45,45 @@ describe('Cinderdeep monster spawning', () => {
     expect(monsters).toBeGreaterThan(0);
     // one tick's pass may overshoot the cap a little, but never runs away
     expect(monsters).toBeLessThan(cap * 2);
+  });
+
+  // The test above used to fail about one run in 16: a sweep over all 81 chunks kept going after the cap
+  // was reached, so a tick that started just under the cap could end far over it (random, 19 up to 50).
+  it('never overshoots the cap by more than one pack, however the dice fall', () => {
+    const cap = scaledCap(CATEGORY.MONSTER, 9 * 9);
+    for (let run = 0; run < 25; run++) {
+      const { spawner, list } = cinderWorld();
+      for (let i = 0; i < 200; i++) {
+        spawner.tick();
+        // a pack in the Cinderdeep is at most 4 mobs, and a pass only starts below the cap
+        expect(list.filter((e) => e.def.category === CATEGORY.MONSTER).length).toBeLessThanOrEqual(cap - 1 + 4);
+      }
+    }
+  });
+
+  it('a sweep stops as soon as the room left under the cap is used up', () => {
+    const { spawner } = cinderWorld();
+    const chunks = [];
+    for (let x = 0; x < 9; x++) for (let z = 0; z < 9; z++) chunks.push([x, z]);
+    let calls = 0;
+    spawner.attempt = () => { calls++; return 3; };
+    expect(spawner.sweep({ idle: 0 }, chunks, CATEGORY.MONSTER, false, 5)).toBe(6);
+    expect(calls).toBe(2);
+    calls = 0;
+    expect(spawner.sweep({ idle: 0 }, chunks, CATEGORY.MONSTER, false)).toBe(81 * 3); // no room given: the whole sweep, as before
+    expect(calls).toBe(81);
+  });
+
+  it('a sweep with limited room still visits every chunk over time (no fixed favourites)', () => {
+    const { spawner } = cinderWorld();
+    const chunks = [];
+    for (let x = 0; x < 9; x++) for (let z = 0; z < 9; z++) chunks.push([x, z]);
+    const seen = new Set();
+    spawner.attempt = (cx, cz) => { seen.add(cx + ',' + cz); return 1; };
+    let k = 0;
+    const rnd = vi.spyOn(Math, 'random').mockImplementation(() => (k++ % 81) / 81); // a fixed walk through the start positions
+    try { for (let i = 0; i < 81; i++) spawner.sweep({ idle: 0 }, chunks, CATEGORY.MONSTER, false, 1); } finally { rnd.mockRestore(); }
+    expect(seen.size).toBe(81);
   });
 });
 

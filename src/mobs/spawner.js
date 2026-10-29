@@ -65,11 +65,22 @@ export class MobSpawner {
     return list;
   }
 
-  /** One spawn sweep over the chunks; throttled to a rotating slice while `state` has been fruitless for a while. */
-  sweep(state, chunks, category, surface) {
+  /**
+   * One spawn sweep over the chunks; throttled to a rotating slice while `state` has been fruitless for a while.
+   * `room` is how many more mobs may still spawn before the cap is reached: the sweep stops as soon as that many
+   * have appeared (so a pass overshoots the cap by at most one chunk's pack, not by a whole sweep), and starts at a
+   * random chunk of its slice then, so the ones that always come first do not get all the spawns.
+   */
+  sweep(state, chunks, category, surface, room = Infinity) {
     const stride = state.idle >= BACKOFF_AFTER ? BACKOFF_STRIDE : 1;
+    const first = stride === 1 ? 0 : (this.sweeps + (surface ? 1 : 0)) % stride;
+    const slice = Math.max(0, Math.ceil((chunks.length - first) / stride));
+    const start = room === Infinity || slice < 2 ? 0 : Math.floor(Math.random() * slice);
     let n = 0;
-    for (let i = stride === 1 ? 0 : (this.sweeps + (surface ? 1 : 0)) % stride; i < chunks.length; i += stride) n += this.attempt(chunks[i][0], chunks[i][1], category, surface);
+    for (let k = 0; k < slice && n < room; k++) {
+      const i = first + ((start + k) % slice) * stride;
+      n += this.attempt(chunks[i][0], chunks[i][1], category, surface);
+    }
     state.idle = n ? 0 : state.idle + 1;
     return n;
   }
@@ -268,7 +279,7 @@ export class MobSpawner {
     }
     if (this.hostileEnabled()) {
       if (monsters < cap) {
-        monsters += this.sweep(this.pass.monster, chunks, CATEGORY.MONSTER, false);
+        monsters += this.sweep(this.pass.monster, chunks, CATEGORY.MONSTER, false, cap - monsters);
       }
       monsters += tickMonumentSpawns(this, monsters, cap); // Deepeyes in Tide Citadels
       // Monsters in caves fill the cap quickly in this deep world, which would leave the
@@ -278,7 +289,7 @@ export class MobSpawner {
       // "on the surface", so this pass used to spawn without limit there.)
       const overworld = !w.dimension || w.dimension === 'overworld';
       if (overworld && surface < Math.ceil(cap / 2) && monsters < cap * 2) {
-        surface += this.sweep(this.pass.surface, chunks, CATEGORY.MONSTER, true);
+        surface += this.sweep(this.pass.surface, chunks, CATEGORY.MONSTER, true, cap * 2 - monsters);
       }
       this.sweeps++;
     }
