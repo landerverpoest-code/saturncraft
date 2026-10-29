@@ -1,6 +1,6 @@
 // Shaped/shapeless crafting and furnace smelting recipes.
 import { B, BLOCKS, WOOD_SETS, STONE_SETS, WALL_SETS, COLOR_BLOCKS, DOOR_SETS, GATE_SETS, CANDLE_IDS, BOX_IDS, BOX_COLORS, isBox } from '../world/blocks.js';
-import { I, ITEMS, DYES, WOOL_ITEMS, TIPPED_ARROW, SPLASH_ITEM, SHERD_ITEMS, LINGERING_ITEM } from '../world/items.js';
+import { I, ITEMS, DYES, WOOL_ITEMS, TIPPED_ARROW, SPLASH_ITEM, SHERD_ITEMS, LINGERING_ITEM, FIREWORK_STARS, STAR_ROCKETS } from '../world/items.js';
 import { potFacesFromGrid } from '../world/archaeology.js';
 import { withExtras } from '../world/enchantments.js';
 import { bookCopy } from '../world/books.js';
@@ -360,6 +360,13 @@ shaped(['CCC', 'C C', 'CRC'], { C: B.COBBLESTONE, R: I.CINNABAR }, B.DROPPER, 1)
 shaped([' T ', 'TQT', 'SSS'], { T: B.CINNABAR_TORCH, Q: I.EMBER_QUARTZ, S: B.STONE }, B.COMPARATOR, 1);
 shaped(['CCC', 'RRQ', 'CCC'], { C: 'stone_mat', R: I.CINNABAR, Q: I.EMBER_QUARTZ }, B.OBSERVER, 1);
 shaped(['GGG', 'QQQ', 'SSS'], { G: B.GLASS, Q: I.EMBER_QUARTZ, S: 'wood_slab' }, B.DAYLIGHT_SENSOR, 1);
+// a Hush Sensor and three Hush Shards tune it: the Calibrated Hush Sensor (world/vibrations.js)
+shaped([' S ', 'SHS'], { S: I.HUSH_SHARD, H: B.HUSH_SENSOR }, B.CALIBRATED_HUSH_SENSOR, 1);
+// Firework Stars and Star Rockets (world/items.js, entities/skyRocket.js)
+for (let c = 0; c < 16; c++) {
+  shapeless([I.GUNPOWDER, c === 0 ? I.BONE_MEAL : DYES[c]], FIREWORK_STARS[c], 1);
+  shapeless([I.PAPER, I.GUNPOWDER, FIREWORK_STARS[c]], STAR_ROCKETS[c], 3);
+}
 shapeless([I.GUNPOWDER, I.EMBER_POWDER, I.COAL], I.FIRE_CHARGE, 3);
 // Lead (4 string round a slimeball), Bundle (string tying up leather, or the older rabbit-hide pouch)
 shaped(['SS ', 'SB ', '  S'], { S: I.STRING, B: I.SLIMEBALL }, I.LEAD, 2);

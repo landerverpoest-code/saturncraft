@@ -128,6 +128,14 @@ export function fatigueFactor(level) {
 /** Mining speed multiplier from Haste (+20 % per level) and Mining Fatigue. */
 export function miningFactor(map) { return (1 + 0.2 * effectLevel(map, 'haste')) * fatigueFactor(effectLevel(map, 'mining_fatigue')); }
 
+/**
+ * Attack speed multiplier (reference): Haste +10 % per level and Mining Fatigue -10 % per level (so Mining
+ * Fatigue III, the Elder Deepeye's curse, swings at 70 %). It never drops below 10 %.
+ */
+export function attackSpeedFactor(map) {
+  return Math.max(0.1, 1 + 0.1 * effectLevel(map, 'haste') - 0.1 * effectLevel(map, 'mining_fatigue'));
+}
+
 /** Ticks between poison / regeneration pulses at an amplifier (25 >> amp, 50 >> amp). */
 export function poisonInterval(amp) { return Math.max(1, 25 >> amp); }
 export function regenInterval(amp) { return Math.max(1, 50 >> amp); }

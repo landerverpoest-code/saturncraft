@@ -716,6 +716,12 @@ def(B.FLETCHING_TABLE, 'Fletching Table', { hardness: 2.5, resistance: 2.5, tool
 ext('OMINOUS_SPAWNER');
 def(B.OMINOUS_SPAWNER, 'Ominous Proving Spawner', { ...BLOCKS[B.PROVING_SPAWNER], tex: { top: 'ominous_spawner_top', bottom: 'ominous_spawner_top', side: 'ominous_spawner_side_0' } });
 
+// Calibrated Hush Sensor (world/vibrations.js): a Hush Sensor that only hears the vibration frequency matching the
+// cinnabar signal fed into it (any side; no signal = it hears everything) and hears twice as far. Same meta as the
+// plain sensor: power in bits 0-3, the frequency of what it heard in bits 4-7.
+ext('CALIBRATED_HUSH_SENSOR');
+def(B.CALIBRATED_HUSH_SENSOR, 'Calibrated Hush Sensor', { ...BLOCKS[B.HUSH_SENSOR], drops: B.CALIBRATED_HUSH_SENSOR, silkSelf: false, tex: { top: 'calibrated_sensor_top', bottom: 'hushmoss', side: 'hush_sensor_side' } });
+
 // Tidestone shapes (reference: the prismarine slabs, stairs and walls): slabs, stairs and walls for the Tide
 // Citadel's three stones. They copy their material's look and strength; walls connect like cobblestone walls.
 export const WALL_SETS = []; // [material, wall, name]

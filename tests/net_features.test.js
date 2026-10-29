@@ -207,6 +207,7 @@ describe('the Deep Hush hears guests', () => {
     const g = { ticks: 1000, world, player: host, entities: { list: [] }, spawner: { spawnMob: () => null } };
     g.net = { isHost: true, isClient: false, players: () => [{ id: 0, name: 'Host', obj: host }, { id: 3, name: 'Guest', obj: c.rp.target, c }] };
     g.hush = new HushSystem(g);
+    g.hush.travel = 0; // sensors hear at once (travel time is tested in calibrated_sensors.test.js)
     return { g, world, c, host };
   }
   it('raises the warning of the guest who walked by a sensor, not the host', () => {

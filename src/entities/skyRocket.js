@@ -1,31 +1,28 @@
-// Sky Rockets (reference: firework rockets without stars). Launched from a
-// block they climb faster and faster (x1.15 sideways, +0.04 up per tick) for
-// 20-31 ticks and burst into a ring of coloured sparks (decoration only).
+// Sky Rockets (reference: firework rockets). Launched from a block they climb
+// faster and faster (x1.15 sideways, +0.04 up per tick) for 20-31 ticks and
+// burst into a ball of coloured sparks (a plain rocket: one random colour,
+// decoration only). A Star Rocket (made with a Firework Star, world/items.js)
+// bursts in its star's colour and hurts the mobs within STAR_RANGE blocks of
+// the burst; only the host (or a single player) deals that damage.
 // Used while gliding they ride along with the player and push the Voidwing
 // (Player.boostTicks, see player/glider.js rocketBoost), trailing sparks.
-// A starred rocket (crafted with a dye, items.js STAR_ROCKETS) bursts in that colour and its burst hurts
-// everything within STAR_RADIUS blocks for STAR_DAMAGE (the rider of a gliding one included).
 import * as THREE from 'three';
 import { SOLID } from '../world/blocks.js';
 import { rocketLifetime } from '../player/glider.js';
+import { COLORS } from '../world/colors.js';
 
-export const STAR_RADIUS = 5;
-export const STAR_DAMAGE = 5;
-
-/** Everything a starred burst at (x, y, z) hurts: living mobs and the (non-creative) player whose middle is within STAR_RADIUS. */
-export function burstTargets(list, player, x, y, z, radius = STAR_RADIUS) {
-  const out = [];
-  const near = (e, cy) => Math.hypot(e.x - x, cy - y, e.z - z) <= radius;
-  for (const e of list) if (e && e.kind === 'mob' && e.deathTime === 0 && typeof e.hurt === 'function' && near(e, e.y + (e.height || 0) * 0.5)) out.push(e);
-  if (player && !player.dead && !player.creative && near(player, player.y + 0.9)) out.push(player);
-  return out;
-}
+/** Mobs within this many blocks of a Star Rocket's burst take STAR_DAMAGE (reference: 5 blocks, 5 + 2 per star). */
+export const STAR_RANGE = 5, STAR_DAMAGE = 7;
+/** Damage a Star Rocket's burst deals at distance `dist` blocks. */
+export const starDamage = (dist) => (dist <= STAR_RANGE ? STAR_DAMAGE : 0);
+/** Spark colour (0-1 rgb) of a Firework Star colour index. */
+export const starColor = (c) => (COLORS[c] ? COLORS[c][2].map((v) => v / 255) : null);
 
 let nextId = 7_000_000;
 const PALETTES = [[1, 0.35, 0.3], [0.4, 0.8, 1], [1, 0.85, 0.3], [0.7, 0.45, 1], [0.45, 1, 0.55], [1, 0.55, 0.9]];
 
 export class SkyRocket {
-  /** `rider`: the gliding player it pushes (or null for a free rocket). */
+  /** `rider`: the gliding player it pushes (or null for a free rocket); `star`: a Firework Star colour index (a Star Rocket). */
   constructor(x, y, z, rider = null, rng = Math.random, star = null) {
     this.id = nextId++;
     this.kind = 'rocket';
@@ -35,8 +32,8 @@ export class SkyRocket {
     this.vx = (rng() - 0.5) * 0.023; this.vz = (rng() - 0.5) * 0.023; this.vy = 0.05;
     this.life = rocketLifetime(1, rng);
     this.age = 0; this.dead = false;
-    this.starred = !!star;
-    this.color = star ? star.slice() : PALETTES[Math.floor(rng() * PALETTES.length)];
+    this.star = star;
+    this.color = starColor(star) || PALETTES[Math.floor(rng() * PALETTES.length)];
   }
 
   tick(game) {
@@ -46,7 +43,7 @@ export class SkyRocket {
       // riding along: sparks behind the glider
       this.x = r.x; this.y = r.y + 0.3; this.z = r.z;
       game.particles.emit(this.x, this.y, this.z, -r.body.vx * 0.3, -r.body.vy * 0.3, -r.body.vz * 0.3, 1, 0.8, 0.5, 14, 0);
-      if (++this.age >= this.life || r.dead || !r.gliding) { if (this.starred && !r.dead) this.burst(game); else this.dead = true; }
+      if (++this.age >= this.life || r.dead || !r.gliding) this.dead = true;
       return;
     }
     this.vx *= 1.15; this.vz *= 1.15; this.vy += 0.04;
@@ -67,7 +64,19 @@ export class SkyRocket {
       game.particles.emit(this.x, this.y, this.z, Math.cos(a) * s * sp, u * sp, Math.sin(a) * s * sp, cr * w, cg * w, cb * w, 30 + Math.random() * 15, 0.004);
     }
     game.audio.play('rocket_burst', [this.x, this.y, this.z]);
-    if (this.starred) for (const e of burstTargets(game.entities ? game.entities.list : [], game.localPlayer || game.player, this.x, this.y, this.z)) e.hurt(STAR_DAMAGE, 'firework');
+    if (this.star != null) this.hurtNearby(game);
+  }
+
+  /** A Star Rocket's burst hurts the mobs close to it (only where the mobs are simulated: single player and the host). */
+  hurtNearby(game) {
+    if (game.net && game.net.isClient) return 0;
+    let n = 0;
+    for (const e of game.entities.list) {
+      if (e.kind !== 'mob' || e.dead || e.deathTime > 0) continue;
+      const dmg = starDamage(Math.hypot(e.x - this.x, e.y + e.height / 2 - this.y, e.z - this.z));
+      if (dmg > 0 && e.hurt(dmg, 'firework', null, 0)) n++;
+    }
+    return n;
   }
 
   createMesh() {
@@ -89,7 +98,7 @@ export class SkyRocket {
 export function useSkyRocket(game, target, star = null) {
   const p = game.player;
   if (p.gliding) {
-    const r = game.entities.add(new SkyRocket(p.x, p.y, p.z, p, Math.random, star));
+    const r = game.entities.add(new SkyRocket(p.x, p.y, p.z, p));
     p.boostTicks = r.life;
     game.audio.play('rocket', [p.x, p.y, p.z]);
     return true;

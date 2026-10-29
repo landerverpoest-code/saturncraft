@@ -307,7 +307,7 @@ export function blockBoxes(id, meta) {
   if (id === B.CHAIN) return CHAIN_BOXES;
   if (id === B.GRINDSTONE) return meta & 1 ? GRIND_Z : GRIND_X;
   if (id === B.STONECUTTER) return meta & 1 ? CUTTER_Z : CUTTER_X;
-  if (id === B.HUSH_SENSOR) return SENSOR_BOXES;
+  if (id === B.HUSH_SENSOR || id === B.CALIBRATED_HUSH_SENSOR) return SENSOR_BOXES;
   if (id === B.HUSH_SHRIEKER) return SHRIEKER_BOXES;
   if (id === B.LECTERN) return LECTERN_BOXES[meta & 3][(meta >> 2) & 1];
   if (id === B.CAKE) return CAKE_BOXES[Math.min(6, meta & 7)];
@@ -329,7 +329,7 @@ SHAPED_COLLISION[B.SNOW_LAYER] = 1;
 SHAPED_COLLISION[B.SEEPSTONE_SPIKE] = 1;
 SHAPED_COLLISION[B.MUD] = 1; // you sink into mud a little
 const MUD_BOX = [[0, 0, 0, 1, 14 / 16, 1]];
-for (const id of [B.COBBLESTONE_WALL, B.MOSSY_COBBLESTONE_WALL, B.OAK_TRAPDOOR, B.ENCHANTING_TABLE, B.ANVIL, B.CAMPFIRE, B.LANTERN, B.BREWING_STAND, B.TURTLE_EGG, B.HOPPER, B.COMPOSTER, B.SCAFFOLDING, B.FLOWER_POT, B.DECORATED_POT, B.CHAIN, B.GRINDSTONE, B.STONECUTTER, B.HUSH_SENSOR, B.HUSH_SHRIEKER, B.LECTERN, B.CAKE]) SHAPED_COLLISION[id] = 1;
+for (const id of [B.COBBLESTONE_WALL, B.MOSSY_COBBLESTONE_WALL, B.OAK_TRAPDOOR, B.ENCHANTING_TABLE, B.ANVIL, B.CAMPFIRE, B.LANTERN, B.BREWING_STAND, B.TURTLE_EGG, B.HOPPER, B.COMPOSTER, B.SCAFFOLDING, B.FLOWER_POT, B.DECORATED_POT, B.CHAIN, B.GRINDSTONE, B.STONECUTTER, B.HUSH_SENSOR, B.CALIBRATED_HUSH_SENSOR, B.HUSH_SHRIEKER, B.LECTERN, B.CAKE]) SHAPED_COLLISION[id] = 1;
 /** Snow layer box (n = meta + 1 layers); collision is one layer lower, so a single layer has none. */
 export const snowBox = (meta, collide = false) => [0, 0, 0, 1, ((meta & 7) + (collide ? 0 : 1)) * 2 / 16, 1];
 for (const id of [B.OAK_FENCE, B.SPRUCE_FENCE, B.BIRCH_FENCE, B.OAK_FENCE_GATE]) SHAPED_COLLISION[id] = 1;
@@ -362,7 +362,7 @@ export function collisionBoxes(id, meta, world, x, y, z) {
   if (sh === SHAPE.TRAPDOOR) return [trapdoorBox(meta)];
   if (sh === SHAPE.WALL) return wallBoxes(world ? wallMask((a, b, c) => world.getBlock(a, b, c), x, y, z) : 0, 1.5);
   if (sh === SHAPE.STAIRS) return world ? stairBoxes(meta, (dx, dz) => [world.getBlock(x + dx, y, z + dz), world.getMeta(x + dx, y, z + dz)], (n) => BLOCKS[n] && BLOCKS[n].shape === SHAPE.STAIRS) : stairBoxes(meta);
-  if (id === B.HUSH_SENSOR) return SENSOR_COLLISION;
+  if (id === B.HUSH_SENSOR || id === B.CALIBRATED_HUSH_SENSOR) return SENSOR_COLLISION;
   if (id === B.HUSH_SHRIEKER) return SHRIEKER_COLLISION;
   if (sh === SHAPE.BOXES) return id === B.STONECUTTER ? CUTTER_BASE : id === B.ANVIL ? [boundsOf(blockBoxes(id, meta))] : id === B.BREWING_STAND ? ALEMBIC_COLLISION : blockBoxes(id, meta);
   if (sh === SHAPE.CIRCUIT) return circuitCollision(id, meta);

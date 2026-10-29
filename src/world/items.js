@@ -363,13 +363,20 @@ item('proving_key', 'Proving Key', { provingKey: true, iconStyle: [ICON_PROVING_
 // Gale Rod (mobs/gustling.js): a Gustling's rod, spun from the wind it keeps. Right-click to burst upwards
 // (about seven blocks, with a soft landing); it is used up.
 item('gale_rod', 'Gale Rod', { galeRod: true, iconStyle: ['stick', { s: '#bfe4f0' }] });
-
-// Starred Sky Rockets (reference: firework rockets with a star): a rocket crafted with a dye bursts in that
-// colour and the burst hurts everything within 5 blocks (entities/skyRocket.js). One per colour, appended.
-export const STAR_ROCKETS = [];
-COLORS.forEach(([key, name, rgb], c) => {
-  STAR_ROCKETS[c] = item(`${key}_sky_rocket`, `${name} Sky Rocket`, { rocket: true, starred: true, rocketColor: rgb.map((v) => Math.round(v / 255 * 100) / 100), iconStyle: [ICON_ROCKET, { h: `rgb(${rgb.join(',')})`, H: `rgb(${rgb.map((v) => Math.min(255, v + 50)).join(',')})`, w: '#f4f0e4', s: '#7a5a32' }] }).id;
-});
+// Tattered Book (world/books.js): what a copy of a copy turns into. It is read like a Written Book (it keeps its
+// title, author and pages) but it can never be copied again.
+item('tattered_book', 'Tattered Book', { stack: 16, written: true, tattered: true, iconStyle: ['book', { h: '#5a4a3a', H: '#7a6650', w: '#cdbf9c' }] });
+// Firework Stars (entities/skyRocket.js; reference: firework stars): blast powder and a dye (white: bone meal) press a
+// star of that colour; paper, blast powder and a star make three Star Rockets that burst in the star's colour and hurt
+// mobs near the burst. One item per colour, so the colour travels with the stack through saves, chests and the network.
+export const FIREWORK_STARS = [], STAR_ROCKETS = [];
+{
+  const hex = (rgb, k = 1) => '#' + rgb.map((v) => Math.min(255, Math.round(v * k)).toString(16).padStart(2, '0')).join('');
+  COLORS.forEach(([key, name, rgb], c) => {
+    FIREWORK_STARS[c] = item(`${key}_firework_star`, `${name} Firework Star`, { star: c, iconStyle: ['pearl', { h: hex(rgb) }] }).id;
+    STAR_ROCKETS[c] = item(`${key}_star_rocket`, `${name} Star Rocket`, { rocket: true, rocketStar: c, iconStyle: [ICON_ROCKET, { h: hex(rgb), H: hex(rgb, 1.25), w: '#f4f0e4', s: '#7a5a32' }] }).id;
+  });
+}
 
 /** Light level (0-15) an item gives when held: a torch, lantern or other light block; 0 for the rest. */
 /** Is this item an arrow a bow can shoot (plain or tipped)? */
