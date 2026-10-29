@@ -31,7 +31,7 @@ export function leashPull(d) {
 
 /** Can this mob be put on a lead? Animals only (not settlers, not monsters, not the ridden or dying). */
 export function canLeash(mob) {
-  return !!(mob && mob.kind === 'mob' && mob.def && mob.def.category === 'creature' && !mob.def.villager && !mob.def.aquatic && mob.deathTime === 0 && !mob.dead);
+  return !!(mob && mob.kind === 'mob' && mob.def && mob.def.category === 'creature' && !mob.def.villager && !mob.def.trader && !mob.def.aquatic && mob.deathTime === 0 && !mob.dead);
 }
 
 /** Is block `id` a fence post a lead can be tied to? */

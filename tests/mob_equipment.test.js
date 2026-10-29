@@ -77,9 +77,9 @@ describe('equipment rolls', () => {
     let normal = 0, hard = 0, swords = 0;
     for (let k = 0; k < N; k++) {
       const a = rollEquipment('shambler', 0, 'normal', r).hand;
-      if (a) normal++;
+      if (a && a.id !== I.IRON_AXE) normal++; // (the rare axe is rolled on top, see the axe test)
       const b = rollEquipment('dune_shambler', 0, 'hard', r).hand;
-      if (b) { hard++; if (b.id === I.IRON_SWORD) swords++; else expect(b.id).toBe(I.IRON_SHOVEL); }
+      if (b && b.id !== I.IRON_AXE) { hard++; if (b.id === I.IRON_SWORD) swords++; else expect(b.id).toBe(I.IRON_SHOVEL); }
     }
     expect(normal / N).toBeCloseTo(0.01, 2);
     expect(hard / N).toBeCloseTo(0.05, 2);

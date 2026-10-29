@@ -8,6 +8,7 @@ import { armorTotals } from '../player/armor.js';
 import { xpToNextLevel } from '../player/experience.js';
 import { PlayerMarkers } from './playerMarkers.js';
 import { dashGauge } from '../mobs/duneStrider.js';
+import { shieldGauge } from '../player/shield.js';
 import { paintGhostFace, ghostPose, GHOST_TICKS } from './ghostFace.js';
 
 const svg = (inner) => `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" shape-rendering="crispEdges">${inner}</svg>`)}`;
@@ -56,6 +57,7 @@ export class HUD {
         <div id="bars2" style="width:calc(var(--slot) * 9 + 8px);display:flex;justify-content:space-between"><div class="bar" id="armor"></div><div class="bar right" id="air"></div></div>
         <div id="bars"><div class="bar" id="health"></div><div class="bar right" id="food"></div></div>
         <div id="dashbar" class="hidden" title="Dash"><div></div></div>
+        <div id="shieldbar" class="hidden" title="Shield knocked down"><div></div></div>
         <div id="xpbar"><div id="xpfill"></div><span id="xplevel"></span></div>
         <div class="hotbar" id="hotbar"></div>
       </div>`;
@@ -255,6 +257,11 @@ export class HUD {
       dashEl.classList.toggle('charging', gge.charging);
       dashEl.classList.toggle('cooling', !gge.charging && gge.ready < 1);
     }
+    // a shield knocked down by an axe: a bar fills while it recovers
+    const sg = shieldGauge(p.shield);
+    const shEl = this.shieldEl || (this.shieldEl = this.root.querySelector('#shieldbar'));
+    shEl.classList.toggle('hidden', sg === null);
+    if (sg !== null) shEl.firstChild.style.width = `${Math.round(sg * 100)}%`;
     // overlays
     const b = p.body;
     this.ov.water.classList.toggle('hidden', !b.eyeInWater);

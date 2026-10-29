@@ -11,6 +11,7 @@ import { armorReduce, armorTotals, wearArmor, BYPASSES_ARMOR } from './armor.js'
 import { newXp } from './experience.js';
 import { protectionFactor, protectionReduce } from '../world/enchantments.js';
 import { crawlNext } from './crawl.js';
+import { newShield, shieldTick } from './shield.js';
 import { gliderUsable, canStartGliding, glideStep, rocketBoost, wallDamage, wearsThisTick } from './glider.js';
 import { EFFECTS, addEffect as stackEffect, tickEffects, effectLevel, speedFactor, jumpBonus, fallDamageWithEffects, periodicActions, instantAmount, resistanceFactor } from './effects.js';
 
@@ -43,6 +44,7 @@ export class Player {
     this.gamemode = 'survival';  // or 'creative'
     this.flying = false;
     this.xpDelay = 0;           // ticks until the next orb can be absorbed
+    this.shield = newShield();  // cooldown of a shield knocked down by an axe, ticks raised (player/shield.js)
     this.enchSeed = (Math.random() * 0x7fffffff) | 0; // enchanting-table offers stay put until something is enchanted
   }
 
@@ -85,7 +87,7 @@ export class Player {
       else if (this.difficulty === 'hard') amount *= 1.5;
     }
     // a raised shield stops hits and arrows from in front (within 90 degrees of the view)
-    if (this.blocking && attacker && attacker.x !== undefined && source !== 'fall' && source !== 'fire' && source !== 'drown' && source !== 'starve') {
+    if (this.blocking && this.shield.cooldown <= 0 && attacker && attacker.x !== undefined && source !== 'fall' && source !== 'fire' && source !== 'drown' && source !== 'starve') {
       const dx = attacker.x - this.x, dz = attacker.z - this.z, d = Math.hypot(dx, dz) || 1;
       const lx = -Math.sin(this.yaw), lz = -Math.cos(this.yaw);
       if ((dx * lx + dz * lz) / d > 0) {
@@ -210,6 +212,8 @@ export class Player {
     if (this.xpDelay > 0) this.xpDelay--;
     if (this.hurtTime > 0) this.hurtTime--;
     this.attackTicks++;
+    shieldTick(this.shield, this.blocking);
+    if (this.shield.cooldown > 0) this.blocking = false;
 
     // Sneaking changes the hitbox height (only if there is room to stand)
     if (this.flyGrace > 0) this.flyGrace--;

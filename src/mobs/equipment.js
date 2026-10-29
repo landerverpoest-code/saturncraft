@@ -85,10 +85,14 @@ export function rollEquipment(type, clamped, difficulty = 'normal', rng = Math.r
   }
   if (kind === 'melee' && rng() < (hard ? 0.05 : 0.01)) {
     eq.hand = { id: Math.floor(rng() * 3) === 0 ? I.IRON_SWORD : I.IRON_SHOVEL, count: 1, damage: 0 };
+  } else if (kind === 'melee' && rng() < (hard ? AXE_CHANCE_HARD : AXE_CHANCE)) {
+    eq.hand = { id: I.IRON_AXE, count: 1, damage: 0 }; // an axe blow knocks a shield down (player/shield.js)
   }
   return eq;
 }
 
+/** Chance (on top of the sword and shovel roll) that a melee mob holds an iron axe. */
+export const AXE_CHANCE = 0.006, AXE_CHANCE_HARD = 0.03;
 export const ENCHANT_ARMOR_CHANCE = 0.5, ENCHANT_WEAPON_CHANCE = 0.25;
 
 /** The enchantment level of spawned gear: 5 + rnd(18 x clamped difficulty), at most 22. */
@@ -153,7 +157,8 @@ export function weaponBonus(st) {
   const t = st && ITEMS[st.id] && ITEMS[st.id].tool;
   if (!t) return 0;
   const keen = enchLevel(st, 'keen'); // a Keen blade cuts deeper: 0.5 x level + 0.5
-  return Math.max(0, t.damage - 1) + (keen ? 0.5 * keen + 0.5 : 0);
+  const dmg = t.type === 'axe' ? Math.min(t.damage, 6) : t.damage; // a mob's axe hits like a sword, however hard a player's would
+  return Math.max(0, dmg - 1) + (keen ? 0.5 * keen + 0.5 : 0);
 }
 
 /** Strongdraw level of the bow in a mob's hand (it adds to its arrows' damage). */
