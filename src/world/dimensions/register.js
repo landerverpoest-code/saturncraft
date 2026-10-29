@@ -1,6 +1,6 @@
 // Recipes, smelting and milestones added by the Cinderdeep and the Hollow.
 import { B } from '../blocks.js';
-import { I } from '../items.js';
+import { I, STAR_ROCKETS, DYES } from '../items.js';
 import { RECIPES, SMELTING } from '../../player/crafting.js';
 import { MILESTONES } from '../../player/milestones.js';
 
@@ -23,6 +23,8 @@ if (!RECIPES.some((r) => r.result === B.GLOOMSHELL_BOX)) {
   shaped(['SS', 'SS'], { S: B.HOLLOWSTONE }, B.HOLLOWSTONE_BRICKS, 4);
   shaped(['R', 'P'], { R: I.EMBER_ROD, P: I.POPPED_HUSHFRUIT }, B.WISP_ROD, 4);
   shapeless([I.PAPER, I.GUNPOWDER], I.SKY_ROCKET, 3);
+  // with a dye (bone meal for white) the rockets burst in that colour and hurt (entities/skyRocket.js)
+  STAR_ROCKETS.forEach((id, c) => shapeless([I.PAPER, I.GUNPOWDER, c === 0 ? I.BONE_MEAL : DYES[c]], id, 3));
   shaped(['S', 'C', 'S'], { S: I.GLOOMSHELL_HUSK, C: B.CHEST }, B.GLOOMSHELL_BOX, 1);
 }
 SMELTING[I.HUSHFRUIT] = I.POPPED_HUSHFRUIT;

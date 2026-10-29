@@ -3,16 +3,30 @@
 // 20-31 ticks and burst into a ring of coloured sparks (decoration only).
 // Used while gliding they ride along with the player and push the Voidwing
 // (Player.boostTicks, see player/glider.js rocketBoost), trailing sparks.
+// A starred rocket (crafted with a dye, items.js STAR_ROCKETS) bursts in that colour and its burst hurts
+// everything within STAR_RADIUS blocks for STAR_DAMAGE (the rider of a gliding one included).
 import * as THREE from 'three';
 import { SOLID } from '../world/blocks.js';
 import { rocketLifetime } from '../player/glider.js';
+
+export const STAR_RADIUS = 5;
+export const STAR_DAMAGE = 5;
+
+/** Everything a starred burst at (x, y, z) hurts: living mobs and the (non-creative) player whose middle is within STAR_RADIUS. */
+export function burstTargets(list, player, x, y, z, radius = STAR_RADIUS) {
+  const out = [];
+  const near = (e, cy) => Math.hypot(e.x - x, cy - y, e.z - z) <= radius;
+  for (const e of list) if (e && e.kind === 'mob' && e.deathTime === 0 && typeof e.hurt === 'function' && near(e, e.y + (e.height || 0) * 0.5)) out.push(e);
+  if (player && !player.dead && !player.creative && near(player, player.y + 0.9)) out.push(player);
+  return out;
+}
 
 let nextId = 7_000_000;
 const PALETTES = [[1, 0.35, 0.3], [0.4, 0.8, 1], [1, 0.85, 0.3], [0.7, 0.45, 1], [0.45, 1, 0.55], [1, 0.55, 0.9]];
 
 export class SkyRocket {
   /** `rider`: the gliding player it pushes (or null for a free rocket). */
-  constructor(x, y, z, rider = null, rng = Math.random) {
+  constructor(x, y, z, rider = null, rng = Math.random, star = null) {
     this.id = nextId++;
     this.kind = 'rocket';
     this.x = x; this.y = y; this.z = z;
@@ -21,7 +35,8 @@ export class SkyRocket {
     this.vx = (rng() - 0.5) * 0.023; this.vz = (rng() - 0.5) * 0.023; this.vy = 0.05;
     this.life = rocketLifetime(1, rng);
     this.age = 0; this.dead = false;
-    this.color = PALETTES[Math.floor(rng() * PALETTES.length)];
+    this.starred = !!star;
+    this.color = star ? star.slice() : PALETTES[Math.floor(rng() * PALETTES.length)];
   }
 
   tick(game) {
@@ -31,7 +46,7 @@ export class SkyRocket {
       // riding along: sparks behind the glider
       this.x = r.x; this.y = r.y + 0.3; this.z = r.z;
       game.particles.emit(this.x, this.y, this.z, -r.body.vx * 0.3, -r.body.vy * 0.3, -r.body.vz * 0.3, 1, 0.8, 0.5, 14, 0);
-      if (++this.age >= this.life || r.dead || !r.gliding) this.dead = true;
+      if (++this.age >= this.life || r.dead || !r.gliding) { if (this.starred && !r.dead) this.burst(game); else this.dead = true; }
       return;
     }
     this.vx *= 1.15; this.vz *= 1.15; this.vy += 0.04;
@@ -52,6 +67,7 @@ export class SkyRocket {
       game.particles.emit(this.x, this.y, this.z, Math.cos(a) * s * sp, u * sp, Math.sin(a) * s * sp, cr * w, cg * w, cb * w, 30 + Math.random() * 15, 0.004);
     }
     game.audio.play('rocket_burst', [this.x, this.y, this.z]);
+    if (this.starred) for (const e of burstTargets(game.entities ? game.entities.list : [], game.localPlayer || game.player, this.x, this.y, this.z)) e.hurt(STAR_DAMAGE, 'firework');
   }
 
   createMesh() {
@@ -70,17 +86,17 @@ export class SkyRocket {
  * Use a Sky Rocket: while gliding it boosts the glider; aimed at a block it
  * launches from that face. Returns true if one was used.
  */
-export function useSkyRocket(game, target) {
+export function useSkyRocket(game, target, star = null) {
   const p = game.player;
   if (p.gliding) {
-    const r = game.entities.add(new SkyRocket(p.x, p.y, p.z, p));
+    const r = game.entities.add(new SkyRocket(p.x, p.y, p.z, p, Math.random, star));
     p.boostTicks = r.life;
     game.audio.play('rocket', [p.x, p.y, p.z]);
     return true;
   }
   if (!target) return false;
   const x = target.x + 0.5 + target.face[0] * 0.6, y = target.y + 0.5 + target.face[1] * 0.6, z = target.z + 0.5 + target.face[2] * 0.6;
-  game.entities.add(new SkyRocket(x, y, z, null));
+  game.entities.add(new SkyRocket(x, y, z, null, Math.random, star));
   game.audio.play('rocket', [x, y, z]);
   return true;
 }

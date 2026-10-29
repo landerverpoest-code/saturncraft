@@ -45,6 +45,7 @@ import { addXp } from '../player/experience.js';
 import { MAX_USES } from '../mobs/trades.js';
 import { claimSeat } from '../mobs/duneStrider.js';
 import { EFFECTS } from '../player/effects.js';
+import { FATIGUE_AMP, FATIGUE_TICKS, needsFatigue } from '../mobs/oceanMobs.js';
 import { runCommand } from '../ui/commands.js';
 import { DIMENSIONS } from '../world/dimensions/dims.js';
 import { POTIONS } from '../world/potions.js';
@@ -979,7 +980,11 @@ export class ClientSession extends Session {
       case 'eff': // an effect laid on us on the host (a mob's hit or arrow, a splash, Levitation, Mining Fatigue)
         if (typeof m.e !== 'string' || !EFFECTS[m.e]) break;
         if (m.f !== undefined) p.applyEffect(m.e, Math.max(0, Math.min(1e6, m.d | 0)), Math.max(0, Math.min(255, m.a | 0)), Math.max(0, Math.min(1, +m.f || 0)));
-        else if (!EFFECTS[m.e].instant) p.addEffect(m.e, Math.max(0, Math.min(72000, m.d | 0)), Math.max(0, Math.min(10, m.a | 0)));
+        else if (!EFFECTS[m.e].instant) {
+          // an Elder Deepeye's curse (reference: elder guardian) also shows its ghost to the guest it lands on
+          if (m.e === 'mining_fatigue' && (m.a | 0) === FATIGUE_AMP && (m.d | 0) === FATIGUE_TICKS && needsFatigue(p.effects, p.creative) && g.hud && g.hud.showGhostFace) g.hud.showGhostFace();
+          p.addEffect(m.e, Math.max(0, Math.min(72000, m.d | 0)), Math.max(0, Math.min(10, m.a | 0)));
+        }
         break;
       case 'got': {
         const got = copyStack(m.st);

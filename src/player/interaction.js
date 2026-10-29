@@ -262,7 +262,7 @@ export class Interaction {
     }
     // Sky Rockets: a boost while gliding, or launched from the clicked block
     if (d && d.rocket && input.rightPressed && !(this.target && USABLE_BLOCKS.has(this.target.id) && !p.sneaking)) {
-      if (useSkyRocket(g, this.target)) { if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1); this.swing = SWING_TICKS; }
+      if (useSkyRocket(g, this.target, d.rocketColor || null)) { if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1); this.swing = SWING_TICKS; }
       return;
     }
     // a Gale Rod: burst upwards (mobs/gustling.js)

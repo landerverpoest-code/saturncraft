@@ -364,6 +364,13 @@ item('proving_key', 'Proving Key', { provingKey: true, iconStyle: [ICON_PROVING_
 // (about seven blocks, with a soft landing); it is used up.
 item('gale_rod', 'Gale Rod', { galeRod: true, iconStyle: ['stick', { s: '#bfe4f0' }] });
 
+// Starred Sky Rockets (reference: firework rockets with a star): a rocket crafted with a dye bursts in that
+// colour and the burst hurts everything within 5 blocks (entities/skyRocket.js). One per colour, appended.
+export const STAR_ROCKETS = [];
+COLORS.forEach(([key, name, rgb], c) => {
+  STAR_ROCKETS[c] = item(`${key}_sky_rocket`, `${name} Sky Rocket`, { rocket: true, starred: true, rocketColor: rgb.map((v) => Math.round(v / 255 * 100) / 100), iconStyle: [ICON_ROCKET, { h: `rgb(${rgb.join(',')})`, H: `rgb(${rgb.map((v) => Math.min(255, v + 50)).join(',')})`, w: '#f4f0e4', s: '#7a5a32' }] }).id;
+});
+
 /** Light level (0-15) an item gives when held: a torch, lantern or other light block; 0 for the rest. */
 /** Is this item an arrow a bow can shoot (plain or tipped)? */
 export const isArrow = (id) => id === I.ARROW || !!(ITEMS[id] && ITEMS[id].tipped);

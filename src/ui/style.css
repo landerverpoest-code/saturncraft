@@ -302,3 +302,7 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 .screen .book-signing p.sub { color: #4a3a2a; text-align: center; margin: 4px 0; }
 .book-ok:disabled { opacity: .5; cursor: default; }
 .book-actions .btn { min-width: 140px; }
+
+/* The Elder Deepeye's ghost (ui/ghostFace.js): centred, pixelated, over everything in the view */
+#overlay-ghost { position: absolute; left: 50%; top: 50%; width: 25vh; height: 25vh; transform: translate(-50%, -50%); pointer-events: none; image-rendering: pixelated; filter: drop-shadow(0 0 2vh rgba(150, 130, 230, .6)); z-index: 3; }
+#overlay-ghost.hidden { display: none; }

@@ -143,7 +143,8 @@ function elderAI(m, g, p) {
     if (!needsFatigue(pl.effects, pl.creative)) continue;
     pl.addEffect('mining_fatigue', FATIGUE_TICKS, FATIGUE_AMP);
     g.audio.play('scream', [pl.x, pl.y + 1.6, pl.z], 0.5);
-    // a pale ghost of the elder's eye flickers before the player
+    // a pale ghost of the elder's face swells out of the screen (ui/ghostFace.js) with a few wisps before the player
+    if (g.hud && g.hud.showGhostFace) g.hud.showGhostFace();
     if (g.particles) {
       const lx = -Math.sin(pl.yaw || 0), lz = -Math.cos(pl.yaw || 0);
       for (let k = 0; k < 30; k++) g.particles.emit(pl.x + lx * 2 + (Math.random() - 0.5) * 1.2, pl.y + 1.6 + (Math.random() - 0.5) * 1.2, pl.z + lz * 2 + (Math.random() - 0.5) * 1.2, 0, 0.01, 0, 0.75, 0.72, 0.85, 30, 0);
