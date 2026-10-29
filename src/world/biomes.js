@@ -9,6 +9,7 @@ export const BIOME = {
   SWAMP: 11, JUNGLE: 12, SAVANNA: 13, BADLANDS: 14, DARK_FOREST: 15,
   MUSHROOM_FIELDS: 16, SNOWY_TAIGA: 17, FLOWER_FOREST: 18, BLOSSOM_GROVE: 19, MANGROVE_SWAMP: 20,
   RIVER: 21, FROZEN_RIVER: 22,
+  HIGHLAND_MEADOW: 23,
 };
 
 export const BIOMES = [
@@ -36,6 +37,8 @@ export const BIOMES = [
   // rivers wind across the land (generator.js riverField); `water` tints their water
   { id: 21, key: 'river', name: 'River', temp: 0.5, humid: 0.5, water: [178, 226, 214] },
   { id: 22, key: 'frozen_river', name: 'Frozen River', temp: 0.0, humid: 0.5, water: [196, 214, 255] },
+  // high mountain pastures under the bare summits, threaded by cascades (world/highlands.js)
+  { id: 23, key: 'highland_meadow', name: 'Highland Meadow', temp: 0.55, humid: 0.7, grass: [128, 206, 92], foliage: [96, 184, 72] },
 ];
 
 export function biomeName(id) { return BIOMES[id] ? BIOMES[id].name : '?'; }

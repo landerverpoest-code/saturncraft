@@ -7,7 +7,7 @@
 // and everything carved below y -55 fills with lava.
 import { B } from './blocks.js';
 import { MIN_Y, SEA_LEVEL, cidx } from './constants.js';
-import { hash4, mulberry32 } from './noise.js';
+import { hash4, hashf, mulberry32 } from './noise.js';
 
 export const CARVE_RANGE = 8;
 const LAVA_LEVEL = -55;
@@ -133,4 +133,51 @@ function carveEllipsoid(ctx, cx, cy, cz, h, v, pool, ravine) {
       ctx.carved++;
     }
   }
+}
+
+// ---- Great Rifts -------------------------------------------------------------------------------
+// Rare, very wide and very deep canyons (a ravine made far bigger) that run for a hundred blocks,
+// often breaking through to the open sky, with lava lapping at the bottom of the deepest. They are
+// a separate pass after carveChunk, with their own seeds, so the tunnels and ravines above come out
+// exactly as before. Only the rare source chunks that start a rift cost anything: the other
+// sources are rejected by one hash, and the paths of those that do start one are kept.
+export const RIFT_CHANCE = 1 / 300;   // per source chunk
+const RIFT_CACHE_MAX = 256;
+const riftCache = new Map();
+
+/** Does source chunk (sx, sz) start a Great Rift? */
+export function riftStarts(seed, sx, sz) { return hashf(seed, sx, sz, 702) < RIFT_CHANCE; }
+
+/** The spheres of the rift that starts in source chunk (sx, sz) (empty when it starts none). */
+export function riftPaths(seed, sx, sz) {
+  if (!riftStarts(seed, sx, sz)) return NO_PATH;
+  const key = `${seed}:${sx}:${sz}`;
+  let ops = riftCache.get(key);
+  if (ops) return ops;
+  const out = [];
+  const r = mulberry32(hash4(seed, sx, sz, 703));
+  const x = sx * 16 + Math.floor(r() * 16), z = sz * 16 + Math.floor(r() * 16);
+  const y = 24 + Math.floor(r() * 36);
+  // width 3.5 - 11: a canyon 8 - 25 blocks across at its widest and up to a hundred deep
+  tunnel(out, r, x, y, z, 3.5 + r() * 4 + r() * 3.5, r() * Math.PI * 2, (r() - 0.5) / 6, 0, 0, 4, true, null);
+  ops = out.length ? Float64Array.from(out) : NO_PATH;
+  riftCache.set(key, ops);
+  if (riftCache.size > RIFT_CACHE_MAX) riftCache.delete(riftCache.keys().next().value);
+  return ops;
+}
+
+/** Carve the Great Rifts that pass through chunk (cx, cz). Returns the number of blocks carved. */
+export function carveRifts(seed, cx, cz, blocks, surface) {
+  const ctx = { blocks, surface, x0: cx * 16, z0: cz * 16, carved: 0 };
+  const { x0, z0 } = ctx;
+  for (let sx = cx - CARVE_RANGE; sx <= cx + CARVE_RANGE; sx++) for (let sz = cz - CARVE_RANGE; sz <= cz + CARVE_RANGE; sz++) {
+    if (!riftStarts(seed, sx, sz)) continue;
+    const ops = riftPaths(seed, sx, sz);
+    for (let i = 0; i < ops.length; i += OP) {
+      const x = ops[i], z = ops[i + 2], h = ops[i + 3];
+      if (x + h < x0 - 1 || x - h > x0 + 17 || z + h < z0 - 1 || z - h > z0 + 17) continue;
+      carveEllipsoid(ctx, x, ops[i + 1], z, h, ops[i + 4], null, true);
+    }
+  }
+  return ctx.carved;
 }
