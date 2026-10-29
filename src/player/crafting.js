@@ -383,6 +383,8 @@ BOX_COLORS.forEach((id, c) => shapeless(['box', DYES[c] || I.BONE_MEAL], id, 1))
 // job-site blocks for shepherds and fletchers (mobs/jobSites.js)
 shaped(['SS', 'PP'], { S: I.STRING, P: 'planks' }, B.LOOM, 1);
 shaped(['FF', 'PP', 'PP'], { F: I.FLINT, P: 'planks' }, B.FLETCHING_TABLE, 1);
+// ...and for cartographers: two sheets of paper over four planks
+shaped(['AA', 'PP', 'PP'], { A: I.PAPER, P: 'planks' }, B.CARTOGRAPHY_DESK, 1);
 
 // Smelting: input -> output; 200 ticks per item (10 s)
 export const SMELT_TIME = 200;

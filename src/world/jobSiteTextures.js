@@ -1,4 +1,4 @@
-// Procedural textures of the Loom and the Fletching Table (job-site blocks, see
+// Procedural textures of the Loom, the Fletching Table and the Cartography Desk (job-site blocks, see
 // mobs/jobSites.js). Merged into textures.js like the other texture modules;
 // each painter gets (canvas, { hex, mix, shade, planks }).
 
@@ -55,5 +55,32 @@ export const JOBSITE_TEX = {
       c.set(x - 1, 12, hex('#f4f0e8')); c.set(x + 1, 12, hex('#f4f0e8')); c.set(x - 1, 13, hex('#e0dcd0')); c.set(x + 1, 13, hex('#e0dcd0'));
     }
     for (let x = 2; x < 14; x++) c.set(x, 8, shade(hex('#7a5a34'), 1));
+  },
+  // Cartography Desk: dark spruce boards; the top holds a sheet of parchment with a compass rose and a dotted route
+  cartography_desk_top: (c, { hex, shade, planks }) => {
+    planks(c, '#6e5232');
+    frame(c, hex, '#3e2c18');
+    for (let y = 2; y < 14; y++) for (let x = 2; x < 14; x++) c.set(x, y, shade(hex('#e6d8a8'), 0.93 + c.h(x, y) * 0.1));
+    for (let i = -4; i <= 4; i++) { c.set(8 + i, 8, hex('#7a3a2a')); c.set(8, 8 + i, hex('#7a3a2a')); } // the rose: north-south and east-west
+    c.set(8, 3, hex('#b02828')); c.set(8, 4, hex('#b02828')); // its north point
+    for (const [x, y] of [[3, 12], [4, 11], [5, 12], [6, 11], [10, 4], [11, 5], [12, 4]]) c.set(x, y, hex('#3a4a8a')); // a dotted route
+    c.set(12, 12, hex('#b02828')); c.set(11, 11, hex('#b02828')); c.set(13, 11, hex('#b02828')); c.set(11, 13, hex('#b02828')); c.set(13, 13, hex('#b02828')); // and a cross
+  },
+  cartography_desk_side: (c, { hex, shade, planks }) => {
+    planks(c, '#6e5232');
+    for (let x = 0; x < 16; x++) { c.set(x, 0, hex('#3e2c18')); c.set(x, 1, hex('#5a4226')); }
+    for (let y = 0; y < 16; y++) { c.set(0, y, shade(hex('#3e2c18'), 1)); c.set(15, y, shade(hex('#3e2c18'), 1)); }
+  },
+  // the front: a pigeonhole shelf of rolled charts tied with coloured cord, over a drawer
+  cartography_desk_front: (c, { hex, shade, planks }) => {
+    JOBSITE_TEX.cartography_desk_side(c, { hex, shade, planks });
+    for (let x = 2; x < 14; x++) { c.set(x, 2, hex('#3e2c18')); c.set(x, 8, hex('#3e2c18')); }
+    [['#e6d8a8', '#b02828'], ['#dccc98', '#3a4a8a'], ['#ece0b8', '#2a7a4a']].forEach(([paper, cord], k) => {
+      const x0 = 3 + k * 4;
+      for (let y = 3; y < 8; y++) for (let x = x0; x < x0 + 3; x++) c.set(x, y, shade(hex(paper), 0.9 + c.h(x, y) * 0.1));
+      for (let x = x0; x < x0 + 3; x++) c.set(x, 5, hex(cord));
+    });
+    for (let y = 10; y < 14; y++) for (let x = 3; x < 13; x++) c.set(x, y, shade(hex('#7a5c38'), 0.95 + c.h(x, y) * 0.1));
+    c.set(7, 12, hex('#d8c070')); c.set(8, 12, hex('#d8c070'));
   },
 };

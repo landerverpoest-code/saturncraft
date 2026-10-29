@@ -378,6 +378,18 @@ export const FIREWORK_STARS = [], STAR_ROCKETS = [];
   });
 }
 
+// Explorer Charts (world/landmarks.js; reference: explorer maps): used like an Empty Map, a chart is spent on a map of
+// the square round the nearest structure of its kind, surveyed from the terrain and with the structure marked.
+// Cartographer settlers sell them; wreck map chests hold some. One item per kind, so the kind travels with the stack.
+export const CHARTS = {};
+for (const [kind, name, p, e, g, w] of [
+  ['sunken', 'Sunken Ruins Chart', '#d8e4e8', '#4a7a9a', '#3a7ae0', '#2a5ab0'],
+  ['tomb', 'Sun Tomb Chart', '#ecdcae', '#b08830', '#d8b848', '#c89838'],
+  ['skywatch', 'Skywatch Chart', '#e8e8f0', '#8a90a8', '#a8b8d0', '#7888b0'],
+  ['citadel', 'Tide Citadel Chart', '#d0ece4', '#2a8a80', '#30c0b0', '#1a6a9a'],
+  ['outpost', 'Outpost Chart', '#e4d4b8', '#8a3028', '#c03030', '#7a5a3a'],
+]) CHARTS[kind] = item(`chart_${kind}`, name, { stack: 16, chart: kind, iconStyle: ['map', { p, e, g, w }] }).id;
+
 /** Light level (0-15) an item gives when held: a torch, lantern or other light block; 0 for the rest. */
 /** Is this item an arrow a bow can shoot (plain or tipped)? */
 export const isArrow = (id) => id === I.ARROW || !!(ITEMS[id] && ITEMS[id].tipped);

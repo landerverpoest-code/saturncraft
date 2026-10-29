@@ -1,7 +1,7 @@
 // Settler trades: every settler buys one kind of goods for beryl and sells two
 // or three things for it, depending on its profession. Each offer works 12
 // times, then restocks after half a day.
-import { I, WOOL_ITEMS, TIPPED_ARROW } from '../world/items.js';
+import { I, WOOL_ITEMS, TIPPED_ARROW, CHARTS } from '../world/items.js';
 import { B } from '../world/blocks.js';
 
 const BUY = 'buy', SELL = 'sell';
@@ -16,7 +16,15 @@ const OFFERS = {
     [SELL, I.BERYL, 2, TIPPED_ARROW.poison, 5], [SELL, I.BERYL, 2, TIPPED_ARROW.slowness, 5]],
   cleric: [[BUY, I.ROTTEN_FLESH, 32, I.BERYL, 1], [BUY, I.GOLD_INGOT, 3, I.BERYL, 1], [SELL, I.BERYL, 1, I.CINNABAR, 2], [SELL, I.BERYL, 1, I.AZURITE, 1], [SELL, I.BERYL, 4, I.GLOWSHARD_DUST, 4],
     [SELL, I.BERYL, 8, I.GILDED_APPLE, 1], [SELL, I.BERYL, 3, I.GLASS_VIAL, 4], [SELL, I.BERYL, 24, I.CHARM_OF_UNDYING, 1]],
+  // Cartographers (Cartography Desk): buy paper, ink and compasses; sell maps, compasses and clocks and Explorer Charts (world/landmarks.js, dearer for the harder places). Every cartographer stocks at least one chart (see GUARANTEED).
+  cartographer: [[BUY, I.PAPER, 24, I.BERYL, 1], [BUY, I.INK_SAC, 16, I.BERYL, 1], [BUY, I.COMPASS, 2, I.BERYL, 1],
+    [SELL, I.BERYL, 2, I.EMPTY_MAP, 1], [SELL, I.BERYL, 3, I.COMPASS, 1], [SELL, I.BERYL, 4, I.CLOCK, 1],
+    [SELL, I.BERYL, 8, CHARTS.outpost, 1], [SELL, I.BERYL, 10, CHARTS.skywatch, 1], [SELL, I.BERYL, 11, CHARTS.sunken, 1],
+    [SELL, I.BERYL, 12, CHARTS.tomb, 1], [SELL, I.BERYL, 14, CHARTS.citadel, 1]],
 };
+const CHART_IDS = new Set(Object.values(CHARTS));
+/** Trades whose list always holds at least one offer that passes the test (the first sell is picked among those). */
+const GUARANTEED = { cartographer: (o) => CHART_IDS.has(o[3]) };
 export const MAX_USES = 12;
 export const RESTOCK_TICKS = 12000;
 
@@ -28,7 +36,13 @@ export function makeTrades(profession, rng = Math.random) {
   const chosen = [pick(buys.slice())];
   const pool = sells.slice();
   const n = 2 + (rng() < 0.5 ? 1 : 0);
-  for (let k = 0; k < n && pool.length; k++) chosen.push(pick(pool));
+  const must = GUARANTEED[profession];
+  if (must) { // e.g. a cartographer always stocks a chart: take one of those first
+    const first = pick(pool.filter(must));
+    pool.splice(pool.indexOf(first), 1);
+    chosen.push(first);
+  }
+  for (let k = 0; k < n - (must ? 1 : 0) && pool.length; k++) chosen.push(pick(pool));
   return chosen.map(([, give, gn, get, getn]) => ({ give, giveCount: gn, get, getCount: getn, uses: 0 }));
 }
 

@@ -7,6 +7,7 @@
 import { B, BLOCKS } from './blocks.js';
 import { BIOMES } from './biomes.js';
 import { FACE_TILE, TEX_NAMES, texturePixels, grassColor, foliageColor } from './textures.js';
+import { isLandmarkKind } from './landmarkKinds.js';
 
 export const MAP_SIZE = 128;
 export const MAP_VIEW = 64; // how far from the holder the map draws
@@ -87,6 +88,11 @@ export function drawColumn(map, world, mx, mz) {
     const yn = world.heightAt(x, z - 1);
     f = y > yn ? 1.1 : y < yn ? 0.8 : 0.94;
   }
+  setPixel(map, mx, mz, c, f);
+}
+
+/** Set one map pixel to colour `c` (r, g, b) times the shade `f`; counts it as filled the first time. */
+export function setPixel(map, mx, mz, c, f = 1) {
   const o = (mz * MAP_SIZE + mx) * 3;
   if (!map.px[o] && !map.px[o + 1] && !map.px[o + 2]) map.filled++;
   for (let k = 0; k < 3; k++) map.px[o + k] = Math.max(1, Math.min(255, Math.round(c[k] * f)));
@@ -99,11 +105,28 @@ export const mapPos = (map, x, z) => [x - map.x0, z - map.z0];
 export function encodeMap(m) {
   let s = '';
   for (let i = 0; i < m.px.length; i += 8192) s += String.fromCharCode(...m.px.subarray(i, i + 8192));
-  return { id: m.id, x0: m.x0, z0: m.z0, dimension: m.dimension, filled: m.filled, px: btoa(s) };
+  const d = { id: m.id, x0: m.x0, z0: m.z0, dimension: m.dimension, filled: m.filled, px: btoa(s) };
+  if (m.marks && m.marks.length) d.marks = m.marks.map((k) => (k.target ? [k.kind, k.x, k.z, 1] : [k.kind, k.x, k.z]));
+  return d;
 }
 export function decodeMap(d) {
   if (!d || !Number.isInteger(d.id) || typeof d.px !== 'string') return null;
   const m = { id: d.id, x0: d.x0 | 0, z0: d.z0 | 0, dimension: d.dimension || 'overworld', filled: d.filled | 0, px: new Uint8Array(MAP_SIZE * MAP_SIZE * 3) };
   try { const s = atob(d.px); for (let i = 0; i < Math.min(s.length, m.px.length); i++) m.px[i] = s.charCodeAt(i); } catch { /* keep blank */ }
+  const marks = cleanMarks(d.marks, m);
+  if (marks.length) m.marks = marks;
   return m;
+}
+
+/** Saved landmark marks, checked: [{ kind, x, z, target? }] inside the map's square, at most 48. */
+function cleanMarks(list, m) {
+  const out = [];
+  if (!Array.isArray(list)) return out;
+  for (const e of list) {
+    if (!Array.isArray(e) || !isLandmarkKind(e[0]) || !Number.isInteger(e[1]) || !Number.isInteger(e[2])) continue;
+    if (e[1] < m.x0 || e[2] < m.z0 || e[1] >= m.x0 + MAP_SIZE || e[2] >= m.z0 + MAP_SIZE) continue;
+    out.push(e[3] ? { kind: e[0], x: e[1], z: e[2], target: true } : { kind: e[0], x: e[1], z: e[2] });
+    if (out.length >= 48) break;
+  }
+  return out;
 }

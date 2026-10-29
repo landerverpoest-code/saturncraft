@@ -10,7 +10,7 @@ import { I, DYES, WOOL_ITEMS, ITEMS } from '../src/world/items.js';
 import { COLOR_BLOCKS } from '../src/world/blocks.js';
 import { CHUNK_VOLUME, cidx } from '../src/world/constants.js';
 import { TerrainGenerator } from '../src/world/generator.js';
-import { villageInRegion, houseJobSite, PROFESSIONS } from '../src/world/villages.js';
+import { villageInRegion, houseJobSite, PROFESSIONS, TRADE_PROFESSIONS } from '../src/world/villages.js';
 import { loomResult, loomAcceptsCloth, loomAcceptsDye, loomDyeColor } from '../src/world/workstations.js';
 import { JOBSITE_TEX } from '../src/world/jobSiteTextures.js';
 
@@ -30,8 +30,8 @@ const fakeGame = (world, list = []) => ({ ticks: 0, time: 1000, world, entities:
 
 describe('job-site blocks', () => {
   it('every settler trade has a job-site block, and every block one trade', () => {
-    expect(Object.keys(JOB_SITES).sort()).toEqual([...PROFESSIONS].sort());
-    for (const p of PROFESSIONS) {
+    expect(Object.keys(JOB_SITES).sort()).toEqual([...TRADE_PROFESSIONS].sort());
+    for (const p of TRADE_PROFESSIONS) {
       expect(jobSiteBlock(p)).toBeGreaterThan(0);
       for (const id of JOB_SITES[p]) { expect(isJobSite(id)).toBe(true); expect(jobSiteProfession(id)).toBe(p); }
     }

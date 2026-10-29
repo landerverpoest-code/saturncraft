@@ -241,6 +241,20 @@ export class Interaction {
       this.swing = SWING_TICKS;
       return;
     }
+    if (d && d.chart && input.rightPressed) {
+      // an Explorer Chart turns into a map of the nearest structure of its kind (world/landmarks.js)
+      const r = g.createChartMap(d.chart);
+      if (!r) { g.hud.toast(g.world.dimension === 'overworld' ? 'The chart shows nothing within reach' : 'The chart can only be read in the overworld'); return; }
+      const filled = { id: I.FILLED_MAP, count: 1, damage: 0, map: r.map.id, mapX: Math.floor(r.map.x0 / 128), mapZ: Math.floor(r.map.z0 / 128), label: r.title };
+      if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
+      if (!p.inventory.selectedStack) p.inventory.slots[p.inventory.selected] = filled;
+      else if (p.inventory.add(filled)) g.entities.spawnItem(p.x, p.y + 1, p.z, filled);
+      p.inventory.changed();
+      g.hud.toast(`${r.title}: ${Math.round(r.site.dist)} blocks away`);
+      g.audio.play('page', [p.x, p.y + 1, p.z]);
+      this.swing = SWING_TICKS;
+      return;
+    }
     if (d && d.throwable === 'potion' && input.rightPressed) {
       // splash elixirs: thrown at 0.5 blocks/tick, aimed 20 degrees above the view
       const [ex, ey, ez] = p.eyePos();
