@@ -25,9 +25,13 @@ import {
   VIBRATION_RANGE, SENSOR_PULSE, SENSOR_REST, WARNING_MAX, DARKNESS_TICKS, DARKNESS_RANGE, SHRIEKER_CAN_SUMMON,
   WarningLevels, sensorPower, sensorHears, quietStep, deathCharge, spreadHushmoss, findEmergeSpot, findNear,
 } from './deepHush.js';
-import { vibrationFrequency, sensorMeta, occluded, findListeners, GUEST_KINDS } from './vibrations.js';
+import {
+  vibrationFrequency, sensorMeta, occluded, findListeners, GUEST_KINDS, VibrationQueue, TRAVEL_TICKS_PER_BLOCK,
+  CALIBRATED_RANGE, travelTicks, sensorRange, calibratedHears,
+} from './vibrations.js';
+import { powerInto } from './circuits.js';
 
-const LISTENERS = new Set([B.HUSH_SENSOR, B.HUSH_SHRIEKER]);
+const LISTENERS = new Set([B.HUSH_SENSOR, B.CALIBRATED_HUSH_SENSOR, B.HUSH_SHRIEKER]);
 const CATALYSTS = new Set([B.HUSH_CATALYST]);
 export const NOISE_MEMORY = 60, SHRIEK_REST = 90, KEEPER_RANGE = 48;
 /** Creatures walking about shake the ground too: one step per MOB_STEP_EVERY ticks at most each. */
@@ -67,7 +71,12 @@ export class HushSystem {
     this.rest = new Map();         // "x,y,z" -> tick a sensor / shrieker can hear again
     this.lastStep = 0;
     this.remote = new Map();       // guest name -> what remoteVibration keeps of them (multiplayer host)
+    this.queue = new VibrationQueue(); // vibrations travelling to a sensor (world/vibrations.js)
+    this.travel = TRAVEL_TICKS_PER_BLOCK; // ticks a vibration needs per block (0: sensors hear at once)
   }
+
+  /** The frequency a Calibrated Hush Sensor is tuned to: the cinnabar signal reaching it from any side (0 = untuned, hears all). */
+  tuning(x, y, z) { return powerInto(this.game.world, x, y, z); }
 
   get now() { return this.game.ticks; }
   playerName(p) { return (p && p.netName) || 'player'; }
@@ -79,6 +88,7 @@ export class HushSystem {
     if (now % 20 === 0) this.warnings.decay(now);
     if (g.net && g.net.isHost) this.tickRemote();
     if (g.net && g.net.isClient) return;
+    this.arrive();
     this.tickMobs();
     if (!p || p.dead || p.spectator) return;
     const b = p.body;
@@ -136,6 +146,9 @@ export class HushSystem {
   /**
    * A vibration of `kind` at (x, y, z) made by `player` (null for other sources). Returns what reacted:
    * { sensors: [...], shrieked: [...], level } (level = the player's warning level after it, -1 if unchanged).
+   * A sensor `d` blocks away hears it ceil(d) ticks later (travel = ticks per block): `sensors` then lists the
+   * sensors it is on its way to, and the shriek and warning that follow happen when the first one hears it
+   * (see arrive). With travel 0 everything happens at once.
    */
   vibrate(x, y, z, kind, player = null, steppedOn = null) {
     const g = this.game, w = g.world, now = this.now;
@@ -143,24 +156,62 @@ export class HushSystem {
     if (this.noises.length > 48) this.noises.shift();
     const out = { sensors: [], shrieked: [], level: -1 };
     if (g.net && g.net.isClient) return out;
-    const near = findListeners(w, x, y, z, VIBRATION_RANGE, LISTENERS);
+    const near = findListeners(w, x, y, z, CALIBRATED_RANGE, LISTENERS);
     if (!near.length) return out;
-    const freq = vibrationFrequency(kind), getBlock = (a, b, c) => w.getBlock(a, b, c);
+    const getBlock = (a, b, c) => w.getBlock(a, b, c);
+    const ev = { x, y, z, kind, freq: vibrationFrequency(kind), player, steppedOn, shriekers: near.filter((s) => s.id === B.HUSH_SHRIEKER && s.d <= VIBRATION_RANGE) };
+    let heard = false;
     for (const s of near) {
-      if (s.id !== B.HUSH_SENSOR) continue;
-      const k = `${s.x},${s.y},${s.z}`;
-      if (!sensorHears(s.d, w.getMeta(s.x, s.y, s.z), this.rest.get(k) || 0, now)) continue;
+      if (s.id === B.HUSH_SHRIEKER || s.d > sensorRange(s.id)) continue;
       if (occluded(getBlock, x, y, z, s.x + 0.5, s.y + 0.5, s.z + 0.5)) continue; // wool in the way
-      this.rest.set(k, now + SENSOR_PULSE + SENSOR_REST);
-      w.setBlock(s.x, s.y, s.z, B.HUSH_SENSOR, sensorMeta(sensorPower(s.d), freq));
-      if (w.scheduleTick) w.scheduleTick(s.x, s.y, s.z, SENSOR_PULSE);
-      out.sensors.push(s);
-      this.pulseFx(x, y, z, s);
+      const delay = travelTicks(s.d, this.travel);
+      if (delay > 0) {
+        this.queue.add(now + delay, { ev, s });
+        out.sensors.push(s);
+        this.travelFx(x, y, z, s);
+      } else if (this.hear(ev, s)) {
+        heard = true;
+        out.sensors.push(s);
+        this.travelFx(x, y, z, s);
+        this.pulseFx(s);
+      }
     }
+    this.shrieks(ev, out, heard);
+    return out;
+  }
+
+  /** Once a tick (host): hand the vibrations that have reached their sensor over to it. */
+  arrive() {
+    if (!this.queue.size) return;
+    for (const { ev, s } of this.queue.take(this.now)) {
+      if (!this.hear(ev, s)) continue;
+      this.pulseFx(s);
+      this.shrieks(ev, { sensors: [], shrieked: [], level: -1 }, true);
+    }
+  }
+
+  /** A sensor takes in a vibration, if it is still there, idle, in range and (calibrated) tuned to its frequency: it pulses. */
+  hear(ev, s) {
+    const w = this.game.world, now = this.now, id = w.getBlock(s.x, s.y, s.z);
+    if (id !== B.HUSH_SENSOR && id !== B.CALIBRATED_HUSH_SENSOR) return false;
+    const k = `${s.x},${s.y},${s.z}`, range = sensorRange(id);
+    if (!sensorHears(s.d, w.getMeta(s.x, s.y, s.z), this.rest.get(k) || 0, now, range)) return false;
+    if (id === B.CALIBRATED_HUSH_SENSOR && !calibratedHears(ev.freq, this.tuning(s.x, s.y, s.z))) return false;
+    this.rest.set(k, now + SENSOR_PULSE + SENSOR_REST);
+    w.setBlock(s.x, s.y, s.z, id, sensorMeta(sensorPower(s.d, range), ev.freq));
+    if (w.scheduleTick) w.scheduleTick(s.x, s.y, s.z, SENSOR_PULSE);
+    return true;
+  }
+
+  /**
+   * Shriekers near a vibration made by a player: the one stepped on, and (when `heard`: a sensor took
+   * the vibration in) those within 8 blocks of where it was made. Fills `out` (shrieked, level).
+   */
+  shrieks(ev, out, heard) {
+    const { player, steppedOn } = ev, w = this.game.world, now = this.now;
     if (!player) return out;
-    // shriekers: the one stepped on, or those near a sensor the player set off
     const stepped = (s) => !!steppedOn && s.x === steppedOn[0] && s.y === steppedOn[1] && s.z === steppedOn[2];
-    const shriekers = near.filter((s) => s.id === B.HUSH_SHRIEKER && (out.sensors.length || stepped(s)) && (this.rest.get(`${s.x},${s.y},${s.z}`) || 0) <= now);
+    const shriekers = ev.shriekers.filter((s) => (heard || stepped(s)) && w.getBlock(s.x, s.y, s.z) === B.HUSH_SHRIEKER && (this.rest.get(`${s.x},${s.y},${s.z}`) || 0) <= now);
     if (!shriekers.length) return out;
     // only a world-grown shrieker raises the warning (a placed one only shrieks)
     const summons = (s) => (w.getMeta(s.x, s.y, s.z) & SHRIEKER_CAN_SUMMON) !== 0;
@@ -178,13 +229,20 @@ export class HushSystem {
     return out;
   }
 
-  /** Cinnabar-red specks running from the sound to the sensor that heard it, and a click. */
-  pulseFx(x, y, z, s) {
+  /** Cinnabar-red specks running from the sound to the sensor, a block per tick (as fast as the vibration travels). */
+  travelFx(x, y, z, s) {
+    const g = this.game;
+    if (!g.particles) return;
+    const tx = s.x + 0.5, ty = s.y + 0.8, tz = s.z + 0.5, d = Math.hypot(tx - x, ty - y, tz - z) || 1, sp = this.travel > 0 ? 1 / this.travel : 0.45;
+    for (let k = 0; k < 3; k++) g.particles.emit(x, y + 0.3, z, (tx - x) / d * sp, (ty - y - 0.3) / d * sp, (tz - z) / d * sp, 0.95, 0.28, 0.16, Math.max(1, Math.ceil(d / sp) - k * 2), 0);
+  }
+
+  /** The sensor lights up where it took the vibration in: a click and a few specks. */
+  pulseFx(s) {
     const g = this.game;
     if (g.audio) g.audio.play('hush_sensor', [s.x + 0.5, s.y + 0.5, s.z + 0.5]);
     if (!g.particles) return;
-    const tx = s.x + 0.5, ty = s.y + 0.8, tz = s.z + 0.5, d = Math.hypot(tx - x, ty - y, tz - z) || 1, sp = 0.45;
-    for (let k = 0; k < 3; k++) g.particles.emit(x, y + 0.3, z, (tx - x) / d * sp, (ty - y - 0.3) / d * sp, (tz - z) / d * sp, 0.95, 0.28, 0.16, Math.ceil(d / sp) - k * 2, 0);
+    const tx = s.x + 0.5, ty = s.y + 0.8, tz = s.z + 0.5;
     for (let k = 0; k < 6; k++) g.particles.emit(tx, ty, tz, (Math.random() - 0.5) * 0.1, 0.05 + Math.random() * 0.05, (Math.random() - 0.5) * 0.1, 0.95, 0.3, 0.2, 16, 0);
   }
 

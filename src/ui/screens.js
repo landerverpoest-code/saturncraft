@@ -1358,7 +1358,7 @@ export class UI {
       const l = g.lecterns.get(k);
       if (!l) { close(); return; } // someone else took the book
       const pages = bookPages(l.book);
-      head.textContent = l.book.id === I.WRITTEN_BOOK ? `${l.book.title || 'Untitled'}${l.book.author ? ' by ' + l.book.author : ''}` : 'Writable Book';
+      head.textContent = l.book.id !== I.WRITABLE_BOOK ? `${l.book.title || 'Untitled'}${l.book.author ? ' by ' + l.book.author : ''}` : 'Writable Book';
       text.textContent = pages[l.page] || '';
       num.textContent = `Page ${l.page + 1} of ${pages.length}`;
       prev.disabled = l.page === 0;

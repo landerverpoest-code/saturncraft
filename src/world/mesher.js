@@ -93,6 +93,10 @@ const WS_TILES = (() => {
       const ss = 'hush_sensor_side', td = all(on ? 'hush_tendril_active' : 'hush_tendril');
       return [t(ss, ss, 'hush_sensor_top', 'hushmoss', ss, ss), td, td, td, td];
     }),
+    [B.CALIBRATED_HUSH_SENSOR]: [0, 1].map((on) => {
+      const ss = 'hush_sensor_side', td = all(on ? 'hush_tendril_active' : 'hush_tendril');
+      return [t(ss, ss, 'calibrated_sensor_top', 'hushmoss', ss, ss), td, td, td, td];
+    }),
     [B.HUSH_SHRIEKER]: [0, 1].map(() => {
       const ss = 'hush_shrieker_side', bn = all('hush_shrieker_bone');
       return [t(ss, ss, 'hush_shrieker_top', 'hushmoss', ss, ss), bn, bn, bn, bn];
@@ -108,7 +112,7 @@ const WS_TILES = (() => {
   };
 })();
 /** Which set of WS_TILES a block uses for its meta. */
-const wsIndex = (id, m) => (id === B.HUSH_SENSOR ? ((m & 15) ? 1 : 0) : id === B.LECTERN ? (m >> 2) & 1 : id === B.CAKE ? ((m & 7) ? 1 : 0) : m & 1);
+const wsIndex = (id, m) => ((id === B.HUSH_SENSOR || id === B.CALIBRATED_HUSH_SENSOR) ? ((m & 15) ? 1 : 0) : id === B.LECTERN ? (m >> 2) & 1 : id === B.CAKE ? ((m & 7) ? 1 : 0) : m & 1);
 const BERRY_TILES = [0, 1, 2, 3].map((i) => texId('sweet_berry_bush_' + i));
 // Suspicious Sand and Gravel: one tile per brushing stage (meta bits 0-1, world/archaeology.js)
 const SUS_TILES = { [B.SUSPICIOUS_SAND]: [0, 1, 2, 3].map((i) => texId('suspicious_sand_' + i)), [B.SUSPICIOUS_GRAVEL]: [0, 1, 2, 3].map((i) => texId('suspicious_gravel_' + i)) };
