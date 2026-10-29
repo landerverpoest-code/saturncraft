@@ -191,6 +191,16 @@ describe('lazy catalogue icons', () => {
     lazy.add(mk(1)[0], () => {}); // still usable afterwards
     expect(frames.length).toBe(1);
   });
+  it('every frame draws at least one slot, even with a zero budget (no endless empty frames)', () => {
+    const frames = [];
+    const lazy = createLazyRenderer({ root: {}, IO: null, schedule: (f) => frames.push(f), budgetMs: 0 });
+    const els = mk(40), order = [];
+    for (const e of els) lazy.add(e, () => order.push(e.i));
+    let n = 0;
+    while (frames.length) { frames.shift()(); n++; expect(order.length).toBe(n); }
+    expect(order).toEqual(els.map((e) => e.i));
+    expect(n).toBe(40);
+  });
   it('dispose stops pending work', () => {
     const frames = [];
     const lazy = createLazyRenderer({ root: {}, IO: null, schedule: (f) => frames.push(f) });

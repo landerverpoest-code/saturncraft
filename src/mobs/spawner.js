@@ -28,6 +28,8 @@ import { tickMonumentSpawns, spawnElders } from './oceanMobs.js';
 import { spawnVillageStrider, desertChunkSpawn } from './duneStrider.js';
 import { CAGE, forestChunkSpawn, hollowSpawnTick } from './hoverling.js';
 import { caravanTick } from './peddler.js';
+import { addPumpkinHead } from './pumpkins.js';
+import { rollOffhand, OFFHAND_KINDS } from './offhand.js';
 import { EQUIP_KINDS, spawnGear, rollCanPickUp, localDifficulty, clampedDifficulty, jockeyRoll } from './equipment.js';
 
 const INHABITED_MAX = 3600000; // the local difficulty stops growing after 50 hours
@@ -66,11 +68,22 @@ export class MobSpawner {
     return list;
   }
 
-  /** One spawn sweep over the chunks; throttled to a rotating slice while `state` has been fruitless for a while. */
-  sweep(state, chunks, category, surface) {
+  /**
+   * One spawn sweep over the chunks; throttled to a rotating slice while `state` has been fruitless for a while.
+   * `room` is how many more mobs may still spawn before the cap is reached: the sweep stops as soon as that many
+   * have appeared (so a pass overshoots the cap by at most one chunk's pack, not by a whole sweep), and starts at a
+   * random chunk of its slice then, so the ones that always come first do not get all the spawns.
+   */
+  sweep(state, chunks, category, surface, room = Infinity) {
     const stride = state.idle >= BACKOFF_AFTER ? BACKOFF_STRIDE : 1;
+    const first = stride === 1 ? 0 : (this.sweeps + (surface ? 1 : 0)) % stride;
+    const slice = Math.max(0, Math.ceil((chunks.length - first) / stride));
+    const start = room === Infinity || slice < 2 ? 0 : Math.floor(Math.random() * slice);
     let n = 0;
-    for (let i = stride === 1 ? 0 : (this.sweeps + (surface ? 1 : 0)) % stride; i < chunks.length; i += stride) n += this.attempt(chunks[i][0], chunks[i][1], category, surface);
+    for (let k = 0; k < slice && n < room; k++) {
+      const i = first + ((start + k) % slice) * stride;
+      n += this.attempt(chunks[i][0], chunks[i][1], category, surface);
+    }
     state.idle = n ? 0 : state.idle + 1;
     return n;
   }
@@ -96,9 +109,10 @@ export class MobSpawner {
     if (fresh && EQUIP_KINDS[type]) {
       // armour and weapons, likelier the longer the world has run and players have stayed here (mobs/equipment.js)
       const clamped = clampedDifficulty(this.localDifficulty(x, z));
-      m.equip = spawnGear(type, clamped, this.game.difficulty); // armour, weapons and, rarely, enchantments
+      m.equip = addPumpkinHead(spawnGear(type, clamped, this.game.difficulty)); // armour, weapons and, rarely, enchantments; now and then a pumpkin on the head (mobs/pumpkins.js)
       m.canPickUp = rollCanPickUp(clamped);
     }
+    if (fresh && OFFHAND_KINDS[type]) m.offhand = rollOffhand(type, clampedDifficulty(this.localDifficulty(x, z)), { tamed: m.tamed }); // a shield, a charm or loot in the off-hand (mobs/offhand.js)
     this.game.entities.add(m);
     if (fresh && m.age < 0 && m.def.shamblerKin && !m.def.aquaticSpawn) this.tryJockey(m);
     return m;
@@ -269,7 +283,7 @@ export class MobSpawner {
     }
     if (this.hostileEnabled()) {
       if (monsters < cap) {
-        monsters += this.sweep(this.pass.monster, chunks, CATEGORY.MONSTER, false);
+        monsters += this.sweep(this.pass.monster, chunks, CATEGORY.MONSTER, false, cap - monsters);
       }
       monsters += tickMonumentSpawns(this, monsters, cap); // Deepeyes in Tide Citadels
       // Monsters in caves fill the cap quickly in this deep world, which would leave the
@@ -279,7 +293,7 @@ export class MobSpawner {
       // "on the surface", so this pass used to spawn without limit there.)
       const overworld = !w.dimension || w.dimension === 'overworld';
       if (overworld && surface < Math.ceil(cap / 2) && monsters < cap * 2) {
-        surface += this.sweep(this.pass.surface, chunks, CATEGORY.MONSTER, true);
+        surface += this.sweep(this.pass.surface, chunks, CATEGORY.MONSTER, true, cap * 2 - monsters);
       }
       this.sweeps++;
     }

@@ -5,7 +5,7 @@ import { Player } from '../src/player/player.js';
 import { I } from '../src/world/items.js';
 import { B } from '../src/world/blocks.js';
 import {
-  PARRY_TICKS, DISABLE_TICKS, PARRY_STUN, newShield, shieldTick, canRaise, isParry, disableShield, disablesShield,
+  PARRY_TICKS, DISABLE_TICKS, PARRY_STUN, newShield, shieldTick, canRaise, isParry, disableShield, attackerDisablesShield,
   shieldWear, resolveBlock, shieldGauge, KNOCK,
 } from '../src/player/shield.js';
 import { rollEquipment, weaponBonus, AXE_CHANCE, AXE_CHANCE_HARD } from '../src/mobs/equipment.js';
@@ -58,13 +58,13 @@ describe('shield rules', () => {
   });
 
   it('axes (in a mob\'s hand or a player\'s) disable a shield; swords and bare fists do not', () => {
-    expect(disablesShield({ equip: { hand: { id: I.IRON_AXE } } })).toBe(true);
-    expect(disablesShield({ equip: { hand: { id: I.IRON_SWORD } } })).toBe(false);
-    expect(disablesShield({ equip: { hand: null } })).toBe(false);
-    expect(disablesShield({ inventory: { selectedStack: { id: I.DIAMOND_AXE } } })).toBe(true);
-    expect(disablesShield({ inventory: { selectedStack: { id: I.IRON_SHOVEL } } })).toBe(false);
-    expect(disablesShield({ def: { axeBlows: true } })).toBe(true);
-    expect(disablesShield(null)).toBe(false);
+    expect(attackerDisablesShield({ equip: { hand: { id: I.IRON_AXE } } })).toBe(true);
+    expect(attackerDisablesShield({ equip: { hand: { id: I.IRON_SWORD } } })).toBe(false);
+    expect(attackerDisablesShield({ equip: { hand: null } })).toBe(false);
+    expect(attackerDisablesShield({ inventory: { selectedStack: { id: I.DIAMOND_AXE } } })).toBe(true);
+    expect(attackerDisablesShield({ inventory: { selectedStack: { id: I.IRON_SHOVEL } } })).toBe(false);
+    expect(attackerDisablesShield({ def: { axeBlows: true } })).toBe(true);
+    expect(attackerDisablesShield(null)).toBe(false);
   });
 
   it('an axe blow starts the cooldown, the shield cannot be raised until it has run out, and the gauge fills', () => {

@@ -741,6 +741,12 @@ for (const [name, key, mat] of [['Tidestone', 'TIDESTONE', B.TIDESTONE], ['Tides
 ext('CARTOGRAPHY_DESK');
 def(B.CARTOGRAPHY_DESK, 'Cartography Desk', { hardness: 2.5, resistance: 2.5, tool: TOOL.AXE, sound: 'wood', flammable: true, tex: { top: 'cartography_desk_top', bottom: 'birch_planks', side: 'cartography_desk_side', front: 'cartography_desk_front' } });
 
+// Carved Pumpkin (reference: the carved pumpkin): shears turn a Pumpkin into one (and 4 seeds fall out); it sits
+// in the helmet slot (world/items.js, mobs/pumpkins.js), where Voidwalkers do not mind your gaze, and bolts on a
+// Frostling or Ironguard like the plain one. Meta 0..3 is the way its face looks, as for the Pumpkin Lantern.
+ext('CARVED_PUMPKIN');
+def(B.CARVED_PUMPKIN, 'Carved Pumpkin', { hardness: 1, resistance: 1, tool: TOOL.AXE, sound: 'wood', tex: { top: 'pumpkin_top', bottom: 'pumpkin_top', side: 'pumpkin_side', front: 'pumpkin_face' } });
+
 export const NUM_BLOCKS = BLOCKS.length;
 
 // Flat lookup tables used by hot loops (mesher, lighting, physics) and workers.

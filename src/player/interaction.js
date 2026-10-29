@@ -40,6 +40,7 @@ import { interactStrider, guestWantsSeat } from '../mobs/duneStrider.js';
 import { interactHoverling } from '../mobs/hoverling.js';
 import { galeLeap } from '../mobs/gustling.js';
 import { isBook } from '../world/books.js';
+import { carveFacing, CARVE_SEEDS } from '../mobs/pumpkins.js';
 import { CAKE_SLICES, CAKE_FOOD } from '../world/signalBlocks.js';
 import { sideOf, SIDE_DIRS, DOOR_OPEN, DOOR_UPPER, BED_HEAD, SLAB_TOP, SLAB_DOUBLE, STAIRS_UPSIDE, GATE_OPEN, TRAPDOOR_OPEN, TRAPDOOR_TOP } from '../world/shapes.js';
 
@@ -656,7 +657,7 @@ export class Interaction {
     const d = st && ITEMS[st.id];
     // Armour: right-click puts it on (swapping with what is worn), unless aiming at something usable
     const usable = this.target && (USABLE_BLOCKS.has(this.target.id) || [SHAPE.GATE, SHAPE.DOOR, SHAPE.TRAPDOOR].includes(BLOCKS[this.target.id].shape));
-    if (d && d.armor && !usable) {
+    if (d && d.armor && !usable && !(d.block !== undefined && this.target)) { // a Carved Pumpkin aimed at a block is placed instead
       const inv = p.inventory, worn = inv.armor[d.armor.slot];
       inv.armor[d.armor.slot] = st;
       inv.slots[inv.selected] = worn;
@@ -822,6 +823,16 @@ export class Interaction {
     if (!t) return false;
     // a Vault takes a Proving Key and throws out its treasure, once per player (world/provingSystem.js)
     if (t.id === B.VAULT && !(p.sneaking && st) && g.proving) { this.swing = SWING_TICKS; return g.proving.useVault(t.x, t.y, t.z); }
+    // shears carve a Pumpkin: its face turns towards the player and 4 seeds fall out (mobs/pumpkins.js)
+    if (t.id === B.PUMPKIN && st && d.shears) {
+      const dx = p.x - (t.x + 0.5), dz = p.z - (t.z + 0.5);
+      w.setBlockUrgent(t.x, t.y, t.z, B.CARVED_PUMPKIN, carveFacing(dx, dz));
+      g.entities.spawnItem(t.x + 0.5, t.y + 0.5, t.z + 0.5, { id: I.PUMPKIN_SEEDS, count: CARVE_SEEDS, damage: 0 });
+      if (!p.creative) p.inventory.damageSelected(1);
+      g.audio.play('shear', [t.x + 0.5, t.y + 0.5, t.z + 0.5]);
+      this.swing = SWING_TICKS;
+      return true;
+    }
     if ((t.id === B.BEE_NEST || t.id === B.BEEHIVE) && st && (d.shears || st.id === I.GLASS_VIAL) && ((w.getMeta(t.x, t.y, t.z) >> 2) & 7) >= 5) {
       // a full nest: shears cut 3 honeycomb, a vial fills with honey; the bees mind unless a campfire smokes below
       const m = w.getMeta(t.x, t.y, t.z);
@@ -1353,7 +1364,7 @@ export class Interaction {
     if (p.intersectsBlock(x, y, z) && meta === SLAB_DOUBLE) return false;
     if (LEAVES.has(id)) meta = 1; // placed leaves never decay
     g.world.setBlockUrgent(x, y, z, id, meta);
-    if (id === B.PUMPKIN || id === B.JACK_O_LANTERN) { if (!this.tryBuildIronguard(x, y, z)) this.tryBuildFrostling(x, y, z); }
+    if (id === B.PUMPKIN || id === B.CARVED_PUMPKIN || id === B.JACK_O_LANTERN) { if (!this.tryBuildIronguard(x, y, z)) this.tryBuildFrostling(x, y, z); }
     if (id === B.RAIL) updateRails(g.world, x, y, z);
     g.audio.play('place_' + BLOCKS[id].sound, [x + 0.5, y + 0.5, z + 0.5]);
     if (g.hush) g.hush.blockEvent(x, y, z, 'place', p);

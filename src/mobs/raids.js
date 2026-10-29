@@ -22,6 +22,7 @@
 // runs patrols and raids; guests get the raid's status once a second (the
 // raid bar shows for those near the village) and, when they are in the village
 // as it is won, Village Champion too.
+import { captainOffhand } from './offhand.js';
 import { villagesNear } from '../world/villages.js';
 import { SOLID, OPAQUE, isFluid } from '../world/blocks.js';
 import { effectLevel } from '../player/effects.js';
@@ -387,7 +388,7 @@ export class Raids {
         const m = g.spawner.spawnMob('marauder', sx, w.heightAt(Math.floor(sx), Math.floor(sz)) + 1, sz);
         if (!m) continue;
         m.raider = true; m.raidId = r.id; m.raidCenter = { x: r.cx, z: r.cz }; m.persistent = true;
-        if (i === 0) m.captain = true; // each wave marches behind a banner (no omen from these)
+        if (i === 0) { m.captain = true; m.offhand = captainOffhand(m.offhand); } // each wave marches behind a banner (no omen from these)
       }
       return true;
     }
@@ -434,7 +435,7 @@ export class Raids {
         const m = g.spawner.spawnMob('marauder', x + 0.5, yy, z + 0.5);
         if (!m) continue;
         m.persistent = true; // patrols roam by day too
-        if (!out.length) m.captain = true; else m.patrolLeader = out[0];
+        if (!out.length) { m.captain = true; m.offhand = captainOffhand(m.offhand); } else m.patrolLeader = out[0];
         out.push(m);
       }
       return out;

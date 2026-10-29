@@ -37,9 +37,13 @@ describe('terrain generator', () => {
     const LOGS = TREE_LOGS;
     const LEAVES = TREE_LEAVES;
     const g = new TerrainGenerator(777);
+    // each chunk is the eastern neighbour of one pair and the west half of the next: generate it once
+    // (generation is by far the cost of this test, which crawled towards its timeout on a loaded machine)
+    const made = new Map();
+    const chunk = (x, z) => { const k = x + ',' + z; if (!made.has(k)) made.set(k, g.generate(x, z)); return made.get(k); };
     let checked = 0;
     for (let cx = 0; cx < 30 && checked < 5; cx++) for (let cz = 0; cz < 4; cz++) {
-      const a = g.generate(cx, cz), b = g.generate(cx + 1, cz);
+      const a = chunk(cx, cz), b = chunk(cx + 1, cz);
       for (let z = 2; z < 14; z++) {
         // trunk at the eastern edge of chunk a
         let top = -1;

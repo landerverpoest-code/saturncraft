@@ -37,7 +37,7 @@ export function disableShield(s, ticks = DISABLE_TICKS) {
 }
 
 /** Does this attacker's blow knock a shield down? Axes do (in a mob's hand or a player's), as does a mob built for it. */
-export function disablesShield(attacker) {
+export function attackerDisablesShield(attacker) {
   if (!attacker) return false;
   if (attacker.def && attacker.def.axeBlows) return true;
   const hand = attacker.equip && attacker.equip.hand
@@ -60,7 +60,7 @@ export function shieldWear(amount, parry) {
  */
 export function resolveBlock(s, amount, attacker) {
   const parry = isParry(s);
-  const disabled = disablesShield(attacker);
+  const disabled = attackerDisablesShield(attacker);
   if (disabled) disableShield(s);
   return {
     parry, disabled,

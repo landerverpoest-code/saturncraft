@@ -22,7 +22,8 @@ export function createLazyRenderer({ root, IO = typeof IntersectionObserver !== 
     scheduled = false;
     if (dead) return;
     const t0 = performance.now();
-    while (qi < queue.length && performance.now() - t0 < budgetMs) run(queue[qi++]);
+    // at least one slot per frame, whatever the budget or a stalled clock: a frame that draws nothing could repeat forever
+    if (qi < queue.length) do run(queue[qi++]); while (qi < queue.length && performance.now() - t0 < budgetMs);
     if (qi < queue.length) { scheduled = true; schedule(drain); } else { queue = []; qi = 0; }
   };
   return {

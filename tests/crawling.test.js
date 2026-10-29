@@ -170,7 +170,7 @@ describe('crawling in multiplayer', () => {
     const m = new Mob('shambler', 1, 64, 2);
     m.crawling = true; // a stray flag on a mob changes nothing on the wire
     const a = packMob(m);
-    expect(a.length).toBe(24);
+    expect(a.length).toBe(25);
     expect([a[0], a[1], a[2], a[3], a[4]]).toEqual([m.id, 'shambler', 1, 64, 2]);
     expect(unpackMob(JSON.parse(JSON.stringify(a)))).toMatchObject({ type: 'shambler', x: 1, y: 64, z: 2, heldItem: 0, passenger: -1 });
   });

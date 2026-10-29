@@ -222,7 +222,7 @@ describe('saving and multiplayer', () => {
     expect(equipIds({ hand: null, armor: [st(I.IRON_HELMET), null, null, null] })).toEqual([0, I.IRON_HELMET, 0, 0, 0]); // plain gear: the same ids as before
     const m = { id: 4, type: 'shambler', x: 1, y: 2, z: 3, yaw: 0, health: 20, age: 0, equip: eq, body: { onGround: true } };
     const packed = JSON.parse(JSON.stringify(packMob(m)));
-    expect(packed.length).toBe(24);
+    expect(packed.length).toBe(25);
     expect(packed[20]).toEqual(ids);
     const shown = equipFromIds(unpackMob(packed).equip);
     expect(shown.hand.id).toBe(I.IRON_SWORD);

@@ -21,7 +21,7 @@ import { findJobSite, claimedSites, takeJobSite, checkJobSite, cleanJobSite, sit
 import { marauderAI } from './raids.js';
 import { leashTick, leashSaveData, unleash } from '../entities/leash.js';
 import { mobDamageTaken, weaponBonus, equipmentDrops, equipFromSave, slotFor, isBetter, helmetShadesSun, gearXp, bowPower } from './equipment.js';
-import { wearArmor as wearArmorModel, lightArmor } from '../render/armorModel.js';
+import { wearArmor as wearArmorModel, lightArmor, holdOffhand } from '../render/armorModel.js';
 import { itemCanvas } from '../ui/icons.js';
 import { hasEnch } from '../world/enchantments.js';
 import * as THREE from 'three';
@@ -30,6 +30,8 @@ import { conversionStep, newConversion } from './hostileVariants.js'; // registe
 import { outOfMeleeReach } from './duneStrider.js'; // registers the Dune Strider
 import { moraleAI, soundAlarm } from './morale.js';
 import './peddler.js'; // registers the Roving Peddler and its Packhorns
+import { gazeProvokes } from './pumpkins.js';
+import { isShield, isCharm, shieldBlocks, disablesShield, wearShield, charmHealth, charmIgnores, offhandDrops, offhandFromSave, OFFHAND_KINDS } from './offhand.js';
 import { companionAI, companionSave, companionLoad } from './companions.js'; // tame Vixlings and Cragbucks
 import { babySpeedFactor, babyAttackFactor, babyHealth, babyExplosion, babyXp, babyLoot } from './babies.js'; // spiderlings, Fizzlets, Brute cubs
 import './hoverling.js'; // registers the Hoverling
@@ -103,6 +105,7 @@ export class Mob {
     if (type === 'wobbler') this.setSize([1, 2, 4][Math.floor(Math.random() * 3)]);
     // gear (mobs/equipment.js): { hand, armor: [helmet, chest, legs, boots] }; picked-up slots always drop
     this.equip = null; this.equipPicked = 0; this.canPickUp = false;
+    this.offhand = null; // the off-hand item (mobs/offhand.js): a Marauder's shield or charm, a Vixling's loot
     // chicken jockeys: the rider steers its mount
     this.mount = null; this.passenger = null;
   }
@@ -135,7 +138,7 @@ export class Mob {
   }
 
   /** State kept when the mob is saved with its chunk. */
-  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor, profession: this.profession, trades: this.trades, home: this.home, lastRestock: this.lastRestock, jobSite: this.jobSite || undefined, traded: this.traded || undefined, size: this.size, coat: this.coat, temper: this.temper, saddled: this.saddled, maxHp: this.maxHp, playerMade: this.playerMade, tamed: this.tamed, sitting: this.sitting, ownerName: this.ownerName, horns: this.horns, hive: this.hive, nectar: this.nectar, beach: this.beach, pregnant: this.pregnant, captain: this.captain || undefined, raider: this.raider || undefined, raidId: this.raidId || undefined, customName: this.customName || undefined, leash: leashSaveData(this), equip: this.equip || undefined, equipPicked: this.equipPicked || undefined, canPickUp: this.canPickUp || undefined, ...(this.def.companion ? companionSave(this) : {}), ...(this.def.saveExtra ? this.def.saveExtra(this) : {}) }; }
+  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor, profession: this.profession, trades: this.trades, home: this.home, lastRestock: this.lastRestock, jobSite: this.jobSite || undefined, traded: this.traded || undefined, size: this.size, coat: this.coat, temper: this.temper, saddled: this.saddled, maxHp: this.maxHp, playerMade: this.playerMade, tamed: this.tamed, sitting: this.sitting, ownerName: this.ownerName, horns: this.horns, hive: this.hive, nectar: this.nectar, beach: this.beach, pregnant: this.pregnant, captain: this.captain || undefined, raider: this.raider || undefined, raidId: this.raidId || undefined, customName: this.customName || undefined, leash: leashSaveData(this), offhand: this.offhand || undefined, equip: this.equip || undefined, equipPicked: this.equipPicked || undefined, canPickUp: this.canPickUp || undefined, ...(this.def.companion ? companionSave(this) : {}), ...(this.def.saveExtra ? this.def.saveExtra(this) : {}) }; }
   loadData(s) {
     this.health = s.health; this.yaw = s.yaw;
     if (s.age < 0) { this.setBaby(true); this.age = s.age; } else { if (this.age < 0) this.setBaby(false); this.age = s.age || 0; }
@@ -154,7 +157,7 @@ export class Mob {
     if (this.def.loadExtra) this.def.loadExtra(this, s); // Dune Striders' saddles, Hoverlings' items
     if (s.customName && typeof s.customName === 'string') { this.customName = s.customName.slice(0, 32); this.persistent = true; } // named with a Name Tag: never despawns
     if (s.leash && (s.leash.player || Array.isArray(s.leash.knot))) { this.leashPending = s.leash; this.persistent = true; } // its holder is found again on its first tick (entities/leash.js)
-    this.equip = equipFromSave(s.equip); this.equipPicked = s.equipPicked | 0; this.canPickUp = !!s.canPickUp;
+    this.offhand = offhandFromSave(s.offhand); this.equip = equipFromSave(s.equip); this.equipPicked = s.equipPicked | 0; this.canPickUp = !!s.canPickUp;
     if (this.mount) this.dismount(true); // (a fresh spawn's jockey roll does not apply to a loaded mob)
     if (s.profession) { this.profession = s.profession; this.trades = s.trades || []; this.lastRestock = s.lastRestock || 0; }
     if (this.def.villager) { this.home = s.home || null; this.jobSite = cleanJobSite(s.jobSite); this.traded = !!s.traded; }
@@ -314,6 +317,7 @@ export class Mob {
       this.teleportRandom(this._game);
       return false;
     }
+    if (this.offhand && isShield(this.offhand) && this.shieldStops(dmg, source, attacker, projectile)) return false; // a raised shield (mobs/offhand.js)
     // natural armour (every source) and worn armour (what stops the player's armour too)
     if (this.def.armor || this.equip) dmg = mobDamageTaken(dmg, this.def.armor || 0, this.equip, source);
     dmg *= resistanceFactor(this.effects, source); // Resistance (a Turtle Master elixir, a beacon)
@@ -378,9 +382,51 @@ export class Mob {
       }
     } else if (this.def.category === CATEGORY.CREATURE) this.panicTicks = 60 + Math.floor(Math.random() * 40);
     else if (attacker && attacker.isPlayer) { this.target = 'player'; if (this.type === 'voidwalker') this.angry = true; if (g && this.health > 0) soundAlarm(this, g.entities.list); }
+    if (this.health <= 0 && this.offhand && isCharm(this.offhand) && !charmIgnores(source)) this.useCharm(g); // the Charm of Undying keeps it alive once
+    else if (this.health > 0 && this.offhand && OFFHAND_KINDS[this.type] === 'thief' && !this.tamed) this.spitOut(g); // a hurt thief drops its loot
     if (g) g.audio.play(this.health <= 0 ? 'mob_death' : 'mob_hurt', [this.x, this.y + 1, this.z]);
     if (this.health <= 0) this.die(g, source);
     return true;
+  }
+
+  /** Does the shield in the off-hand stop this hit? A hit with an axe splinters it instead. */
+  shieldStops(dmg, source, attacker, projectile) {
+    const from = projectile && projectile.x !== undefined ? projectile : attacker;
+    if (!shieldBlocks(this.offhand, this, from, source)) return false;
+    const g = this._game;
+    const held = attacker && attacker.isPlayer && attacker.inventory ? attacker.inventory.selectedStack : null;
+    if (!projectile && disablesShield(held)) { // an axe splinters the shield; the blow lands
+      this.offhand = null;
+      if (g) { g.audio.play('shield', [this.x, this.y + 1, this.z], 0.6); g.particles.smoke(this.x, this.y + 1.2, this.z, 10, 1); }
+      return false;
+    }
+    if (wearShield(this.offhand, dmg)) this.offhand = null;
+    if (g) g.audio.play('shield', [this.x, this.y + 1, this.z]);
+    if (attacker && !projectile && attacker.body && attacker.kind === 'mob') {
+      const dx = attacker.x - this.x, dz = attacker.z - this.z, d = Math.hypot(dx, dz) || 1;
+      attacker.body.vx += dx / d * 0.4; attacker.body.vz += dz / d * 0.4;
+    }
+    return true;
+  }
+
+  /** The Charm of Undying in the off-hand: a burst of green and gold, a few hit points back, the charm used up. */
+  useCharm(g) {
+    this.offhand = null;
+    this.health = charmHealth(this.maxHealth);
+    this.fireTicks = 0;
+    if (!g) return;
+    for (let k = 0; k < 40; k++) {
+      const gold = Math.random() < 0.5;
+      g.particles.emit(this.x, this.y + 1, this.z, (Math.random() - 0.5) * 0.5, Math.random() * 0.5, (Math.random() - 0.5) * 0.5, gold ? 1.4 : 0.4, gold ? 1.1 : 1.3, gold ? 0.2 : 0.5, 30 + Math.random() * 20, -0.002);
+    }
+    g.audio.play('levelup', [this.x, this.y + 1, this.z]);
+  }
+
+  /** A hurt thief spits out what it carries. */
+  spitOut(g) {
+    const st = this.offhand;
+    this.offhand = null;
+    if (g) g.entities.spawnItem(this.x, this.y + 0.6, this.z, st, [(Math.random() - 0.5) * 0.3, 0.2, (Math.random() - 0.5) * 0.3]);
   }
 
   die(g, source) {
@@ -405,6 +451,7 @@ export class Mob {
     if (this.def.onDeath) this.def.onDeath(this, g, killedByPlayer);
     if (this.captain && g.raids) g.raids.onCaptainKilled(this, killedByPlayer); // Dark Omen
     for (const st of equipmentDrops(this.equip, { killedByPlayer, plunder: source === 'player' ? this.plunder | 0 : 0, picked: this.equipPicked })) g.entities.spawnItem(this.x, this.y + 0.5, this.z, st);
+    for (const st of offhandDrops(this.offhand, { killedByPlayer, plunder: source === 'player' ? this.plunder | 0 : 0 })) g.entities.spawnItem(this.x, this.y + 0.5, this.z, st);
     if (this.age < 0 && this.def.category !== CATEGORY.MONSTER) { this.killedByPlayer = false; return; } // baby animals drop nothing
     const plunder = source === 'player' ? this.plunder | 0 : 0; // set by the player's melee hit
     let drops = rollDrops(this.type, { killedByPlayer, onFire: this.fireTicks > 0, sheared: this.sheared, plunder });
@@ -640,7 +687,7 @@ export class Mob {
     m.setBaby(this.age < 0);
     m.yaw = m.prevYaw = this.yaw;
     m.persistent = this.persistent;
-    m.equip = this.equip; m.equipPicked = this.equipPicked; m.canPickUp = this.canPickUp; // it keeps its gear
+    m.offhand = this.offhand; m.equip = this.equip; m.equipPicked = this.equipPicked; m.canPickUp = this.canPickUp; // it keeps its gear
     if (this.mount) { const mount = this.mount; this.dismount(); m.mountOn(mount); }
     m.target = this.target;
     this.removed = true; this.dead = true;
@@ -1625,7 +1672,7 @@ export class Mob {
 
   voidwalkerAI(g, p, pdist) {
     // Becomes hostile when the player looks at its head
-    if (!this.angry && !p.dead && pdist < 64) {
+    if (!this.angry && !p.dead && pdist < 64 && gazeProvokes(p)) { // a Carved Pumpkin hides the face (mobs/pumpkins.js)
       const [ex, ey, ez] = p.eyePos();
       const [lx, ly, lz] = p.lookDir();
       const vx = this.x - ex, vy = this.eyeY - ey, vz = this.z - ez;
@@ -1634,7 +1681,7 @@ export class Mob {
       if (dot > 1 - 0.025 / d && this.canSee(g, ex, ey, ez)) {
         if (++this.stare > 5) { this.angry = true; this.target = 'player'; g.audio.play('scream', [this.x, this.eyeY, this.z]); }
       } else this.stare = 0;
-    }
+    } else if (!gazeProvokes(p)) this.stare = 0;
     if (this.angry && (p.dead || pdist > 64)) { this.angry = false; this.target = null; }
     // Daylight makes them teleport away
     const st = g.sky.state;
@@ -1743,6 +1790,7 @@ export class Mob {
     if (parts && parts.armL && this.def.guard && this.swingTime > 0) parts.armL.rotation.x = parts.armR.rotation.x = -2 * Math.sin((this.swingTime - alpha) / 10 * Math.PI);
     if (this.def.customRender) this.def.customRender(this, m, alpha, sec);
     if (this.equip || m.userData.armorKey) this.renderEquip(m, L);
+    if (this.offhand || m.userData.offKey) holdOffhand(m, this.offhand, L); // render/armorModel.js
     if (parts && parts.legL && parts.legR && (this.mount || this.netRiding)) { parts.legL.rotation.x = parts.legR.rotation.x = -1.4; parts.legL.rotation.z = -0.15; parts.legR.rotation.z = 0.15; } // a jockey sits astride
     if (this.captain && !m.userData.banner) addCaptainBanner(m);
     if (m.userData.bannerFlag) m.userData.bannerFlag.rotation.x = -(0.12 + Math.sin(sec * 2.3 + this.id) * 0.06 + this.limbAmount * 0.25); // sways, streams out when walking
