@@ -4,6 +4,7 @@
 
 import { cleanEnch, withExtras, sameEnch, cleanLabel } from '../world/enchantments.js';
 import { equipIds } from '../mobs/equipment.js';
+import { offhandId } from '../mobs/offhand.js';
 import { sameBook } from '../world/books.js';
 import { effectColorInt } from '../player/effects.js';
 import { TRADE_PROFESSIONS } from '../world/villages.js';
@@ -172,7 +173,8 @@ export function unpackLeash(a) {
 /**
  * [id, type, x, y, z, yaw, headPitch, health, hurtTime, deathTime, flags, woolColor, fuse, profession, beam [x,y,z] | 0, moving,
  *  name | 0, lead (packLeash), emerging, digging, equipment [hand, helmet, chest, legs, boots] | 0,
- *  flags2 (MF2), passenger id | -1 (a Dune Strider's back seat), held item id | 0 (a Hoverling's)]
+ *  flags2 (MF2), passenger id | -1 (a Dune Strider's back seat), held item id | 0 (a Hoverling's),
+ *  off-hand item id | 0 (a Marauder's shield or charm, a Vixling's loot; mobs/offhand.js)]
  *  (emerging/digging: a Hushkeeper rising out of / sinking into the ground)
  */
 export function packMob(m, playerIdOf = () => -1) {
@@ -182,7 +184,8 @@ export function packMob(m, playerIdOf = () => -1) {
     m.beam ? [r2(m.beam.x), r2(m.beam.y), r2(m.beam.z)] : 0, m.moving ? 1 : 0, // Deepeye beams (mobs/oceanMobs.js)
     m.customName || 0, packLeash(m.leashHolder, playerIdOf), m.emerging > 0 ? m.emerging | 0 : 0, m.digging > 0 ? m.digging | 0 : 0,
     equipIds(m.equip) || 0, // worn armour and held weapon (mobs/equipment.js)
-    (m.saddled ? MF2.SADDLED : 0) | (m.dancing ? MF2.DANCING : 0), m.passengerId != null ? m.passengerId : -1, m.held ? m.held.id : 0]; // Dune Strider seats, Hoverling items
+    (m.saddled ? MF2.SADDLED : 0) | (m.dancing ? MF2.DANCING : 0), m.passengerId != null ? m.passengerId : -1, m.held ? m.held.id : 0, // Dune Strider seats, Hoverling items
+    offhandId(m.offhand)]; // off-hand items (mobs/offhand.js)
 }
 export function unpackMob(a) {
   if (!Array.isArray(a) || a.length < 13) return null;
@@ -195,7 +198,7 @@ export function unpackMob(a) {
     beam: Array.isArray(a[14]) && a[14].length === 3 && a[14].every(Number.isFinite) ? { x: a[14][0], y: a[14][1], z: a[14][2] } : null, moving: !!a[15],
     name: cleanLabel(a[16]), leash: unpackLeash(a[17]), emerging: Math.max(0, a[18] | 0), digging: Math.max(0, a[19] | 0),
     equip: Array.isArray(a[20]) ? a[20].slice(0, 5).map((v) => (Number.isInteger(v) && v > 0 ? v : 0)) : null,
-    saddled: !!((a[21] | 0) & MF2.SADDLED), dancing: !!((a[21] | 0) & MF2.DANCING), passenger: Number.isInteger(a[22]) ? a[22] : -1, heldItem: a[23] | 0,
+    saddled: !!((a[21] | 0) & MF2.SADDLED), dancing: !!((a[21] | 0) & MF2.DANCING), passenger: Number.isInteger(a[22]) ? a[22] : -1, heldItem: a[23] | 0, offhand: a[24] | 0,
   };
 }
 

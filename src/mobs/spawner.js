@@ -27,6 +27,8 @@ import { SEA_LEVEL } from '../world/constants.js';
 import { tickMonumentSpawns, spawnElders } from './oceanMobs.js';
 import { spawnVillageStrider, desertChunkSpawn } from './duneStrider.js';
 import { CAGE, forestChunkSpawn, hollowSpawnTick } from './hoverling.js';
+import { addPumpkinHead } from './pumpkins.js';
+import { rollOffhand, OFFHAND_KINDS } from './offhand.js';
 import { EQUIP_KINDS, spawnGear, rollCanPickUp, localDifficulty, clampedDifficulty, jockeyRoll } from './equipment.js';
 
 const INHABITED_MAX = 3600000; // the local difficulty stops growing after 50 hours
@@ -106,9 +108,10 @@ export class MobSpawner {
     if (fresh && EQUIP_KINDS[type]) {
       // armour and weapons, likelier the longer the world has run and players have stayed here (mobs/equipment.js)
       const clamped = clampedDifficulty(this.localDifficulty(x, z));
-      m.equip = spawnGear(type, clamped, this.game.difficulty); // armour, weapons and, rarely, enchantments
+      m.equip = addPumpkinHead(spawnGear(type, clamped, this.game.difficulty)); // armour, weapons and, rarely, enchantments; now and then a pumpkin on the head (mobs/pumpkins.js)
       m.canPickUp = rollCanPickUp(clamped);
     }
+    if (fresh && OFFHAND_KINDS[type]) m.offhand = rollOffhand(type, clampedDifficulty(this.localDifficulty(x, z)), { tamed: m.tamed }); // a shield, a charm or loot in the off-hand (mobs/offhand.js)
     this.game.entities.add(m);
     if (fresh && m.age < 0 && m.def.shamblerKin && !m.def.aquaticSpawn) this.tryJockey(m);
     return m;
