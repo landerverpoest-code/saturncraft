@@ -17,6 +17,9 @@ import { BIOMES } from '../world/biomes.js';
 import { outpostsNear } from '../world/temples.js';
 import { hutsNear, hutAt } from '../world/swampHuts.js';
 import { igloosNear, basementLayout } from '../world/igloos.js';
+import { sunkenRuinsNear, sunkenGuardSpots } from '../world/sunkenRuins.js';
+import { sunTombsNear, tombGuardSpots } from '../world/sunTombs.js';
+import { skywatchesNear, skywatchGuards } from '../world/skywatch.js';
 import { HUT_MONSTERS, isNewtPoolFloor } from './spawnRules.js';
 import { soddenSpawnChance } from './hostileVariants.js';
 import { babyHealth } from './babies.js';
@@ -308,6 +311,14 @@ export class MobSpawner {
       if (Math.floor(c.x / 16) !== cx || Math.floor(c.z / 16) !== cz) continue;
       const m = this.spawnMob('settler', c.x + 0.5, c.y, c.z + 0.5);
       if (m) { m.profession = 'cleric'; m.home = { x: c.x + 0.5, y: c.y, z: c.z + 0.5 }; m.trades = makeTrades('cleric'); m.lastRestock = this.game.time; m.persistent = true; }
+    }
+    // guards of the large structures (world/sunkenRuins.js, sunTombs.js, skywatch.js), placed once with the chunk that holds their spot
+    if (this.hostileEnabled()) {
+      const gen = this.game.world.gen, X0 = cx * 16, Z0 = cz * 16, inChunk = (x, z) => Math.floor(x / 16) === cx && Math.floor(z / 16) === cz;
+      const guard = (type, x, y, z) => { if (!inChunk(x, z)) return; const m = this.spawnMob(type, x + 0.5, y, z + 0.5); if (m) m.persistent = true; };
+      for (const r of sunkenRuinsNear(gen, X0, Z0, X0 + 15, Z0 + 15)) for (const [x, y, z] of sunkenGuardSpots(r)) guard('sodden_shambler', x, y, z);
+      for (const t of sunTombsNear(gen, X0, Z0, X0 + 15, Z0 + 15)) for (const [x, y, z] of tombGuardSpots(t)) guard('dune_shambler', x, y, z);
+      for (const t of skywatchesNear(gen, X0, Z0, X0 + 15, Z0 + 15)) for (const g of skywatchGuards(t)) guard(g.type, g.x, g.y, g.z);
     }
     // three Elder Deepeyes in every Tide Citadel
     if (this.hostileEnabled()) spawnElders(this, cx, cz);
