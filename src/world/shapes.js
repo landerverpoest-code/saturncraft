@@ -338,6 +338,8 @@ for (const id of [B.OAK_SLAB, B.COBBLESTONE_SLAB, B.STONE_BRICK_SLAB, B.SANDSTON
 for (const id of [B.HOLLOWBRICK_SLAB, B.HOLLOWBRICK_STAIRS, B.WYRM_HEAD]) SHAPED_COLLISION[id] = 1;
 // every slab, stair, fence and gate (the extended blocks too)
 for (const b of BLOCKS) if (b && (b.shape === SHAPE.SLAB || b.shape === SHAPE.STAIRS || b.shape === SHAPE.FENCE || b.shape === SHAPE.GATE)) SHAPED_COLLISION[b.id] = 1;
+// every wall (the cobblestone walls above and the later sets)
+for (const b of BLOCKS) if (b && b.shape === SHAPE.WALL) SHAPED_COLLISION[b.id] = 1;
 // carpets and Hush Veins (thin sheets) have no collision, like one layer of snow
 for (const b of BLOCKS) if (b && b.carpet) SHAPED_COLLISION[b.id] = 1;
 

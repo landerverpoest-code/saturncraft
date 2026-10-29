@@ -2,7 +2,7 @@
 // little experience), the Stonecutter (one stone block into one of its cut
 // shapes) and the Loom (one dye recolours up to eight wool or carpets). Pure
 // functions, unit tested; the screens live in ui/screens.js.
-import { B, BLOCKS, SHAPE, STONE_SETS, TOOL, COLOR_BLOCKS } from './blocks.js';
+import { B, BLOCKS, SHAPE, STONE_SETS, WALL_SETS, TOOL, COLOR_BLOCKS } from './blocks.js';
 import { ITEMS, I, DYES, WOOL_ITEMS } from './items.js';
 import { ENCHANTS } from './enchantments.js';
 
@@ -80,7 +80,9 @@ const VARIANTS = new Map([
 // Ashstone (the Proving Vaults' stone) is cut from Tuff
 VARIANTS.set(B.TUFF, [B.POLISHED_ASHSTONE, B.ASHSTONE_BRICKS]);
 VARIANTS.set(B.ASHSTONE_BRICKS, [B.ASHSTONE_TILES]);
-const WALLS = new Map([[B.COBBLESTONE, B.COBBLESTONE_WALL], [B.MOSSY_COBBLESTONE, B.MOSSY_COBBLESTONE_WALL]]);
+// Tidestone is cut into its bricks (reference: prismarine into prismarine bricks)
+VARIANTS.set(B.TIDESTONE, [B.TIDESTONE_BRICKS]);
+const WALLS = new Map([[B.COBBLESTONE, B.COBBLESTONE_WALL], [B.MOSSY_COBBLESTONE, B.MOSSY_COBBLESTONE_WALL], ...WALL_SETS.map(([mat, wall]) => [mat, wall])]);
 // slabs and stairs of every stone (the original sets, the extended ones and the Hollow's)
 const SLABS = new Map(), STAIRS = new Map();
 for (const [mat, slab, stairs] of [[B.COBBLESTONE, B.COBBLESTONE_SLAB, B.COBBLESTONE_STAIRS], [B.STONE_BRICKS, B.STONE_BRICK_SLAB, B.STONE_BRICK_STAIRS],

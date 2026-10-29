@@ -722,6 +722,20 @@ def(B.OMINOUS_SPAWNER, 'Ominous Proving Spawner', { ...BLOCKS[B.PROVING_SPAWNER]
 ext('CALIBRATED_HUSH_SENSOR');
 def(B.CALIBRATED_HUSH_SENSOR, 'Calibrated Hush Sensor', { ...BLOCKS[B.HUSH_SENSOR], drops: B.CALIBRATED_HUSH_SENSOR, silkSelf: false, tex: { top: 'calibrated_sensor_top', bottom: 'hushmoss', side: 'hush_sensor_side' } });
 
+// Tidestone shapes (reference: the prismarine slabs, stairs and walls): slabs, stairs and walls for the Tide
+// Citadel's three stones. They copy their material's look and strength; walls connect like cobblestone walls.
+export const WALL_SETS = []; // [material, wall, name]
+for (const [name, key, mat] of [['Tidestone', 'TIDESTONE', B.TIDESTONE], ['Tidestone Brick', 'TIDESTONE_BRICK', B.TIDESTONE_BRICKS], ['Dark Tidestone', 'DARK_TIDESTONE', B.DARK_TIDESTONE]]) {
+  const m = BLOCKS[mat];
+  const common = { hardness: m.hardness, resistance: m.resistance, tool: m.tool, tier: m.tier, sound: m.sound, tex: { ...m.tex }, base: mat };
+  const slab = ext(key + '_SLAB'), stairs = ext(key + '_STAIRS'), wall = ext(key + '_WALL');
+  def(slab, `${name} Slab`, { ...common, opaque: false, opacity: 15, shape: SHAPE.SLAB, drops: 'slab' });
+  def(stairs, `${name} Stairs`, { ...common, opaque: false, opacity: 15, shape: SHAPE.STAIRS });
+  def(wall, `${name} Wall`, { ...common, opaque: false, shape: SHAPE.WALL });
+  STONE_SETS.push([mat, slab, stairs, name]);
+  WALL_SETS.push([mat, wall, name]);
+}
+
 // Cartography Desk (mobs/jobSites.js): the job-site block of Cartographer settlers, who trade in maps and Explorer
 // Charts (mobs/trades.js). A drawing board under a compass rose; its front faces the player.
 ext('CARTOGRAPHY_DESK');

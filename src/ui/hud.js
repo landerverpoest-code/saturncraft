@@ -8,6 +8,7 @@ import { armorTotals } from '../player/armor.js';
 import { xpToNextLevel } from '../player/experience.js';
 import { PlayerMarkers } from './playerMarkers.js';
 import { dashGauge } from '../mobs/duneStrider.js';
+import { paintGhostFace, ghostPose, GHOST_TICKS } from './ghostFace.js';
 
 const svg = (inner) => `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" shape-rendering="crispEdges">${inner}</svg>`)}`;
 const heartPath = 'M9 16 L2 9 Q0 6 2 3.5 Q4.5 1 7 3 L9 5 L11 3 Q13.5 1 16 3.5 Q18 6 16 9 Z';
@@ -39,6 +40,7 @@ export class HUD {
       <div id="overlay-vignette"></div>
       <div id="overlay-darkness"></div>
       <div id="overlay-scope" class="hidden"></div>
+      <canvas id="overlay-ghost" class="hidden" width="48" height="48"></canvas>
       <div id="crosshair"></div>
       <div id="attack-indicator" class="hidden"><div></div></div>
       <div id="skyinfo"><canvas width="192" height="96"></canvas><div><div id="phase-label">Day</div><div id="time-label" style="opacity:.7;font-size:11px"></div></div></div>
@@ -91,6 +93,8 @@ export class HUD {
     };
     this.scopeEl = this.root.querySelector('#overlay-scope');
     this.darkEl = this.root.querySelector('#overlay-darkness');
+    this.ghostEl = this.root.querySelector('#overlay-ghost');
+    this.ghostT = -1; // ticks into the Elder Deepeye's apparition, -1 when none
     this.frame = 0;
     this.lastHotbarKey = '';
     this.lastSel = -1;
@@ -102,6 +106,30 @@ export class HUD {
 
   setVisible(v) { this.visible = v; this.root.style.display = v ? '' : 'none'; }
   /** The dark ring of a Farglass while looking through it (also hides the crosshair). */
+  /** The Elder Deepeye's curse: its pale ghost swells out of the screen for three seconds (ui/ghostFace.js). */
+  showGhostFace() {
+    if (!this.ghostEl || !this.ghostEl.getContext) return;
+    const ctx = this.ghostEl.getContext('2d');
+    if (!ctx) return;
+    if (!this.ghostPainted) { paintGhostFace(ctx); this.ghostPainted = true; }
+    this.ghostStart = performance.now();
+    this.ghostT = 0;
+  }
+
+  /** Draw the apparition for the time that has passed (20 ticks a second); called every frame from update(). */
+  tickGhostFace() {
+    if (this.ghostT < 0) return;
+    const el = this.ghostEl;
+    this.ghostT = (performance.now() - this.ghostStart) / 50;
+    if (this.ghostT >= GHOST_TICKS) { this.ghostT = -1; el.classList.add('hidden'); return; }
+    const pose = ghostPose(this.ghostT);
+    el.classList.remove('hidden');
+    const size = pose.scale * 100;
+    el.style.opacity = String(pose.alpha);
+    el.style.width = el.style.height = `${size}vh`;
+    el.style.transform = `translate(calc(-50% + ${pose.dx * 100}vh), calc(-50% + ${pose.dy * 100}vh))`;
+  }
+
   setScope(on) {
     if (on === this.scoped) return;
     this.scoped = on;
@@ -234,6 +262,7 @@ export class HUD {
     this.ov.fire.classList.toggle('hidden', !(p.fireTicks > 0 && !b.inWater));
     const vign = this.ov.vign;
     vign.style.background = p.hurtTime > 0 ? `radial-gradient(ellipse at center, transparent 50%, rgba(200,0,0,${p.hurtTime / 22}) 100%)` : (p.health <= 4 ? 'radial-gradient(ellipse at center, transparent 60%, rgba(120,0,0,.35) 100%)' : '');
+    this.tickGhostFace();
     // Darkness from Hush Shriekers: black closing in from the edges in waves (game.render works out how dark)
     const dk = g.darkness || 0;
     if (Math.abs(dk - (this.lastDark || 0)) > 0.004) { this.lastDark = dk; this.darkEl.style.opacity = String(dk); }
