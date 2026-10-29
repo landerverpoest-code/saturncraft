@@ -15,6 +15,8 @@ import { B, BLOCKS, isBox } from '../world/blocks.js';
 import { canTrade, doTrade, offerPrice, MAX_USES } from '../mobs/trades.js';
 import { championDiscount } from '../mobs/raids.js';
 import { MILESTONES } from '../player/milestones.js';
+import { ACTIONS, GROUPS, SLOT_KINDS, SLOT_NAMES, resolveBindings, toOverrides, setBinding, codeLabel } from './bindings.js';
+import { COLOR_BLIND_LABELS, nextColorBlind } from './accessibility.js';
 import { loadPlayerName } from '../net/protocol.js';
 import { grindstoneAccepts, grindstoneResult, grindstoneXp, stonecutterOutputs, stonecutterAccepts, loomResult, loomAcceptsCloth, loomAcceptsDye, LOOM_BATCH } from '../world/workstations.js';
 import { BEACON_POWERS, POWER_LEVEL, SECONDARY, BEACON_PAYMENT, beaconLevel, beamColor, beaconMeta, beaconRange } from '../world/beacons.js';
@@ -65,7 +67,7 @@ export class UI {
 
   get blocking() { return this.open !== null; }
 
-  clear() { if (this.lazy) { this.lazy.dispose(); this.lazy = null; } this.layer.innerHTML = ''; this.tooltipEl.classList.add('hidden'); }
+  clear() { if (this.game.input) this.game.input.capture = null; /* a controls screen waiting for a key */ if (this.lazy) { this.lazy.dispose(); this.lazy = null; } this.layer.innerHTML = ''; this.tooltipEl.classList.add('hidden'); }
 
   close() {
     if (this.open === 'death') return;
@@ -1109,6 +1111,8 @@ export class UI {
       <button class="btn" id="hm">Hostile mobs: ${g.settings.hostileMobs !== false ? 'On' : 'Off'}</button></div>
       <button class="btn" id="crd">Show coordinates: ${g.settings.showCoords ? 'On' : 'Off'}</button>
       <button class="btn" id="diff">Difficulty: ${cap(g.difficulty)}</button>
+      <div class="btn-row"><button class="btn" data-a="controls">Controls</button>
+      <button class="btn" data-a="access">Accessibility</button></div>
       <button class="btn" data-a="ms">Milestones</button>
       <div class="net-box"></div>
       <button class="btn" data-a="title">${g.net && g.net.isClient ? 'Disconnect' : 'Save &amp; Quit to Title'}</button>
@@ -1150,6 +1154,103 @@ export class UI {
       setTimeout(() => { sv.disabled = false; sv.textContent = 'Save Game'; }, 1500);
     };
     s.querySelector('[data-a=ms]').onclick = () => this.showMilestones();
+    s.querySelector('[data-a=controls]').onclick = () => this.showControls();
+    s.querySelector('[data-a=access]').onclick = () => this.showAccessibility();
+    this.layer.appendChild(s);
+  }
+
+  /**
+   * Controls: every action has a main key, a spare key and a gamepad button. Click a slot, then press
+   * the new key or button (Backspace / the gamepad Back button clears it, Esc cancels). A code that is
+   * already used swaps places with the slot's old one, so nothing is left unbound by accident.
+   */
+  showControls() {
+    this.clear();
+    this.open = 'pause';
+    const g = this.game, inp = g.input;
+    let table = resolveBindings(g.settings.keys);
+    let waiting = null; // { id, slot }
+    let note = '';
+    const s = el(`<div class="screen pause-screen controls-screen"><h2>Controls</h2>
+      <p class="sub controls-pad"></p><p class="sub controls-note"></p><div class="controls-list"></div>
+      <div class="btn-row"><button class="btn" data-a="reset">Reset all</button><button class="btn" data-a="back">Back</button></div></div>`);
+    const list = s.querySelector('.controls-list'), noteEl = s.querySelector('.controls-note');
+    const stop = () => { waiting = null; inp.capture = null; };
+    const label = (id) => ACTIONS.find((a) => a.id === id).label;
+    const commit = (next) => { table = next; g.setSetting('keys', toOverrides(table)); };
+    const onCode = (code) => {
+      if (!waiting) return;
+      const { id, slot } = waiting;
+      if (code === 'Escape') { stop(); note = ''; render(); return; }
+      const clear = code === 'Backspace' || code === 'PadBack';
+      const r = setBinding(table, id, slot, clear ? null : code);
+      if (r.error) { note = r.error; render(); return; } // keep waiting for a fitting key
+      stop();
+      commit(r.table);
+      note = clear ? `${label(id)} cleared`
+        : r.swapped ? `${codeLabel(code)} was ${label(r.swapped.id)}'s ${SLOT_NAMES[r.swapped.slot].toLowerCase()}: the two swapped places`
+        : `${label(id)}: ${codeLabel(code)}`;
+      render();
+    };
+    const render = () => {
+      list.textContent = '';
+      noteEl.textContent = note;
+      s.querySelector('.controls-pad').textContent = inp.pad.connected
+        ? 'Gamepad connected: left stick moves, right stick looks. Inventories still need the mouse.'
+        : 'Plug in a gamepad and press any button to play with it.';
+      for (const group of GROUPS) {
+        list.appendChild(el(`<div class="world-head">${group}</div>`));
+        for (const a of ACTIONS.filter((x) => x.group === group)) {
+          const row = el('<div class="control-row"><span class="control-name"></span></div>');
+          row.firstChild.textContent = a.label;
+          for (let slot = 0; slot < 3; slot++) {
+            const b = el('<button class="btn control-key"></button>');
+            const on = waiting && waiting.id === a.id && waiting.slot === slot;
+            b.textContent = on ? (SLOT_KINDS[slot] === 'pad' ? 'Press a button…' : 'Press a key…') : codeLabel(table[a.id][slot]);
+            b.title = `${a.label} · ${SLOT_NAMES[slot]}: click to change, right-click to clear`;
+            b.classList.toggle('waiting', !!on);
+            b.classList.toggle('unbound', !table[a.id][slot]);
+            b.onclick = () => { waiting = { id: a.id, slot }; note = ''; inp.capture = onCode; render(); };
+            b.oncontextmenu = (e) => { e.preventDefault(); stop(); commit(setBinding(table, a.id, slot, null).table); note = `${a.label} cleared`; render(); };
+            row.appendChild(b);
+          }
+          list.appendChild(row);
+        }
+      }
+    };
+    s.querySelector('[data-a=reset]').onclick = () => { stop(); commit(resolveBindings(null)); note = 'Controls reset to the defaults'; render(); };
+    s.querySelector('[data-a=back]').onclick = () => { stop(); this.showPause(); };
+    this.layer.appendChild(s);
+    render();
+  }
+
+  /** Accessibility: sound captions, reduced motion / flashing and colour-blind friendly status bars. */
+  showAccessibility() {
+    this.clear();
+    this.open = 'pause';
+    const g = this.game;
+    const onOff = (k) => (g.settings[k] ? 'On' : 'Off');
+    const s = el(`<div class="screen pause-screen"><h2>Accessibility</h2>
+      <button class="btn" data-k="captions">Sound captions: ${onOff('captions')}</button>
+      <p class="sub">Shows what you hear, and from which side, at the bottom right.</p>
+      <button class="btn" data-k="reduceMotion">Reduce motion: ${onOff('reduceMotion')}</button>
+      <p class="sub">No head bob, hurt tilt, sprint zoom or trembling apparitions.</p>
+      <button class="btn" data-k="reduceFlashing">Reduce flashing: ${onOff('reduceFlashing')}</button>
+      <p class="sub">Lightning only brightens the sky a little and hearts stop flashing.</p>
+      <button class="btn" data-a="cb">Colour-blind HUD: ${COLOR_BLIND_LABELS[g.settings.colorBlind] || 'Off'}</button>
+      <p class="sub">Moves the status-bar colours apart and marks poison and hunger with a cross.</p>
+      <button class="btn" data-a="back">Back</button></div>`);
+    s.querySelectorAll('[data-k]').forEach((b) => {
+      const k = b.dataset.k, name = b.textContent.split(':')[0];
+      b.onclick = () => {
+        g.setSetting(k, !g.settings[k]);
+        b.textContent = `${name}: ${onOff(k)}`;
+        if (k === 'captions' && g.settings.captions) g.captions.add('click', [g.player.x + 3, g.player.y, g.player.z], 1, [g.player.x, g.player.y, g.player.z, 0], performance.now());
+      };
+    });
+    const cb = s.querySelector('[data-a=cb]');
+    cb.onclick = () => { g.setSetting('colorBlind', nextColorBlind(g.settings.colorBlind)); cb.textContent = `Colour-blind HUD: ${COLOR_BLIND_LABELS[g.settings.colorBlind]}`; };
+    s.querySelector('[data-a=back]').onclick = () => this.showPause();
     this.layer.appendChild(s);
   }
 
