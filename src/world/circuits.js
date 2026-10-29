@@ -26,8 +26,11 @@ import { SIDE_DIRS, DOOR_OPEN, DOOR_UPPER, TRAPDOOR_OPEN, GATE_OPEN } from './sh
 import {
   FACING6, CIRCUIT_BLOCK, isWire, isTorchC, isPiston, isConductor, wireMask, wirePowerSides, attachDir, torchAttachDir,
   ON, TURNED, REPEATER_POWERED, PISTON_EXTENDED, HEAD_STICKY, CHIME_POWERED, OPENABLE_POWERED, SIDE_TO_FACING, facingOf, DISPENSER_TRIGGERED,
-  COMPARATOR_SUBTRACT, OBSERVER_POWERED, SENSOR_INVERTED, comparatorLevel, observerBack,
+  COMPARATOR_SUBTRACT, OBSERVER_POWERED, SENSOR_INVERTED, comparatorLevel, observerBack, isPlate, isWeightedPlate, plateLevel,
 } from './circuitShapes.js';
+import {
+  RAIL_ON, DETECT_TICKS, weightedLevel, railShouldBeOn, pushStructure, moveOrder, immovable, pushBreaks,
+} from './automation.js';
 import { comparatorOutput, daylightLevel } from './comparators.js';
 import { LECTERN_POWERED, LECTERN_PULSE_TICKS } from './books.js';
 import { TARGET_TICKS_STUCK } from './signalBlocks.js';
@@ -57,14 +60,16 @@ const OPENABLE_SHAPE = (id) => !!BLOCKS[id] && (BLOCKS[id].shape === SHAPE.DOOR 
 export const CIRCUIT_REACT = new Uint8Array(BLOCK_LIMIT);
 for (const id of [B.CINNABAR_WIRE, B.CINNABAR_TORCH, B.CINNABAR_TORCH_OFF, B.CINNABAR_LAMP, B.CINNABAR_LAMP_ON, B.REPEATER,
   B.PISTON, B.STICKY_PISTON, B.STONE_BUTTON, B.WOODEN_PRESSURE_PLATE, B.CHIME_BLOCK, B.DOOR, B.OAK_TRAPDOOR, B.OAK_FENCE_GATE, B.TNT, B.DISPENSER, B.DROPPER,
-  B.COMPARATOR, B.OBSERVER, B.DAYLIGHT_SENSOR, B.HUSH_SENSOR, B.CALIBRATED_HUSH_SENSOR, B.TARGET, B.LECTERN]) CIRCUIT_REACT[id] = 1;
+  B.COMPARATOR, B.OBSERVER, B.DAYLIGHT_SENSOR, B.HUSH_SENSOR, B.CALIBRATED_HUSH_SENSOR, B.TARGET, B.LECTERN,
+  B.STONE_PRESSURE_PLATE, B.LIGHT_WEIGHTED_PLATE, B.HEAVY_WEIGHTED_PLATE, B.POWERED_RAIL, B.DETECTOR_RAIL, B.ACTIVATOR_RAIL]) CIRCUIT_REACT[id] = 1;
 for (const b of BLOCKS) if (b && (b.shape === SHAPE.DOOR || b.shape === SHAPE.TRAPDOOR || b.shape === SHAPE.GATE)) CIRCUIT_REACT[b.id] = 1;
 CIRCUIT_REACT[B.COPPER_BULB] = 1; CIRCUIT_REACT[B.COPPER_BULB_LIT] = 1; // Copper Bulbs toggle on a rising edge
 /** Blocks re-evaluated when their chunk loads or on random ticks (state may be stale after a reload). */
 export const CIRCUIT_SETTLE = new Uint8Array(BLOCK_LIMIT);
 for (const id of [B.CINNABAR_WIRE, B.CINNABAR_TORCH, B.CINNABAR_TORCH_OFF, B.CINNABAR_LAMP, B.CINNABAR_LAMP_ON, B.REPEATER,
   B.PISTON, B.STICKY_PISTON, B.STONE_BUTTON, B.WOODEN_PRESSURE_PLATE, B.DISPENSER, B.DROPPER,
-  B.COMPARATOR, B.OBSERVER, B.DAYLIGHT_SENSOR, B.HUSH_SENSOR, B.CALIBRATED_HUSH_SENSOR, B.TARGET, B.LECTERN]) CIRCUIT_SETTLE[id] = 1;
+  B.COMPARATOR, B.OBSERVER, B.DAYLIGHT_SENSOR, B.HUSH_SENSOR, B.CALIBRATED_HUSH_SENSOR, B.TARGET, B.LECTERN,
+  B.STONE_PRESSURE_PLATE, B.LIGHT_WEIGHTED_PLATE, B.HEAVY_WEIGHTED_PLATE, B.POWERED_RAIL, B.DETECTOR_RAIL, B.ACTIVATOR_RAIL]) CIRCUIT_SETTLE[id] = 1;
 export { CIRCUIT_BLOCK };
 
 // ---- power queries (pure functions of a world with getBlock / getMeta) -----------------
@@ -85,7 +90,9 @@ export function strongOut(w, x, y, z, d, forWire = false) {
   const id = get(w, x, y, z);
   switch (id) {
     case B.LEVER: case B.STONE_BUTTON: { const m = w.getMeta(x, y, z); return m & ON && same(attachDir(m), d) ? 15 : 0; }
-    case B.WOODEN_PRESSURE_PLATE: return w.getMeta(x, y, z) & 1 && d[1] < 0 ? 15 : 0;
+    case B.WOODEN_PRESSURE_PLATE: case B.STONE_PRESSURE_PLATE: case B.LIGHT_WEIGHTED_PLATE: case B.HEAVY_WEIGHTED_PLATE:
+      return d[1] < 0 ? plateLevel(id, w.getMeta(x, y, z)) : 0;
+    case B.DETECTOR_RAIL: return d[1] < 0 && w.getMeta(x, y, z) & RAIL_ON ? 15 : 0; // a cart on it powers the block under it
     case B.HUSH_SENSOR: case B.CALIBRATED_HUSH_SENSOR: return d[1] < 0 ? w.getMeta(x, y, z) & 15 : 0; // a pulsing sensor powers the block under it
     case B.LECTERN: return d[1] < 0 && w.getMeta(x, y, z) & LECTERN_POWERED ? 15 : 0; // a turned page powers the block under it
     case B.CINNABAR_TORCH: return d[1] > 0 ? 15 : 0;
@@ -102,7 +109,9 @@ export function weakOut(w, x, y, z, d, forWire = false) {
   const id = get(w, x, y, z);
   switch (id) {
     case B.LEVER: case B.STONE_BUTTON: return w.getMeta(x, y, z) & ON ? 15 : 0;
-    case B.WOODEN_PRESSURE_PLATE: return w.getMeta(x, y, z) & 1 ? 15 : 0;
+    case B.WOODEN_PRESSURE_PLATE: case B.STONE_PRESSURE_PLATE: case B.LIGHT_WEIGHTED_PLATE: case B.HEAVY_WEIGHTED_PLATE:
+      return plateLevel(id, w.getMeta(x, y, z));
+    case B.DETECTOR_RAIL: return w.getMeta(x, y, z) & RAIL_ON ? 15 : 0;
     case B.HUSH_SENSOR: case B.CALIBRATED_HUSH_SENSOR: return w.getMeta(x, y, z) & 15; // the pulse of a Hush Sensor (world/hushSystem.js)
     case B.TARGET: return w.getMeta(x, y, z) & 15; // a hit target block (world/signalBlocks.js)
     case B.LECTERN: return w.getMeta(x, y, z) & LECTERN_POWERED ? 15 : 0; // a page was turned (world/books.js)
@@ -249,20 +258,8 @@ export function solveNetwork(w, x, y, z, cap = MAX_NETWORK) {
   return nodes;
 }
 
-// ---- pistons ------------------------------------------------------------------------
-/** Blocks a piston cannot move at all. */
-export function immovable(id, meta) {
-  const d = BLOCKS[id];
-  if (!d || d.hardness < 0 || id === B.OBSIDIAN || d.container || isFurnace(id) || id === B.SPAWNER) return true;
-  if (id === B.ENCHANTING_TABLE || id === B.PISTON_HEAD || id === B.RIFT || id === B.LECTERN) return true; // (a lectern keeps its book per position)
-  if (isPiston(id) && meta & PISTON_EXTENDED) return true;
-  return false;
-}
-/** Blocks a piston breaks (drops) instead of pushing: plants, torches, wire, fluids... */
-export function pushBreaks(id) {
-  const d = BLOCKS[id];
-  return !!d && (d.replaceable || d.needsSupport || !d.solid || !!d.fluid);
-}
+// ---- pistons (what can move: world/automation.js) -----------------------------------------
+export { immovable, pushBreaks };
 
 /**
  * Blocks a piston at x,y,z facing f would push: { ok, line: [[x,y,z,id,meta]...], end: [x,y,z] | null }.
@@ -292,6 +289,8 @@ export class Circuits {
     this.burn = new Map();      // torch key -> recent turn-off ticks / burnt-out-until
     this.acting = 0;            // > 0 while the simulation itself edits blocks
     this.entitiesOn = null;     // (x, y, z) => is something standing on the plate? (set by the game)
+    this.entitiesCount = null;  // (x, y, z, livingOnly) => how many things stand on the plate (set by the game; weighted plates)
+    this.cartOn = null;         // (x, y, z) => is a minecart on the rail? (set by the game; Detector Rails)
     this.onTNT = null;          // falls back to world.onTNT
     this.onDispense = null;     // (x, y, z, id) => fire a dispenser / dropper (set by the game, world/dispensers.js)
     this.containerSignal = null; // (x, y, z) => fullness 0-15 of a container there, or -1 (set by the game, world/comparators.js)
@@ -384,7 +383,8 @@ export class Circuits {
     this.enqueueAround(x, y, z, quiet);
     // a lever / button / plate that turns on schedules its own release
     if (id === B.STONE_BUTTON && w.getMeta(x, y, z) & ON) w.scheduleTick(x, y, z, BUTTON_TICKS);
-    if (id === B.WOODEN_PRESSURE_PLATE && w.getMeta(x, y, z) & 1) w.scheduleTick(x, y, z, PLATE_TICKS);
+    if (isPlate(id) && plateLevel(id, w.getMeta(x, y, z))) w.scheduleTick(x, y, z, PLATE_TICKS);
+    if (id === B.DETECTOR_RAIL && w.getMeta(x, y, z) & RAIL_ON) w.scheduleTick(x, y, z, DETECT_TICKS);
     if (id === B.LECTERN && w.getMeta(x, y, z) & LECTERN_POWERED) w.scheduleTick(x, y, z, LECTERN_PULSE_TICKS);
     // pistons and their heads go together
     if (isPiston(old) && old !== id) {
@@ -458,7 +458,16 @@ export class Circuits {
       case B.HUSH_SENSOR: case B.CALIBRATED_HUSH_SENSOR: if (m & 15) w.scheduleTick(x, y, z, SENSOR_PULSE); break; // (a pulse left over from before a reload ends too)
       case B.TARGET: if (m & 15) w.scheduleTick(x, y, z, Math.max(1, (this.targetUntil.get(key(x, y, z)) ?? w.tickCount + TARGET_TICKS_STUCK) - w.tickCount)); break;
       case B.LECTERN: if (m & LECTERN_POWERED) w.scheduleTick(x, y, z, LECTERN_PULSE_TICKS); break;
-      case B.WOODEN_PRESSURE_PLATE: if (m & 1) w.scheduleTick(x, y, z, PLATE_TICKS); break;
+      case B.WOODEN_PRESSURE_PLATE: case B.STONE_PRESSURE_PLATE: case B.LIGHT_WEIGHTED_PLATE: case B.HEAVY_WEIGHTED_PLATE:
+        if (plateLevel(id, m)) w.scheduleTick(x, y, z, PLATE_TICKS);
+        break;
+      case B.DETECTOR_RAIL: if (m & RAIL_ON) w.scheduleTick(x, y, z, DETECT_TICKS); break;
+      case B.POWERED_RAIL: case B.ACTIVATOR_RAIL: {
+        // switched on by power reaching it or a rail of its kind in line with it (world/automation.js)
+        const on = railShouldBeOn(w, x, y, z, (a, b, c) => powerInto(w, a, b, c) > 0);
+        if (on !== !!(m & RAIL_ON)) this.act(() => w.setBlock(x, y, z, id, on ? m | RAIL_ON : m & ~RAIL_ON, false));
+        break;
+      }
       case B.CHIME_BLOCK: {
         const p = powerInto(w, x, y, z) > 0;
         if (p !== !!(m & CHIME_POWERED)) this.act(() => w.setBlock(x, y, z, id, p ? m | CHIME_POWERED : m & ~CHIME_POWERED, false));
@@ -566,10 +575,23 @@ export class Circuits {
         break;
       }
       case B.LECTERN: if (m & LECTERN_POWERED) this.act(() => w.setBlock(x, y, z, id, m & ~LECTERN_POWERED, false)); break;
-      case B.WOODEN_PRESSURE_PLATE:
+      case B.WOODEN_PRESSURE_PLATE: case B.STONE_PRESSURE_PLATE:
         if (!(m & 1)) break;
-        if (this.entitiesOn && this.entitiesOn(x, y, z)) w.scheduleTick(x, y, z, PLATE_TICKS);
+        if (this.countOn(id, x, y, z) > 0) w.scheduleTick(x, y, z, PLATE_TICKS);
         else this.act(() => w.setBlock(x, y, z, id, 0));
+        break;
+      case B.LIGHT_WEIGHTED_PLATE: case B.HEAVY_WEIGHTED_PLATE: {
+        // the level follows how many things stand on it; it lets go when nothing does
+        if (!(m & 15)) break;
+        const lv = weightedLevel(id, this.countOn(id, x, y, z));
+        if (lv !== (m & 15)) this.act(() => w.setBlock(x, y, z, id, lv));
+        if (lv) w.scheduleTick(x, y, z, PLATE_TICKS);
+        break;
+      }
+      case B.DETECTOR_RAIL:
+        if (!(m & RAIL_ON)) break;
+        if (this.cartOn && this.cartOn(x, y, z)) w.scheduleTick(x, y, z, DETECT_TICKS);
+        else this.act(() => w.setBlock(x, y, z, id, m & ~RAIL_ON, false));
         break;
       case B.CINNABAR_WIRE: this.updateWire(x, y, z); break;
       case B.DISPENSER: case B.DROPPER: if (this.onDispense) this.onDispense(x, y, z, id); break;
@@ -606,35 +628,38 @@ export class Circuits {
   /** Push the line in front of the piston one block and put the head out. */
   extend(x, y, z, id, m) {
     const w = this.world, f = m & 7, [dx, dy, dz] = FACING6[f];
-    const r = pushLine(w, x, y, z, f);
+    const r = pushStructure(w, x, y, z, f);
     if (!r.ok) return false;
     this.act(() => {
-      if (r.end) { const [ex, ey, ez] = r.end; if (w.getBlock(ex, ey, ez)) w.breakBlock(ex, ey, ez, !BLOCKS[w.getBlock(ex, ey, ez)].fluid); }
-      for (let i = r.line.length - 1; i >= 0; i--) {
-        const [bx, by, bz, bid, bm] = r.line[i];
-        w.setBlock(bx + dx, by + dy, bz + dz, bid, bm);
-      }
+      this.applyMoves(r, FACING6[f]);
       w.setBlock(x, y, z, id, m | PISTON_EXTENDED, false);
       w.setBlock(x + dx, y + dy, z + dz, B.PISTON_HEAD, f | (id === B.STICKY_PISTON ? HEAD_STICKY : 0));
-      if (w.emit) w.emit('pistonMoved', x, y, z, f, r.line.length, true);
+      if (w.emit) w.emit('pistonMoved', x, y, z, f, r.moves.length, true, [[x + dx, y + dy, z + dz], ...r.cells]);
     });
     return true;
   }
 
-  /** Pull the head back in (a sticky piston brings the block in front of it along). */
+  /**
+   * Carry out what pushStructure worked out: break what is in the way, then move the blocks one step along md
+   * (the farthest first, so each lands in a cell that is already free) and empty the cells nothing moved into.
+   */
+  applyMoves(r, md) {
+    const w = this.world;
+    for (const [bx, by, bz] of r.breaks) { const bid = w.getBlock(bx, by, bz); if (bid) w.breakBlock(bx, by, bz, !BLOCKS[bid].fluid); }
+    const into = new Set(r.cells.map(([a, b, c]) => key(a, b, c)));
+    for (const [bx, by, bz, bid, bm] of moveOrder(r.moves, md)) w.setBlock(bx + md[0], by + md[1], bz + md[2], bid, bm);
+    for (const [bx, by, bz] of r.moves) if (!into.has(key(bx, by, bz))) w.setBlock(bx, by, bz, B.AIR);
+  }
+
+  /** Pull the head back in (a sticky piston brings the block in front of it, and what holds on to it, along). */
   retract(x, y, z, id, m) {
     const w = this.world, f = m & 7, [dx, dy, dz] = FACING6[f];
     const hx = x + dx, hy = y + dy, hz = z + dz;
+    const pull = id === B.STICKY_PISTON ? pushStructure(w, x, y, z, f, true) : null; // (the head counts as gone)
     this.act(() => {
       w.setBlock(x, y, z, id, m & ~PISTON_EXTENDED);
       if (w.getBlock(hx, hy, hz) === B.PISTON_HEAD) w.setBlock(hx, hy, hz, B.AIR);
-      if (id === B.STICKY_PISTON) {
-        const fx = hx + dx, fy = hy + dy, fz = hz + dz, b = w.getBlock(fx, fy, fz), bm = w.getMeta(fx, fy, fz);
-        if (b && !pushBreaks(b) && !immovable(b, bm) && !w.getBlock(hx, hy, hz)) {
-          w.setBlock(fx, fy, fz, B.AIR);
-          w.setBlock(hx, hy, hz, b, bm);
-        }
-      }
+      if (pull && pull.ok && pull.moves.length) this.applyMoves(pull, [-dx, -dy, -dz]);
       if (w.emit) w.emit('pistonMoved', x, y, z, f, 0, false);
     });
   }
@@ -645,11 +670,38 @@ export class Circuits {
     for (const [x, y, z] of positions) this.queue.add(key(x, y, z));
   }
 
-  /** Something stepped on a pressure plate (host / single player). */
-  press(x, y, z) {
+  /** How many things stand on the plate at x,y,z (a Stone Plate counts creatures and players only). */
+  countOn(id, x, y, z) {
+    if (this.entitiesCount) return this.entitiesCount(x, y, z, id === B.STONE_PRESSURE_PLATE);
+    return this.entitiesOn && this.entitiesOn(x, y, z) ? 1 : 0;
+  }
+
+  /**
+   * Something stands on the pressure plate at x,y,z (host / single player): a wooden or stone plate goes down; a
+   * weighted plate takes the level for `count` things. Returns whether the plate changed.
+   */
+  press(x, y, z, count = 1) {
+    const w = this.world, id = w.getBlock(x, y, z);
+    if (!this.enabled || !isPlate(id)) return false;
+    const m = w.getMeta(x, y, z);
+    if (isWeightedPlate(id)) {
+      const lv = weightedLevel(id, count);
+      if (!lv || lv === (m & 15)) return false;
+      this.act(() => w.setBlock(x, y, z, id, lv));
+      return true;
+    }
+    if (m & 1) return false;
+    this.act(() => w.setBlock(x, y, z, id, 1));
+    return true;
+  }
+
+  /** A minecart is on the Detector Rail at x,y,z (host / single player). */
+  detect(x, y, z) {
     const w = this.world;
-    if (!this.enabled || w.getBlock(x, y, z) !== B.WOODEN_PRESSURE_PLATE || w.getMeta(x, y, z) & 1) return false;
-    this.act(() => w.setBlock(x, y, z, B.WOODEN_PRESSURE_PLATE, 1));
+    if (!this.enabled || w.getBlock(x, y, z) !== B.DETECTOR_RAIL) return false;
+    const m = w.getMeta(x, y, z);
+    if (m & RAIL_ON) return false;
+    this.act(() => w.setBlock(x, y, z, B.DETECTOR_RAIL, m | RAIL_ON, false));
     return true;
   }
 }
@@ -669,7 +721,7 @@ export function placeMeta(id, face, look) {
     const s = SIDE_DIRS.findIndex(([a, , c]) => a === -face[0] && c === -face[2]);
     return 1 + s;
   }
-  if (id === B.CINNABAR_WIRE || id === B.REPEATER || id === B.WOODEN_PRESSURE_PLATE) {
+  if (id === B.CINNABAR_WIRE || id === B.REPEATER || isPlate(id)) {
     if (face[1] !== 1) return -1;
     return id === B.REPEATER ? sideLook : 0;
   }
@@ -715,7 +767,7 @@ export function useMeta(id, meta) {
 export function changeSound(w, x, y, z, old, id) {
   if (old === id) {
     const m = w.getMeta(x, y, z);
-    if (id === B.LEVER || id === B.STONE_BUTTON || id === B.WOODEN_PRESSURE_PLATE) return 'click';
+    if (id === B.LEVER || id === B.STONE_BUTTON || isPlate(id)) return 'click';
     if (OPENABLE_SHAPE(id)) {
       if (isDoorId(id) && m & DOOR_UPPER) return null;
       const open = isDoorId(id) ? DOOR_OPEN : BLOCKS[id].shape === SHAPE.TRAPDOOR ? TRAPDOOR_OPEN : GATE_OPEN;

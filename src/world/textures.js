@@ -13,6 +13,7 @@ import { ARCH_TEX } from './archaeologyTextures.js';
 import { LIBRARY_TEX } from './libraryTextures.js';
 import { PROVING_TEX } from './provingTextures.js';
 import { JOBSITE_TEX } from './jobSiteTextures.js';
+import { AUTOMATION_TEX } from './automationTextures.js';
 
 export const TEX_SIZE = 16;
 
@@ -49,6 +50,7 @@ for (const n of Object.keys(ARCH_TEX)) addTex(n); // archaeology: brushing stage
 for (const n of Object.keys(LIBRARY_TEX)) addTex(n); // lecterns, targets, cakes, dyed boxes (world/libraryTextures.js)
 for (const n of Object.keys(PROVING_TEX)) addTex(n); // the Proving Vaults (world/provingTextures.js)
 for (const n of Object.keys(JOBSITE_TEX)) addTex(n); // looms and fletching tables (world/jobSiteTextures.js)
+for (const n of Object.keys(AUTOMATION_TEX)) addTex(n); // switched rails, Slime and Honey Blocks (world/automationTextures.js)
 ARTS.forEach(([, w, h], art) => { for (let p = 0; p < w * h; p++) addTex(`painting_${art}_${p}`); });
 for (let i = 0; i < 8; i++) addTex('fire_' + i);
 addTex('lava_flow');
@@ -1298,6 +1300,7 @@ function paint(c, name) {
   else if (LIBRARY_TEX[name]) LIBRARY_TEX[name](c, { hex, mix, shade, planks });
   else if (PROVING_TEX[name]) PROVING_TEX[name](c, { hex, mix, shade });
   else if (JOBSITE_TEX[name]) JOBSITE_TEX[name](c, { hex, mix, shade, planks });
+  else if (AUTOMATION_TEX[name]) AUTOMATION_TEX[name](c, { hex, mix, shade });
   else c.noiseFill(P.stone);
 }
 

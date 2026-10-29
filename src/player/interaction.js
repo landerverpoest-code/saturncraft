@@ -22,7 +22,7 @@ import { canLight, FIRE_DELAY } from '../world/fire.js';
 import { Bobber } from '../entities/bobber.js';
 import { igniteTNT } from '../entities/tnt.js';
 import { scaffoldDistance, scaffoldColumnTop, SCAFFOLD_MAX } from '../world/scaffolding.js';
-import { updateRails } from '../world/rails.js';
+import { updateRails, isRail } from '../world/rails.js';
 import { placeMeta as circuitPlaceMeta, useMeta as circuitUseMeta } from '../world/circuits.js';
 import { ON as CIRCUIT_ON } from '../world/circuitShapes.js';
 import { choosePainting, placePainting } from '../world/paintings.js';
@@ -62,7 +62,7 @@ const BREAK_DELAY = 5;
 /** Blocks that right-click opens / toggles instead of using the held item. */
 const USABLE_BLOCKS = new Set([B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.CHEST, B.BARREL, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL, B.BREWING_STAND, B.GLOOMSHELL_BOX, B.HOPPER, B.COMPOSTER, B.SWEET_BERRY_BUSH, B.JUKEBOX, B.CAVE_VINES_LIT, B.FLOWER_POT, B.BEACON, B.DISPENSER, B.DROPPER, B.GRINDSTONE, B.STONECUTTER, B.LECTERN, B.CAKE, B.LOOM, ...BOX_COLORS, B.VAULT]);
 const CIRCUIT_USE = new Set([B.LEVER, B.STONE_BUTTON, B.REPEATER, B.CHIME_BLOCK, B.COMPARATOR, B.DAYLIGHT_SENSOR]);
-const CIRCUIT_PLACE = new Set([B.LEVER, B.STONE_BUTTON, B.CINNABAR_WIRE, B.REPEATER, B.WOODEN_PRESSURE_PLATE, B.PISTON, B.STICKY_PISTON, B.COMPARATOR, B.OBSERVER, B.DAYLIGHT_SENSOR]);
+const CIRCUIT_PLACE = new Set([B.LEVER, B.STONE_BUTTON, B.CINNABAR_WIRE, B.REPEATER, B.WOODEN_PRESSURE_PLATE, B.STONE_PRESSURE_PLATE, B.LIGHT_WEIGHTED_PLATE, B.HEAVY_WEIGHTED_PLATE, B.PISTON, B.STICKY_PISTON, B.COMPARATOR, B.OBSERVER, B.DAYLIGHT_SENSOR]);
 const USE_DELAY = 4;
 /** Blocks a Water Vial turns to mud. */
 const MUDDABLE = new Set([B.DIRT, B.DIRT_PATH]);
@@ -797,7 +797,7 @@ export class Interaction {
     }
     if (d && d.minecart) {
       // carts go on rails
-      if (!this.target || this.target.id !== B.RAIL) return false;
+      if (!this.target || !isRail(this.target.id)) return false;
       const t = this.target;
       g.entities.spawnBoat(t.x + 0.5, t.y + 1 / 16, t.z + 0.5, p.yaw, true);
       if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
@@ -1365,7 +1365,7 @@ export class Interaction {
     if (LEAVES.has(id)) meta = 1; // placed leaves never decay
     g.world.setBlockUrgent(x, y, z, id, meta);
     if (id === B.PUMPKIN || id === B.CARVED_PUMPKIN || id === B.JACK_O_LANTERN) { if (!this.tryBuildIronguard(x, y, z)) this.tryBuildFrostling(x, y, z); }
-    if (id === B.RAIL) updateRails(g.world, x, y, z);
+    if (isRail(id)) updateRails(g.world, x, y, z);
     g.audio.play('place_' + BLOCKS[id].sound, [x + 0.5, y + 0.5, z + 0.5]);
     if (g.hush) g.hush.blockEvent(x, y, z, 'place', p);
     p.inventory.removeFromSlot(p.inventory.selected, 1);

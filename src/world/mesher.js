@@ -6,7 +6,7 @@ import { LEAVES } from './trees.js';
 import { waterTint } from './biomes.js';
 import { FACE_TILE, FRONT_TILE, texId } from './textures.js';
 import { WOOL_RGB } from './colors.js';
-import { railHeight } from './rails.js';
+import { railHeight, railShapeOf, RAIL_ON } from './rails.js';
 import { ARTS, artOf, partOf } from './paintings.js';
 import { crystalTex, orientPoint } from './caves.js';
 import { circuitParts, partPoint, wireMask, wireColor } from './circuitShapes.js';
@@ -70,6 +70,8 @@ const WATER_STILL = texId('water');
 const LATTICE = new Uint8Array(BLOCK_LIMIT);
 for (const d of BLOCKS) if (d && d.lattice) LATTICE[d.id] = 1;
 const RAIL_CORNER = texId('rail_corner');
+// the cinnabar rails show another texture while switched on (meta bit 3)
+const RAIL_ON_TILE = { [B.POWERED_RAIL]: texId('powered_rail_on'), [B.DETECTOR_RAIL]: texId('detector_rail_on'), [B.ACTIVATOR_RAIL]: texId('activator_rail_on') };
 const PAINT_TILES = ARTS.map(([, w, h], art) => Array.from({ length: w * h }, (_, p) => texId(`painting_${art}_${p}`)));
 const DOOR_LOWER = texId('door_lower'), DOOR_UPPER_TILE = texId('door_upper');
 const DOOR_TILES = {};
@@ -351,8 +353,8 @@ export function meshSection(sec) {
       buf.quad(false);
     } else if (shape === SHAPE.RAIL) {
       // one textured quad on the floor (sloped for ascending rails), rotated to the rail's shape
-      const l = light[i], m = meta[i] % 10, sky = (l >> 4) * 17, blk = (l & 15) * 17;
-      const tile = m >= 6 ? RAIL_CORNER : FACE_TILE[id * 6 + 2];
+      const l = light[i], m = railShapeOf(id, meta[i]), sky = (l >> 4) * 17, blk = (l & 15) * 17;
+      const tile = m >= 6 ? RAIL_CORNER : (meta[i] & RAIL_ON) && RAIL_ON_TILE[id] !== undefined ? RAIL_ON_TILE[id] : FACE_TILE[id * 6 + 2];
       const rot = m >= 6 ? m - 6 : (m === 1 || m === 2 || m === 3) ? 1 : 0;
       const cx = [0, 1, 1, 0], cz = [0, 0, 1, 1], bu = [0, 1, 1, 0], bv = [0, 0, 1, 1];
       buf.ensure(4);

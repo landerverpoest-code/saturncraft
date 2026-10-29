@@ -40,6 +40,13 @@ export function attachDir(meta) {
 /** Direction from a (cinnabar) torch towards its block (torch meta: 0 floor, 1..4 wall side+1). */
 export function torchAttachDir(meta) { return meta ? SIDE_DIRS[(meta - 1) & 3] : [0, -1, 0]; }
 
+/** Pressure plates: wooden and stone (meta bit 0 = pressed) and the weighted ones (meta bits 0-3 = the level they give). */
+export const PLATE_TEX = { [B.WOODEN_PRESSURE_PLATE]: 'oak_planks', [B.STONE_PRESSURE_PLATE]: 'stone', [B.LIGHT_WEIGHTED_PLATE]: 'gold_block', [B.HEAVY_WEIGHTED_PLATE]: 'iron_block' };
+export const isPlate = (id) => PLATE_TEX[id] !== undefined;
+export const isWeightedPlate = (id) => id === B.LIGHT_WEIGHTED_PLATE || id === B.HEAVY_WEIGHTED_PLATE;
+/** Signal a plate gives with this meta. */
+export const plateLevel = (id, meta) => (isWeightedPlate(id) ? meta & 15 : meta & 1 ? 15 : 0);
+
 export const isWire = (id) => id === B.CINNABAR_WIRE;
 export const isTorchC = (id) => id === B.CINNABAR_TORCH || id === B.CINNABAR_TORCH_OFF;
 export const isPiston = (id) => id === B.PISTON || id === B.STICKY_PISTON;
@@ -48,7 +55,7 @@ export const isConductor = (id) => !!(SOLID[id] && OPAQUE[id]);
 
 /** Do wires point at this neighbour (on side `side` of the wire)? */
 function wireAttracts(id, meta, side) {
-  if (id === B.LEVER || id === B.STONE_BUTTON || id === B.WOODEN_PRESSURE_PLATE || isTorchC(id) || id === B.CINNABAR_BLOCK) return true;
+  if (id === B.LEVER || id === B.STONE_BUTTON || isPlate(id) || id === B.DETECTOR_RAIL || isTorchC(id) || id === B.CINNABAR_BLOCK) return true;
   if (id === B.REPEATER) return ((meta & 3) & 1) === (side & 1); // only along its axis
   if (id === B.COMPARATOR || id === B.DAYLIGHT_SENSOR || id === B.TARGET) return true;
   if (id === B.OBSERVER) return (meta & 7) === SIDE_TO_FACING[side]; // only at its back
@@ -112,7 +119,7 @@ export function circuitParts(id, meta) {
     ];
   }
   if (id === B.STONE_BUTTON) return [P(5, 0, 6, 11, meta & ON ? 1 : 2, 10, 'stone', attachedXform(meta))];
-  if (id === B.WOODEN_PRESSURE_PLATE) return [P(1, 0, 1, 15, meta & 1 ? 0.5 : 1, 15, 'oak_planks')];
+  if (isPlate(id)) return [P(1, 0, 1, 15, plateLevel(id, meta) ? 0.5 : 1, 15, PLATE_TEX[id])];
   if (id === B.REPEATER) {
     const yaw = (meta & 3), on = meta & REPEATER_POWERED, delay = ((meta >> 2) & 3) + 1;
     const torch = on ? 'cinnabar_torch' : 'cinnabar_torch_off';
@@ -221,7 +228,8 @@ export function circuitCollision(id, meta) {
 }
 
 export const CIRCUIT_BLOCK = new Uint8Array(BLOCK_LIMIT);
-for (const id of [B.CINNABAR_WIRE, B.LEVER, B.STONE_BUTTON, B.WOODEN_PRESSURE_PLATE, B.CINNABAR_TORCH, B.CINNABAR_TORCH_OFF,
+for (const id of [B.CINNABAR_WIRE, B.LEVER, B.STONE_BUTTON, B.WOODEN_PRESSURE_PLATE, B.STONE_PRESSURE_PLATE, B.LIGHT_WEIGHTED_PLATE, B.HEAVY_WEIGHTED_PLATE,
+  B.POWERED_RAIL, B.DETECTOR_RAIL, B.ACTIVATOR_RAIL, B.CINNABAR_TORCH, B.CINNABAR_TORCH_OFF,
   B.CINNABAR_LAMP, B.CINNABAR_LAMP_ON, B.REPEATER, B.PISTON, B.STICKY_PISTON, B.PISTON_HEAD, B.CHIME_BLOCK, B.CINNABAR_BLOCK, B.DISPENSER, B.DROPPER,
   B.COMPARATOR, B.OBSERVER, B.DAYLIGHT_SENSOR, B.HUSH_SENSOR, B.CALIBRATED_HUSH_SENSOR, B.TARGET, B.LECTERN]) CIRCUIT_BLOCK[id] = 1;
 CIRCUIT_BLOCK[B.COPPER_BULB] = 1; CIRCUIT_BLOCK[B.COPPER_BULB_LIT] = 1; // (world/provingVaults.js)

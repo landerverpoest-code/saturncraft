@@ -10,7 +10,7 @@ import { riftCanStay } from './dimensions/portal.js';
 import { hushvineSupported, hushFlowerSupported } from './dimensions/hushvine.js';
 import { createGenerator } from './dimensions/dims.js';
 import { LEAVES as LEAVES_SET } from './trees.js';
-import { railSupported } from './rails.js';
+import { railSupported, isRail } from './rails.js';
 import { spongeUpdate } from './sponge.js';
 import { paintingIntact } from './paintings.js';
 import { LISTENS } from './vibrations.js';
@@ -297,7 +297,7 @@ export class World {
       if ((metaIn ?? this.getMeta(x, y, z)) & DOOR_UPPER) return below === id;
       return !!SOLID[below] && below !== id && this.getBlock(x, y + 1, z) === id;
     }
-    if (id === B.RAIL) return railSupported(this, x, y, z);
+    if (isRail(id)) return railSupported(this, x, y, z);
     if (id === B.COCOA) { const [dx, , dz] = SIDE_DIRS[(metaIn ?? this.getMeta(x, y, z)) & 3]; return this.getBlock(x + dx, y, z + dz) === B.JUNGLE_LOG; }
     if (id === B.ITEM_FRAME) { const [dx, , dz] = SIDE_DIRS[(metaIn ?? this.getMeta(x, y, z)) & 3]; return !!SOLID[this.getBlock(x + dx, y, z + dz)]; }
     if (id === B.OAK_WALL_SIGN) { const [dx, , dz] = SIDE_DIRS[(metaIn ?? this.getMeta(x, y, z)) & 3]; return !!SOLID[this.getBlock(x + dx, y, z + dz)]; }

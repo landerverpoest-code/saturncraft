@@ -1005,6 +1005,8 @@ export class Game {
     // daylight sensors: how bright the three suns are (dimmed by rain; no suns in the Cinderdeep or the Hollow)
     ci.daylight = () => (this.world.dimension === 'overworld' ? skyState(this.time).combined * (1 - 0.3 * (this.weather ? this.weather.level : 0)) : 0);
     ci.entitiesOn = (x, y, z) => this.feetPositions().some(([ex, ey, ez]) => Math.floor(ex) === x && Math.floor(ey + 0.05) === y && Math.floor(ez) === z);
+    ci.entitiesCount = (x, y, z, livingOnly) => this.pressers().filter(([ex, ey, ez, living]) => (living || !livingOnly) && Math.floor(ex) === x && Math.floor(ey + 0.05) === y && Math.floor(ez) === z).length;
+    ci.cartOn = (x, y, z) => this.entities.list.some((e) => e.cart && !e.dead && Math.floor(e.x) === x && Math.floor(e.y + 0.05) === y && Math.floor(e.z) === z);
     // sounds of changes made by the circuits (here, or on the host when we are a guest)
     const OPENABLE = new Set(BLOCKS.filter((b) => b && (b.shape === SHAPE.DOOR || b.shape === SHAPE.TRAPDOOR || b.shape === SHAPE.GATE)).map((b) => b.id));
     // jukeboxes: whoever sees a jukebox take a disc hears it (the disc lives in the block's meta)
@@ -1030,14 +1032,15 @@ export class Game {
       if (kind === 'burnout') { this.particles.smoke(x + 0.5, y + 0.7, z + 0.5, 6, 0.3); this.audio.play('burnout', [x + 0.5, y + 0.5, z + 0.5]); }
     });
     // an extending piston shoves whoever stands where the blocks go
-    w.on('pistonMoved', (x, y, z, f, n, out) => {
+    w.on('pistonMoved', (x, y, z, f, n, out, cells) => {
       if (!out) return;
       const [dx, dy, dz] = FACING6[f];
+      // (a cluster held together by Slime or Honey Blocks lists the cells it moves into)
+      const spots = cells && cells.length ? cells : Array.from({ length: n + 1 }, (_, i) => [x + dx * (i + 1), y + dy * (i + 1), z + dz * (i + 1)]);
       const bodies = [this.player.body, ...this.entities.list.filter((e) => e.body && !e.dead).map((e) => e.body)];
       for (const b of bodies) {
         const [x0, y0, z0, x1, y1, z1] = b.aabb ? b.aabb() : [b.x - b.width / 2, b.y, b.z - b.width / 2, b.x + b.width / 2, b.y + b.height, b.z + b.width / 2];
-        for (let i = 1; i <= n + 1; i++) {
-          const cx = x + dx * i, cy = y + dy * i, cz = z + dz * i;
+        for (const [cx, cy, cz] of spots) {
           if (x1 > cx && x0 < cx + 1 && y1 > cy && y0 < cy + 1 && z1 > cz && z0 < cz + 1) {
             b.setPos(b.x + dx, b.y + dy * 1.01, b.z + dz);
             if (dy > 0) b.vy = Math.max(b.vy || 0, 0);
@@ -1048,24 +1051,35 @@ export class Game {
     });
   }
 
-  /** Feet of everyone who can press a plate: the player, mobs, items, other players. */
-  feetPositions() {
+  /** Everything that can press a plate: [x, y, z, living] for the player, other players, mobs and the rest (items, carts...). */
+  pressers() {
     const out = [];
     const p = this.player;
-    if (!p.dead && !p.spectator) out.push([p.x, p.y, p.z]);
-    for (const e of this.entities.list) if (!e.dead && e.body) out.push([e.x, e.y, e.z]);
-    if (this.net && this.net.isHost) for (const rp of this.net.remotes.values()) if (rp.state) out.push([rp.state.x, rp.state.y, rp.state.z]);
+    if (!p.dead && !p.spectator) out.push([p.x, p.y, p.z, true]);
+    for (const e of this.entities.list) if (!e.dead && e.body && e.kind !== 'xp') out.push([e.x, e.y, e.z, e.kind === 'mob']);
+    if (this.net && this.net.isHost) for (const rp of this.net.remotes.values()) if (rp.state) out.push([rp.state.x, rp.state.y, rp.state.z, true]);
     return out;
   }
+
+  /** Feet of everyone who can press a plate: the player, mobs, items, other players. */
+  feetPositions() { return this.pressers().map(([x, y, z]) => [x, y, z]); }
 
   tickCircuits() {
     const w = this.world, ci = w.circuits;
     ci.enabled = !(this.net && this.net.isClient); // guests apply the host's results
     if (!ci.enabled) { if (ci.queue.size) ci.queue.clear(); return; }
-    for (const [ex, ey, ez] of this.feetPositions()) {
+    const weighted = new Map(); // weighted plates: key -> [x, y, z, count]
+    for (const [ex, ey, ez, living] of this.pressers()) {
       const bx = Math.floor(ex), by = Math.floor(ey + 0.05), bz = Math.floor(ez);
-      if (w.getBlock(bx, by, bz) === B.WOODEN_PRESSURE_PLATE) ci.press(bx, by, bz);
+      const id = w.getBlock(bx, by, bz);
+      if (id === B.WOODEN_PRESSURE_PLATE || (id === B.STONE_PRESSURE_PLATE && living)) ci.press(bx, by, bz);
+      else if (id === B.LIGHT_WEIGHTED_PLATE || id === B.HEAVY_WEIGHTED_PLATE) {
+        const k = `${bx},${by},${bz}`, c = weighted.get(k);
+        if (c) c[3]++; else weighted.set(k, [bx, by, bz, 1]);
+      }
     }
+    for (const [bx, by, bz, n] of weighted.values()) ci.press(bx, by, bz, n);
+    for (const e of this.entities.list) if (e.cart && !e.dead && w.getBlock(Math.floor(e.x), Math.floor(e.y + 0.05), Math.floor(e.z)) === B.DETECTOR_RAIL) ci.detect(Math.floor(e.x), Math.floor(e.y + 0.05), Math.floor(e.z));
   }
 
   // -------------------------------------------------------------------------

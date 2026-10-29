@@ -5,6 +5,7 @@
 // 0 = -z, 1 = +x, 2 = +z, 3 = -x.
 import { B, BLOCKS, SHAPE, BLOCK_LIMIT } from './blocks.js';
 import { circuitSelection, circuitCollision } from './circuitShapes.js';
+import { railShapeOf } from './rails.js';
 import { crystalBox, rodBoxes } from './caves.js';
 
 export const SIDE_DIRS = [[0, 0, -1], [1, 0, 0], [0, 0, 1], [-1, 0, 0]];
@@ -378,7 +379,7 @@ export function selectionBox(id, meta) {
   if (BLOCKS[id].shape === SHAPE.DOOR) return doorBox(meta);
   if (BLOCKS[id].shape === SHAPE.SNOW) return snowBox(id === B.SNOW_LAYER ? meta : 0);
   if (id === B.PAINTING || id === B.PAINTING_B) { const [dx, , dz] = SIDE_DIRS[meta & 3]; return [dx > 0 ? 15 / 16 : 0, 0, dz > 0 ? 15 / 16 : 0, dx < 0 ? 1 / 16 : 1, 1, dz < 0 ? 1 / 16 : 1]; }
-  if (id === B.RAIL) return [0, 0, 0, 1, meta >= 2 && meta <= 5 ? 0.5 : 2 / 16, 1];
+  if (BLOCKS[id].shape === SHAPE.RAIL) { const sh = railShapeOf(id, meta); return [0, 0, 0, 1, sh >= 2 && sh <= 5 ? 0.5 : 2 / 16, 1]; }
   if (BLOCKS[id].shape === SHAPE.TRAPDOOR) return trapdoorBox(meta);
   if (BLOCKS[id].shape === SHAPE.WALL) return [4 / 16, 0, 4 / 16, 12 / 16, 1, 12 / 16];
   if (BLOCKS[id].shape === SHAPE.FENCE) return [P0, 0, P0, P1, 1, P1];
