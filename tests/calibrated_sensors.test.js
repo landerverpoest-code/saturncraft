@@ -50,7 +50,7 @@ describe('Calibrated Hush Sensor block', () => {
   it('is appended after every earlier block and listens for vibrations', () => {
     expect(B.CALIBRATED_HUSH_SENSOR).toBeGreaterThan(B.HUSH_SENSOR);
     expect(B.CALIBRATED_HUSH_SENSOR).toBeGreaterThan(B.OMINOUS_SPAWNER);
-    expect(B.CALIBRATED_HUSH_SENSOR).toBe(NUM_BLOCKS - 1);
+    expect(B.CALIBRATED_HUSH_SENSOR).toBe(B.TIDESTONE_SLAB - 1); // the Tidestone shapes are appended right after it
     expect(BLOCKS[B.CALIBRATED_HUSH_SENSOR].name).toBe('Calibrated Hush Sensor');
     expect(LISTENS[B.CALIBRATED_HUSH_SENSOR]).toBe(1);
     expect(sensorRange(B.CALIBRATED_HUSH_SENSOR)).toBe(16);

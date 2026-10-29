@@ -1,5 +1,5 @@
 // Shaped/shapeless crafting and furnace smelting recipes.
-import { B, BLOCKS, WOOD_SETS, STONE_SETS, COLOR_BLOCKS, DOOR_SETS, GATE_SETS, CANDLE_IDS, BOX_IDS, BOX_COLORS, isBox } from '../world/blocks.js';
+import { B, BLOCKS, WOOD_SETS, STONE_SETS, WALL_SETS, COLOR_BLOCKS, DOOR_SETS, GATE_SETS, CANDLE_IDS, BOX_IDS, BOX_COLORS, isBox } from '../world/blocks.js';
 import { I, ITEMS, DYES, WOOL_ITEMS, TIPPED_ARROW, SPLASH_ITEM, SHERD_ITEMS, LINGERING_ITEM, FIREWORK_STARS, STAR_ROCKETS } from '../world/items.js';
 import { potFacesFromGrid } from '../world/archaeology.js';
 import { withExtras } from '../world/enchantments.js';
@@ -104,6 +104,7 @@ shaped(['PIP', 'PPP', ' P '], { P: 'planks', I: I.IRON_INGOT }, I.SHIELD, 1);
 shaped(['  S', ' SW', 'S W'], { S: I.STICK, W: I.STRING }, I.FISHING_ROD, 1);
 shaped(['CCC', 'CCC'], { C: B.COBBLESTONE }, B.COBBLESTONE_WALL, 6);
 shaped(['CCC', 'CCC'], { C: B.MOSSY_COBBLESTONE }, B.MOSSY_COBBLESTONE_WALL, 6);
+for (const [mat, wall] of WALL_SETS) shaped(['CCC', 'CCC'], { C: mat }, wall, 6);
 for (const [planks, , trap] of DOOR_SETS) shaped(['PPP', 'PPP'], { P: planks }, trap, 2);
 shaped(['BBB'], { B: B.SNOW_BLOCK }, B.SNOW_LAYER, 6);
 shaped(['P P', ' P '], { P: 'planks' }, I.BOWL, 4);
