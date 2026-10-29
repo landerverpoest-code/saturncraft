@@ -354,6 +354,7 @@ poison from eyes) follow the documented table.
 * Gravity blocks, water and lava flow, source creation, obsidian/cobblestone/stone formation
 * Player physics, sprinting, sneaking (ledge stop), swimming, step-up, fall damage
 * **Crawling** (reference: the crawl pose; `src/player/crawl.js`): hold `C`, or simply walk into a gap one block high (a slab, a trapdoor, a tunnel you dug) and you drop to a 0.6-high pose that fits through it, with the eyes lowered to 0.4 blocks (the camera eases down). You crawl as slowly as you sneak (×0.3), cannot sprint or jump, and stay down until you are out from under the low ceiling and have room to stand; it does not start in mid-air, while swimming, gliding, flying, riding or asleep. Other players see you lying face down, crawlers are lower targets (arrows and mobs aim at the lowered body), and in multiplayer the pose travels in the existing player-state flags (a new `CRAWL` bit; the mob snapshot layout is untouched)
+* **Poses and effects in multiplayer** (`src/net/protocol.js`, `src/net/remotePlayer.js`): other players are drawn sprint-swimming (flat, head first, following their pitch) and gliding on a Voidwing (stretched out along the flight) via two more player-state flag bits (`SWIM`, `GLIDE`); a swimmer is a low target for mobs and a glider looks from low eyes. The state also ends with the average colour of the player's potion effects, so everyone sees the same swirl of effect particles around them as around yourself (fewer while invisible). Relayed guest states keep their armour and colour too. Haste and Mining Fatigue also change attack speed (+10 % / −10 % per level, never below 10 %)
 * Health, hunger, saturation, exhaustion, regeneration, starvation, drowning, fire, lava, cactus
 * Attack cooldown, critical hits, knockback, armour formula for mobs, invulnerability frames
 * 9 mobs with AI, pathfinding, drops, natural spawning, caps and despawning
@@ -513,12 +514,12 @@ poison from eyes) follow the documented table.
 
 **Not yet implemented**
 
-* Mining Fatigue's slower attack speed and the Elder Deepeye's ghost face; prismarine-style slabs/stairs/walls and the animated tidestone texture; effect particles of other players in multiplayer
+* The Elder Deepeye's ghost face; prismarine-style slabs/stairs/walls and the animated tidestone texture
 * Taming of animals other than Howlers, Purrlings, Squawklets, Gallopers, Vixlings and Cragbucks
 * Large structures beyond villages, temples, wrecks, Tide Citadels, outposts, ruined rifts, dungeons, sanctums, bastions and Hollow Cities
 * Tuned (calibrated) vibration sensors and vibrations taking time to travel to a sensor; tattered books
 * Baby mobs other than Shambler-kin, spiderlings, Fizzlets, Brute cubs and passive animals; Shamblers in pumpkins and mobs holding off-hand items
-* Firework stars (Sky Rockets always burst in one random colour and never hurt); swimming and gliding are not shown to other players in multiplayer
+* Firework stars (Sky Rockets always burst in one random colour and never hurt)
 
 ## Other dimensions
 

@@ -63,7 +63,7 @@ import { DimensionManager } from './world/dimensions/manager.js';
 import { DIMENSIONS } from './world/dimensions/dims.js';
 import { EnchantBooks } from './render/enchantBooks.js';
 import { newStand, tickStand } from './world/brewing.js';
-import { effectsColor } from './player/effects.js';
+import { effectsColor, effectSwirl } from './player/effects.js';
 import { changeSound, CIRCUIT_BLOCK } from './world/circuits.js';
 import { onChimeChanged } from './mobs/hoverling.js';
 import { FACING6 } from './world/circuitShapes.js';
@@ -429,10 +429,8 @@ export class Game {
     for (const k in p.effects) list.push([k, p.effects[k].amp]);
     const col = effectsColor(list);
     if (!col) return;
-    const a = (this.ticks * 0.37) % (Math.PI * 2) + Math.random() * 0.6, r = 0.45 + Math.random() * 0.15;
-    const h = 0.1 + Math.random() * 1.6;
-    // tangential drift makes them circle and rise around the body
-    this.particles.emit(p.x + Math.cos(a) * r, p.y + h, p.z + Math.sin(a) * r, -Math.sin(a) * 0.035, 0.03, Math.cos(a) * 0.035, col[0], col[1], col[2], 22, -0.0015);
+    const w = effectSwirl(this.ticks);
+    this.particles.emit(p.x + w.dx, p.y + w.h, p.z + w.dz, w.vx, w.vy, w.vz, col[0], col[1], col[2], 22, -0.0015);
   }
 
   tickRain() {

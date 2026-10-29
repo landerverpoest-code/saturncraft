@@ -252,7 +252,7 @@ export class HostSession extends Session {
       case 'st': {
         const st = unpackPlayerState(m.s);
         if (!st) break;
-        c.raw = m.s.slice(0, 8);
+        c.raw = m.s.slice(0, 13); // position, flags, swing, armour and the effect colour
         c.rp.setState(st);
         if (st.sleeping) c.sleepSince = c.sleepSince || performance.now(); else c.sleepSince = 0;
         break;

@@ -11,6 +11,7 @@ import { PHYS } from '../physics/constants.js';
 import { heldLightLevel, ITEMS } from '../world/items.js';
 import { heldSpearModel, lightSpear } from '../render/spearModel.js';
 import { REMOTE_LIGHTS } from '../render/terrainMaterial.js';
+import { colorFromInt, effectSwirl } from '../player/effects.js';
 
 const SWING_MS = 300;
 
@@ -112,6 +113,7 @@ export class RemotePlayer {
 
   update(game, sec, now = performance.now()) {
     const s = this.state;
+    this.effectSwirl(game, s);
     if (!s || s.dead || s.invisible) { this.root.visible = false; return; } // Invisibility hides the whole player
     this.root.visible = true;
     const f = Math.min(1, (now - this.t0) / this.interval);
@@ -132,7 +134,9 @@ export class RemotePlayer {
     this.root.position.set(cur.x, cur.y - (s.sneaking ? 0.12 : 0), cur.z);
     this.root.rotation.set(0, this.bodyYaw, 0);
     if (s.sleeping) this.root.rotation.set(-Math.PI / 2, cur.yaw, 0, 'YXZ');
-    if (s.crawling && !s.sleeping) { this.root.rotation.set(-Math.PI / 2, cur.yaw, 0, 'YXZ'); this.root.position.y += 0.2; this.bodyYaw = cur.yaw; } // prone, head first (player/crawl.js)
+    if (s.swimming && !s.sleeping) { this.root.rotation.set(-Math.PI / 2 - cur.pitch, cur.yaw, 0, 'YXZ'); this.root.position.y += 0.3; this.bodyYaw = cur.yaw; } // sprint-swimming: flat, head first (as playerModel.js)
+    else if (s.gliding && !s.sleeping) { this.root.rotation.set(-Math.PI / 2 - cur.pitch * 0.8, cur.yaw, 0, 'YXZ'); this.root.position.y += 0.3; this.bodyYaw = cur.yaw; } // stretched out along the Voidwing flight
+    else if (s.crawling && !s.sleeping) { this.root.rotation.set(-Math.PI / 2, cur.yaw, 0, 'YXZ'); this.root.position.y += 0.2; this.bodyYaw = cur.yaw; } // prone, head first (player/crawl.js)
     this.anim.hurtTime = s.hurt ? 5 : 0;
     this.anim.headPitch = cur.pitch;
     const L = lightAt(game, cur.x, cur.y + 1.6, cur.z);
@@ -150,6 +154,14 @@ export class RemotePlayer {
     if (this.item && this.item.userData.spear) lightSpear(this.item, L);
   }
 
+  /** The swirl of potion-effect particles around this player, like the one around our own (every 2nd tick, every 6th while invisible). */
+  effectSwirl(game, s) {
+    if (!s || s.dead || !s.fx || !game.particles || game.ticks === this.fxTick || game.ticks % (s.invisible ? 6 : 2) !== 0) return;
+    this.fxTick = game.ticks;
+    const w = effectSwirl(game.ticks), c = colorFromInt(s.fx), p = this.shown || s;
+    game.particles.emit(p.x + w.dx, p.y + w.h, p.z + w.dz, w.vx, w.vy, w.vz, c[0], c[1], c[2], 22, -0.0015);
+  }
+
   dispose() {
     this.setHeldItem(null);
     this.scene.remove(this.root);
@@ -159,7 +171,7 @@ export class RemotePlayer {
 }
 
 /** What mob AI sees of a remote player on the host (same fields it reads from game.player). */
-function makeTarget(rp) {
+export function makeTarget(rp) {
   const st = () => rp.state || { x: 0, y: -1000, z: 0, yaw: 0, pitch: 0, dead: true };
   return {
     isPlayer: true, isRemotePlayer: true, remote: rp,
@@ -171,9 +183,11 @@ function makeTarget(rp) {
     get sneaking() { return !!st().sneaking; },
     get invisible() { return !!st().invisible; },
     get crawling() { return !!st().crawling; },
-    get eyeHeight() { return st().crawling ? PHYS.PLAYER_CRAWL_EYE : st().sneaking ? PHYS.PLAYER_SNEAK_EYE : PHYS.PLAYER_EYE; },
-    width: 0.6, get height() { return st().crawling ? PHYS.PLAYER_CRAWL_HEIGHT : PHYS.PLAYER_HEIGHT; }, // a crawler is a low target
-    body: { get height() { return st().crawling ? PHYS.PLAYER_CRAWL_HEIGHT : PHYS.PLAYER_HEIGHT; }, width: PHYS.PLAYER_WIDTH, vx: 0, vy: 0, vz: 0, onGround: true },
+    get swimming() { return !!st().swimming; },
+    get gliding() { return !!st().gliding; },
+    get eyeHeight() { return st().swimming || st().gliding ? 0.4 : st().crawling ? PHYS.PLAYER_CRAWL_EYE : st().sneaking ? PHYS.PLAYER_SNEAK_EYE : PHYS.PLAYER_EYE; },
+    width: 0.6, get height() { return st().crawling || st().swimming ? PHYS.PLAYER_CRAWL_HEIGHT : PHYS.PLAYER_HEIGHT; }, // a crawler is a low target
+    body: { get height() { return st().crawling || st().swimming ? PHYS.PLAYER_CRAWL_HEIGHT : PHYS.PLAYER_HEIGHT; }, width: PHYS.PLAYER_WIDTH, vx: 0, vy: 0, vz: 0, onGround: true },
     lastHurtBy: null, lastAttacked: null,
     stats: { kills: 0, blocksMined: 0 },
     inventory: { get selectedStack() { const h = st().held; return h == null ? null : { id: h, count: 1 }; } },

@@ -151,7 +151,7 @@ describe('crawling in multiplayer', () => {
   it('rides in the player state flags without moving anything else', () => {
     const p = { x: 1, y: 2, z: 3, yaw: 0.5, pitch: 0.1, crawling: true, sneaking: false, hurtTime: 0, inventory: { armor: [null, null, null, null] } };
     const a = packPlayerState(p, 5, 7);
-    expect(a.length).toBe(12);
+    expect(a.length).toBe(13);
     expect(a.slice(0, 6)).toEqual([1, 2, 3, 0.5, 0.1, 5]);
     expect(a[6] & PF.CRAWL).toBe(PF.CRAWL);
     expect(a[7]).toBe(7);

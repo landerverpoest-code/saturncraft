@@ -128,6 +128,9 @@ export function fatigueFactor(level) {
 /** Mining speed multiplier from Haste (+20 % per level) and Mining Fatigue. */
 export function miningFactor(map) { return (1 + 0.2 * effectLevel(map, 'haste')) * fatigueFactor(effectLevel(map, 'mining_fatigue')); }
 
+/** Attack speed multiplier: Haste +10 % per level, Mining Fatigue -10 % per level (never below 10 %). */
+export function attackSpeedFactor(map) { return Math.max(0.1, 1 + 0.1 * effectLevel(map, 'haste') - 0.1 * effectLevel(map, 'mining_fatigue')); }
+
 /** Ticks between poison / regeneration pulses at an amplifier (25 >> amp, 50 >> amp). */
 export function poisonInterval(amp) { return Math.max(1, 25 >> amp); }
 export function regenInterval(amp) { return Math.max(1, 50 >> amp); }
@@ -195,6 +198,29 @@ export function effectsColor(list) {
     r += ((v >> 16) & 255) / 255 * w; g += ((v >> 8) & 255) / 255 * w; b += (v & 255) / 255 * w; n += w;
   }
   return n ? [r / n, g / n, b / n] : null;
+}
+
+/** The colour of an effect map as one 0xRRGGBB number for the wire (0 = no effects), see net/protocol.js. */
+export function effectColorInt(effects) {
+  if (!effects) return 0;
+  const col = effectsColor(Object.entries(effects).map(([k, e]) => [k, e && e.amp]));
+  if (!col) return 0;
+  const to = (v) => Math.max(0, Math.min(255, Math.round(v * 255)));
+  return ((to(col[0]) << 16) | (to(col[1]) << 8) | to(col[2])) || 1;
+}
+
+/** Inverse of effectColorInt: [r, g, b] in 0..1. */
+export function colorFromInt(v) {
+  return [((v >> 16) & 255) / 255, ((v >> 8) & 255) / 255, (v & 255) / 255];
+}
+
+/**
+ * One point of the swirl of effect particles around a creature at tick `tick`: an offset from its feet
+ * (`dx`, `h`, `dz`) and a tangential velocity, so the points circle and rise around the body. `rand` gives 0..1.
+ */
+export function effectSwirl(tick, rand = Math.random) {
+  const a = (tick * 0.37) % (Math.PI * 2) + rand() * 0.6, r = 0.45 + rand() * 0.15;
+  return { dx: Math.cos(a) * r, h: 0.1 + rand() * 1.6, dz: Math.sin(a) * r, vx: -Math.sin(a) * 0.035, vy: 0.03, vz: Math.cos(a) * 0.035 };
 }
 
 /** A clean effect map from untrusted data (saves, network). */

@@ -16,7 +16,7 @@ import { spearDamage } from '../entities/tidespear.js';
 import { PHYS } from '../physics/constants.js';
 import { Body } from '../physics/body.js';
 import { EXHAUSTION } from './survival.js';
-import { meleeWithEffects } from './effects.js';
+import { meleeWithEffects, attackSpeedFactor } from './effects.js';
 import { lightAt } from '../entities/entities.js';
 import { canLight, FIRE_DELAY } from '../world/fire.js';
 import { Bobber } from '../entities/bobber.js';
@@ -81,7 +81,7 @@ export class Interaction {
 
   attackCooldownTicks() {
     const tool = toolOf(this.game.player.inventory.selectedStack);
-    return 20 / tool.attackSpeed;
+    return 20 / (tool.attackSpeed * attackSpeedFactor(this.game.player.effects)); // Haste speeds the swing up, Mining Fatigue slows it down
   }
   attackCooldownProgress() {
     const p = this.game.player;

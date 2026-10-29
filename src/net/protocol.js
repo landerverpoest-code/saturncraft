@@ -5,6 +5,7 @@
 import { cleanEnch, withExtras, sameEnch, cleanLabel } from '../world/enchantments.js';
 import { equipIds } from '../mobs/equipment.js';
 import { sameBook } from '../world/books.js';
+import { effectColorInt } from '../player/effects.js';
 import { PROFESSIONS } from '../world/villages.js';
 
 export const PROTOCOL_VERSION = 1;
@@ -124,13 +125,14 @@ export function* iterEdits(flat) {
 
 // ---- player state ----------------------------------------------------------------
 const r2 = (v) => Math.round(v * 100) / 100;
-export const PF = { SNEAK: 1, DEAD: 2, SLEEP: 4, CREATIVE: 8, HURT: 16, RIDING: 32, INVISIBLE: 64, CRAWL: 128 }; // CRAWL: the 0.6-high pose (player/crawl.js)
-/** Compact state of a player: [x, y, z, yaw, pitch, heldItemId|-1, flags, swingSeq]. */
+export const PF = { SNEAK: 1, DEAD: 2, SLEEP: 4, CREATIVE: 8, HURT: 16, RIDING: 32, INVISIBLE: 64, CRAWL: 128, SWIM: 256, GLIDE: 512 }; // CRAWL: the 0.6-high pose (player/crawl.js); SWIM: sprint-swimming flat in the water; GLIDE: flying on a Voidwing
+/** Compact state of a player: [x, y, z, yaw, pitch, heldItemId|-1, flags, swingSeq, 4 armour ids, effect colour 0xRRGGBB|0]. */
 export function packPlayerState(p, held, swingSeq, armor = null) {
   const f = (p.sneaking ? PF.SNEAK : 0) | (p.dead ? PF.DEAD : 0) | (p.sleeping ? PF.SLEEP : 0) |
-    (p.creative ? PF.CREATIVE : 0) | (p.hurtTime > 0 ? PF.HURT : 0) | (p.riding ? PF.RIDING : 0) | ((p.effects && p.effects.invisibility) || p.gamemode === 'spectator' ? PF.INVISIBLE : 0) | (p.crawling ? PF.CRAWL : 0);
+    (p.creative ? PF.CREATIVE : 0) | (p.hurtTime > 0 ? PF.HURT : 0) | (p.riding ? PF.RIDING : 0) | ((p.effects && p.effects.invisibility) || p.gamemode === 'spectator' ? PF.INVISIBLE : 0) | (p.crawling ? PF.CRAWL : 0) |
+    (p.swimming ? PF.SWIM : 0) | (p.gliding ? PF.GLIDE : 0);
   const ar = armor || (p.inventory && p.inventory.armor ? p.inventory.armor.map((s) => (s ? s.id : 0)) : [0, 0, 0, 0]);
-  return [r2(p.x), r2(p.y), r2(p.z), r2(p.yaw), r2(p.pitch), held == null ? -1 : held, f, swingSeq | 0, ...ar];
+  return [r2(p.x), r2(p.y), r2(p.z), r2(p.yaw), r2(p.pitch), held == null ? -1 : held, f, swingSeq | 0, ...ar, effectColorInt(p.effects)];
 }
 export function unpackPlayerState(a) {
   if (!Array.isArray(a) || a.length < 8 || !a.slice(0, 5).every(Number.isFinite)) return null;
@@ -138,8 +140,9 @@ export function unpackPlayerState(a) {
   return {
     x: a[0], y: a[1], z: a[2], yaw: a[3], pitch: a[4], held: a[5] < 0 ? null : a[5] | 0,
     sneaking: !!(f & PF.SNEAK), dead: !!(f & PF.DEAD), sleeping: !!(f & PF.SLEEP), creative: !!(f & PF.CREATIVE),
-    hurt: !!(f & PF.HURT), riding: !!(f & PF.RIDING), invisible: !!(f & PF.INVISIBLE), crawling: !!(f & PF.CRAWL), swing: a[7] | 0,
+    hurt: !!(f & PF.HURT), riding: !!(f & PF.RIDING), invisible: !!(f & PF.INVISIBLE), crawling: !!(f & PF.CRAWL), swimming: !!(f & PF.SWIM), gliding: !!(f & PF.GLIDE), swing: a[7] | 0,
     armor: a.length >= 12 ? [a[8] | 0, a[9] | 0, a[10] | 0, a[11] | 0].map((i) => i || null) : [null, null, null, null],
+    fx: a.length >= 13 && Number.isInteger(a[12]) && a[12] > 0 && a[12] <= 0xffffff ? a[12] : 0, // colour of the swirl of potion effects around them
   };
 }
 
