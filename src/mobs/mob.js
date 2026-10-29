@@ -1719,7 +1719,7 @@ export class Mob {
     const parts = m.userData.parts;
     if (parts && parts.robe && this.def.villager && m.userData.prof !== (this.profession || 'none')) {
       m.userData.prof = this.profession || 'none';
-      const col = { farmer: '#8a6a3a', librarian: '#e4dccb', smith: '#34343a', shepherd: '#9a9a88', butcher: '#c8c4b4', fletcher: '#6a7a3a', cleric: '#7a3a8a' }[this.profession] || '#a8987a'; // no trade: a plain undyed smock
+      const col = { farmer: '#8a6a3a', librarian: '#e4dccb', smith: '#34343a', shepherd: '#9a9a88', butcher: '#c8c4b4', fletcher: '#6a7a3a', cleric: '#7a3a8a', cartographer: '#2a5a7a' }[this.profession] || '#a8987a'; // no trade: a plain undyed smock
       parts.robe.children[0].material.userData.base.set(col);
     }
     if (parts && parts.wool) {

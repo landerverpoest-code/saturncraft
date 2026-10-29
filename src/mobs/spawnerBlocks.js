@@ -3,7 +3,7 @@
 // their kind are already close. Mobs need light 11 or lower and room to stand.
 // Also rolls the loot of dungeon chests.
 import { B, SOLID } from '../world/blocks.js';
-import { I, DISCS, SHERD_ITEMS } from '../world/items.js';
+import { I, DISCS, SHERD_ITEMS, CHARTS } from '../world/items.js';
 import { hollowCityLoot, LOOT_CITY, LOOT_SHIP } from '../world/dimensions/hollowCity.js';
 import { VAULTS_CHEST } from '../world/provingLoot.js';
 import { VAULTS_LOOT } from '../world/provingVaults.js';
@@ -87,7 +87,7 @@ const STRUCTURE_LOOT = {
   // shipwreck holds: supplies in the bow, treasure under the stern, charts in the stern cabin
   [LOOT.WRECK]: [[[I.PAPER, 1, 12, 8], [I.COAL, 2, 8, 6], [I.WHEAT, 8, 21, 7], [I.CARROT, 4, 8, 7], [I.POTATO, 2, 6, 7], [I.BREAD, 1, 4, 7], [I.DRIED_KELP, 2, 8, 5], [I.PUMPKIN_PIE, 1, 2, 3], [I.ROTTEN_FLESH, 5, 24, 5], [I.LEATHER_HELMET, 1, 1, 3], [I.LEATHER_CHESTPLATE, 1, 1, 3], [B.TNT, 1, 2, 1], [I.NAME_TAG, 1, 1, 3]], 3, 8],
   [LOOT.WRECK_TREASURE]: [[[I.IRON_INGOT, 1, 5, 90], [I.GOLD_INGOT, 1, 5, 10], [I.IRON_NUGGET, 1, 10, 50], [I.GOLD_NUGGET, 1, 10, 50], [I.BERYL, 1, 5, 40], [I.DIAMOND, 1, 1, 5], [I.AZURITE, 1, 10, 20]], 3, 6, [[I.BERYL, 1, 3]]],
-  [LOOT.WRECK_MAP]: [[[I.PAPER, 1, 10, 20], [I.FEATHER, 1, 5, 10], [I.BOOK, 1, 5, 5], [I.CLOCK, 1, 1, 1], [I.COMPASS, 1, 1, 1], [I.EMPTY_MAP, 1, 1, 10]], 3, 6, [[I.EMPTY_MAP, 1, 1]]],
+  [LOOT.WRECK_MAP]: [[[I.PAPER, 1, 10, 20], [I.FEATHER, 1, 5, 10], [I.BOOK, 1, 5, 5], [I.CLOCK, 1, 1, 1], [I.COMPASS, 1, 1, 1], [I.EMPTY_MAP, 1, 1, 10], ...Object.values(CHARTS).map((id) => [id, 1, 1, 3])], 3, 6, [[I.EMPTY_MAP, 1, 1]]], // (charts: world/landmarks.js)
   // the ruins of the Deep Hush (world/deepHush.js HUSH_LOOT)
   [LOOT.DEEP_HUSH]: [[[I.HUSH_SHARD, 1, 3, 12], [B.CANDLE, 1, 4, 15], [I.BONE, 2, 6, 15], [I.IRON_INGOT, 1, 4, 10], [I.AZURITE, 2, 6, 8], [I.DIAMOND, 1, 2, 4], [I.GILDED_APPLE, 1, 1, 3], [I.GOLD_INGOT, 1, 3, 6], [B.HUSHMOSS, 4, 10, 8], [I.DISC_HOLLOW, 1, 1, 2]], 3, 7],
 };

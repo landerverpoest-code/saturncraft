@@ -6,6 +6,7 @@ import { containerSignal } from './world/comparators.js';
 import { Fireball } from './entities/fireball.js';
 import { powerInto } from './world/circuits.js';
 import { newMap, updateMap, MAP_SIZE } from './world/maps.js';
+import { noteLandmarks, chartMap, mapTitle } from './world/landmarks.js';
 import { KEEP_BITS, unpairAfterBreak } from './world/chests.js';
 import * as THREE from 'three';
 import { World } from './world/world.js';
@@ -567,6 +568,21 @@ export class Game {
     return m;
   }
 
+  /**
+   * An Explorer Chart is read: the map of the square round the nearest structure of `kind`, surveyed and
+   * marked (world/landmarks.js). Returns { map, site, title } or null when there is none within reach
+   * (or outside the overworld).
+   */
+  createChartMap(kind) {
+    if (this.world.dimension !== 'overworld' || !this.world.gen) return null;
+    let id;
+    do id = 1 + Math.floor(Math.random() * 0x7ffffffe); while (this.maps.has(id));
+    const r = chartMap(this.world.gen, kind, this.player.x, this.player.z, id, this.world.dimension);
+    if (!r) return null;
+    this.maps.set(id, r.map);
+    return { ...r, title: mapTitle(r.map) };
+  }
+
   /** The map behind a filled-map stack (a blank one is made for a map from another player). */
   mapOf(st) {
     if (!st || !Number.isInteger(st.map)) return null;
@@ -581,6 +597,8 @@ export class Game {
     if (!st || st.id !== I.FILLED_MAP || this.player.dead) return;
     const m = this.mapOf(st);
     if (m && m.dimension === this.world.dimension && this.ticks % 2 === 0) { updateMap(m, this.world, this.player.x, this.player.z, 600); m.dirty = true; }
+    // structures that come within sight get a glyph on the map (overworld only; a look every second)
+    if (m && m.dimension === 'overworld' && this.world.dimension === 'overworld' && this.world.gen && this.ticks % 20 === 7 && noteLandmarks(m, this.world.gen, this.player.x, this.player.z)) m.dirty = true;
   }
 
   getDispenser(x, y, z) {

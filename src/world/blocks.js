@@ -722,6 +722,11 @@ def(B.OMINOUS_SPAWNER, 'Ominous Proving Spawner', { ...BLOCKS[B.PROVING_SPAWNER]
 ext('CALIBRATED_HUSH_SENSOR');
 def(B.CALIBRATED_HUSH_SENSOR, 'Calibrated Hush Sensor', { ...BLOCKS[B.HUSH_SENSOR], drops: B.CALIBRATED_HUSH_SENSOR, silkSelf: false, tex: { top: 'calibrated_sensor_top', bottom: 'hushmoss', side: 'hush_sensor_side' } });
 
+// Cartography Desk (mobs/jobSites.js): the job-site block of Cartographer settlers, who trade in maps and Explorer
+// Charts (mobs/trades.js). A drawing board under a compass rose; its front faces the player.
+ext('CARTOGRAPHY_DESK');
+def(B.CARTOGRAPHY_DESK, 'Cartography Desk', { hardness: 2.5, resistance: 2.5, tool: TOOL.AXE, sound: 'wood', flammable: true, tex: { top: 'cartography_desk_top', bottom: 'birch_planks', side: 'cartography_desk_side', front: 'cartography_desk_front' } });
+
 export const NUM_BLOCKS = BLOCKS.length;
 
 // Flat lookup tables used by hot loops (mesher, lighting, physics) and workers.

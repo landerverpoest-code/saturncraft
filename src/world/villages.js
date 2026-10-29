@@ -14,7 +14,10 @@ import { jobSiteBlock } from '../mobs/jobSites.js';
 
 export const VILLAGE_REGION = 320;
 const REACH = 56; // how far buildings may reach from the centre
+/** Professions of the settlers village houses are planned with (changing this would change villages not yet generated). */
 export const PROFESSIONS = ['farmer', 'librarian', 'smith', 'shepherd', 'butcher', 'fletcher', 'cleric'];
+/** Every trade a settler can take up: the village ones, and those that only come with a job-site block placed by a player. */
+export const TRADE_PROFESSIONS = [...PROFESSIONS, 'cartographer'];
 
 const STYLES = {
   plains: { corner: B.OAK_LOG, wall: B.OAK_PLANKS, floor: B.COBBLESTONE, roof: B.OAK_STAIRS, roofSlab: B.OAK_SLAB, fence: B.OAK_FENCE },

@@ -19,6 +19,7 @@ export const JOB_SITES = {
   butcher: [B.SMOKER, B.SMOKER_LIT],
   fletcher: [B.FLETCHING_TABLE],
   cleric: [B.BREWING_STAND],
+  cartographer: [B.CARTOGRAPHY_DESK], // (last: the order numbers the trades)
 };
 const TRADES = Object.keys(JOB_SITES);
 /** Block id -> 1 + index of its trade in TRADES (0: not a job site). */

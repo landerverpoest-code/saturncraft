@@ -1,5 +1,6 @@
 // Block selection outline, break-progress cracks and the first-person held item.
 import { MAP_SIZE, mapPos } from '../world/maps.js';
+import { LANDMARK_BY_KEY } from '../world/landmarkKinds.js';
 import * as THREE from 'three';
 import { BLOCKS, SHAPE } from '../world/blocks.js';
 import { ITEMS } from '../world/items.js';
@@ -206,6 +207,7 @@ function drawMap(cv, m, p, dimension) {
   ctx.fillStyle = '#8a7650'; ctx.fillRect(2, 2, 140, 140);
   ctx.fillStyle = '#d8c8a0'; ctx.fillRect(4, 4, 136, 136);
   ctx.putImageData(img, 8, 8);
+  for (const k of m.marks || []) drawMark(ctx, 8 + k.x - m.x0, 8 + k.z - m.z0, LANDMARK_BY_KEY[k.kind], k.target);
   if (m.dimension !== dimension) return;
   // the player: a white arrow pointing the way they face (clamped to the edge outside the map)
   let [mx, mz] = mapPos(m, p.x, p.z);
@@ -217,5 +219,26 @@ function drawMap(cv, m, p, dimension) {
   ctx.rotate(-p.yaw);
   ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(3.5, 4); ctx.lineTo(0, 2); ctx.lineTo(-3.5, 4); ctx.closePath();
   ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#202020'; ctx.lineWidth = 1; ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+
+/** A landmark glyph (world/landmarkKinds.js) centred on (x, y), dark-edged so it reads on any ground; a destination gets a red ring. */
+function drawMark(ctx, x, y, kind, target) {
+  if (!kind) return;
+  ctx.save();
+  ctx.translate(Math.round(x), Math.round(y));
+  ctx.lineWidth = 1.5; ctx.strokeStyle = '#1c1408'; ctx.fillStyle = kind.color;
+  if (target) { ctx.beginPath(); ctx.arc(0, 0, 7, 0, Math.PI * 2); ctx.strokeStyle = '#d02020'; ctx.stroke(); ctx.strokeStyle = '#1c1408'; }
+  ctx.beginPath();
+  switch (kind.shape) {
+    case 'house': ctx.moveTo(-4, 3); ctx.lineTo(-4, -1); ctx.lineTo(0, -4); ctx.lineTo(4, -1); ctx.lineTo(4, 3); break;
+    case 'tower': ctx.moveTo(-2.5, 4); ctx.lineTo(-2.5, -4); ctx.lineTo(-1, -4); ctx.lineTo(-1, -2.5); ctx.lineTo(1, -2.5); ctx.lineTo(1, -4); ctx.lineTo(2.5, -4); ctx.lineTo(2.5, 4); break;
+    case 'pyramid': ctx.moveTo(-5, 3.5); ctx.lineTo(0, -4.5); ctx.lineTo(5, 3.5); break;
+    case 'dome': ctx.arc(0, 2, 4.5, Math.PI, 0); break;
+    case 'boat': ctx.moveTo(-5, -1); ctx.lineTo(5, -1); ctx.lineTo(3, 3.5); ctx.lineTo(-3, 3.5); break;
+    case 'star': for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 2.3 : 5; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); } break;
+    default: ctx.moveTo(0, -5); ctx.lineTo(4, 0); ctx.lineTo(0, 5); ctx.lineTo(-4, 0); // diamond
+  }
+  ctx.closePath(); ctx.fill(); ctx.stroke();
   ctx.restore();
 }
