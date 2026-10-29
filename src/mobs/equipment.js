@@ -214,7 +214,7 @@ export function isBetter(slot, cand, cur) {
  */
 export function helmetShadesSun(eq, rng = Math.random) {
   const h = eq && eq.armor[0];
-  if (!h) return false;
+  if (!h || ITEMS[h.id].armor.pumpkin) return false; // a pumpkin head has nothing to wear down: the sun still burns
   h.damage = (h.damage | 0) + Math.floor(rng() * 2);
   if (h.damage >= (ITEMS[h.id].durability || 1)) eq.armor[0] = null;
   return true;

@@ -3,6 +3,7 @@
 // material's colour. Rebuilt only when the worn pieces change.
 import * as THREE from 'three';
 import { ITEMS, ARMOR_MATERIALS } from '../world/items.js';
+import { itemCanvas } from '../ui/icons.js';
 
 const texCache = new Map();
 function armorTexture(color) {
@@ -46,6 +47,7 @@ export function wearArmor(root, ids, glints = null) {
     const a = id && ITEMS[id] && ITEMS[id].armor;
     if (!a) return;
     if (a.glider) { addWings(ud, a); return; } // a Voidwing: two membrane wings on the back
+    if (a.pumpkin) { addPumpkinHead(ud); return; } // a Carved Pumpkin: a cube over the head with its face in front
     const mat = new THREE.MeshLambertMaterial({ map: armorTexture(ARMOR_MATERIALS[a.material].color) });
     mat.userData.base = new THREE.Color(0xffffff);
     mat.userData.glint = !!(glints && glints[slot]);
@@ -84,4 +86,109 @@ function addWings(ud, a) {
 /** Light the armour like the rest of the model. */
 export function lightArmor(root, L) {
   for (const m of root.userData.armorMats || []) m.color.setScalar(Math.min(1.6, L * 1.35)); // metal reads a little brighter than cloth
+}
+
+// ---- Carved Pumpkin on the head ---------------------------------------------------------
+const pumpkinTex = {};
+function pumpkinTexture(kind) {
+  if (pumpkinTex[kind]) return pumpkinTex[kind];
+  const c = document.createElement('canvas'); c.width = c.height = 16;
+  const ctx = c.getContext('2d');
+  const px = (x, y, col) => { ctx.fillStyle = col; ctx.fillRect(x, y, 1, 1); };
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    const f = x % 4 === 0 ? 0.72 : x % 4 === 2 ? 1.04 : 0.92;
+    px(x, y, `rgb(${Math.round(216 * f)},${Math.round(128 * f)},${Math.round(30 * f)})`);
+  }
+  if (kind === 'top') for (let y = 6; y < 10; y++) for (let x = 6; x < 10; x++) px(x, y, '#6a7a2a');
+  if (kind === 'face') {
+    const d = '#3a1e06';
+    for (const [x0, y0] of [[3, 4], [10, 4]]) for (let y = y0; y < y0 + 3; y++) for (let x = x0; x < x0 + 3; x++) if (y - y0 >= Math.abs(x - x0 - 1)) px(x, y, d);
+    for (let x = 3; x < 13; x++) { px(x, 10, d); if (x % 3 !== 0) px(x, 11, d); }
+    px(4, 9, d); px(11, 9, d);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; t.colorSpace = THREE.SRGBColorSpace;
+  return (pumpkinTex[kind] = t);
+}
+
+/** A cube a little larger than the head, the carved face towards the front (-z). */
+function addPumpkinHead(ud) {
+  const parent = ud.parts.head;
+  if (!parent) return;
+  const mats = { side: 'side', top: 'top', face: 'face' };
+  const m = {};
+  for (const k of Object.keys(mats)) {
+    m[k] = new THREE.MeshLambertMaterial({ map: pumpkinTexture(k) });
+    m[k].userData.base = new THREE.Color(0xffffff);
+    ud.armorMats.push(m[k]);
+  }
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(9.4 / 16, 9.4 / 16, 9.4 / 16), [m.side, m.side, m.top, m.top, m.side, m.face]);
+  mesh.position.set(0, 4.2 / 16, 0);
+  mesh.castShadow = true;
+  parent.add(mesh);
+  ud.armorMeshes.push(mesh);
+}
+
+// ---- Off-hand item of a mob (mobs/offhand.js) ------------------------------------------
+const offTex = new Map();
+function offhandTexture(id) {
+  if (offTex.has(id)) return offTex.get(id);
+  const t = new THREE.CanvasTexture(itemCanvas(id));
+  t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; t.colorSpace = THREE.SRGBColorSpace;
+  offTex.set(id, t);
+  return t;
+}
+
+/**
+ * Show `st` (a stack or null) in the off-hand of a model: a Shield as a slab across the left side of the chest, any other item as a sprite in that hand, or, on a model without arms (a Vixling), in the mouth.
+ * Rebuilt only when the item changes; `L` is the light level.
+ */
+export function holdOffhand(root, st, L = 1) {
+  const ud = root.userData, parts = ud.parts;
+  if (!parts) return;
+  const id = st && ITEMS[st.id] ? st.id : 0;
+  if ((ud.offKey || 0) !== id) {
+    ud.offKey = id;
+    if (ud.offMesh) { ud.offMesh.parent.remove(ud.offMesh); ud.offMesh.geometry.dispose(); ud.offMats.forEach((m) => m.dispose()); ud.offMesh = null; ud.offMats = []; }
+    const hand = parts.armL || null, head = parts.head || null;
+    if (id && (hand || head)) {
+      const tex = offhandTexture(id);
+      let mesh, mats;
+      if (ITEMS[id].shield && parts.body) {
+        const wood = new THREE.MeshLambertMaterial({ color: 0x5a3d1e });
+        wood.userData.base = new THREE.Color(0x5a3d1e);
+        const face = new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.3 });
+        face.userData.base = new THREE.Color(0xffffff);
+        mats = [wood, face];
+        mesh = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.62, 0.06), [wood, wood, wood, wood, face, face]);
+        mesh.position.set(0.17, 0.02, -0.27); // strapped across the left side of the chest (the arms may be raised to aim)
+        mesh.rotation.y = -0.2;
+        parts.body.add(mesh);
+      } else if (hand) {
+        const mat = new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.3, side: THREE.DoubleSide });
+        mat.userData.base = new THREE.Color(0xffffff);
+        mats = [mat];
+        mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.45, 0.45), mat);
+        mesh.position.set(0, -0.62, -0.18);
+        mesh.rotation.set(0, Math.PI / 2, -0.6);
+        hand.add(mesh);
+      } else {
+        const mat = new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.3, side: THREE.DoubleSide });
+        mat.userData.base = new THREE.Color(0xffffff);
+        mats = [mat];
+        mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.3), mat);
+        mesh.position.set(0, -0.14, -0.42); // carried in the mouth
+        mesh.rotation.set(0, Math.PI / 2, 0.5);
+        head.add(mesh);
+      }
+      mesh.castShadow = true;
+      ud.offMesh = mesh; ud.offMats = mats;
+      if (!ud.disposeOff) {
+        const base = ud.dispose;
+        ud.disposeOff = true;
+        ud.dispose = () => { if (ud.offMesh) { ud.offMesh.geometry.dispose(); ud.offMats.forEach((m) => m.dispose()); } if (base) base(); };
+      }
+    }
+  }
+  if (ud.offMats) for (const m of ud.offMats) m.color.copy(m.userData.base).multiplyScalar(L);
 }

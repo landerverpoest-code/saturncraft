@@ -30,7 +30,7 @@ export function wearArmor(armor, damage, rng = Math.random) {
   const wear = Math.max(1, Math.floor(damage / 4));
   for (let i = 0; i < armor.length; i++) {
     const st = armor[i];
-    if (!st || ITEMS[st.id].armor.glider) continue; // a Voidwing only wears by flying
+    if (!st || ITEMS[st.id].armor.glider || ITEMS[st.id].armor.pumpkin) continue; // a Voidwing only wears by flying; a pumpkin does not wear
     st.damage = (st.damage || 0) + durabilityLoss(st, wear, rng); // Steadfast spares some wear
     if (st.damage >= ITEMS[st.id].durability) { armor[i] = null; broke.push(i); }
   }

@@ -344,12 +344,12 @@ describe('companion behaviour', () => {
 });
 
 describe('multiplayer snapshots', () => {
-  it('carry tamed, sitting and baby for the new companions (host-authoritative, 24 fields as before)', () => {
+  it('carry tamed, sitting and baby for the new companions (host-authoritative, 25 fields, the last one the off-hand item)', () => {
     const { g } = fakeGame({ player: { netName: 'Ana' } });
     for (const type of ['vixling', 'cragbuck']) {
       const m = pet(type); m.tame(g); m.setBaby(true);
       const packed = JSON.parse(JSON.stringify(packMob(m)));
-      expect(packed.length).toBe(24);
+      expect(packed.length).toBe(25);
       expect(unpackMob(packed)).toMatchObject({ type, tamed: true, sitting: true, baby: true });
       m.setBaby(false); m.sitting = false;
       expect(unpackMob(JSON.parse(JSON.stringify(packMob(m))))).toMatchObject({ tamed: true, sitting: false, baby: false });

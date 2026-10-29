@@ -388,3 +388,12 @@ export function heldLightLevel(id) {
   const b = BLOCKS[d.block ?? d.places];
   return b && b.emit ? b.emit : 0;
 }
+
+// Carved Pumpkin as a helmet (reference: the carved pumpkin): no defence and no wear, but Voidwalkers do not
+// take a gaze through it as a challenge (mobs/pumpkins.js). A block item first: right-click aims it at a block to
+// place it, or into the air to put it on.
+{
+  const cp = ITEMS[B.CARVED_PUMPKIN];
+  cp.stack = 1;
+  cp.armor = { slot: 0, piece: 'helmet', material: 'pumpkin', defense: 0, toughness: 0, pumpkin: true };
+}

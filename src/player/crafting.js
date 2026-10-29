@@ -56,6 +56,7 @@ shaped(['PPP', 'P P', 'PPP'], { P: 'planks' }, B.CHEST, 1);
 shaped(['WWW'], { W: I.WHEAT }, I.BREAD, 1);
 shaped(['SSS'], { S: B.SUGAR_CANE }, I.PAPER, 3);
 shaped(['P', 'T'], { P: B.PUMPKIN, T: B.TORCH }, B.JACK_O_LANTERN, 1);
+shapeless([B.CARVED_PUMPKIN, B.TORCH], B.JACK_O_LANTERN, 1); // a carved one lights up as well
 shaped(['SSS', 'SSS', 'SSS'], { S: I.MELON_SLICE }, B.MELON, 1);
 shapeless([B.PUMPKIN, I.EGG], I.PUMPKIN_PIE, 1);
 shapeless([I.PAPER, I.PAPER, I.PAPER, I.LEATHER], I.BOOK, 1);
