@@ -1,7 +1,7 @@
 // Settler trades: every settler buys one kind of goods for beryl and sells two
 // or three things for it, depending on its profession. Each offer works 12
 // times, then restocks after half a day.
-import { I, WOOL_ITEMS, TIPPED_ARROW, CHARTS } from '../world/items.js';
+import { I, WOOL_ITEMS, TIPPED_ARROW, CHARTS, DYES } from '../world/items.js';
 import { B } from '../world/blocks.js';
 
 const BUY = 'buy', SELL = 'sell';
@@ -22,6 +22,14 @@ const OFFERS = {
     [SELL, I.BERYL, 8, CHARTS.outpost, 1], [SELL, I.BERYL, 10, CHARTS.skywatch, 1], [SELL, I.BERYL, 11, CHARTS.sunken, 1],
     [SELL, I.BERYL, 12, CHARTS.tomb, 1], [SELL, I.BERYL, 14, CHARTS.citadel, 1]],
 };
+// Roving Peddlers (mobs/peddler.js): they buy a few raw goods and sell odd wares no village stocks; the stock does not refill.
+OFFERS.peddler = [[BUY, I.IRON_INGOT, 3, I.BERYL, 1], [BUY, I.GOLD_INGOT, 2, I.BERYL, 1], [BUY, I.LEATHER, 8, I.BERYL, 1], [BUY, I.FEATHER, 20, I.BERYL, 1],
+  [SELL, I.BERYL, 1, B.JUNGLE_SAPLING, 1], [SELL, I.BERYL, 1, B.ACACIA_SAPLING, 1], [SELL, I.BERYL, 1, B.DARK_OAK_SAPLING, 1], [SELL, I.BERYL, 1, B.BLOSSOM_SAPLING, 1],
+  [SELL, I.BERYL, 1, DYES[2], 3], [SELL, I.BERYL, 1, DYES[6], 3], [SELL, I.BERYL, 1, DYES[11], 3], [SELL, I.BERYL, 1, DYES[14], 3],
+  [SELL, I.BERYL, 2, I.GLOW_BERRIES, 6], [SELL, I.BERYL, 2, I.HONEY_BOTTLE, 2], [SELL, I.BERYL, 3, I.SLIMEBALL, 4], [SELL, I.BERYL, 2, I.NAME_TAG, 1],
+  [SELL, I.BERYL, 2, I.LEAD, 2], [SELL, I.BERYL, 5, I.SADDLE, 1], [SELL, I.BERYL, 6, I.VOID_PEARL, 1], [SELL, I.BERYL, 3, B.ICE, 4]];
+/** Extra sell offers on top of the usual two or three (a peddler's pack is fuller than a settler's stall). */
+const EXTRA_SELLS = { peddler: 2 };
 const CHART_IDS = new Set(Object.values(CHARTS));
 /** Trades whose list always holds at least one offer that passes the test (the first sell is picked among those). */
 const GUARANTEED = { cartographer: (o) => CHART_IDS.has(o[3]) };
@@ -35,7 +43,7 @@ export function makeTrades(profession, rng = Math.random) {
   const pick = (arr) => arr.splice(Math.floor(rng() * arr.length), 1)[0];
   const chosen = [pick(buys.slice())];
   const pool = sells.slice();
-  const n = 2 + (rng() < 0.5 ? 1 : 0);
+  const n = 2 + (rng() < 0.5 ? 1 : 0) + (EXTRA_SELLS[profession] || 0);
   const must = GUARANTEED[profession];
   if (must) { // e.g. a cartographer always stocks a chart: take one of those first
     const first = pick(pool.filter(must));

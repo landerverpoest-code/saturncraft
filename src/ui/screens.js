@@ -1027,7 +1027,7 @@ export class UI {
   openTrade(mob) {
     this.game.input.unlock();
     const g = this.game, inv = g.player.inventory;
-    const title = `${mob.profession[0].toUpperCase() + mob.profession.slice(1)} Settler`;
+    const title = mob.def.trader ? mob.def.name : `${mob.profession[0].toUpperCase() + mob.profession.slice(1)} Settler`;
     // Village Champions pay less (a guest pays from its own inventory, so its own effect sets the price)
     const cut = championDiscount(g.player.effects);
     this.showContainer('trade', title, (panel) => {
@@ -1063,7 +1063,7 @@ export class UI {
         list.appendChild(row);
       });
       panel.appendChild(list);
-      panel.appendChild(el('<div class="recipes-hint">Shift-click trades as often as you can afford. Offers restock every half day.</div>'));
+      panel.appendChild(el(`<div class="recipes-hint">Shift-click trades as often as you can afford. ${mob.def.trader ? 'The pack does not refill, and the peddler moves on after a day.' : 'Offers restock every half day.'}</div>`));
       panel.appendChild(this.inventoryGrid());
     });
     this.refreshAll();

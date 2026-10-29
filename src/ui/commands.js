@@ -21,6 +21,7 @@ import { ENCHANTS, ENCH_KEYS, canApply, compatible, enchName } from '../world/en
 import { villageInRegion, VILLAGE_REGION } from '../world/villages.js';
 import { nearestSanctum } from '../world/dimensions/sanctum.js';
 import { EFFECTS, EFFECT_KEYS, effectLabel } from '../player/effects.js';
+import { spawnCaravan } from '../mobs/peddler.js';
 
 /** item lookup by key ("diamond_sword", "oak_planks", "grass_block") and by display name */
 let ITEM_KEYS = null;
@@ -77,6 +78,7 @@ export const HELP = [
   '/dimension <overworld|cinderdeep|hollow>',
   '/effect give <effect> [seconds] [level],  /effect clear  (effects: ' + EFFECT_KEYS.join(', ') + ')',
   '/raid <patrol|start [level]|stop|status>',
+  '/caravan  (a Roving Peddler and its Packhorns camp nearby)',
   '/kill,  /clear,  /spawnpoint,  /seed,  /heal',
 ];
 
@@ -226,6 +228,12 @@ export function runCommand(game, text) {
       }
       if (sub === 'stop') { r.stop(); return 'Raid stopped'; }
       return r.raid ? r.raid.label() : 'No raid under way';
+    }
+    case 'caravan': {
+      // /caravan: call a Roving Peddler with its Packhorns to a spot a few blocks ahead (mobs/peddler.js)
+      const [dx, , dz] = p.lookDir();
+      const x = Math.floor(p.x + dx * 8), z = Math.floor(p.z + dz * 8), y = game.world.heightAt(x, z) + 1;
+      return spawnCaravan(game.spawner, x, y, z) ? 'A Roving Peddler has set up camp' : 'No room for a camp there';
     }
     case 'heal': p.health = 20; p.hunger.food = 20; p.hunger.saturation = 5; return 'Healed';
     case 'clear': p.inventory.clear(); return 'Cleared the inventory';

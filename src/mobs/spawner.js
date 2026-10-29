@@ -27,6 +27,7 @@ import { SEA_LEVEL } from '../world/constants.js';
 import { tickMonumentSpawns, spawnElders } from './oceanMobs.js';
 import { spawnVillageStrider, desertChunkSpawn } from './duneStrider.js';
 import { CAGE, forestChunkSpawn, hollowSpawnTick } from './hoverling.js';
+import { caravanTick } from './peddler.js';
 import { addPumpkinHead } from './pumpkins.js';
 import { rollOffhand, OFFHAND_KINDS } from './offhand.js';
 import { EQUIP_KINDS, spawnGear, rollCanPickUp, localDifficulty, clampedDifficulty, jockeyRoll } from './equipment.js';
@@ -297,6 +298,7 @@ export class MobSpawner {
       this.sweeps++;
     }
     hollowSpawnTick(this); // Hoverlings drifting through Hollow Cities
+    caravanTick(this); // a Roving Peddler with Packhorns now and then (mobs/peddler.js)
     if (g.ticks % CREATURE_SPAWN_INTERVAL === 0 && creatures < scaledCap(CATEGORY.CREATURE, chunks.length)) {
       for (const [cx, cz] of chunks) creatures += this.attempt(cx, cz, CATEGORY.CREATURE);
     }

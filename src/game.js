@@ -76,6 +76,7 @@ import { beaconLevel, beamColor, beaconEffects, beaconRange, beaconDuration, BEA
 import { PostFX } from './render/postfx.js';
 import { HushSystem } from './world/hushSystem.js';
 import { darknessFactor } from './world/deepHush.js';
+import { resolveBlock } from './player/shield.js';
 
 // Spherical (radial distance) fog instead of view-depth fog, so chunk edges never show at screen corners
 THREE.ShaderChunk.fog_vertex = `#ifdef USE_FOG
@@ -239,11 +240,16 @@ export class Game {
     // a blocked hit wears the shield and pushes melee attackers back
     this.player.listeners.blocked = [(amount, attacker) => {
       const p = this.player;
-      this.audio.play('shield', [p.x, p.y + 1, p.z]);
-      if (!p.creative && amount >= 3) p.inventory.damageSelected(1 + Math.floor(amount));
+      // parries, axe blows that knock the shield down and the wear on it (player/shield.js)
+      const r = resolveBlock(p.shield, amount, attacker);
+      this.audio.play(r.disabled ? 'shield_break' : r.parry ? 'parry' : 'shield', [p.x, p.y + 1, p.z]);
+      if (r.disabled) { p.blocking = false; this.hud.toast('Your shield was knocked down!'); }
+      if (!p.creative && r.wear) p.inventory.damageSelected(r.wear);
       if (attacker && attacker.body && attacker.kind === 'mob') {
         const dx = attacker.x - p.x, dz = attacker.z - p.z, d = Math.hypot(dx, dz) || 1;
-        attacker.body.vx += dx / d * 0.5; attacker.body.vz += dz / d * 0.5;
+        attacker.body.vx += dx / d * r.knock; attacker.body.vz += dz / d * r.knock;
+        if (r.stun) attacker.stunTicks = r.stun; // a parried mob stands staggered
+        if (r.parry && !r.disabled) for (let k = 0; k < 10; k++) this.particles.emit(p.x - Math.sin(p.yaw) * 0.8, p.y + 1.2, p.z - Math.cos(p.yaw) * 0.8, (Math.random() - 0.5) * 0.3, Math.random() * 0.2, (Math.random() - 0.5) * 0.3, 1, 0.9, 0.5, 14, 0.01);
       }
     }];
     this.player.listeners.death.push((cause) => this.onDeath(cause));

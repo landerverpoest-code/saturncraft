@@ -164,6 +164,8 @@ export class Audio {
       case 'gust': this.noise(t, 0.45, 2200, 0.7, 0.22 * gain, out, 'highpass'); this.tone(t, 0.35, 380, 760, 0.05 * gain, out, 'sine'); break; // a Gustling's rush of wind
       case 'neigh': this.tone(t, 0.5, 700, 500, 0.15 * gain, out, 'sawtooth'); this.tone(t + 0.05, 0.4, 820, 560, 0.08 * gain, out, 'square'); break;
       case 'shield': this.noise(t, 0.1, 700, 1.5, 0.45 * gain, out, 'lowpass'); this.tone(t, 0.12, 180, 120, 0.2 * gain, out, 'triangle'); break;
+      case 'parry': this.tone(t, 0.1, 900, 1500, 0.2 * gain, out, 'triangle'); this.noise(t, 0.08, 3000, 2, 0.35 * gain, out, 'highpass'); this.tone(t, 0.12, 200, 140, 0.2 * gain, out, 'triangle'); break; // a shield parry rings
+      case 'shield_break': this.noise(t, 0.25, 500, 1, 0.6 * gain, out, 'lowpass'); this.tone(t, 0.3, 140, 60, 0.3 * gain, out, 'sawtooth'); this.noise(t + 0.05, 0.1, 2500, 2, 0.3 * gain, out); break; // an axe knocks a shield down
       case 'fuse': this.noise(t, 1.2, 5000, 0.6, 0.25 * gain, out, 'highpass'); break;
       case 'rail': this.noise(t, 0.12, 2200, 3, 0.12 * gain, out); this.tone(t, 0.05, 900, 700, 0.04 * gain, out, 'square'); break;
       case 'croak': this.tone(t, 0.09, 140 + Math.random() * 30, 110, 0.2 * gain, out, 'sawtooth'); this.tone(t + 0.12, 0.12, 160, 100, 0.18 * gain, out, 'sawtooth'); break;

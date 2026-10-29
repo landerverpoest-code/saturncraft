@@ -555,7 +555,7 @@ export class HostSession extends Session {
     if (!mob || mob.kind !== 'mob' || !s || s.dead || Math.hypot(mob.x - s.x, mob.y - s.y, mob.z - s.z) > 8) return;
     const held = m.st && ITEMS[m.st.id] ? withExtras({ id: m.st.id, count: Math.max(1, Math.min(64, m.st.count | 0)), damage: m.st.damage | 0 }, m.st) : null; // (a Name Tag keeps its label)
     const d = held && ITEMS[held.id];
-    if (mob.def.villager && mob.deathTime === 0 && mob.trades.length && !(d && d.food && mob.def.food)) {
+    if ((mob.def.villager || mob.def.trader) && mob.deathTime === 0 && mob.trades.length && !(d && d.food && mob.def.food)) {
       c.ch.send({ t: 'trades', id: mob.id, prof: mob.profession, trades: mob.trades });
       return;
     }

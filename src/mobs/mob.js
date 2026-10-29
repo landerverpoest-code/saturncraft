@@ -28,6 +28,8 @@ import * as THREE from 'three';
 
 import { conversionStep, newConversion } from './hostileVariants.js'; // registers the Hexwife and the Shambler / Rattler variants
 import { outOfMeleeReach } from './duneStrider.js'; // registers the Dune Strider
+import { moraleAI, soundAlarm } from './morale.js';
+import './peddler.js'; // registers the Roving Peddler and its Packhorns
 import { gazeProvokes } from './pumpkins.js';
 import { isShield, isCharm, shieldBlocks, disablesShield, wearShield, charmHealth, charmIgnores, offhandDrops, offhandFromSave, OFFHAND_KINDS } from './offhand.js';
 import { companionAI, companionSave, companionLoad } from './companions.js'; // tame Vixlings and Cragbucks
@@ -379,7 +381,7 @@ export class Mob {
         if (!this.tamed && g) for (const e of g.entities.list) if (e !== this && e.type === this.type && !e.tamed && !e.dead && Math.hypot(e.x - this.x, e.z - this.z) < 16) e.enemy = foe;
       }
     } else if (this.def.category === CATEGORY.CREATURE) this.panicTicks = 60 + Math.floor(Math.random() * 40);
-    else if (attacker && attacker.isPlayer) { this.target = 'player'; if (this.type === 'voidwalker') this.angry = true; }
+    else if (attacker && attacker.isPlayer) { this.target = 'player'; if (this.type === 'voidwalker') this.angry = true; if (g && this.health > 0) soundAlarm(this, g.entities.list); }
     if (this.health <= 0 && this.offhand && isCharm(this.offhand) && !charmIgnores(source)) this.useCharm(g); // the Charm of Undying keeps it alive once
     else if (this.health > 0 && this.offhand && OFFHAND_KINDS[this.type] === 'thief' && !this.tamed) this.spitOut(g); // a hurt thief drops its loot
     if (g) g.audio.play(this.health <= 0 ? 'mob_death' : 'mob_hurt', [this.x, this.y + 1, this.z]);
@@ -757,7 +759,9 @@ export class Mob {
 
   // ---------------------------------------------------------------------------
   ai(g, p, pdist) {
+    if (this.stunTicks > 0) { this.stunTicks--; this.move = null; this.path = null; return; } // staggered by a parry (player/shield.js)
     if (this.def.ownAI) return this.def.ownAI(this, g, p, pdist); // Dune Striders, Hoverlings
+    if (this.def.category === CATEGORY.MONSTER && moraleAI(this, g, p, pdist)) return; // running from a losing fight, answering an alarm (mobs/morale.js)
     if (this.def.villager) return this.settlerAI(g, p, pdist);
     if (this.def.companion && this.tamed) return companionAI(this, g, p, pdist); // tame Vixlings and Cragbucks (mobs/companions.js)
     if (this.def.parrot) return this.parrotAI(g, p, pdist);

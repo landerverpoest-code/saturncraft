@@ -287,6 +287,10 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 #dashbar > div { height: 100%; width: 100%; background: linear-gradient(#e8d28a, #b08a3a); }
 #dashbar.charging > div { background: linear-gradient(#ffe070, #e09a20); }
 #dashbar.cooling > div { background: linear-gradient(#9a9a9a, #5a5a5a); }
+/* Knocked-down shield gauge (fills while the shield recovers from an axe blow) */
+#shieldbar { width: calc(var(--slot) * 9 + 8px); height: 4px; background: rgba(0,0,0,.55); border: 1px solid #000; box-sizing: border-box; }
+#shieldbar.hidden { display: none; }
+#shieldbar > div { height: 100%; width: 0; background: linear-gradient(#c8c8d0, #6a6a78); }
 /* Books and Lecterns: a page of paper with page turning, and the signing screen */
 .book-screen { gap: 10px; }
 .book { width: min(340px, calc(100vw - 32px)); padding: 14px 16px 10px; background: linear-gradient(#f4ecd8, #e6dabe); border: 3px solid #6a4a28; border-radius: 4px; box-shadow: 4px 4px 0 rgba(0,0,0,.4); color: #2a1e12; box-sizing: border-box; }

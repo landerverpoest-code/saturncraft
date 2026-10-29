@@ -206,7 +206,7 @@ export class Interaction {
       return;
     }
     // shields: hold right mouse to block (after a short raise, as in the reference)
-    p.blocking = !!(d && d.shield && input.right && (this.shieldRaise = (this.shieldRaise || 0) + 1) > 5);
+    p.blocking = !!(d && d.shield && input.right && !p.shield.cooldown && (this.shieldRaise = (this.shieldRaise || 0) + 1) > 5);
     if (!(d && d.shield && input.right)) this.shieldRaise = 0;
     if (d && d.shield) return;
     // a Brush held on Suspicious Sand or Gravel sweeps it (2.5 s) until the find comes out
@@ -1300,7 +1300,7 @@ export class Interaction {
     // multiplayer guest: the back seat of a host's saddled Dune Strider (the host keeps the seat for us, see net/session.js)
     if (mob.netProxy && guestWantsSeat(mob, p, st)) { g.mount(mob); this.swing = SWING_TICKS; return true; }
     if (mob.netProxy) return g.net.interactMob(mob); // multiplayer guest: the host feeds, shears, tames or trades
-    if (mob.def.villager && mob.deathTime === 0 && mob.trades.length && !(d && d.food && mob.def.food)) { g.ui.openTrade(mob); g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); return true; }
+    if ((mob.def.villager || mob.def.trader) && mob.deathTime === 0 && mob.trades.length && !(d && d.food && mob.def.food)) { g.ui.openTrade(mob); g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); return true; }
     if ((mob.def.tameable || mob.def.companion) && mob.deathTime === 0 && this.interactHowler(mob, st, d)) return true;
     const useOne = () => { if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1); this.swing = SWING_TICKS; };
     if (mob.def.strider) return interactStrider(g, mob, p, st, useOne); // saddle, cactus, climb on
