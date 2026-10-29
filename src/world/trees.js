@@ -11,7 +11,8 @@ export const LOGS = new Set([B.OAK_LOG, B.BIRCH_LOG, B.SPRUCE_LOG, B.JUNGLE_LOG,
 /**
  * Blocks of a tree of `kind`; r in [0,1) picks the variation. Kinds: 'oak',
  * 'birch', 'spruce', 'swamp_oak', 'jungle', 'jungle_big', 'jungle_bush',
- * 'acacia', 'dark_oak', 'blossom', 'mangrove', 'brown_mushroom', 'red_mushroom'. Entries are
+ * 'acacia', 'dark_oak', 'blossom', 'mangrove', 'brown_mushroom', 'red_mushroom', 'grand_oak',
+ * 'tall_birch', 'pine_tall', 'shrub'. Entries are
  * [dx, dy, dz, block, force, meta?] (meta: the side a vine hangs on).
  */
 export function treeShape(kind, r) {
@@ -283,6 +284,65 @@ const BIG_SHAPES = {
     disc(out, 0.5, h - 1, 0.5, 4.2, B.DARK_OAK_LEAVES);
     disc(out, 0.5, h, 0.5, 3.2, B.DARK_OAK_LEAVES);
     disc(out, 0.5, h + 1, 0.5, 2, B.DARK_OAK_LEAVES);
+    return finish(out);
+  },
+  // Grand oak: a tall trunk with two or three side boughs, each under its own leaf cluster, and a broad crown
+  grand_oak(rng) {
+    const out = [], h = 8 + Math.floor(rng() * 4);
+    trunk(out, B.OAK_LOG, h);
+    disc(out, 0, h - 2, 0, 3.6, B.OAK_LEAVES, 0.2);
+    disc(out, 0, h - 1, 0, 3.6, B.OAK_LEAVES, 0.2);
+    disc(out, 0, h, 0, 2.6, B.OAK_LEAVES, 0.2);
+    disc(out, 0, h + 1, 0, 1.4, B.OAK_LEAVES, 0.2);
+    const n = 2 + Math.floor(rng() * 2), first = rng() * Math.PI * 2;
+    for (let b = 0; b < n; b++) {
+      const a = first + (b * Math.PI * 2) / n + (rng() - 0.5) * 0.6, y0 = Math.floor(h * 0.5) + b;
+      let bx = 0, bz = 0, by = y0;
+      for (let k = 1; k <= 3; k++) {
+        bx = Math.round(Math.cos(a) * k); bz = Math.round(Math.sin(a) * k); by = y0 + (k > 1 ? 1 : 0);
+        out.push([bx, by, bz, B.OAK_LOG, true]);
+      }
+      disc(out, bx, by, bz, 2, B.OAK_LEAVES, 0.3);
+      disc(out, bx, by + 1, bz, 2, B.OAK_LEAVES, 0.3);
+      disc(out, bx, by + 2, bz, 1, B.OAK_LEAVES, 0.1);
+    }
+    return finish(out);
+  },
+  // Tall birch: a pale trunk under a narrow, tall oval of leaves
+  tall_birch(rng) {
+    const out = [], h = 8 + Math.floor(rng() * 4);
+    trunk(out, B.BIRCH_LOG, h);
+    const radii = [1, 2, 2, 2, 2, 1, 1];
+    for (let k = 0; k < radii.length; k++) {
+      const y = h + 1 - k, rad = radii[k];
+      for (let dx = -rad; dx <= rad; dx++) for (let dz = -rad; dz <= rad; dz++) {
+        if (Math.abs(dx) === rad && Math.abs(dz) === rad && (rad === 1 || rng() < 0.5)) continue;
+        out.push([dx, y, dz, B.BIRCH_LEAVES, false]);
+      }
+    }
+    return finish(out);
+  },
+  // Tall pine: a spruce of twelve to seventeen blocks with wide, drooping tiers
+  pine_tall(rng) {
+    const out = [], h = 12 + Math.floor(rng() * 6);
+    trunk(out, B.SPRUCE_LOG, h);
+    for (let k = h; k >= 3; k--) {
+      const depth = h - k, tier = Math.min(3, 1 + Math.floor(depth / 3)), rad = depth < 1 ? 0 : tier - (k % 2 ? 1 : 0) || 1;
+      for (let dx = -rad; dx <= rad; dx++) for (let dz = -rad; dz <= rad; dz++) {
+        if (Math.abs(dx) + Math.abs(dz) > rad + (rad > 1 ? 1 : 0)) continue;
+        out.push([dx, k, dz, B.SPRUCE_LEAVES, false]);
+      }
+    }
+    out.push([0, h + 1, 0, B.SPRUCE_LEAVES, false]);
+    return finish(out);
+  },
+  // Shrub: a stump or two of oak under a low round mound of leaves
+  shrub(rng) {
+    const out = [], stem = 1 + Math.floor(rng() * 2);
+    for (let k = 0; k < stem; k++) out.push([0, k, 0, B.OAK_LOG, true]);
+    out.push([0, -1, 0, B.DIRT, true]);
+    disc(out, 0, stem, 0, 1.6 + rng() * 0.4, B.OAK_LEAVES, 0.3);
+    disc(out, 0, stem + 1, 0, 1, B.OAK_LEAVES, 0.3);
     return finish(out);
   },
   // Huge mushrooms: a pale stem under a flat brown cap or a red dome

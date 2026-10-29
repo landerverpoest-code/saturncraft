@@ -13,7 +13,9 @@ import { stampCaveFeatures } from './caveGen.js';
 import { treeShape, LEAVES, LOGS, PLANTS } from './trees.js';
 import { B, DEEP_VARIANT, BLOCK_LIMIT, CORALS, WATERLOGGED_FORM } from './blocks.js';
 import { Simplex, hash4, hashf, mulberry32 } from './noise.js';
-import { carveChunk } from './carvers.js';
+import { carveChunk, carveRifts } from './carvers.js';
+import { isMeadow, stampCascades } from './highlands.js';
+import { FIELD_BIOMES, FIELD_THRESHOLD, FIELD_FLOWER_P, FIELD_GRASS_P, THICKET_BIOMES, THICKET_THRESHOLD, THICKET_CORE, THICKET_SHROOM_P, THICKET_CORE_SHROOM_P, THICKET_TREE_FACTOR, fieldNoise, thicketNoise, fieldFlower, treeKindFor } from './ecology.js';
 import { stampRuins } from './ruinedPortals.js';
 import { stampSmallFeatures } from './smallFeatures.js';
 import { stampBuriedRuins } from './buriedRuins.js';
@@ -88,8 +90,8 @@ export function sampleOreHeight(f, rng) {
 const SNOW_GROUND = new Set([B.SNOWY_GRASS, B.DIRT, B.STONE, B.GRAVEL, B.SAND, B.ICE, B.COBBLESTONE, B.ANDESITE, B.GRANITE, B.DIORITE]);
 
 // Ground cover per biome: chance of tall grass, flowers and small mushrooms on a grass block.
-const GRASS_P = { [BIOME.BLOSSOM_GROVE]: 0.2, [BIOME.PLAINS]: 0.22, [BIOME.TAIGA]: 0.07, [BIOME.SAVANNA]: 0.35, [BIOME.JUNGLE]: 0.3, [BIOME.SWAMP]: 0.12, [BIOME.DARK_FOREST]: 0.06, [BIOME.FLOWER_FOREST]: 0.08 };
-const FLOWER_P = { [BIOME.BLOSSOM_GROVE]: 0.05, [BIOME.FLOWER_FOREST]: 0.2, [BIOME.SWAMP]: 0.012, [BIOME.JUNGLE]: 0.004, [BIOME.SAVANNA]: 0.006, [BIOME.DARK_FOREST]: 0.004 };
+const GRASS_P = { [BIOME.HIGHLAND_MEADOW]: 0.34, [BIOME.BLOSSOM_GROVE]: 0.2, [BIOME.PLAINS]: 0.22, [BIOME.TAIGA]: 0.07, [BIOME.SAVANNA]: 0.35, [BIOME.JUNGLE]: 0.3, [BIOME.SWAMP]: 0.12, [BIOME.DARK_FOREST]: 0.06, [BIOME.FLOWER_FOREST]: 0.08 };
+const FLOWER_P = { [BIOME.HIGHLAND_MEADOW]: 0.08, [BIOME.BLOSSOM_GROVE]: 0.05, [BIOME.FLOWER_FOREST]: 0.2, [BIOME.SWAMP]: 0.012, [BIOME.JUNGLE]: 0.004, [BIOME.SAVANNA]: 0.006, [BIOME.DARK_FOREST]: 0.004 };
 const SHROOM_P = { [BIOME.DARK_FOREST]: 0.025, [BIOME.SWAMP]: 0.01, [BIOME.TAIGA]: 0.003 };
 const TERRACOTTAS = new Set([B.TERRACOTTA, B.ORANGE_TERRACOTTA, B.YELLOW_TERRACOTTA, B.WHITE_TERRACOTTA, B.BROWN_TERRACOTTA, B.RED_TERRACOTTA, B.LIGHT_GRAY_TERRACOTTA]);
 const MAX_TREE_DENSITY = 0.14;
@@ -108,6 +110,7 @@ export class TerrainGenerator {
     this.nSurface = s(11); this.nClay = s(12);
     this.nVariant = s(13); this.nIsland = s(14); this.nHill = s(15); this.nMesa = s(16);
     this.nRiver = s(17); this.nRiverWarp = s(18); this.nRiverWidth = s(19);
+    this.nMeadow = s(20); this.nField = s(21); // highland meadows, flower fields and fungal thickets
     // Badlands colour bands: plain terracotta with thin coloured stripes, fixed per seed
     const br = mulberry32(hash4(this.seed, 77, 13, 5));
     const STRIPES = [B.ORANGE_TERRACOTTA, B.ORANGE_TERRACOTTA, B.YELLOW_TERRACOTTA, B.WHITE_TERRACOTTA, B.BROWN_TERRACOTTA, B.RED_TERRACOTTA, B.RED_TERRACOTTA, B.LIGHT_GRAY_TERRACOTTA];
@@ -198,6 +201,7 @@ export class TerrainGenerator {
     out.humid = humid;
     out.variant = variant;
     out.swamp = wSwamp; out.mangrove = wMangrove; out.mesa = wMesa; out.island = wIsland;
+    out.meadow = mountain > 0.3 ? this.nMeadow.noise2(x / 150, z / 150) : -1; // only mountain flanks can be meadows
     if (wMesa <= 0) out.mesaFloor = true;
     return out;
   }
@@ -324,7 +328,10 @@ export class TerrainGenerator {
     if (col.swamp > 0.5 && top <= SEA_LEVEL + 3) return t > 0.98 ? BIOME.MANGROVE_SWAMP : BIOME.SWAMP;
     if (col.mangrove > 0.5 && top <= SEA_LEVEL + 3) return BIOME.MANGROVE_SWAMP;
     if (col.cont < -0.07 && top <= SEA_LEVEL + 3) return t < 0.15 ? BIOME.SNOWY_PLAINS : BIOME.BEACH;
-    if (col.mountain > 0.3 && top > 105) return (t < 0.5 || top > 170) ? BIOME.SNOWY_PEAKS : BIOME.STONY_PEAKS;
+    if (col.mountain > 0.3 && top > 105) {
+      if (isMeadow(col, top)) return BIOME.HIGHLAND_MEADOW; // mild flanks stay green
+      return (t < 0.5 || top > 170) ? BIOME.SNOWY_PEAKS : BIOME.STONY_PEAKS;
+    }
     if (col.mesa > 0.5) return BIOME.BADLANDS;
     if (t < 0.15) return h > 0.5 ? BIOME.SNOWY_TAIGA : BIOME.SNOWY_PLAINS;
     if (t < 0.45) return BIOME.TAIGA;
@@ -405,7 +412,7 @@ export class TerrainGenerator {
     }
 
     // 4. Caves: worm tunnels and ravines (world/carvers.js), then the noise caves
-    if (!this.noCarvers) carveChunk(this.seed, cx, cz, blocks, heightmap);
+    if (!this.noCarvers) { carveChunk(this.seed, cx, cz, blocks, heightmap); carveRifts(this.seed, cx, cz, blocks, heightmap); } // Great Rifts: carvers.js
     const cg = new Float32Array(5 * 5 * CNY * 3);
     const tmp = [0, 0, 0];
     for (let i = 0; i < 5; i++) for (let k = 0; k < 5; k++) for (let j = 0; j < CNY; j++) {
@@ -693,29 +700,15 @@ export class TerrainGenerator {
       case BIOME.MUSHROOM_FIELDS: return 0.004;
       case BIOME.SNOWY_PLAINS: return 0.004;
       case BIOME.PLAINS: return 0.0025;
+      case BIOME.HIGHLAND_MEADOW: return 0.004;
       case BIOME.STONY_PEAKS: return 0.002;
       case BIOME.SNOWY_PEAKS: return 0.003;
       default: return 0;
     }
   }
 
-  /** Tree kind for a biome; tr in [0,1) picks among the biome's mix. */
-  treeKind(biome, tr) {
-    switch (biome) {
-      case BIOME.TAIGA: case BIOME.SNOWY_TAIGA: case BIOME.SNOWY_PLAINS: case BIOME.SNOWY_PEAKS: case BIOME.STONY_PEAKS: return 'spruce';
-      case BIOME.BIRCH_FOREST: return tr < 0.85 ? 'birch' : 'oak';
-      case BIOME.FOREST: return tr < 0.2 ? 'birch' : 'oak';
-      case BIOME.FLOWER_FOREST: return tr < 0.3 ? 'birch' : 'oak';
-      case BIOME.BLOSSOM_GROVE: return 'blossom';
-      case BIOME.SWAMP: return 'swamp_oak';
-      case BIOME.MANGROVE_SWAMP: return 'mangrove';
-      case BIOME.JUNGLE: return tr < 0.11 ? 'jungle_big' : tr < 0.5 ? 'jungle' : 'jungle_bush';
-      case BIOME.SAVANNA: return tr < 0.85 ? 'acacia' : 'oak';
-      case BIOME.DARK_FOREST: return tr < 0.04 ? 'brown_mushroom' : tr < 0.08 ? 'red_mushroom' : tr < 0.14 ? 'oak' : tr < 0.18 ? 'birch' : 'dark_oak';
-      case BIOME.MUSHROOM_FIELDS: return tr < 0.5 ? 'brown_mushroom' : 'red_mushroom';
-      default: return 'oak';
-    }
-  }
+  /** Tree kind for a biome; tr in [0,1) picks among the biome's mix (ecology.js). */
+  treeKind(biome, tr, thicket = false) { return treeKindFor(biome, tr, thicket); }
 
   decorate(blocks, meta, biomes, heightmap, cx, cz, cols) {
     const x0 = cx * 16, z0 = cz * 16;
@@ -730,7 +723,7 @@ export class TerrainGenerator {
       if ((biome === BIOME.SWAMP || biome === BIOME.MANGROVE_SWAMP) && top < SEA_LEVEL && top >= SEA_LEVEL - 3 && blocks[cidx(x, SEA_LEVEL, z)] === B.WATER && !blocks[cidx(x, SEA_LEVEL + 1, z)] && h(x, z, 49) < (biome === BIOME.SWAMP ? 0.09 : 0.03)) {
         blocks[cidx(x, SEA_LEVEL + 1, z)] = B.LILY_PAD;
       }
-      const ground = blocks[cidx(x, top, z)];
+      let ground = blocks[cidx(x, top, z)];
       const above = cidx(x, top + 1, z);
       // coral reefs in warm, shallow seas: lumps of coral block with corals growing on them
       if (biome === BIOME.OCEAN && cols[ci].temp > 0.95 && (ground === B.SAND || ground === B.GRAVEL) && blocks[above] === B.WATER && top < SEA_LEVEL - 3 && top > SEA_LEVEL - 16) {
@@ -758,19 +751,26 @@ export class TerrainGenerator {
       }
       if (blocks[above]) continue;
       const r = h(x, z, 41);
+      // Wildflower Fields and Fungal Thickets (ecology.js): patches decided by their own noise
+      const field = FIELD_BIOMES.has(biome) && ground === B.GRASS && fieldNoise(this, x0 + x, z0 + z) > FIELD_THRESHOLD;
+      const thicketN = THICKET_BIOMES.has(biome) && ground === B.GRASS ? thicketNoise(this, x0 + x, z0 + z) : -1;
+      const thicket = thicketN > THICKET_THRESHOLD, core = thicketN > THICKET_CORE;
+      if (core) { blocks[cidx(x, top, z)] = B.MYCELIUM; ground = B.MYCELIUM; } // the heart of a thicket: a floor of mycelium
       if (ground === B.GRASS) {
-        const grassP = GRASS_P[biome] ?? 0.1;
-        const flowerP = FLOWER_P[biome] ?? 0.015;
-        const shroomP = SHROOM_P[biome] || 0;
+        const grassP = field ? FIELD_GRASS_P : (GRASS_P[biome] ?? 0.1);
+        const flowerP = field ? FIELD_FLOWER_P : (FLOWER_P[biome] ?? 0.015);
+        const shroomP = thicket ? THICKET_SHROOM_P : (SHROOM_P[biome] || 0);
         if (r < flowerP) {
           const f = h(x, z, 42);
-          if (biome === BIOME.FLOWER_FOREST) blocks[above] = f < 0.3 ? B.SUNPETAL : f < 0.55 ? B.REDBLOOM : f < 0.8 ? B.ROSETTE : B.SKYBELL;
+          if (field) blocks[above] = fieldFlower(this.seed, x0 + x, z0 + z, f, h(x, z, 70));
+          else if (biome === BIOME.HIGHLAND_MEADOW) blocks[above] = f < 0.3 ? B.SKYBELL : f < 0.55 ? B.ROSETTE : f < 0.8 ? B.SUNPETAL : B.REDBLOOM;
+          else if (biome === BIOME.FLOWER_FOREST) blocks[above] = f < 0.3 ? B.SUNPETAL : f < 0.55 ? B.REDBLOOM : f < 0.8 ? B.ROSETTE : B.SKYBELL;
           else if (biome === BIOME.SWAMP) blocks[above] = B.SKYBELL;
           else if (biome === BIOME.BLOSSOM_GROVE) blocks[above] = f < 0.75 ? B.ROSETTE : B.SKYBELL;
           else blocks[above] = f < 0.5 ? B.SUNPETAL : B.REDBLOOM;
         } else if (r < flowerP + shroomP) blocks[above] = h(x, z, 42) < 0.6 ? B.BROWN_MUSHROOM : B.RED_MUSHROOM;
         else if (r < flowerP + shroomP + grassP) blocks[above] = B.TALL_GRASS;
-      } else if (ground === B.MYCELIUM && r < 0.025) blocks[above] = h(x, z, 42) < 0.5 ? B.BROWN_MUSHROOM : B.RED_MUSHROOM;
+      } else if (ground === B.MYCELIUM && r < (core ? THICKET_CORE_SHROOM_P : 0.025)) blocks[above] = h(x, z, 42) < 0.5 ? B.BROWN_MUSHROOM : B.RED_MUSHROOM;
       // sweet berry bushes in taiga patches, most of them ripe
       if ((biome === BIOME.TAIGA || biome === BIOME.SNOWY_TAIGA) && (ground === B.GRASS || ground === B.SNOWY_GRASS) && !blocks[above]
         && hashf(this.seed, (x0 + x) >> 3, (z0 + z) >> 3, 49) < 0.1 && h(x, z, 50) < 0.2) { blocks[above] = B.SWEET_BERRY_BUSH; meta[above] = h(x, z, 51) < 0.6 ? 3 : 2; }
@@ -830,7 +830,8 @@ export class TerrainGenerator {
       }
       if (top < SEA_LEVEL - 3) continue;
       const biome = this.biomeFor(col, top);
-      if (r > this.treeDensity(biome)) continue;
+      const thicket = THICKET_BIOMES.has(biome) && thicketNoise(this, wx, wz) > THICKET_THRESHOLD;
+      if (r > this.treeDensity(biome) * (thicket ? THICKET_TREE_FACTOR : 1)) continue;
       // swamp and mangrove trees may stand in shallow water; others need dry land
       if (top < SEA_LEVEL && biome !== BIOME.SWAMP && biome !== BIOME.MANGROVE_SWAMP) continue;
       if (biome === BIOME.STONY_PEAKS || biome === BIOME.SNOWY_PEAKS) { if (top >= 118) continue; }
@@ -840,7 +841,7 @@ export class TerrainGenerator {
         const cv = this.caveNoiseAt(wx, top, wz);
         if (TerrainGenerator.isCarved(cv[0], cv[1], cv[2], top, top)) continue;
       }
-      const kind = this.treeKind(biome, hashf(this.seed, wx, wz, 52));
+      const kind = this.treeKind(biome, hashf(this.seed, wx, wz, 52), thicket);
       this.placeTree(blocks, meta, kind, wx - x0, top + 1, wz - z0, hashf(this.seed, wx, wz, 53));
       // a bee nest hangs on the side of some oaks and birches in sunny, flowery places
       const nestOdds = biome === BIOME.PLAINS || biome === BIOME.FLOWER_FOREST ? 0.05 : biome === BIOME.BIRCH_FOREST || biome === BIOME.FOREST ? 0.01 : 0;
@@ -859,6 +860,7 @@ export class TerrainGenerator {
       const b = blocks[cidx(x, y, z)];
       if ((SNOW_GROUND.has(b) || LEAVES.has(b)) && !blocks[cidx(x, y + 1, z)]) blocks[cidx(x, y + 1, z)] = B.SNOW_LAYER;
     }
+    stampCascades(this.seed, blocks, meta, biomes, heightmap, cx, cz); // streams down Highland Meadow slopes (highlands.js)
   }
 
   /** Grass + foliage tint of one column, from its biome and climate. */
