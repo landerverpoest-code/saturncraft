@@ -57,6 +57,8 @@ import { MobSpawner } from './mobs/spawner.js';
 import { HUD } from './ui/hud.js';
 import { UI } from './ui/screens.js';
 import { Input } from './ui/input.js';
+import { resolveBindings } from './ui/bindings.js';
+import { ACCESS_DEFAULTS, CaptionLog, motionScales } from './ui/accessibility.js';
 import { Audio } from './audio/audio.js';
 import { explode } from './entities/explosion.js';
 import { saveGame, applySave, applyPlayerSave } from './world/save.js';
@@ -94,7 +96,7 @@ const DARK_FOG = new THREE.Color(0, 0, 0);
 export const DIFFICULTIES = ['peaceful', 'easy', 'normal', 'hard'];
 const FIREFLY_BIOMES = new Set(['swamp', 'forest', 'flower_forest', 'blossom_grove', 'mangrove_swamp', 'dark_forest', 'jungle', 'birch_forest']);
 
-export const DEFAULT_SETTINGS = { renderDistance: 8, fov: 75, sensitivity: 100, volume: 0.5, music: 0.5, shadows: true, shaders: true, shadowMapSize: 1024, pixelRatioCap: 1.25, daylightCycle: true, hostileMobs: true, difficulty: 'normal', showCoords: false };
+export const DEFAULT_SETTINGS = { renderDistance: 8, fov: 75, sensitivity: 100, volume: 0.5, music: 0.5, shadows: true, shaders: true, shadowMapSize: 1024, pixelRatioCap: 1.25, daylightCycle: true, hostileMobs: true, difficulty: 'normal', showCoords: false, keys: {}, ...ACCESS_DEFAULTS };
 
 export class Game {
   constructor(canvas, seed, settings, hooks = {}, saveData = null) {
@@ -189,8 +191,11 @@ export class Game {
     this.interaction = new Interaction(this);
     this.input = new Input(this.canvas);
     this.input.sensitivity = 0.0022 * s.sensitivity / 100;
+    this.input.setBindings(resolveBindings(s.keys)); // rebound controls (pause menu > Controls)
     this.audio = new Audio();
     this.audio.setVolume(s.volume);
+    this.captions = new CaptionLog(); // sound captions (pause menu > Accessibility)
+    this.audio.onPlay = (name, pos, vol) => { if (this.settings.captions) this.captions.add(name, pos, vol, this.audio.listener, performance.now()); };
     this.music = new Music(this.audio);
     this.music.setVolume(s.music ?? 0.5);
     this.hud = new HUD(this);
@@ -268,10 +273,11 @@ export class Game {
 
     // the chat opens on the key press itself, so nothing typed right after T or / reaches the game
     this.input.onKey = (e) => {
-      if (this.running && !this.ui.blocking && (e.code === 'KeyT' || e.code === 'Slash')) {
+      const command = this.input.matches('command', e.code);
+      if (this.running && !this.ui.blocking && (command || this.input.matches('chat', e.code))) {
         e.preventDefault();
         this.input.down.clear(); this.input.pressed.clear();
-        this.ui.openChat(e.code === 'Slash' ? '/' : '');
+        this.ui.openChat(command ? '/' : '');
       }
     };
     this.input.onLockChange = (locked) => {
@@ -327,6 +333,8 @@ export class Game {
     if (k === 'renderDistance') this.chunks.setRenderDistance(v);
     if (k === 'fov') { this.camera.fov = v; this.camera.updateProjectionMatrix(); }
     if (k === 'sensitivity') this.input.sensitivity = 0.0022 * v / 100;
+    if (k === 'keys') this.input.setBindings(resolveBindings(v));
+    if (k === 'colorBlind') this.hud.setColorBlind(v);
     if (k === 'volume') this.audio.setVolume(v);
     if (k === 'music') this.music.setVolume(v);
     if (k === 'shadows') this.sky.setShadowsEnabled(v && (this.quality || 0) < 2);
@@ -1128,8 +1136,9 @@ export class Game {
     this.player.landedFrom = 0;
   }
 
-  handleFrameInput() {
+  handleFrameInput(dtMs = 16) {
     const inp = this.input, p = this.player;
+    inp.beginFrame(dtMs / 1000, !this.ui.blocking); // gamepad + keys bound to attack / use
     // latch clicks for the next tick
     if (!this.mouseLatch) this.mouseLatch = { left: false, right: false, middle: false };
     if (inp.mouse.leftPressed) this.mouseLatch.left = true;
@@ -1145,7 +1154,7 @@ export class Game {
     if (inp.wasPressed('pause') && this.ui.blocking) {
       if (this.ui.open === 'pause') { this.ui.open = null; this.ui.clear(); this.onUIClosed(); }
       else this.ui.close();
-    }
+    } else if (inp.wasPressed('pause') && this.running) { this.input.unlock(); this.ui.showPause(); } // a gamepad's Start button
     if (inp.wasPressed('debug')) { this.hud.showDebug = !this.hud.showDebug; this.hud.debugEl.classList.toggle('hidden', !this.hud.showDebug); }
     if (inp.wasPressed('hud')) this.hud.setVisible(!this.hud.visible);
     if (inp.wasPressed('shaders')) { const on = this.settings.shaders === false; this.setSetting('shaders', on); this.hud.toast(`Shaders ${on ? 'on' : 'off'} (F7)`); }
@@ -1156,7 +1165,9 @@ export class Game {
       p.yaw -= m.dx * sens;
       p.pitch = Math.max(-Math.PI / 2 + 0.001, Math.min(Math.PI / 2 - 0.001, p.pitch - m.dy * sens));
       if (m.wheel) p.inventory.selected = (p.inventory.selected + m.wheel + 9) % 9;
-      for (let i = 1; i <= 9; i++) if (inp.codePressed('Digit' + i)) p.inventory.selected = i - 1;
+      for (let i = 1; i <= 9; i++) if (inp.wasPressed('slot' + i)) p.inventory.selected = i - 1;
+      if (inp.wasPressed('hotbarNext')) p.inventory.selected = (p.inventory.selected + 1) % 9;
+      if (inp.wasPressed('hotbarPrev')) p.inventory.selected = (p.inventory.selected + 8) % 9;
       if (inp.wasPressed('drop') && p.inventory.selectedStack && !p.dead) {
         const all = inp.down.has('ControlLeft');
         const st = p.inventory.removeFromSlot(p.inventory.selected, all ? 64 : 1);
@@ -1176,7 +1187,7 @@ export class Game {
     this.lastTime = now;
     this.governQuality(dt);
     if (dt > 250) dt = 250;
-    this.handleFrameInput();
+    this.handleFrameInput(dt);
     const pauseSim = this.ui.open === 'pause' && !this.net; // a shared world keeps running
     if (!pauseSim) {
       this.acc += dt;
@@ -1226,7 +1237,8 @@ export class Game {
     const eye = Math.abs(eyeTarget - this.eyeShown) < 0.005 ? eyeTarget : this.eyeShown;
     // view bobbing while walking
     const speed = Math.hypot(b.vx, b.vz);
-    const bob = b.onGround ? Math.sin(sec * 9) * Math.min(0.06, speed * 0.25) : 0;
+    const fxScale = motionScales(this.settings); // reduced motion / flashing (ui/accessibility.js)
+    const bob = b.onGround ? Math.sin(sec * 9) * Math.min(0.06, speed * 0.25) * fxScale.bob : 0;
     this.camera.position.set(x, y + eye + Math.abs(bob) * 0.6, z);
     this.camera.rotation.set(p.pitch, p.yaw, 0, 'YXZ');
     if (this.perspective && !p.dead) {
@@ -1239,10 +1251,10 @@ export class Game {
       c.set(c.x + ldx * s * dist, c.y + ldy * s * dist, c.z + ldz * s * dist);
       if (this.perspective === 2) this.camera.rotation.set(-p.pitch, p.yaw + Math.PI, 0, 'YXZ');
     }
-    if (p.hurtTime > 0) this.camera.rotation.z = Math.sin(p.hurtTime * 0.6) * 0.04;
+    if (p.hurtTime > 0) this.camera.rotation.z = Math.sin(p.hurtTime * 0.6) * 0.04 * fxScale.tilt;
     // looking through a Farglass narrows the view to a tenth (at once, like the reference); the arm and item are hidden
     const zoom = p.zooming && this.perspective === 0 && !p.dead;
-    const targetFov = this.settings.fov * (zoom ? 0.1 : p.sprinting ? 1.1 : 1);
+    const targetFov = this.settings.fov * (zoom ? 0.1 : p.sprinting ? 1 + 0.1 * fxScale.sprintFov : 1);
     this.camera.fov = zoom || this.camera.fov < this.settings.fov * 0.5 ? targetFov : this.camera.fov + (targetFov - this.camera.fov) * 0.2;
     this.camera.updateProjectionMatrix();
 
@@ -1251,7 +1263,7 @@ export class Game {
     const smoothTime = this.time + (this.daylightCycle ? alpha : 0);
     this.sky.rain = this.weather.level;
     this.sky.thunder = this.weather.storm;
-    this.sky.flash = this.lightning.flash;
+    this.sky.flash = this.lightning.flash * fxScale.flash;
     const st = this.dims.updateSky(smoothTime, sec, this.camera, new THREE.Vector3(x, y, z));
     const wlevel = this.world.dimension === 'overworld' ? this.weather.level : 0; // no weather in the Cinderdeep or the Hollow
     this.weatherFx.update(this.world, this.camera, p.yaw, wlevel, sec, Math.min(1, st.combined) * 0.85 + 0.15);

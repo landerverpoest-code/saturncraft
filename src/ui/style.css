@@ -306,3 +306,18 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 /* The Elder Deepeye's ghost (ui/ghostFace.js): centred, pixelated, over everything in the view */
 #overlay-ghost { position: absolute; left: 50%; top: 50%; width: 25vh; height: 25vh; transform: translate(-50%, -50%); pointer-events: none; image-rendering: pixelated; filter: drop-shadow(0 0 2vh rgba(150, 130, 230, .6)); z-index: 3; }
 #overlay-ghost.hidden { display: none; }
+
+/* Controls screen (ui/bindings.js) and sound captions (ui/accessibility.js) */
+.controls-screen { justify-content: flex-start; }
+.controls-list { display: flex; flex-direction: column; gap: 4px; width: min(640px, calc(100vw - 24px)); }
+.controls-list .world-head { margin-top: 10px; }
+.control-row { display: grid; grid-template-columns: minmax(0, 1fr) repeat(3, minmax(0, 120px)); gap: 6px; align-items: center; background: rgba(255,255,255,.06); border-radius: 4px; padding: 3px 6px; }
+.control-name { font-size: 14px; }
+.btn.control-key { min-width: 0; width: 100%; padding: 6px 4px; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.btn.control-key.unbound { opacity: .55; font-style: italic; }
+.btn.control-key.waiting { border-color: var(--accent); background: linear-gradient(#8a6a2a, #5e4a20); }
+.controls-note { min-height: 1.2em; color: #ffe2a6; margin: 0 !important; }
+.controls-pad { margin: 0 !important; font-size: 13px; }
+#captions { position: absolute; right: 12px; bottom: 120px; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; pointer-events: none; max-width: 40vw; }
+#captions .caption { background: rgba(0, 0, 0, .72); color: #fff; font: 15px/1.25 system-ui, sans-serif; padding: 3px 9px; border-radius: 3px; transition: opacity .3s; }
+@media (max-width: 560px) { .control-row { grid-template-columns: 1fr repeat(3, 64px); } .control-name { font-size: 12px; } }

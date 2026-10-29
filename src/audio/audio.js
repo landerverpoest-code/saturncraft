@@ -7,6 +7,7 @@ export class Audio {
     this.listener = [0, 0, 0, 0]; // x,y,z,yaw
     this.noiseBuf = null;
     this.last = new Map();
+    this.onPlay = null;     // (name, pos, vol) for every sound asked for
   }
 
   ensure() {
@@ -83,6 +84,7 @@ export class Audio {
   }
 
   play(name, pos = null, vol = 1) {
+    if (this.onPlay) this.onPlay(name, pos, vol); // sound captions (ui/accessibility.js); also when the audio context is not running
     if (!this.ctx || this.ctx.state !== 'running') return;
     const now = this.ctx.currentTime;
     const lastT = this.last.get(name) || 0;
