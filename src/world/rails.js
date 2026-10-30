@@ -12,7 +12,15 @@ export const RAIL_EXITS = [
 /** Ascending rails: the horizontal direction that goes up (exit b of RAIL_EXITS). */
 export const RAIL_UP = { 2: [1, 0], 3: [-1, 0], 4: [0, -1], 5: [0, 1] };
 
-const isRail = (id) => id === B.RAIL;
+/** The straight cinnabar rails (meta bits 0-2 = shape, bit 3 = switched on) and the plain Rail (meta = shape, 0-9). */
+export const RAIL_ON = 8;
+export const SPECIAL_RAILS = [B.POWERED_RAIL, B.DETECTOR_RAIL, B.ACTIVATOR_RAIL];
+const isSpecial = (id) => id === B.POWERED_RAIL || id === B.DETECTOR_RAIL || id === B.ACTIVATOR_RAIL;
+/** Any rail a minecart can ride. */
+export const isRail = (id) => id === B.RAIL || isSpecial(id);
+export const isSpecialRail = isSpecial;
+/** Shape (0-9, see RAIL_EXITS) of the rail block `id` with this meta. */
+export const railShapeOf = (id, meta) => (id === B.RAIL ? meta % 10 : meta & 7);
 
 /** Rail neighbours by direction (index 0 -z, 1 +x, 2 +z, 3 -x): 0 none, 1 same level, 2 one up, 3 one down. */
 function neighbours(world, x, y, z) {
@@ -56,17 +64,30 @@ function connectedEnds(world, x, y, z, meta) {
   return c;
 }
 
+/** The meta a rail block gets for a shape: the cinnabar rails stay straight and keep their on/off bit. */
+function railMetaFor(world, x, y, z, id) {
+  const shape = railShape(world, x, y, z);
+  if (id === B.RAIL) return shape;
+  const straight = shape >= 6 ? (neighbours(world, x, y, z).some((n, d) => n > 0 && (d & 1) === 0) ? 0 : 1) : shape;
+  return straight | (world.getMeta(x, y, z) & RAIL_ON);
+}
+const reshape = (world, x, y, z) => {
+  const id = world.getBlock(x, y, z), m = railMetaFor(world, x, y, z, id);
+  if (m !== world.getMeta(x, y, z)) world.setBlock(x, y, z, id, m, false);
+};
+
 /** After a rail is placed: shape it, and let neighbouring rails with a free end turn towards it. */
 export function updateRails(world, x, y, z) {
   if (!isRail(world.getBlock(x, y, z))) return;
-  world.setBlock(x, y, z, B.RAIL, railShape(world, x, y, z), false);
+  reshape(world, x, y, z);
   for (const [dx, dz] of DIRS) for (const dy of [0, -1, 1]) {
     const nx = x + dx, ny = y + dy, nz = z + dz;
     if (!isRail(world.getBlock(nx, ny, nz))) continue;
-    if (connectedEnds(world, nx, ny, nz, world.getMeta(nx, ny, nz)) >= 2) continue;
-    world.setBlock(nx, ny, nz, B.RAIL, railShape(world, nx, ny, nz), false);
+    const nm = world.getMeta(nx, ny, nz);
+    if (connectedEnds(world, nx, ny, nz, railShapeOf(world.getBlock(nx, ny, nz), nm)) >= 2) continue;
+    reshape(world, nx, ny, nz);
   }
-  world.setBlock(x, y, z, B.RAIL, railShape(world, x, y, z), false);
+  reshape(world, x, y, z);
 }
 
 /** Rails need a solid top to sit on. */

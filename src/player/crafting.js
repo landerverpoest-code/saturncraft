@@ -385,6 +385,17 @@ shaped(['SS', 'PP'], { S: I.STRING, P: 'planks' }, B.LOOM, 1);
 shaped(['FF', 'PP', 'PP'], { F: I.FLINT, P: 'planks' }, B.FLETCHING_TABLE, 1);
 // ...and for cartographers: two sheets of paper over four planks
 shaped(['AA', 'PP', 'PP'], { A: I.PAPER, P: 'planks' }, B.CARTOGRAPHY_DESK, 1);
+// cinnabar automation (world/automation.js): pressure plates of stone and weighted ones, the three special rails,
+// sticky Slime and Honey Blocks
+shaped(['SS'], { S: B.STONE }, B.STONE_PRESSURE_PLATE, 1);
+shaped(['GG'], { G: I.GOLD_INGOT }, B.LIGHT_WEIGHTED_PLATE, 1);
+shaped(['II'], { I: I.IRON_INGOT }, B.HEAVY_WEIGHTED_PLATE, 1);
+shaped(['G G', 'GSG', 'GCG'], { G: I.GOLD_INGOT, S: I.STICK, C: I.CINNABAR }, B.POWERED_RAIL, 6);
+shaped(['I I', 'IPI', 'ICI'], { I: I.IRON_INGOT, P: B.STONE_PRESSURE_PLATE, C: I.CINNABAR }, B.DETECTOR_RAIL, 6);
+shaped(['ISI', 'ITI', 'ISI'], { I: I.IRON_INGOT, S: I.STICK, T: B.CINNABAR_TORCH }, B.ACTIVATOR_RAIL, 6);
+shaped(['SSS', 'SSS', 'SSS'], { S: I.SLIMEBALL }, B.SLIME_BLOCK, 1);
+shapeless([B.SLIME_BLOCK], I.SLIMEBALL, 9);
+shaped(['HH', 'HH'], { H: I.HONEYCOMB }, B.HONEY_BLOCK, 1);
 
 // Smelting: input -> output; 200 ticks per item (10 s)
 export const SMELT_TIME = 200;

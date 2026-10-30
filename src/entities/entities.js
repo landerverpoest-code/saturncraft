@@ -10,7 +10,8 @@ import { itemCanvas } from '../ui/icons.js';
 import { texturePixels } from '../world/textures.js';
 import { MIN_Y } from '../world/constants.js';
 import { addXp, splitOrbs } from '../player/experience.js';
-import { RAIL_EXITS, RAIL_UP, railHeight } from '../world/rails.js';
+import { RAIL_EXITS, RAIL_UP, RAIL_ON, railHeight, railShapeOf, isRail } from '../world/rails.js';
+import { railSpeed } from '../world/automation.js';
 import { withExtras, canStack, isGlinting, arrowDamage } from '../world/enchantments.js';
 import { splashPotion } from './splash.js';
 import { ArmorStand, STAND_WIDTH, STAND_HEIGHT } from './armorStand.js';
@@ -220,7 +221,7 @@ export class Minecart extends Boat {
   get width() { return 0.98; } get height() { return 0.7; }
 
   railAt(w, x, y, z) {
-    for (const dy of [0, -1, 1]) if (w.getBlock(x, y + dy, z) === B.RAIL) return y + dy;
+    for (const dy of [0, -1, 1]) if (isRail(w.getBlock(x, y + dy, z))) return y + dy;
     return null;
   }
 
@@ -239,8 +240,10 @@ export class Minecart extends Boat {
       if (b.y < MIN_Y - 64) this.dead = true;
       return;
     }
-    const m = w.getMeta(bx, ry, bz) % 10;
+    const railId = w.getBlock(bx, ry, bz), railMeta = w.getMeta(bx, ry, bz), m = railShapeOf(railId, railMeta);
     const [[ax, az], [cx, cz]] = RAIL_EXITS[m];
+    // an Activator Rail that is on throws the rider out
+    if (railId === B.ACTIVATOR_RAIL && railMeta & RAIL_ON && this.rider) { if (game.player.riding === this) game.dismount(); else this.rider = null; }
     // track: from the middle of edge a to the middle of edge b (curves cut the corner, as in the reference)
     let dx = cx - ax, dz = cz - az; const dl = Math.hypot(dx, dz); dx /= dl; dz /= dl;
     let s = b.vx * dx + b.vz * dz;
@@ -252,17 +255,22 @@ export class Minecart extends Boat {
     }
     s *= this.rider ? 0.997 : 0.96;
     s = Math.max(-0.4, Math.min(0.4, s));
+    // a Powered Rail speeds the cart up while it is on and holds it back while it is off (world/automation.js)
+    if (railId === B.POWERED_RAIL) {
+      const wall = (ex, ez) => !!SOLID[w.getBlock(bx + ex, ry, bz + ez)] || (!!up && up[0] === ex && up[1] === ez && !!SOLID[w.getBlock(bx + ex, ry + 1, bz + ez)]);
+      s = Math.max(-0.4, Math.min(0.4, railSpeed(railId, !!(railMeta & RAIL_ON), s, [wall(ax, az), wall(cx, cz)])));
+    }
     // snap onto the track line
     const ox = bx + 0.5 + ax * 0.5, oz = bz + 0.5 + az * 0.5;
     const t = (b.x - ox) * dx + (b.z - oz) * dz;
     let nx = ox + dx * t + dx * s, nz = oz + dz * t + dz * s;
     // blocked by a wall ahead
     const fx = Math.floor(nx + Math.sign(dx * s) * 0.49), fz = Math.floor(nz + Math.sign(dz * s) * 0.49);
-    if (SOLID[w.getBlock(fx, ry, fz)] && (fx !== bx || fz !== bz) && !(up && w.getBlock(fx, ry + 1, fz) === B.RAIL)) { s = 0; nx = ox + dx * t; nz = oz + dz * t; }
+    if (SOLID[w.getBlock(fx, ry, fz)] && (fx !== bx || fz !== bz) && !(up && isRail(w.getBlock(fx, ry + 1, fz)))) { s = 0; nx = ox + dx * t; nz = oz + dz * t; }
     const nbx = Math.floor(nx), nbz = Math.floor(nz);
     const nry = this.railAt(w, nbx, ry, nbz);
     let ny;
-    if (nry !== null) ny = nry + railHeight(w.getMeta(nbx, nry, nbz) % 10, nx - nbx, nz - nbz);
+    if (nry !== null) ny = nry + railHeight(railShapeOf(w.getBlock(nbx, nry, nbz), w.getMeta(nbx, nry, nbz)), nx - nbx, nz - nbz);
     else ny = ry + railHeight(m, Math.max(0, Math.min(1, nx - bx)), Math.max(0, Math.min(1, nz - bz)));
     b.vx = dx * s; b.vz = dz * s; b.vy = 0;
     b.setPos(nx, ny, nz);

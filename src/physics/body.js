@@ -107,7 +107,21 @@ export class Body {
     // Fall distance accounting
     if (this.onGround) { /* consumed by caller via landing() */ }
     else if (ry < 0) this.fallDistance -= ry;
+    if (this.onGround && landed) this.landOn(world, dy, sneakEdge);
     return [rx, ry, rz];
+  }
+
+  /**
+   * Touched down on something soft (physics/body.js): a Slime Block takes the fall away and throws you back up
+   * (not while sneaking), a Honey Block takes most of the sting out of it (world/automation.js).
+   */
+  landOn(world, vyIn, sneaking) {
+    const d = BLOCKS[world.getBlock(Math.floor(this.x), Math.floor(this.y - 0.01), Math.floor(this.z))];
+    if (!d) return;
+    if (d.bouncy) {
+      this.fallDistance = 0;
+      if (!sneaking && vyIn < -0.1) { this.vy = -vyIn * 0.8; this.onGround = false; }
+    } else if (d.honeyed) this.fallDistance *= 0.2;
   }
 
   backOffFromEdge(world, dx, dz) {

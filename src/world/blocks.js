@@ -747,6 +747,34 @@ def(B.CARTOGRAPHY_DESK, 'Cartography Desk', { hardness: 2.5, resistance: 2.5, to
 ext('CARVED_PUMPKIN');
 def(B.CARVED_PUMPKIN, 'Carved Pumpkin', { hardness: 1, resistance: 1, tool: TOOL.AXE, sound: 'wood', tex: { top: 'pumpkin_top', bottom: 'pumpkin_top', side: 'pumpkin_side', front: 'pumpkin_face' } });
 
+// Cinnabar rails (world/rails.js, world/automation.js): straight rails for minecarts. Meta bits 0-2 = the shape (0 north-south,
+// 1 east-west, 2-5 ascending towards +x, -x, -z, +z, like the plain Rail), bit 3 = switched on. The Powered Rail speeds a cart
+// up while on (and holds it back while off), the Detector Rail powers its neighbours while a cart is on it, the Activator
+// Rail throws a rider out of the cart while powered.
+ext('POWERED_RAIL'); ext('DETECTOR_RAIL'); ext('ACTIVATOR_RAIL');
+{
+  const rail = { hardness: 0.7, resistance: 0.7, tool: TOOL.PICKAXE, sound: 'metal', solid: false, opaque: false, shape: SHAPE.RAIL, layer: LAYER.CUTOUT, needsSupport: true, flatIcon: true };
+  def(B.POWERED_RAIL, 'Powered Rail', { ...rail, tex: { all: 'powered_rail' } });
+  def(B.DETECTOR_RAIL, 'Detector Rail', { ...rail, tex: { all: 'detector_rail' } });
+  def(B.ACTIVATOR_RAIL, 'Activator Rail', { ...rail, tex: { all: 'activator_rail' } });
+}
+// Pressure plates (world/automation.js): the Stone Plate answers creatures and players (not dropped items), meta bit 0 = pressed.
+// The two weighted plates give a signal that grows with the number of things on them, meta bits 0-3 = that level:
+// Light (gold) = one level per thing up to 15, Heavy (iron) = one level per ten.
+ext('STONE_PRESSURE_PLATE'); ext('LIGHT_WEIGHTED_PLATE'); ext('HEAVY_WEIGHTED_PLATE');
+{
+  const plate = { ...part, hardness: 0.5, resistance: 0.5, tool: TOOL.PICKAXE, tier: TIER.WOOD, sound: 'stone', shape: SHAPE.CIRCUIT };
+  def(B.STONE_PRESSURE_PLATE, 'Stone Pressure Plate', { ...plate, tex: { all: 'stone' } });
+  def(B.LIGHT_WEIGHTED_PLATE, 'Light Weighted Plate', { ...plate, sound: 'metal', tex: { all: 'gold_block' } });
+  def(B.HEAVY_WEIGHTED_PLATE, 'Heavy Weighted Plate', { ...plate, sound: 'metal', tex: { all: 'iron_block' } });
+}
+// Slime and Honey Blocks (world/automation.js, physics/body.js): sticky blocks. A piston that moves one drags every block
+// touching it along (a Slime Block and a Honey Block do not stick to each other). Slime bounces whoever lands on it and
+// cancels the fall; honey slows walkers and takes most of the sting out of a fall.
+ext('SLIME_BLOCK'); ext('HONEY_BLOCK');
+def(B.SLIME_BLOCK, 'Slime Block', { hardness: 0, resistance: 0, sound: 'mud', opaque: false, opacity: 1, layer: LAYER.TRANSLUCENT, sticky: 'slime', bouncy: true, tex: { all: 'slime_block' } });
+def(B.HONEY_BLOCK, 'Honey Block', { hardness: 0, resistance: 0, sound: 'mud', opaque: false, opacity: 1, layer: LAYER.TRANSLUCENT, sticky: 'honey', speedFactor: 0.5, honeyed: true, tex: { all: 'honey_block' } });
+
 export const NUM_BLOCKS = BLOCKS.length;
 
 // Flat lookup tables used by hot loops (mesher, lighting, physics) and workers.

@@ -17,11 +17,11 @@ const N = 30000;
 const eqEmpty = () => ({ hand: null, armor: [null, null, null, null] });
 
 describe('the Carved Pumpkin block and item', () => {
-  it('is appended after every other extended block', () => {
+  it('was appended after the blocks that came before it (later ones are appended after it)', () => {
     expect(B.CARVED_PUMPKIN).toBeGreaterThanOrEqual(EXT_BASE);
-    expect(B.CARVED_PUMPKIN).toBe(Math.max(...Object.values(B).filter((v) => v >= EXT_BASE)));
+    expect(B.CARVED_PUMPKIN).toBe(B.CARTOGRAPHY_DESK + 1);
     expect(BLOCKS[B.CARVED_PUMPKIN].name).toBe('Carved Pumpkin');
-    expect(NUM_BLOCKS).toBe(B.CARVED_PUMPKIN + 1);
+    expect(NUM_BLOCKS).toBeGreaterThan(B.CARVED_PUMPKIN);
     expect(BLOCKS[B.CARVED_PUMPKIN].tex.front).toBe('pumpkin_face'); // the face turns towards the player when placed
   });
   it('is a helmet without defence, wear or enchantments', () => {
