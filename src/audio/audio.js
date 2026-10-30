@@ -1,5 +1,17 @@
 // Procedural Web Audio sound effects (no audio files). Every sound is
 // synthesised from noise and oscillators so all audio is original.
+import { REVERB_DECAYS, roofVoice, rainUnderCover } from './acoustics.js';
+
+// Looping noise layers of the ambient bed (levels come from ambience.js). Each has a slow
+// tremolo (lfo Hz, depth 0..1) so wind swells and crickets pulse.
+export const BED_LAYERS = {
+  wind: { type: 'bandpass', freq: 480, q: 0.6, lfo: 0.13, depth: 0.55 },
+  insects: { type: 'highpass', freq: 5400, q: 0.7, lfo: 7.5, depth: 0.85 },
+  rumble: { type: 'lowpass', freq: 85, q: 0.7, lfo: 0.06, depth: 0.45 },
+  sizzle: { type: 'highpass', freq: 6800, q: 0.5, lfo: 0.35, depth: 0.6 },
+  water: { type: 'bandpass', freq: 2700, q: 0.35, lfo: 0.21, depth: 0.15 },
+};
+
 export class Audio {
   constructor() {
     this.ctx = null;
@@ -8,6 +20,10 @@ export class Audio {
     this.noiseBuf = null;
     this.last = new Map();
     this.onPlay = null;     // (name, pos, vol) for every sound asked for
+    this.room = { wet: 0, bucket: 0, damp: 9000 }; // reverb of the space the listener is in (setRoom)
+    this.irs = [];          // impulse responses per REVERB_DECAYS bucket, built on first use
+    this.bed = new Map();   // ambient bed layers, created when first asked for
+    this.nextPatter = 0;    // when the next rain droplet tick on the roof is due
   }
 
   ensure() {
@@ -26,8 +42,12 @@ export class Audio {
 
   setVolume(v) { this.volume = v; if (this.master) this.master.gain.value = v; }
 
-  /** Continuous rain hiss; `level` 0..1, muffled when the listener is under cover. */
-  setRain(level, covered) {
+  /**
+   * Continuous rain hiss; `level` 0..1. Under a roof (`covered`) it takes the voice of the roof's
+   * material (`roof` = { mat, depth } from acoustics.roofMaterial): glass pings, wood knocks, leaves
+   * hush, and it fades away under deep rock.
+   */
+  setRain(level, covered, roof = null) {
     if (!this.ctx) return;
     if (!this.rainGain) {
       const src = this.ctx.createBufferSource();
@@ -40,8 +60,81 @@ export class Audio {
       src.start();
     }
     const t = this.ctx.currentTime;
-    this.rainGain.gain.setTargetAtTime(level * (covered ? 0.12 : 0.22), t, 0.3);
-    this.rainFilter.frequency.setTargetAtTime(covered ? 500 : 2600, t, 0.3);
+    if (!covered || !roof) {
+      this.rainGain.gain.setTargetAtTime(level * (covered ? 0.12 : 0.22), t, 0.3);
+      this.rainFilter.frequency.setTargetAtTime(covered ? 500 : 2600, t, 0.3);
+      return;
+    }
+    const v = roofVoice(roof.mat), vol = level * rainUnderCover(roof);
+    this.rainGain.gain.setTargetAtTime(vol * v.gain, t, 0.3);
+    this.rainFilter.frequency.setTargetAtTime(v.freq * 2.2, t, 0.3);
+    // droplets drumming on the roof
+    if (vol > 0.05 && this.ctx.state === 'running' && t >= this.nextPatter) {
+      this.nextPatter = t + (0.6 + Math.random() * 0.8) / (v.tick.rate * vol);
+      this.noise(t, 0.035, v.tick.freq * (0.8 + Math.random() * 0.4), v.tick.q, v.tick.gain * vol, this.master);
+    }
+  }
+
+  /** Looping ambient layers: `levels` maps BED_LAYERS names to gains (layers not mentioned fade out). */
+  setBed(levels) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    for (const [name, def] of Object.entries(BED_LAYERS)) {
+      const want = levels[name] || 0;
+      let L = this.bed.get(name);
+      if (!L) {
+        if (want <= 0) continue; // never build a layer that is not wanted
+        const src = this.ctx.createBufferSource();
+        src.buffer = this.noiseBuf; src.loop = true; src.playbackRate.value = 0.8 + Math.random() * 0.4;
+        const f = this.ctx.createBiquadFilter(); f.type = def.type; f.frequency.value = def.freq; f.Q.value = def.q;
+        const mod = this.ctx.createGain(); mod.gain.value = 1;
+        const lfo = this.ctx.createOscillator(); lfo.frequency.value = def.lfo * (0.85 + Math.random() * 0.3);
+        const depth = this.ctx.createGain(); depth.gain.value = def.depth * 0.5;
+        lfo.connect(depth); depth.connect(mod.gain);
+        const amp = this.ctx.createGain(); amp.gain.value = 0;
+        src.connect(f); f.connect(mod); mod.connect(amp); amp.connect(this.master);
+        src.start(t, Math.random() * 0.5); lfo.start(t);
+        L = { amp };
+        this.bed.set(name, L);
+      }
+      L.amp.gain.setTargetAtTime(want, t, 1.5);
+    }
+  }
+
+  /** Impulse response for a reverb bucket: decaying stereo noise, cached. */
+  impulse(bucket) {
+    if (this.irs[bucket]) return this.irs[bucket];
+    const sr = this.ctx.sampleRate, secs = REVERB_DECAYS[bucket] ?? 1, len = Math.floor(sr * secs);
+    const ir = this.ctx.createBuffer(2, len, sr);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = ir.getChannelData(ch);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2);
+    }
+    return (this.irs[bucket] = ir);
+  }
+
+  /** Reverb of the listener's surroundings (acoustics.reverbFor): a send level, a tail length bucket and a damping filter. */
+  setRoom(room) {
+    if (!this.ctx) return;
+    this.room = room;
+    if (room.wet <= 0 && !this.verb) return; // never built, nothing to do in the open
+    if (!this.verb) {
+      this.verb = this.ctx.createConvolver();
+      this.verbIn = this.ctx.createGain();
+      this.verbDamp = this.ctx.createBiquadFilter(); this.verbDamp.type = 'lowpass'; this.verbDamp.frequency.value = 9000;
+      this.verbOut = this.ctx.createGain(); this.verbOut.gain.value = 1;
+      this.verbIn.connect(this.verb); this.verb.connect(this.verbDamp); this.verbDamp.connect(this.verbOut); this.verbOut.connect(this.master);
+      this.verb.buffer = this.impulse(room.bucket);
+      this.verbBucket = room.bucket;
+    }
+    const t = this.ctx.currentTime;
+    this.verbDamp.frequency.setTargetAtTime(room.damp, t, 0.4);
+    if (room.bucket !== this.verbBucket && room.wet > 0) {
+      // swap the tail while the return is silent so the buffer change does not click
+      this.verbBucket = room.bucket;
+      this.verbOut.gain.setTargetAtTime(0, t, 0.04);
+      setTimeout(() => { if (this.verb) { this.verb.buffer = this.impulse(room.bucket); this.verbOut.gain.setTargetAtTime(1, this.ctx.currentTime, 0.1); } }, 220);
+    }
   }
   setListener(x, y, z, yaw) { this.listener = [x, y, z, yaw]; }
 
@@ -96,6 +189,11 @@ export class Audio {
     const p = this.ctx.createStereoPanner();
     p.pan.value = pan;
     p.connect(this.master);
+    if (pos && this.room.wet > 0.02 && this.verbIn) { // reverb send: caves ring, open ground does not
+      const send = this.ctx.createGain();
+      send.gain.value = this.room.wet * Math.min(1, gain * 1.5);
+      p.connect(send); send.connect(this.verbIn);
+    }
     const out = p;
     const t = now;
     const mat = name.split('_').slice(1).join('_');
@@ -199,6 +297,16 @@ export class Audio {
       case 'sonic_charge': this.tone(t, 1.6, 120, 900, 0.18 * gain, out, 'sawtooth'); this.noise(t, 1.6, 500, 2, 0.15 * gain, out); break;
       case 'sonic_boom': this.tone(t, 0.9, 140, 35, 1.0 * gain, out, 'sine'); this.noise(t, 0.7, 900, 0.4, 0.8 * gain, out); this.tone(t, 0.4, 900, 200, 0.25 * gain, out, 'square'); break;
       case 'catalyst': this.tone(t, 0.6, 300, 600, 0.12 * gain, out, 'sine'); this.noise(t, 0.5, 900, 1, 0.12 * gain, out, 'lowpass'); break;
+      // ambient one-shots (audio/ambience.js)
+      case 'bird_trill': { const f = 2300 + Math.random() * 900; for (let k = 0; k < 4 + Math.floor(Math.random() * 3); k++) this.tone(t + k * 0.085, 0.07, f + k * 160 * (k % 2 ? -1 : 1), f + 380, 0.045 * gain, out, 'sine'); break; }
+      case 'cricket': for (let k = 0; k < 3; k++) this.tone(t + k * 0.07, 0.045, 4300, 4500, 0.03 * gain, out, 'sine'); break;
+      case 'owl': this.tone(t, 0.35, 420, 380, 0.09 * gain, out, 'sine'); this.tone(t + 0.45, 0.6, 360, 300, 0.09 * gain, out, 'sine'); break;
+      case 'drip': this.tone(t, 0.07, 1900 + Math.random() * 700, 900, 0.07 * gain, out, 'sine'); this.noise(t, 0.015, 3500, 4, 0.05 * gain, out); break;
+      case 'lava_pop': this.tone(t, 0.14, 110 + Math.random() * 40, 55, 0.2 * gain, out, 'sine'); this.noise(t, 0.12, 700, 1.5, 0.13 * gain, out, 'lowpass'); this.noise(t + 0.09, 0.05, 3000, 3, 0.05 * gain, out); break;
+      case 'rift_moan': this.tone(t, 3.2, 58, 46, 0.13 * gain, out, 'sine'); this.tone(t + 0.4, 2.6, 87, 70, 0.05 * gain, out, 'triangle'); this.noise(t, 3.2, 260, 0.8, 0.12 * gain, out, 'lowpass'); break;
+      case 'breeze': this.noise(t, 1.8, 600, 0.5, 0.1 * gain, out); this.noise(t + 0.3, 1.5, 1400, 0.6, 0.04 * gain, out); break;
+      case 'ember_snap': this.noise(t, 0.03, 2800, 5, 0.12 * gain, out); this.tone(t, 0.05, 1300, 700, 0.04 * gain, out, 'square'); break;
+      case 'void_whisper': this.tone(t, 2.0, 1150, 1090, 0.03 * gain, out, 'sine'); this.tone(t + 0.1, 1.8, 1740, 1660, 0.02 * gain, out, 'sine'); this.noise(t, 1.8, 3200, 4, 0.04 * gain, out); break;
       default: this.tone(t, 0.1, 440, 440, 0.1 * gain, out);
     }
   }

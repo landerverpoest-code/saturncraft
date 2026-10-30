@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { SUNS, skyState } from './suns.js';
 import { skyVertex, skyFragment } from './skyShader.js';
 import { RingSystem } from './gasGiant.js';
+import { auroraTarget, nightCharacter, Meteors, DAY_TICKS } from './nightSky.js';
 
 const DEG = Math.PI / 180;
 const FLASH = new THREE.Color(0.75, 0.8, 1.0);
@@ -48,6 +49,10 @@ export class Sky {
       uUnderwater: { value: 0 },
       uCave: { value: 0 },
       uRain: { value: 0 },
+      uAurora: { value: 0 },
+      uMeteorHead: { value: new THREE.Vector3() },
+      uMeteorTail: { value: new THREE.Vector3() },
+      uMeteorGlow: { value: 0 },
     };
     const mat = new THREE.ShaderMaterial({
       uniforms: this.uniforms, vertexShader: skyVertex, fragmentShader: skyFragment,
@@ -85,6 +90,10 @@ export class Sky {
     this.state = skyState(0);
     this.horizon = new THREE.Color();
     this.zenith = new THREE.Color();
+    this.biomeTemp = 0.5;   // temperature of the biome the player is in (set by the game): colder skies see more Veilfire
+    this.aurora = 0;        // smoothed Veilfire brightness
+    this.meteors = new Meteors();
+    this.lastSeconds = 0;
   }
 
   setShadowsEnabled(on) {
@@ -128,6 +137,15 @@ export class Sky {
     if (thunder > 0) for (const c of [this.zenith, this.horizon]) c.multiplyScalar(1 - 0.45 * thunder);
     if (flash > 0) for (const c of [this.zenith, this.horizon]) c.lerp(FLASH, flash * 0.6);
     u.uRain.value = rain;
+    // Veilfire and falling stars, both only at night and under a clear sky
+    const dtS = Math.min(0.25, Math.max(0, seconds - this.lastSeconds)); this.lastSeconds = seconds;
+    const dayNo = Math.floor(t / DAY_TICKS);
+    const dark = Math.min(1, Math.max(0, 1 - st.combined * 3));
+    this.aurora += (auroraTarget(this.biomeTemp, st.combined, rain, dayNo) - this.aurora) * Math.min(1, dtS * 0.4);
+    u.uAurora.value = this.aurora < 0.004 ? 0 : this.aurora;
+    const m = this.meteors.update(dtS, dark, nightCharacter(dayNo).starfall, 1 - rain);
+    if (m) { u.uMeteorHead.value.set(m.head[0], m.head[1], m.head[2]); u.uMeteorTail.value.set(m.tail[0], m.tail[1], m.tail[2]); }
+    u.uMeteorGlow.value = m ? m.glow : 0;
     u.uZenith.value.copy(this.zenith);
     u.uHorizon.value.copy(this.horizon);
 

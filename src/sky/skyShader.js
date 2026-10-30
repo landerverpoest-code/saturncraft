@@ -1,7 +1,7 @@
 // Sky dome fragment shader: atmosphere gradient, three suns with glare and
 // twilight scattering, stars, and a ray-traced gas giant with a banded
 // animated atmosphere, limb glow, polar aurora and the rings' shadow on its
-// cloud tops. The rings themselves are a mesh + particles (gasGiant.js).
+// cloud tops, Veilfire (aurora curtains) and falling stars (nightSky.js). The rings themselves are a mesh + particles (gasGiant.js).
 
 export const skyVertex = /* glsl */ `
 varying vec3 vDir;
@@ -32,6 +32,10 @@ uniform float uRingOuter;
 uniform float uUnderwater;
 uniform float uCave;
 uniform float uRain;
+uniform float uAurora;      // Veilfire brightness 0..1 (nightSky.js auroraTarget)
+uniform vec3 uMeteorHead;   // a falling star: head and tail directions, glow 0..1
+uniform vec3 uMeteorTail;
+uniform float uMeteorGlow;
 
 float hash12(vec2 p) {
   vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -52,6 +56,22 @@ float fbm(vec2 p) {
   float s = 0.0, a = 0.5;
   for (int i = 0; i < 5; i++) { s += a * vnoise(p); p = p * 2.03 + vec2(17.1, 9.3); a *= 0.5; }
   return s;
+}
+
+// Veilfire: curtains hanging from a wavering arc in the north, striped by vertical rays, green
+// below and violet above. Only evaluated when uAurora is on.
+vec3 veilfire(vec3 dir) {
+  float az = atan(dir.x, -dir.z);
+  float h = dir.y;
+  float wave = sin(az * 3.0 + uTime * 0.07 + 1.7 * sin(az * 5.0 - uTime * 0.05)) * 0.12 + sin(az * 7.0 - uTime * 0.11) * 0.04;
+  float arc = h - 0.34 - wave;
+  float band = exp(-pow(arc * (arc > 0.0 ? 4.2 : 9.0), 2.0)); // sharp lower hem, long soft upper fade
+  float rays = vnoise(vec2(az * 26.0 + uTime * 0.12, 0.0)) * 0.65 + vnoise(vec2(az * 61.0 - uTime * 0.2, h * 3.0)) * 0.35;
+  float flow = vnoise(vec2(az * 3.5 - uTime * 0.045, h * 5.0 + uTime * 0.07));
+  float north = 0.35 + 0.65 * pow(0.5 + 0.5 * cos(az), 1.4);
+  float a = band * (0.25 + 0.75 * rays) * smoothstep(0.2, 0.65, flow + 0.2) * north;
+  vec3 c = mix(vec3(0.12, 1.0, 0.5), vec3(0.62, 0.26, 0.95), smoothstep(0.0, 0.35, arc));
+  return c * a * 0.5;
 }
 
 // Ring optical density at radius rho (planet radii) and rotated angle phi
@@ -108,6 +128,16 @@ void main() {
     // faint galactic band
     float band = exp(-pow(dot(dir, normalize(vec3(0.3, 0.5, -0.8))) * 4.0, 2.0));
     col += vec3(0.05, 0.05, 0.08) * band * fbm(dir.xz * 6.0 + dir.y * 3.0) * starVis;
+  }
+
+  // Veilfire and a falling star (the mesh is at the far plane, so these cost nothing in the daytime)
+  if (uAurora > 0.01) col += veilfire(dir) * uAurora * smoothstep(-0.02, 0.14, h) * (1.0 - uRain);
+  if (uMeteorGlow > 0.01) {
+    vec3 ab = uMeteorTail - uMeteorHead;
+    float tt = clamp(dot(dir - uMeteorHead, ab) / max(dot(ab, ab), 1e-6), 0.0, 1.0);
+    float md = length(dir - (uMeteorHead + ab * tt));
+    float streak = smoothstep(0.0045, 0.0, md) * (1.0 - tt) + smoothstep(0.012, 0.0, length(dir - uMeteorHead)) * 0.8;
+    col += vec3(0.9, 0.95, 1.0) * streak * uMeteorGlow * smoothstep(0.0, 0.12, h) * (1.0 - uRain);
   }
 
   // Suns: twilight scattering, glare and discs

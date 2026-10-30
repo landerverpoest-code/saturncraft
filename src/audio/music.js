@@ -2,9 +2,13 @@
 // composed on the spot (chord progression, broken-chord left hand, sparse
 // melody) on a soft piano voice with reverb. The mood follows the world: major
 // by day, minor at night, low and sparse underground. Caves also get the odd
-// distant rumble.
+// distant rumble. Where the player stands also colours the piece: a music
+// profile (ambience.js) swaps the scale, tempo, register and brightness, so a
+// Highland Meadow sounds bright and open, a Magma Lake low and smouldering and a
+// Great Rift vast and slow.
 
 import { mulberry32 } from '../world/noise.js';
+import { profileMode } from './ambience.js';
 
 const MODES = {
   major: [0, 2, 4, 5, 7, 9, 11],
@@ -23,6 +27,7 @@ export class Music {
     this.playingUntil = 0;
     this.darkTime = 0;
     this.nextRumble = 60;
+    this.bright = 1; // piano brightness of the piece being scheduled (profile.bright)
   }
 
   setVolume(v) { this.volume = v; if (this.out) this.out.gain.value = v; }
@@ -55,7 +60,7 @@ export class Music {
     const g = ctx.createGain();
     const f = ctx.createBiquadFilter();
     f.type = 'lowpass';
-    f.frequency.value = 900 + vel * 2600;
+    f.frequency.value = (900 + vel * 2600) * this.bright;
     const p = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
     const decay = Math.min(6, 1.2 + dur * 1.4) * (freq < 200 ? 1.4 : 1);
     g.gain.setValueAtTime(0.0001, t);
@@ -77,16 +82,19 @@ export class Music {
   play(mood, rnd = Math.random, dest = this.dry, opts = {}) {
     const ctx = this.audio.ctx, t0 = ctx.currentTime + 0.3;
     const note = (t, f, d, v, pan) => this.note(t, f, d, v, pan, dest);
-    const mode = mood === 'day' ? MODES.major : mood === 'night' ? (rnd() < 0.5 ? MODES.minor : MODES.dorian) : MODES.minor;
-    const rootMidi = opts.root ?? (mood === 'cave' ? 45 : 50) + Math.floor(rnd() * 7); // A2..D#3 or D3..G#3
-    const bpm = opts.bpm ?? (mood === 'cave' ? 52 + rnd() * 10 : 62 + rnd() * 14);
+    const prof = opts.profile || null;
+    const mode = prof ? profileMode(prof, mood) : mood === 'day' ? MODES.major : mood === 'night' ? (rnd() < 0.5 ? MODES.minor : MODES.dorian) : MODES.minor;
+    const between = (r) => r[0] + rnd() * (r[1] - r[0]);
+    this.bright = prof ? prof.bright : 1; // read by note() while this piece is scheduled; discs and caves keep 1
+    const rootMidi = opts.root ?? (prof ? Math.floor(between(prof.root)) : (mood === 'cave' ? 45 : 50) + Math.floor(rnd() * 7)); // A2..D#3 or D3..G#3
+    const bpm = opts.bpm ?? (prof ? between(prof.bpm) : mood === 'cave' ? 52 + rnd() * 10 : 62 + rnd() * 14);
     const beat = 60 / bpm;
     const prog = PROGRESSIONS[Math.floor(rnd() * PROGRESSIONS.length)];
     const midiOf = (deg, oct = 0) => rootMidi + 12 * (oct + Math.floor(deg / 7)) + mode[((deg % 7) + 7) % 7];
     const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
-    const rounds = opts.rounds ?? (mood === 'cave' ? 2 : 3 + Math.floor(rnd() * 2));
+    const rounds = opts.rounds ?? (prof ? Math.round(between(prof.rounds)) : mood === 'cave' ? 2 : 3 + Math.floor(rnd() * 2));
     let t = t0, lastMel = 7 + 2;
-    const density = mood === 'cave' ? 0.25 : mood === 'night' ? 0.4 : 0.5;
+    const density = prof ? prof.density * (mood === 'night' ? 0.8 : 1) : mood === 'cave' ? 0.25 : mood === 'night' ? 0.4 : 0.5;
     for (let r = 0; r < rounds; r++) {
       for (const deg of prog) {
         const chord = [deg, deg + 2, deg + 4];
@@ -152,11 +160,11 @@ export class Music {
   }
 
   /** Called once per second. */
-  update(dt, mood, inDarkCave) {
+  update(dt, mood, inDarkCave, profile = null) {
     if (!this.ensureNodes()) return;
     this.clock += dt;
     if (this.volume > 0 && this.clock >= this.nextAt && this.clock >= this.playingUntil) {
-      const len = this.play(mood);
+      const len = this.play(mood, Math.random, this.dry, { profile });
       this.playingUntil = this.clock + len;
       this.nextAt = this.playingUntil + 300 + Math.random() * 300; // 5-10 minutes of silence
     }

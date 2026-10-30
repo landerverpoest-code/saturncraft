@@ -42,6 +42,8 @@ export const CAPTION_TEXT = {
   rocket: 'Rocket whooshes', rocket_burst: 'Rocket bursts', hush_sensor: 'Sensor trills', shriek: 'Shrieker screams',
   hush_heart: 'Heartbeat', hush_growl: 'Deep growl', hush_sniff: 'Sniffing', emerge: 'Something emerges', sonic_charge: 'Sonic charge builds',
   sonic_boom: 'Sonic boom', catalyst: 'Catalyst spreads',
+  bird_trill: 'Birdsong', cricket: 'Crickets chirp', owl: 'Owl hoots', drip: 'Water drips', lava_pop: 'Lava bubbles', rift_moan: 'Deep rift moans',
+  breeze: 'Breeze sighs', ember_snap: 'Embers snap', void_whisper: 'Void whispers',
 };
 
 /** Sounds that are only interface feedback when they have no place in the world. */

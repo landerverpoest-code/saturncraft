@@ -40,6 +40,7 @@ import { igniteTNT, PrimedTNT } from './entities/tnt.js';
 import { canLight, FIRE_DELAY } from './world/fire.js';
 import { Chat } from './ui/chat.js';
 import { Music } from './audio/music.js';
+import { AmbientSystem } from './audio/ambientSystem.js';
 import { Milestones } from './player/milestones.js';
 import { Raids } from './mobs/raids.js';
 import { effectiveSkyLight, skyState } from './sky/suns.js';
@@ -199,6 +200,7 @@ export class Game {
     this.audio.onPlay = (name, pos, vol) => { if (this.settings.captions) this.captions.add(name, pos, vol, this.audio.listener, performance.now()); };
     this.music = new Music(this.audio);
     this.music.setVolume(s.music ?? 0.5);
+    this.ambience = new AmbientSystem(this); // soundscapes, cave reverb and rain-on-roof voices (audio/ambientSystem.js)
     this.hud = new HUD(this);
     this.ui = new UI(this);
     this.held = new HeldItem(this);
@@ -1121,8 +1123,10 @@ export class Game {
       // music mood: underground, night (all suns down) or day
       const px = Math.floor(p.x), py = Math.floor(p.y + 1), pz = Math.floor(p.z);
       const sky = this.world.skyLight(px, py, pz), under = sky === 0 && py < this.world.heightAt(px, pz) - 4;
-      const mood = under ? 'cave' : this.sky.state.aboveCount === 0 ? 'night' : 'day';
-      this.music.update(1, mood, under && this.world.blockLight(px, py, pz) < 4);
+      const scape = this.ambience.tick(1); // also sets the bed, the reverb and the roof for the rain
+      const deep = scape === 'magma' || scape === 'rift'; // Magma Lakes and Great Rifts are scored like caves, in their own key
+      const mood = under || deep ? 'cave' : this.sky.state.aboveCount === 0 ? 'night' : 'day';
+      this.music.update(1, mood, under && this.world.blockLight(px, py, pz) < 4, this.ambience.musicProfile);
       for (const h of this.jukeboxes.values()) this.music.placeDisc(h, p.x, p.y + 1.6, p.z);
     }
     // footsteps
@@ -1268,13 +1272,14 @@ export class Game {
     if (this.chunks.edited) { this.chunks.edited = false; this.sky.refreshShadows(); }
     const smoothTime = this.time + (this.daylightCycle ? alpha : 0);
     this.sky.rain = this.weather.level;
+    this.sky.biomeTemp = (BIOMES[this.world.biomeAt(Math.floor(x), Math.floor(z))] || BIOMES[3]).temp; // colder skies see more Veilfire
     this.sky.thunder = this.weather.storm;
     this.sky.flash = this.lightning.flash * fxScale.flash;
     const st = this.dims.updateSky(smoothTime, sec, this.camera, new THREE.Vector3(x, y, z));
     const wlevel = this.world.dimension === 'overworld' ? this.weather.level : 0; // no weather in the Cinderdeep or the Hollow
     this.weatherFx.update(this.world, this.camera, p.yaw, wlevel, sec, Math.min(1, st.combined) * 0.85 + 0.15);
     this.audio.setRain(wlevel * (Weather.precipitation(this.world.biomeAt(Math.floor(x), Math.floor(z))) === 'rain' ? 1 : 0),
-      this.world.heightAt(Math.floor(x), Math.floor(z)) > y + eye);
+      this.world.heightAt(Math.floor(x), Math.floor(z)) > y + eye, this.ambience.roof);
     terrainUniforms.uTime.value = sec;
     // Night Vision lifts the darkest light to near daylight (flickering in its last 10 seconds)
     const nv = p.effects.night_vision;
