@@ -127,7 +127,7 @@ function circuitIcon(ctx, c, b) {
   } else if (b.name === 'Stone Button') {
     tex('stone', 0, 0, 12, 8, 7, 11, 18, 10); outline(7, 11, 18, 10);
   } else if (b.name.endsWith('Pressure Plate') || b.name.endsWith('Weighted Plate')) {
-    tex(b.tex.all, 0, 0, 16, 4, 2, 18, 28, 7); outline(2, 18, 28, 7);
+    tex(b.tex.top, 0, 0, 16, 4, 2, 18, 28, 7); outline(2, 18, 28, 7);
   } else if (b.id === B.COMPARATOR) {
     tex('comparator', 0, 0, 16, 16, 2, 2, 28, 28); outline(2, 2, 28, 28);
     ctx.fillStyle = '#5a1a14'; ctx.fillRect(14, 4, 4, 4);

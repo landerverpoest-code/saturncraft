@@ -12,7 +12,7 @@ import { spendLevels } from '../player/experience.js';
 import { mulberry32 } from '../world/noise.js';
 import { craft, consumeCraft, RECIPES, recipeLayout, chooseIngredients } from '../player/crafting.js';
 import { B, BLOCKS, isBox } from '../world/blocks.js';
-import { canTrade, doTrade, offerPrice, MAX_USES, recordTrades, levelProgress, LEVEL_NAMES, giftValue, GIFT_COOLDOWN } from '../mobs/trades.js';
+import { canTrade, affordableTimes, doTrade, offerPrice, MAX_USES, recordTrades, levelProgress, LEVEL_NAMES, giftValue, GIFT_COOLDOWN } from '../mobs/trades.js';
 import { getRep, standing, repHint, refusesTrade, REP } from '../mobs/reputation.js';
 import { repEvent } from '../mobs/villageRep.js';
 import { championDiscount } from '../mobs/raids.js';
@@ -1074,7 +1074,7 @@ export class UI {
         btn.addEventListener('mousedown', (e) => {
           e.preventDefault();
           const times = e.shiftKey ? 64 : 1;
-          if (mob.netProxy) { if (canTrade(o, inv, cut, market())) g.net.requestTrade(mob, mob.trades.indexOf(o), times); return; } // the host keeps count
+          if (mob.netProxy) { const n = affordableTimes(o, inv, cut, times, market()); if (n > 0) g.net.requestTrade(mob, mob.trades.indexOf(o), n); return; } // the host keeps count (and is asked only for trades we can pay for)
           let done = 0;
           for (let k = 0; k < times && canTrade(o, inv, cut, market()); k++) {
             const got = doTrade(o, inv, cut, market());
