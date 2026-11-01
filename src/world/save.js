@@ -8,6 +8,7 @@ import { cleanEffects } from '../player/effects.js';
 import { liveStands, loadStands } from '../entities/armorStand.js';
 import { saveState as saveCaravanState, loadState as loadCaravanState } from '../mobs/peddler.js';
 import { saveStats, loadStats } from '../player/stats.js';
+import { cleanReputation } from '../mobs/reputation.js';
 
 const DB_NAME = 'saturncraft';
 const STORE = 'worlds';
@@ -77,6 +78,7 @@ export function playerSaveData(p) {
     food: p.hunger.food, saturation: p.hunger.saturation, exhaustion: p.hunger.exhaustion,
     air: p.air, spawn: p.spawn, bed: p.bed || null, slots: p.inventory.slots, armor: p.inventory.armor, xp: p.xp, gamemode: p.gamemode, flying: p.flying, selected: p.inventory.selected, enchSeed: p.enchSeed,
     effects: p.effects,
+    reputation: cleanReputation(p.reputation), // what villages think of the player (mobs/reputation.js)
   };
 }
 
@@ -238,6 +240,7 @@ export function applyPlayerSave(game, d) {
   if (d.xp) p.xp = { ...d.xp };
   if (Number.isInteger(d.enchSeed)) p.enchSeed = d.enchSeed;
   p.effects = cleanEffects(d.effects);
+  p.reputation = cleanReputation(d.reputation); // (older saves have none)
   if (d.gamemode) p.setGamemode(d.gamemode);
   p.flying = !!d.flying && p.creative;
   p.inventory.selected = d.selected;

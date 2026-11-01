@@ -190,6 +190,7 @@ export function makeTarget(rp) {
     body: { get height() { return st().crawling || st().swimming ? PHYS.PLAYER_CRAWL_HEIGHT : PHYS.PLAYER_HEIGHT; }, width: PHYS.PLAYER_WIDTH, vx: 0, vy: 0, vz: 0, onGround: true },
     lastHurtBy: null, lastAttacked: null,
     stats: { kills: 0, blocksMined: 0 },
+    reputation: {}, // what villages think of this guest (mobs/reputation.js); the host keeps it and tells the guest
     inventory: { get selectedStack() { const h = st().held; return h == null ? null : { id: h, count: 1 }; } },
     eyePos() { const s = st(); return [s.x, s.y + this.eyeHeight, s.z]; },
     lookDir() { const s = st(), cp = Math.cos(s.pitch); return [-Math.sin(s.yaw) * cp, Math.sin(s.pitch), -Math.cos(s.yaw) * cp]; },

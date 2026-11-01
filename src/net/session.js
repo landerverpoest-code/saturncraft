@@ -27,7 +27,9 @@ import {
 } from './protocol.js';
 import { heldBy, unleash, tieToFence, untieFromFence, isFencePost } from '../entities/leash.js';
 import { raidBarFor, championDiscount } from '../mobs/raids.js';
-import { offerPrice } from '../mobs/trades.js';
+import { offerPrice, recordTrades, giftValue, GIFT_COOLDOWN } from '../mobs/trades.js';
+import { getRep, setRep, cleanReputation, refusesTrade, REP } from '../mobs/reputation.js';
+import { repEvent } from '../mobs/villageRep.js';
 import { EditSync } from './editSync.js';
 import { createTransport } from './transport.js';
 import { RemotePlayer } from './remotePlayer.js';
@@ -295,11 +297,12 @@ export class HostSession extends Session {
       }
       case 'hit': this.remoteHit(c, m); break;
       case 'pvp': this.remotePvp(c, m); break;
-      case 'ps': if (m.p && Array.isArray(m.p.slots)) g.netPlayers[c.name] = { ...m.p, dim: g.world.dimension }; break;
+      case 'ps': if (m.p && Array.isArray(m.p.slots)) g.netPlayers[c.name] = { ...m.p, reputation: cleanReputation(c.rp && c.rp.target.reputation), dim: g.world.dimension }; break;
       case 'spawn': this.remoteSpawn(c, m); break;
       case 'take': this.remoteTake(c, m); break;
       case 'mi': this.remoteInteract(c, m); break;
       case 'trade': this.remoteTrade(c, m); break;
+      case 'gift': this.remoteGift(c, m); break;
       case 'open': this.openFor(c, m); break;
       case 'close': { const v = this.viewers.get(contKey(m.k, m.x, m.y, m.z)); if (v) v.ids.delete(c.id); break; }
       case 'cset': this.containerSet(c, m); break;
@@ -368,6 +371,7 @@ export class HostSession extends Session {
     c.ch.send({ t: 'ready' });
     c.joined = true;
     c.rp = new RemotePlayer(g.scene, c.id, name, this);
+    c.rp.target.reputation = cleanReputation((g.netPlayers[name] || {}).reputation); // (the host's copy is the true one)
     this.remotes.set(c.id, c.rp);
     this.broadcast({ t: 'join', id: c.id, name }, c);
     g.chat.add(`${name} joined the game`);
@@ -556,7 +560,7 @@ export class HostSession extends Session {
     const held = m.st && ITEMS[m.st.id] ? withExtras({ id: m.st.id, count: Math.max(1, Math.min(64, m.st.count | 0)), damage: m.st.damage | 0 }, m.st) : null; // (a Name Tag keeps its label)
     const d = held && ITEMS[held.id];
     if ((mob.def.villager || mob.def.trader) && mob.deathTime === 0 && mob.trades.length && !(d && d.food && mob.def.food)) {
-      c.ch.send({ t: 'trades', id: mob.id, prof: mob.profession, trades: mob.trades });
+      c.ch.send({ t: 'trades', id: mob.id, prof: mob.profession, trades: mob.trades, tc: mob.tradeCount | 0, lv: mob.level | 0, vil: mob.villageId ? mob.villageId(g) : null, gift: mob.lastGift });
       return;
     }
     const ops = { consume: 0, damage: 0 };
@@ -581,10 +585,32 @@ export class HostSession extends Session {
     if (!mob || !mob.trades || !s || Math.hypot(mob.x - s.x, mob.z - s.z) > 8) return;
     const o = mob.trades[m.i | 0];
     if (!o) return;
-    const n = Math.max(0, Math.min(m.n | 0, MAX_USES - o.uses));
+    const key = mob.villageId ? mob.villageId(this.game) : null, who = c.rp.target;
+    const n = refusesTrade(getRep(who, key)) ? 0 : Math.max(0, Math.min(m.n | 0, MAX_USES - o.uses)); // a village that has turned on the guest trades with nobody of theirs
     o.uses += n;
-    if (n > 0) mob.traded = true; // it keeps its trade now even if its job-site block goes (mobs/jobSites.js)
-    c.ch.send({ t: 'traded', id: mob.id, i: m.i | 0, n, trades: mob.trades });
+    if (n > 0) { mob.traded = true; recordTrades(mob, n); } // it keeps its trade now even if its job-site block goes (mobs/jobSites.js); trades count towards its level
+    c.ch.send({ t: 'traded', id: mob.id, i: m.i | 0, n, trades: mob.trades, tc: mob.tradeCount | 0, lv: mob.level | 0 });
+    if (n > 0 && key) repEvent(this.game, who, key, REP.trade * n, 'trade');
+  }
+
+  /** A guest hands a settler the item it holds as a gift (the guest takes it from its own hand if this says yes). */
+  remoteGift(c, m) {
+    const g = this.game, mob = this.entity(m.id), s = c.rp.state;
+    if (!mob || !mob.trades || !mob.def.villager || !s || Math.hypot(mob.x - s.x, mob.z - s.z) > 8) return;
+    const item = c.rp.state.held, key = mob.villageId(g), who = c.rp.target;
+    const worth = item == null || !key ? 0 : giftValue(mob.profession, item);
+    const ok = worth > 0 && g.time - mob.lastGift >= GIFT_COOLDOWN;
+    if (ok) { mob.lastGift = g.time; repEvent(g, who, key, worth); }
+    c.ch.send({ t: 'gifted', id: mob.id, ok: ok ? 1 : 0, item: item == null ? -1 : item, gift: mob.lastGift });
+  }
+
+  /** The host tells a guest of a change to its reputation (the host's copy is the true one; it is saved with the guest's record). */
+  sendReputation(who, key, value) {
+    const c = who && who.remote ? this.clients.get(who.remote.id) : null;
+    if (!c) return;
+    const rec = this.game.netPlayers[c.name];
+    if (rec) rec.reputation = cleanReputation(who.reputation);
+    c.ch.send({ t: 'rep', k: key, v: value });
   }
 
   remoteBoatHit(c, m) {
@@ -1017,10 +1043,13 @@ export class ClientSession extends Session {
         const mob = this.ents.byNetId(m.id);
         if (!mob) break;
         mob.trades = m.trades; mob.profession = m.prof;
+        mob.tradeCount = m.tc | 0; mob.level = Math.max(1, m.lv | 0); mob.village = typeof m.vil === 'string' ? m.vil : null; mob.lastGift = Number.isFinite(m.gift) ? m.gift : -1e9;
         if (!g.ui.blocking) { g.ui.openTrade(mob); g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); }
         break;
       }
       case 'traded': this.onTraded(m); break;
+      case 'gifted': this.onGifted(m); break;
+      case 'rep': if (typeof m.k === 'string' && Number.isFinite(m.v)) setRep(g.player, m.k, m.v); break;
       case 'cont': this.onContainerState(m, false); break;
       case 'cack': case 'cnak': this.onContainerReply(m); break;
       case 'cclose': if (this.cont && this.cont.kind === m.k && this.cont.x === m.x && this.cont.y === m.y && this.cont.z === m.z && g.ui.open === (m.k === 'chest2' ? 'chest' : m.k)) g.ui.close(); break;
@@ -1106,15 +1135,19 @@ export class ClientSession extends Session {
   }
 
   requestTrade(mob, i, times) { this.send({ t: 'trade', id: mob.netId, i, n: times }); }
+  requestGift(mob) { this.send({ t: 'gift', id: mob.netId }); }
 
   onTraded(m) {
     const g = this.game, inv = g.player.inventory, mob = this.ents.byNetId(m.id);
+    const grew = !!(mob && mob.trades && m.trades && m.trades.length !== mob.trades.length); // a new level brought new offers
     if (mob && mob.trades) (m.trades || []).forEach((t, i) => { if (mob.trades[i]) mob.trades[i].uses = t.uses; }); // keep the open screen's offers
+    if (mob) { mob.tradeCount = m.tc | 0; mob.level = Math.max(1, m.lv | 0); }
     const o = m.trades && m.trades[m.i];
     if (!o) return;
     let done = 0;
-    const price = offerPrice(o, championDiscount(g.player.effects)); // a Village Champion pays less
+    const market = mob && mob.village ? { rep: getRep(g.player, mob.village) } : null; // our copy of the host's reputation
     for (let k = 0; k < m.n; k++) {
+      const price = offerPrice({ ...o, uses: o.uses - m.n + k }, championDiscount(g.player.effects), market); // a Village Champion pays less; demand raised the price with every use
       if (inv.count(o.give) < price) break;
       let left = price;
       for (let i = 0; i < inv.slots.length && left; i++) {
@@ -1130,6 +1163,18 @@ export class ClientSession extends Session {
     }
     inv.changed();
     if (done) { g.player.stats.trades += done; g.milestones.event('trade'); if (mob && mob.def && mob.def.trader) g.milestones.event('peddler'); if (mob) g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); g.entities.spawnXp(g.player.x, g.player.y + 1, g.player.z, 3 * done); }
+    if (grew) mob.trades = m.trades;
+    if (g.ui.open === 'trade') { if (grew) g.ui.openTrade(mob); else g.ui.refreshAll(); }
+  }
+
+  /** The host's answer to our gift: a yes takes one of the item from our hand. */
+  onGifted(m) {
+    const g = this.game, p = g.player, mob = this.ents.byNetId(m.id);
+    if (mob) mob.lastGift = Number.isFinite(m.gift) ? m.gift : mob.lastGift;
+    const st = p.inventory.selectedStack;
+    if (m.ok && st && st.id === m.item && !p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
+    if (g.hud) g.hud.toast(m.ok ? 'The settler is delighted' : 'The settler has no use for that right now', 2500);
+    if (m.ok && mob) g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]);
     if (g.ui.open === 'trade') g.ui.refreshAll();
   }
 

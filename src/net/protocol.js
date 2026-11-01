@@ -10,7 +10,7 @@ import { sameBook } from '../world/books.js';
 import { effectColorInt } from '../player/effects.js';
 import { TRADE_PROFESSIONS } from '../world/villages.js';
 
-export const PROTOCOL_VERSION = 1;
+export const PROTOCOL_VERSION = 2; // 2: settler levels, reputation and gifts (mobs/trades.js, mobs/reputation.js)
 export const MAX_PLAYERS = 8;
 export const PEER_PREFIX = 'saturncraft-';
 export const FRAGMENT_SIZE = 48000; // characters per data-channel message (well under SCTP limits)

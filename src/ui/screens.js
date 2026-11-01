@@ -12,7 +12,9 @@ import { spendLevels } from '../player/experience.js';
 import { mulberry32 } from '../world/noise.js';
 import { craft, consumeCraft, RECIPES, recipeLayout, chooseIngredients } from '../player/crafting.js';
 import { B, BLOCKS, isBox } from '../world/blocks.js';
-import { canTrade, doTrade, offerPrice, MAX_USES } from '../mobs/trades.js';
+import { canTrade, doTrade, offerPrice, MAX_USES, recordTrades, levelProgress, LEVEL_NAMES, giftValue, GIFT_COOLDOWN } from '../mobs/trades.js';
+import { getRep, standing, repHint, refusesTrade, REP } from '../mobs/reputation.js';
+import { repEvent } from '../mobs/villageRep.js';
 import { championDiscount } from '../mobs/raids.js';
 import { MILESTONES } from '../player/milestones.js';
 import { statRows, killRows } from '../player/stats.js';
@@ -1032,47 +1034,107 @@ export class UI {
     });
   }
 
-  /** Trading with a settler: each offer row shows price -> goods; click to trade. */
+  /**
+   * Trading with a settler: each offer row shows price -> goods; click to trade. Under the title: the settler's level with a
+   * bar towards the next one (more trades unlock better offers), what the village thinks of you (it moves prices) and a
+   * button to give the settler the item in your hand. Prices climb with every use of an offer until the next restock.
+   */
   openTrade(mob) {
     this.game.input.unlock();
-    const g = this.game, inv = g.player.inventory;
-    const title = mob.def.trader ? mob.def.name : `${mob.profession[0].toUpperCase() + mob.profession.slice(1)} Settler`;
+    const g = this.game, inv = g.player.inventory, trader = !!mob.def.trader;
+    const title = trader ? mob.def.name : `${mob.profession[0].toUpperCase() + mob.profession.slice(1)} Settler`;
     // Village Champions pay less (a guest pays from its own inventory, so its own effect sets the price)
     const cut = championDiscount(g.player.effects);
+    const key = trader ? null : (mob.villageId ? mob.villageId(g) : mob.village) || null;
+    const market = () => ({ rep: getRep(g.player, key) });
+    const price = (o) => offerPrice(o, cut, market());
     this.showContainer('trade', title, (panel) => {
+      let bar = null, repLine = null, gift = null;
+      if (!trader) {
+        const head = el('<div class="trade-head"><div class="trade-level"><span class="trade-level-name"></span><div class="trade-bar"><div class="trade-bar-fill"></div></div><span class="trade-level-count"></span></div><div class="trade-rep"></div></div>');
+        bar = head.querySelector('.trade-level');
+        repLine = head.querySelector('.trade-rep');
+        gift = el('<button class="btn trade-gift"></button>');
+        head.appendChild(gift);
+        panel.appendChild(head);
+      }
       const list = el('<div class="trade-list"></div>');
       mob.trades.forEach((o) => {
         const row = el(`<div class="trade-row">
-          <div class="slot${offerPrice(o, cut) < o.giveCount ? ' discounted' : ''}">${this.slotHTML({ id: o.give, count: offerPrice(o, cut) })}</div>
+          <div class="slot price"></div>
           <div class="arrow">➜</div>
           <div class="slot">${this.slotHTML({ id: o.get, count: o.getCount })}</div>
           <span class="trade-name"></span><button class="btn trade-btn">Trade</button></div>`);
         row.querySelector('.trade-name').textContent = ITEMS[o.get].name;
-        const btn = row.querySelector('button');
+        const btn = row.querySelector('button'), priceSlot = row.querySelector('.price');
         btn.addEventListener('mousedown', (e) => {
           e.preventDefault();
           const times = e.shiftKey ? 64 : 1;
-          if (mob.netProxy) { if (canTrade(o, inv, cut)) g.net.requestTrade(mob, mob.trades.indexOf(o), times); return; } // the host keeps count
+          if (mob.netProxy) { if (canTrade(o, inv, cut, market())) g.net.requestTrade(mob, mob.trades.indexOf(o), times); return; } // the host keeps count
           let done = 0;
-          for (let k = 0; k < times && canTrade(o, inv, cut); k++) {
-            const got = doTrade(o, inv, cut);
+          for (let k = 0; k < times && canTrade(o, inv, cut, market()); k++) {
+            const got = doTrade(o, inv, cut, market());
             const left = inv.add(got);
             if (left) g.entities.spawnItem(g.player.x, g.player.y + 1, g.player.z, { ...got, count: left });
             done++;
           }
-          if (done) { mob.traded = true; g.player.stats.trades += done; g.milestones.event('trade'); if (mob.def.trader) g.milestones.event('peddler'); g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); g.entities.spawnXp(g.player.x, g.player.y + 1, g.player.z, 3 * done); }
+          if (done) {
+            mob.traded = true;
+            const up = recordTrades(mob, done); // trades count towards the settler's level
+            if (key) repEvent(g, g.player, key, REP.trade * done, 'trade');
+            g.player.stats.trades += done; g.milestones.event('trade'); if (trader) g.milestones.event('peddler'); g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); g.entities.spawnXp(g.player.x, g.player.y + 1, g.player.z, 3 * done);
+            if (up) {
+              if (g.hud) g.hud.toast(`The settler is now a ${LEVEL_NAMES[mob.level - 1]}: new offers`, 3500);
+              g.audio.play('levelup', [mob.x, mob.y + 1.5, mob.z]);
+              this.openTrade(mob); // (the list grew)
+              return;
+            }
+          }
           this.refreshAll();
         });
         this.refreshers.push(() => {
-          const ok = canTrade(o, inv, cut);
+          const base = o.giveCount, now = price(o);
+          priceSlot.innerHTML = this.slotHTML({ id: o.give, count: now });
+          priceSlot.classList.toggle('discounted', now < base);
+          priceSlot.classList.toggle('pricey', now > base);
+          priceSlot.title = now === base ? 'Usual price' : now < base ? `Cheaper than the usual ${base}` : `Dearer than the usual ${base}`;
+          const refused = refusesTrade(market().rep);
+          const ok = canTrade(o, inv, cut, market());
           btn.disabled = !ok;
           row.classList.toggle('sold-out', o.uses >= MAX_USES);
-          btn.textContent = o.uses >= MAX_USES ? 'Sold out' : 'Trade';
+          btn.textContent = o.uses >= MAX_USES ? 'Sold out' : refused ? 'Refused' : 'Trade';
         });
         list.appendChild(row);
       });
+      if (bar) {
+        this.refreshers.push(() => {
+          const lp = levelProgress(mob.tradeCount | 0), lv = Math.max(lp.level, mob.level | 0);
+          bar.querySelector('.trade-level-name').textContent = `${LEVEL_NAMES[lv - 1]} (level ${lv})`;
+          bar.querySelector('.trade-bar-fill').style.width = `${Math.round(lp.frac * 100)}%`;
+          bar.querySelector('.trade-level-count').textContent = lp.max ? 'Master' : `${lp.done} / ${lp.need} trades to ${LEVEL_NAMES[lp.level]}`;
+          const rep = market().rep, st = standing(rep);
+          repLine.textContent = key ? `Standing: ${st.name} (${rep > 0 ? '+' : ''}${Math.round(rep)}) - ${repHint(rep)}` : 'No village to speak for this settler';
+          repLine.dataset.standing = String(st.index);
+          const sel = inv.selectedStack, worth = sel && key ? giftValue(mob.profession, sel.id) : 0;
+          gift.disabled = !key || !worth || g.time - mob.lastGift < GIFT_COOLDOWN;
+          gift.textContent = worth ? (g.time - mob.lastGift < GIFT_COOLDOWN ? 'Already given a gift' : `Gift: ${ITEMS[sel.id].name}`) : 'Gift (hold goods it wants)';
+        });
+        gift.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          if (gift.disabled) return;
+          if (mob.netProxy) { g.net.requestGift(mob); return; } // the host decides
+          const sel = inv.selectedStack, worth = sel ? giftValue(mob.profession, sel.id) : 0;
+          if (!worth || !key) return;
+          if (!g.player.creative) inv.removeFromSlot(inv.selected, 1);
+          mob.lastGift = g.time;
+          repEvent(g, g.player, key, worth);
+          if (g.hud) g.hud.toast('The settler is delighted', 2500);
+          g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]);
+          this.refreshAll();
+        });
+      }
       panel.appendChild(list);
-      panel.appendChild(el(`<div class="recipes-hint">Shift-click trades as often as you can afford. ${mob.def.trader ? 'The pack does not refill, and the peddler moves on after a day.' : 'Offers restock every half day.'}</div>`));
+      panel.appendChild(el(`<div class="recipes-hint">Shift-click trades as often as you can afford. ${trader ? 'The pack does not refill, and the peddler moves on after a day.' : 'Offers restock every half day; until then each use makes an offer a little dearer. More trades raise the settler\'s level and unlock better offers.'}</div>`));
       panel.appendChild(this.inventoryGrid());
     });
     this.refreshAll();

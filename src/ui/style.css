@@ -334,3 +334,17 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 .stats-table th, .stats-table td { padding: 5px 8px; border-top: 1px solid rgba(255,255,255,.08); font-weight: normal; }
 .stats-table th { text-align: left; }
 .stats-table td { text-align: right; font-variant-numeric: tabular-nums; color: #ffe2a6; }
+
+/* Settler levels, reputation and gifts in the trade screen (mobs/trades.js, mobs/reputation.js) */
+.trade-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-bottom: 10px; padding: 6px 8px; background: rgba(0,0,0,.08); border-radius: 4px; }
+.trade-level { display: flex; align-items: center; gap: 8px; flex: 1 1 100%; font-size: 13px; color: #333; }
+.trade-level-name { font-weight: bold; white-space: nowrap; }
+.trade-bar { flex: 1; min-width: 80px; height: 10px; background: rgba(0,0,0,.25); border: 1px solid #555; border-radius: 5px; overflow: hidden; }
+.trade-bar-fill { height: 100%; width: 0; background: linear-gradient(#7be07b, #3aa63a); transition: width .25s; }
+.trade-level-count { font-size: 12px; color: #444; white-space: nowrap; }
+.trade-rep { flex: 1; font-size: 12px; color: #333; }
+.trade-rep[data-standing="0"], .trade-rep[data-standing="1"] { color: #a02020; }
+.trade-rep[data-standing="3"], .trade-rep[data-standing="4"], .trade-rep[data-standing="5"] { color: #1f6f1f; }
+.trade-head .trade-gift { padding: 3px 10px; min-width: 0; width: auto; font-size: 12px; }
+.trade-head .trade-gift:disabled { opacity: .45; cursor: default; }
+.trade-row .slot.pricey { outline: 2px solid #d25a5a; outline-offset: -2px; }

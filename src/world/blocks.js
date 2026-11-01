@@ -775,6 +775,14 @@ ext('SLIME_BLOCK'); ext('HONEY_BLOCK');
 def(B.SLIME_BLOCK, 'Slime Block', { hardness: 0, resistance: 0, sound: 'mud', opaque: false, opacity: 1, layer: LAYER.TRANSLUCENT, sticky: 'slime', bouncy: true, tex: { all: 'slime_block' } });
 def(B.HONEY_BLOCK, 'Honey Block', { hardness: 0, resistance: 0, sound: 'mud', opaque: false, opacity: 1, layer: LAYER.TRANSLUCENT, sticky: 'honey', speedFactor: 0.5, honeyed: true, tex: { all: 'honey_block' } });
 
+// Job-site blocks of the Mason, Toolsmith and Armorer settlers (mobs/jobSites.js, mobs/trades.js): a Masonry Bench with a
+// block of stone under the mallet, a Whetstone Stand with tools hung on it, and an Armorer's Rack with a helm and a breastplate.
+// Wooden full blocks like the Fletching Table; the front faces the player.
+ext('MASONRY_BENCH'); ext('WHETSTONE_STAND'); ext('ARMOR_RACK');
+for (const [key, name, tex] of [['MASONRY_BENCH', 'Masonry Bench', 'masonry_bench'], ['WHETSTONE_STAND', 'Whetstone Stand', 'whetstone_stand'], ['ARMOR_RACK', "Armorer's Rack", 'armor_rack']]) {
+  def(B[key], name, { hardness: 2.5, resistance: 2.5, tool: TOOL.AXE, sound: 'wood', flammable: true, tex: { top: `${tex}_top`, bottom: 'spruce_planks', side: `${tex}_side`, front: `${tex}_front` } });
+}
+
 export const NUM_BLOCKS = BLOCKS.length;
 
 // Flat lookup tables used by hot loops (mesher, lighting, physics) and workers.
