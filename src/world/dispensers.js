@@ -4,7 +4,8 @@
 // (or puts it into a container in front); a Dispenser uses it when it can:
 // arrows fly, fire charges shoot a small fireball, buckets pour or scoop up
 // fluid, flint and steel lights fires and TNT, TNT goes out primed, bone meal
-// makes plants grow and armour goes onto a player standing in front. Anything
+// makes plants grow, rockets (Sky Rockets and Star Rockets) take off from the face (straight up when it points up, otherwise
+// flying straight along it), and armour goes onto a player standing in front. Anything
 // else is dropped like a Dropper does.
 // Meta: bits 0-2 = facing (FACING6 index: down, up, -z, +z, -x, +x), bit 3 = triggered.
 import { B, BLOCKS, isFluid } from './blocks.js';
@@ -12,6 +13,7 @@ import { ITEMS, I, isArrow } from './items.js';
 import { FACING6, SIDE_TO_FACING, DISPENSER_TRIGGERED } from './circuitShapes.js';
 import { canLight, FIRE_DELAY } from './fire.js';
 import { containerAccess, insertOne } from './hoppers.js';
+import { launchRocket, DISPENSED_SPEED } from '../entities/skyRocket.js';
 
 export const DISPENSER_SLOTS = 9;
 export const TRIGGERED = DISPENSER_TRIGGERED;
@@ -66,7 +68,7 @@ function playerIn(p, x, y, z) {
  * getDispenser, entities (spawnItem / spawnArrow), the player, interaction
  * (boneMeal), primeTNT and shootFireball. Returns what happened: 'empty',
  * 'drop', 'insert', 'arrow', 'fireball', 'pour', 'scoop', 'ignite', 'tnt',
- * 'grow', 'equip' or 'fail'.
+ * 'grow', 'rocket', 'equip' or 'fail'.
  */
 export function dispense(game, x, y, z, rng = Math.random) {
   const w = game.world, id = w.getBlock(x, y, z);
@@ -143,6 +145,14 @@ export function dispense(game, x, y, z, rng = Math.random) {
     game.primeTNT(fx + 0.5, fy, fz + 0.5);
     takeOne(slots, i);
     return 'tnt';
+  }
+  if (def.rocket) {
+    const j = () => (rng() - 0.5) * 0.04;
+    const d = dy ? dir : [dx + j(), j(), dz + j()]; // (a sideways shot wobbles a hair; straight up or down stays exact)
+    const len = Math.hypot(d[0], d[1], d[2]);
+    launchRocket(game, ox, oy, oz, dy ? dir : d.map((v) => v / len), st, { speed: DISPENSED_SPEED, rng });
+    takeOne(slots, i);
+    return 'rocket';
   }
   if (def.boneMeal) {
     if (!front || !game.interaction || !game.interaction.boneMeal({ x: fx, y: fy, z: fz, id: front, face: [-dx, -dy, -dz] })) { sound('click'); return 'fail'; }

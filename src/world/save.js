@@ -96,7 +96,7 @@ export async function saveGame(game) {
     name: game.worldName || `World ${game.saveSlot || 1}`,
     seed: game.seed,
     time: game.time,
-    gameRules: { doDaylightCycle: game.settings.daylightCycle !== false, doHostileSpawning: game.settings.hostileMobs !== false, difficulty: game.difficulty },
+    gameRules: { doDaylightCycle: game.settings.daylightCycle !== false, doHostileSpawning: game.settings.hostileMobs !== false, fireworksHurtPlayers: game.settings.fireworksHurtPlayers === true, difficulty: game.difficulty },
     savedAt: Date.now(),
     player: playerSaveData(p),
     furnaces: [...game.furnaces.values()],
@@ -194,6 +194,7 @@ export function applySave(game, data) {
   if (data.gameRules) {
     if (typeof data.gameRules.doDaylightCycle === 'boolean') game.settings.daylightCycle = data.gameRules.doDaylightCycle;
     if (typeof data.gameRules.doHostileSpawning === 'boolean') game.settings.hostileMobs = data.gameRules.doHostileSpawning;
+    game.settings.fireworksHurtPlayers = data.gameRules.fireworksHurtPlayers === true; // (off unless the world turned it on)
     if (['peaceful', 'easy', 'normal', 'hard'].includes(data.gameRules.difficulty)) game.settings.difficulty = data.gameRules.difficulty;
   }
   game.netPlayers = data.netPlayers || {};
