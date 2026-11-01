@@ -122,7 +122,7 @@ export function villagesNear(gen, x0, z0, x1, z1) {
 export function houseHome(p) { return { x: Math.floor((p.x0 + p.x1) / 2) + 0.5, y: p.y, z: Math.floor((p.z0 + p.z1) / 2) + 0.5 }; }
 
 /** The house's front door cell (in the middle of the wall facing the road). */
-function houseDoor(p) {
+export function houseDoor(p) {
   const [fx, , fz] = SIDE_DIRS[p.facing];
   const mx = Math.floor((p.x0 + p.x1) / 2), mz = Math.floor((p.z0 + p.z1) / 2);
   return [fx > 0 ? p.x1 : fx < 0 ? p.x0 : mx, fz > 0 ? p.z1 : fz < 0 ? p.z0 : mz];

@@ -191,7 +191,7 @@ export const demandFactor = (uses) => 1 + DEMAND_STEP * Math.max(0, Math.min(MAX
  */
 export function offerPrice(offer, discount = 0, market = null) {
   let price = offer.giveCount;
-  if (market) price = Math.max(1, Math.round(price * repFactor(market.rep || 0) * demandFactor(offer.uses)));
+  if (market) price = Math.max(1, Math.round(price * repFactor(market.rep || 0) * demandFactor(offer.uses) * (1 - (market.festival || 0)))); // market.festival: the Lantern Festival's cut (world/events.js)
   if (!(discount > 0)) return price;
   return Math.max(1, price - Math.max(1, Math.floor(discount * price)));
 }

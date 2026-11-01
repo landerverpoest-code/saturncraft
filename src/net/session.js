@@ -29,6 +29,7 @@ import { heldBy, unleash, tieToFence, untieFromFence, isFencePost } from '../ent
 import { raidBarFor, championDiscount } from '../mobs/raids.js';
 import { offerPrice, recordTrades, giftValue, GIFT_COOLDOWN } from '../mobs/trades.js';
 import { getRep, setRep, cleanReputation, refusesTrade, REP } from '../mobs/reputation.js';
+import { tradeMarket } from '../world/events.js';
 import { repEvent } from '../mobs/villageRep.js';
 import { EditSync } from './editSync.js';
 import { createTransport } from './transport.js';
@@ -366,7 +367,7 @@ export class HostSession extends Session {
     c.ch.send({
       t: 'welcome', v: PROTOCOL_VERSION, id: c.id, name, hostName: this.name,
       seed: g.seed, time: g.time, weather: g.weather.save(), gamemode: p.gamemode, dim: g.world.dimension,
-      dl: g.daylightCycle, df: g.difficulty, pvp: this.pvp, gc: this.guestCommands, se: g.seasons.save(),
+      dl: g.daylightCycle, df: g.difficulty, pvp: this.pvp, gc: this.guestCommands, se: g.seasons.save(), ev: g.worldEvents ? g.worldEvents.syncOut() : undefined,
       worldSpawn: g.worldSpawn, pos: { x: p.x, y: p.y, z: p.z, yaw: p.yaw },
       player: g.netPlayers[name] || null,
       signs: [...g.signs], frames: [...g.frames], pots: [...g.pots], lecterns: [...g.lecterns],
@@ -751,7 +752,7 @@ export class HostSession extends Session {
   sendEnv() {
     const g = this.game;
     // rb: the raid under way (mobs/raids.js raidStatus): guests near the village show its bar
-    this.broadcast({ t: 'env', time: g.time, w: g.weather.save(), dl: g.daylightCycle, df: g.difficulty, pvp: this.pvp, gc: this.guestCommands, se: g.seasons.save(), rb: g.raids && g.raids.status ? g.raids.status() : null });
+    this.broadcast({ t: 'env', time: g.time, w: g.weather.save(), dl: g.daylightCycle, df: g.difficulty, pvp: this.pvp, gc: this.guestCommands, se: g.seasons.save(), ev: g.worldEvents ? g.worldEvents.syncOut() : undefined, rb: g.raids && g.raids.status ? g.raids.status() : null });
   }
 
   /** Night is skipped once everybody has been asleep for a while (the host in bed for 5 s). */
@@ -963,6 +964,7 @@ export class ClientSession extends Session {
     if (typeof w.dl === 'boolean') game.settings.daylightCycle = w.dl;
     if (typeof w.df === 'string') game.settings.difficulty = w.df;
     this.applySeasons(w.se);
+    if (game.worldEvents) game.worldEvents.syncIn(w.ev);
     game.spawner.enabled = false;
     game.worldSpawn = { ...w.worldSpawn };
     const p = game.player;
@@ -1013,6 +1015,7 @@ export class ClientSession extends Session {
         if (typeof m.dl === 'boolean') g.settings.daylightCycle = m.dl;
         if (typeof m.df === 'string') g.settings.difficulty = m.df;
         this.applySeasons(m.se);
+        if (g.worldEvents) g.worldEvents.syncIn(m.ev); // optional: world events (world/events.js)
         this.setOptions(m);
         this.onRaidStatus(m.rb || null);
         break;
@@ -1169,7 +1172,7 @@ export class ClientSession extends Session {
     const o = m.trades && m.trades[m.i];
     if (!o) return;
     let done = 0;
-    const market = mob && mob.village ? { rep: getRep(g.player, mob.village) } : null; // our copy of the host's reputation
+    const market = mob && mob.village ? tradeMarket(g, mob.village, g.player) : null; // our copy of the host's reputation (and the festival's cut)
     for (let k = 0; k < m.n; k++) {
       const price = offerPrice({ ...o, uses: o.uses - m.n + k }, championDiscount(g.player.effects), market); // a Village Champion pays less; demand raised the price with every use
       if (inv.count(o.give) < price) break;

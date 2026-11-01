@@ -56,6 +56,14 @@ export class Meteors {
     this.cur = null;
   }
 
+  /**
+   * Send a streak down towards the horizon in direction `az` (radians, as in update) lasting `seconds`: the herald of a
+   * meteorite that is about to land (world/events.js). It shows faintly even by day.
+   */
+  launch(az, seconds = 3) {
+    this.cur = { age: 0, life: Math.max(0.6, seconds), from: null, az, el: 1.05, heading: Math.PI / 2, len: 1, always: true };
+  }
+
   /** dt seconds, `dark` 0..1 (how night it is), `starfall` the night is a Starfall, `clear` 0..1 (no overcast). */
   update(dt, dark, starfall, clear) {
     const r = this.rng;
@@ -81,7 +89,7 @@ export class Meteors {
       return [Math.cos(az) * Math.cos(el), Math.sin(el), Math.sin(az) * Math.cos(el)];
     };
     const head = at(k), tail = at(Math.max(0, k - 0.28));
-    const glow = Math.sin(Math.PI * Math.min(1, k)) * dark;
+    const glow = Math.sin(Math.PI * Math.min(1, k)) * (c.always ? Math.max(dark, 0.5) : dark);
     return { head, tail, glow };
   }
 }
