@@ -24,6 +24,7 @@ import { creatureIcon, structureIcon } from './guideArt.js';
 import { MOBS } from '../mobs/mobTypes.js';
 import { ACTIONS, GROUPS, SLOT_KINDS, SLOT_NAMES, resolveBindings, toOverrides, setBinding, codeLabel } from './bindings.js';
 import { COLOR_BLIND_LABELS, nextColorBlind } from './accessibility.js';
+import { TOUCH_MODE_LABELS, SIZE_RANGE, OPACITY_RANGE, nextTouchMode, normalizeTouch, detectTouch, readTouchEnv } from './touchMath.js';
 import { loadPlayerName } from '../net/protocol.js';
 import { grindstoneAccepts, grindstoneResult, grindstoneXp, stonecutterOutputs, stonecutterAccepts, loomResult, loomAcceptsCloth, loomAcceptsDye, LOOM_BATCH } from '../world/workstations.js';
 import { BEACON_POWERS, POWER_LEVEL, SECONDARY, BEACON_PAYMENT, beaconLevel, beamColor, beaconMeta, beaconRange } from '../world/beacons.js';
@@ -74,7 +75,7 @@ export class UI {
 
   get blocking() { return this.open !== null; }
 
-  clear() { if (this.game.input) this.game.input.capture = null; /* a controls screen waiting for a key */ if (this.lazy) { this.lazy.dispose(); this.lazy = null; } this.layer.innerHTML = ''; this.padBack = null; this.padScroll = null; this.padTab = null; this.inGuide = false; this.tooltipEl.classList.add('hidden'); }
+  clear() { if (this.game.input) this.game.input.capture = null; /* a controls screen waiting for a key */ if (this.lazy) { this.lazy.dispose(); this.lazy = null; } this.layer.innerHTML = ''; this.padBack = null; this.padScroll = null; this.padTab = null; this.inGuide = false; this.touchPreview = false; this.tooltipEl.classList.add('hidden'); }
 
   /** Gamepad on a sub-screen of the pause menu: B or Back returns to it, the left stick or D-pad scrolls. */
   padNav(pressed, ly) {
@@ -1175,7 +1176,7 @@ export class UI {
       <button class="btn" data-a="save">Save Game</button>
       <div class="field"><label>Render distance: <b id="rdv">${g.settings.renderDistance}</b> chunks</label><input type="range" min="2" max="16" value="${g.settings.renderDistance}" id="rd"></div>
       <div class="field"><label>Field of view: <b id="fovv">${g.settings.fov}</b></label><input type="range" min="50" max="110" value="${g.settings.fov}" id="fov"></div>
-      <div class="field"><label>Mouse sensitivity: <b id="msv">${g.settings.sensitivity}</b></label><input type="range" min="10" max="200" value="${g.settings.sensitivity}" id="ms"></div>
+      <div class="field"><label>Look sensitivity (mouse and touch): <b id="msv">${g.settings.sensitivity}</b></label><input type="range" min="10" max="200" value="${g.settings.sensitivity}" id="ms"></div>
       <div class="field"><label>Volume: <b id="volv">${Math.round(g.settings.volume * 100)}</b>%</label><input type="range" min="0" max="100" value="${Math.round(g.settings.volume * 100)}" id="vol"></div>
       <div class="field"><label>Music: <b id="musv">${Math.round((g.settings.music ?? 0.5) * 100)}</b>%</label><input type="range" min="0" max="100" value="${Math.round((g.settings.music ?? 0.5) * 100)}" id="mus"></div>
       <div class="field"><label><input type="checkbox" id="sh" ${g.settings.shadows ? 'checked' : ''}> Sun shadows (3 shadow-casting lights)</label></div>
@@ -1192,6 +1193,7 @@ export class UI {
       <div class="btn-row"><button class="btn" data-a="ms">Milestones</button>
       <button class="btn" data-a="stats">Statistics</button></div>
       <button class="btn" data-a="guide">Field Guide (${codeLabel(resolveBindings(g.settings.keys).guide[0])})</button>
+      <button class="btn" data-a="touch">Touch controls: ${g.touch ? 'On' : 'Off'}</button>
       <div class="net-box"></div>
       <button class="btn" data-a="title">${g.net && g.net.isClient ? 'Disconnect' : 'Save &amp; Quit to Title'}</button>
     </div>`);
@@ -1237,6 +1239,33 @@ export class UI {
     s.querySelector('[data-a=guide]').onclick = () => this.showGuide();
     s.querySelector('[data-a=controls]').onclick = () => this.showControls();
     s.querySelector('[data-a=access]').onclick = () => this.showAccessibility();
+    s.querySelector('[data-a=touch]').onclick = () => this.showTouchSettings();
+    this.layer.appendChild(s);
+  }
+
+  /** Touch controls: Auto / On / Off, button size and opacity, left-handed layout (ui/touch.js). */
+  showTouchSettings() {
+    this.clear();
+    this.open = 'pause';
+    const g = this.game, t = normalizeTouch(g.settings);
+    const detected = detectTouch(readTouchEnv());
+    this.touchPreview = true; // the on-screen buttons stay visible behind this screen so size and opacity can be judged
+    const s = el(`<div class="screen pause-screen"><h2>Touch controls</h2>
+      <button class="btn" data-a="mode">Touch controls: ${TOUCH_MODE_LABELS[t.touchMode]}</button>
+      <p class="sub">Auto turns them on for phones and tablets${detected ? ' (this device looks like one)' : ' (this device does not look like one)'}.</p>
+      <div class="field"><label>Button size: <b id="tsv">${t.touchSize}</b>%</label><input type="range" min="${SIZE_RANGE[0]}" max="${SIZE_RANGE[1]}" step="5" value="${t.touchSize}" id="ts"></div>
+      <div class="field"><label>Button opacity: <b id="tov">${t.touchOpacity}</b>%</label><input type="range" min="${OPACITY_RANGE[0]}" max="${OPACITY_RANGE[1]}" step="5" value="${t.touchOpacity}" id="to"></div>
+      <button class="btn" data-a="left">Left-handed layout: ${t.touchLeft ? 'On' : 'Off'}</button>
+      <p class="sub">Left thumb moves (push far to sprint), drag the other side to look, hold to mine. Double-tap Jump to fly in creative mode. Hold a slot for a right click; Split and Quick change the next taps.</p>
+      <button class="btn" data-a="back">Back</button></div>`);
+    const mode = s.querySelector('[data-a=mode]');
+    mode.onclick = () => { const m = nextTouchMode(normalizeTouch(g.settings).touchMode); g.setSetting('touchMode', m); mode.textContent = `Touch controls: ${TOUCH_MODE_LABELS[m]}`; };
+    const bind = (id, lbl, key) => s.querySelector('#' + id).addEventListener('input', (e) => { s.querySelector('#' + lbl).textContent = e.target.value; g.setSetting(key, +e.target.value); });
+    bind('ts', 'tsv', 'touchSize');
+    bind('to', 'tov', 'touchOpacity');
+    const left = s.querySelector('[data-a=left]');
+    left.onclick = () => { const on = !g.settings.touchLeft; g.setSetting('touchLeft', on); left.textContent = `Left-handed layout: ${on ? 'On' : 'Off'}`; };
+    s.querySelector('[data-a=back]').onclick = () => this.showPause();
     this.layer.appendChild(s);
   }
 

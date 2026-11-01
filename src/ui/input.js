@@ -27,6 +27,11 @@ export class Input {
     this.pad = { lx: 0, ly: 0, rx: 0, ry: 0, connected: false };
     this.sprintLatch = false;   // a clicked stick keeps sprinting until you stop pushing forward
     this.virtualAttack = false; this.virtualUse = false;
+    // touch controls (ui/touch.js) press whole actions rather than key codes, and push the stick here
+    this.vdown = new Set();     // actions held by the touch buttons
+    this.vpressed = new Set();  // actions pressed since last consume
+    this.touch = { lx: 0, ly: 0, sprint: false };
+    this.noLock = false;        // touch controls on: never request pointer lock
 
     window.addEventListener('keydown', (e) => {
       if (this.capture) { e.preventDefault(); if (!e.repeat) this.capture(e.code); return; }
@@ -71,10 +76,7 @@ export class Input {
 
   /** Shared by keys and pad buttons: double taps, latches, and the pressed / held sets. */
   noteDown(code) {
-    if (this.keys.jump.includes(code)) {
-      const now = performance.now();
-      if (now - this.lastJumpTap < 280) { this.flyToggle = true; this.lastJumpTap = 0; } else this.lastJumpTap = now;
-    }
+    if (this.keys.jump.includes(code)) this.tapJump();
     if (this.keys.forward.includes(code)) {
       const now = performance.now();
       if (now - this.lastForwardTap < 280) this.doubleTapSprint = true;
@@ -84,6 +86,21 @@ export class Input {
     this.down.add(code);
     this.pressed.add(code);
   }
+
+  /** A jump press: twice within 280 ms toggles creative flight. */
+  tapJump() {
+    const now = performance.now();
+    if (now - this.lastJumpTap < 280) { this.flyToggle = true; this.lastJumpTap = 0; } else this.lastJumpTap = now;
+  }
+
+  /** Touch buttons: an action goes down (it behaves as if one of its keys were pressed). */
+  pressAction(action) {
+    if (action === 'jump') this.tapJump();
+    this.vdown.add(action); this.vpressed.add(action);
+  }
+  releaseAction(action) { this.vdown.delete(action); }
+  /** The thumbstick: x / y as for the gamepad stick (y negative = forward), sprint = pushed far. */
+  setTouchStick(x, y, sprint) { this.touch.lx = x; this.touch.ly = y; this.touch.sprint = !!sprint; }
 
   /**
    * Once per frame, before anything reads the input: poll the first connected gamepad (buttons become
@@ -109,7 +126,8 @@ export class Input {
       this.pad = { lx: 0, ly: 0, rx: 0, ry: 0, connected: false };
       this.sprintLatch = false;
     }
-    const atk = playing && this.is('attack'), use = playing && this.is('use');
+    // (a touch tap can come and go between two frames: the pressed set still counts as one frame held)
+    const atk = playing && (this.is('attack') || this.vpressed.has('attack')), use = playing && (this.is('use') || this.vpressed.has('use'));
     if (atk && !this.virtualAttack) { this.mouse.left = true; this.mouse.leftPressed = true; }
     if (!atk && this.virtualAttack) this.mouse.left = false;
     if (use && !this.virtualUse) { this.mouse.right = true; this.mouse.rightPressed = true; }
@@ -118,14 +136,14 @@ export class Input {
   }
 
   lock() {
-    if (this.locked || !this.canvas.requestPointerLock) return;
+    if (this.locked || this.noLock || !this.canvas.requestPointerLock) return; // (touch screens have no pointer to lock)
     // Browsers refuse to re-lock for ~1 s after Esc; the next click locks instead.
     try { const r = this.canvas.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch { /* ignored */ }
   }
   unlock() { if (document.pointerLockElement) document.exitPointerLock(); }
 
-  is(action) { return this.keys[action].some((k) => this.down.has(k)); }
-  wasPressed(action) { return this.keys[action].some((k) => this.pressed.has(k)); }
+  is(action) { return this.vdown.has(action) || this.keys[action].some((k) => this.down.has(k)); }
+  wasPressed(action) { return this.vpressed.has(action) || this.keys[action].some((k) => this.pressed.has(k)); }
   codePressed(code) { return this.pressed.has(code); }
 
   consumeMouse() {
@@ -135,20 +153,21 @@ export class Input {
   }
   endFrame() {
     this.pressed.clear();
+    this.vpressed.clear();
     this.mouse.leftPressed = this.mouse.rightPressed = this.mouse.middlePressed = false;
   }
 
   movement() {
     const clamp = (v) => Math.max(-1, Math.min(1, v));
-    const forward = clamp((this.is('forward') ? 1 : 0) - (this.is('back') ? 1 : 0) - this.pad.ly); // stick up is negative
-    const strafe = clamp((this.is('right') ? 1 : 0) - (this.is('left') ? 1 : 0) + this.pad.lx);
+    const forward = clamp((this.is('forward') ? 1 : 0) - (this.is('back') ? 1 : 0) - this.pad.ly - this.touch.ly); // stick up is negative
+    const strafe = clamp((this.is('right') ? 1 : 0) - (this.is('left') ? 1 : 0) + this.pad.lx + this.touch.lx);
     if (forward <= 0) this.sprintLatch = false;
     return {
       forward, strafe,
       jump: this.is('jump'),
       sneak: this.is('sneak'),
       crawl: this.is('crawl'),
-      sprint: this.is('sprint') || this.doubleTapSprint || this.sprintLatch,
+      sprint: this.is('sprint') || this.doubleTapSprint || this.sprintLatch || (this.touch.sprint && forward > 0),
     };
   }
 }
