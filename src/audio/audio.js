@@ -1,6 +1,7 @@
 // Procedural Web Audio sound effects (no audio files). Every sound is
 // synthesised from noise and oscillators so all audio is original.
 import { REVERB_DECAYS, roofVoice, rainUnderCover } from './acoustics.js';
+import { parseChimeSound, chimeVoices } from '../world/chimes.js';
 
 // Looping noise layers of the ambient bed (levels come from ambience.js). Each has a slow
 // tremolo (lfo Hz, depth 0..1) so wind swells and crickets pulse.
@@ -204,9 +205,12 @@ export class Audio {
     else if (name === 'step_mud') { this.noise(t, 0.09, 420, 1.2, 0.14 * gain, out); this.tone(t + 0.02, 0.08, 160, 90, 0.05 * gain, out, 'sine'); } // a wet squelch
     else if (name.startsWith('step_')) this.noise(t, 0.07, matFreq * 0.7, 1.5, 0.12 * gain, out);
     else if (name.startsWith('chime_')) {
-      // chime block: 25 semitones from F#3 like the reference note block, a bell-like pair of sines
-      const f = 185 * Math.pow(2, (+name.slice(6) || 0) / 12);
-      this.tone(t, 0.9, f, f * 0.995, 0.22 * gain, out, 'sine'); this.tone(t, 0.5, f * 2.01, f * 2, 0.07 * gain, out, 'sine');
+      // chime block: 25 semitones from F#3, the timbre chosen by the block under it (world/chimes.js)
+      const note = parseChimeSound(name);
+      if (note) for (const v of chimeVoices(note.instrument, note.pitch)) {
+        if (v.k === 'tone') this.tone(t + v.dt, v.dur, v.f0, v.f1, v.gain * gain, out, v.type);
+        else this.noise(t + v.dt, v.dur, v.freq, v.q, v.gain * gain, out, v.filter);
+      }
     }
     else switch (name) {
       case 'pop': this.tone(t, 0.08, 600 + Math.random() * 400, 1400, 0.2 * gain, out, 'triangle'); break;

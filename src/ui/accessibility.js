@@ -1,5 +1,6 @@
 // Accessibility options: sound captions, reduced motion / flashing, and colour-blind friendly HUD
 // palettes. Everything here is pure (no DOM), so game.js, hud.js and the tests share it.
+import { chimeCaption } from '../world/chimes.js';
 
 export const ACCESS_DEFAULTS = { captions: false, reduceMotion: false, reduceFlashing: false, colorBlind: 'off' };
 export const COLOR_BLIND_MODES = ['off', 'redgreen', 'blueyellow'];
@@ -53,7 +54,7 @@ const UI_WHEN_UNPLACED = new Set(['click', 'pop', 'equip', 'page']);
 function prefixedCaption(name) {
   if (name.startsWith('break_')) return 'Block broken';
   if (name.startsWith('place_')) return 'Block placed';
-  if (name.startsWith('chime_')) return 'Chime plays';
+  if (name.startsWith('chime_')) return chimeCaption(name) || 'Chime plays';
   if (name.startsWith('step_') || name.startsWith('hit_')) return null;
   return undefined;
 }

@@ -34,6 +34,7 @@ import { PotRenderer } from './render/pots.js';
 import { BrushSites, isSuspicious, cleanPotFaces } from './world/archaeology.js';
 import { cleanLectern, lecternMeta } from './world/books.js';
 import { projectileHit } from './world/signalBlocks.js';
+import { chimeSoundAt, pitchOf, noteName, noteColor } from './world/chimes.js';
 import { Lightning } from './sky/lightning.js';
 import { snowfall } from './world/randomTicks.js';
 import { igniteTNT, PrimedTNT } from './entities/tnt.js';
@@ -69,7 +70,7 @@ import { EnchantBooks } from './render/enchantBooks.js';
 import { newStand, tickStand } from './world/brewing.js';
 import { effectsColor, effectSwirl } from './player/effects.js';
 import { changeSound, CIRCUIT_BLOCK } from './world/circuits.js';
-import { onChimeChanged } from './mobs/hoverling.js';
+import { onChimeChanged, hearChime } from './mobs/hoverling.js';
 import { FACING6 } from './world/circuitShapes.js';
 import { findStormRod, lightningCleanCopper } from './world/caves.js';
 import { BeaconBeams } from './render/beaconBeams.js';
@@ -862,6 +863,29 @@ export class Game {
     if (!fromNet && this.net && this.net.sendLectern) this.net.sendLectern(x, y, z, s);
   }
 
+  /**
+   * A Chime Block at x,y,z sounds (punched, retuned, or - fromNet - heard from another player): the instrument comes from
+   * the block under it, the pitch from its meta; a coloured note rises from it. Multiplayer: the note is sent on so that
+   * everyone hears a punch (rings from cinnabar signals arrive with the block edits instead).
+   */
+  playChime(x, y, z, { fromNet = false, toast = false } = {}) {
+    const w = this.world;
+    if (w.getBlock(x, y, z) !== B.CHIME_BLOCK) return false;
+    this.audio.play(chimeSoundAt(w, x, y, z), [x + 0.5, y + 0.5, z + 0.5]);
+    this.chimeNote(x, y, z);
+    if (toast && this.hud) this.hud.toast('Note ' + noteName(pitchOf(w.getMeta(x, y, z))));
+    if (!fromNet && this.net && this.net.sendNote) this.net.sendNote(x, y, z);
+    if (!this.net || this.net.isHost) hearChime(this.entities.list, x, y, z, this.ticks); // Hoverlings nearby remember where it rang
+    return true;
+  }
+
+  /** The note particle over a Chime Block: a few specks in a colour that follows its pitch. */
+  chimeNote(x, y, z) {
+    if (!this.particles) return;
+    const [r, g, b] = noteColor(pitchOf(this.world.getMeta(x, y, z)));
+    for (let k = 0; k < 3; k++) this.particles.emit(x + 0.3 + Math.random() * 0.4, y + 1.05, z + 0.3 + Math.random() * 0.4, (Math.random() - 0.5) * 0.02, 0.05 + Math.random() * 0.02, (Math.random() - 0.5) * 0.02, r, g, b, 22, -0.001);
+  }
+
   /** A projectile (kind 'arrow', 'spear', 'snowball', 'egg', 'potion') struck a block at the world point x,y,z: a target block answers. */
   onProjectileHit(hit, x, y, z, kind) {
     if (this.net && this.net.isClient) return; // the host's arrows hit for everyone
@@ -1032,6 +1056,7 @@ export class Game {
       if (!ci.acting && !(this.net && this.net.applyingRemote)) return;
       const s = changeSound(w, x, y, z, old, id);
       if (s) this.audio.play(s, [x + 0.5, y + 0.5, z + 0.5]);
+      if (s && id === B.CHIME_BLOCK) this.chimeNote(x, y, z);
     });
     w.on('circuitFx', (x, y, z, kind) => {
       if (kind === 'burnout') { this.particles.smoke(x + 0.5, y + 0.7, z + 0.5, 6, 0.3); this.audio.play('burnout', [x + 0.5, y + 0.5, z + 0.5]); }
