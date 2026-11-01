@@ -64,6 +64,7 @@ import { UI } from './ui/screens.js';
 import { Input } from './ui/input.js';
 import { resolveBindings } from './ui/bindings.js';
 import { ACCESS_DEFAULTS, CaptionLog, motionScales } from './ui/accessibility.js';
+import { TOUCH_DEFAULTS, normalizeTouch, wantTouch, readTouchEnv } from './ui/touchMath.js';
 import { Audio } from './audio/audio.js';
 import { explode } from './entities/explosion.js';
 import { saveGame, applySave, applyPlayerSave } from './world/save.js';
@@ -104,7 +105,7 @@ const EVENT_FOG = new THREE.Color(); // scratch colour for the dust storm / grou
 export const DIFFICULTIES = ['peaceful', 'easy', 'normal', 'hard'];
 const FIREFLY_BIOMES = new Set(['swamp', 'forest', 'flower_forest', 'blossom_grove', 'mangrove_swamp', 'dark_forest', 'jungle', 'birch_forest']);
 
-export const DEFAULT_SETTINGS = { renderDistance: 8, fov: 75, sensitivity: 100, volume: 0.5, music: 0.5, shadows: true, shaders: true, shadowMapSize: 1024, pixelRatioCap: 1.25, daylightCycle: true, seasons: true, worldEvents: true, hostileMobs: true, fireworksHurtPlayers: false, difficulty: 'normal', showCoords: false, keys: {}, ...ACCESS_DEFAULTS };
+export const DEFAULT_SETTINGS = { renderDistance: 8, fov: 75, sensitivity: 100, volume: 0.5, music: 0.5, shadows: true, shaders: true, shadowMapSize: 1024, pixelRatioCap: 1.25, daylightCycle: true, seasons: true, worldEvents: true, hostileMobs: true, fireworksHurtPlayers: false, difficulty: 'normal', showCoords: false, keys: {}, ...ACCESS_DEFAULTS, ...TOUCH_DEFAULTS };
 
 export class Game {
   constructor(canvas, seed, settings, hooks = {}, saveData = null) {
@@ -112,6 +113,7 @@ export class Game {
     this.saveData = saveData;
     this.seed = seed;
     this.settings = { ...DEFAULT_SETTINGS, ...settings };
+    Object.assign(this.settings, normalizeTouch(this.settings)); // (saved touch settings may be anything)
     this.hooks = hooks;
     this.ticks = 0;
     this.time = 0;            // world time in ticks (drives the suns)
@@ -294,16 +296,14 @@ export class Game {
       const command = this.input.matches('command', e.code);
       if (this.running && !this.ui.blocking && (command || this.input.matches('chat', e.code))) {
         e.preventDefault();
-        this.input.down.clear(); this.input.pressed.clear();
-        this.ui.openChat(command ? '/' : '');
+        this.openChatFrom(command ? '/' : '');
       }
     };
     this.input.onLockChange = (locked) => {
       if (!locked && !this.ui.blocking && this.running) { this.ui.showPause(); }
     };
     this.canvas.addEventListener('click', () => {
-      this.audio.ensure();
-      if (this.audio.ctx && this.audio.ctx.state === 'suspended') this.audio.ctx.resume();
+      this.wakeAudio();
       if (!this.ui.blocking) this.input.lock();
     });
     this._onResize = () => {
@@ -340,14 +340,47 @@ export class Game {
     // the world spawn (used again when the home bed is gone)
     this.worldSpawn = (this.saveData && this.saveData.worldSpawn) || this.worldSpawn || { ...this.player.spawn };
 
+    await this.applyTouch(); // a phone or tablet gets the on-screen controls (ui/touch.js)
     this.running = true;
     this.lastTime = performance.now();
     this.acc = 0;
     requestAnimationFrame((t) => this.frame(t));
   }
 
+  /** Browsers start audio only after a gesture: every click or touch calls this. */
+  wakeAudio() {
+    this.audio.ensure();
+    if (this.audio.ctx && this.audio.ctx.state === 'suspended') this.audio.ctx.resume();
+  }
+
+  /** Open the chat line (from the chat key, or the touch chat button). */
+  openChatFrom(prefix = '') {
+    this.input.down.clear(); this.input.pressed.clear();
+    this.ui.openChat(prefix);
+  }
+
+  /**
+   * Touch controls on or off for the setting (Auto follows the device). The overlay and its listeners
+   * are only built, from a separate chunk, when they are wanted; a desktop never loads them.
+   */
+  async applyTouch() {
+    const wanted = () => wantTouch(this.settings, location.search, readTouchEnv());
+    const want = wanted();
+    if (want && !this.touch && !this._touchLoading) {
+      this._touchLoading = true;
+      try {
+        const { TouchControls } = await import('./ui/touch.js');
+        if (wanted() && !this.touch) this.touch = new TouchControls(this);
+      } finally { this._touchLoading = false; }
+    } else if (!want && this.touch) { this.touch.destroy(); this.touch = null; }
+    if (this.touch) this.touch.applySettings();
+    return !!this.touch;
+  }
+
   setSetting(k, v) {
     this.settings[k] = v;
+    if (k === 'touchMode') this.applyTouch();
+    else if (k.startsWith('touch') && this.touch) this.touch.applySettings();
     if (k === 'renderDistance') this.chunks.setRenderDistance(v);
     if (k === 'fov') { this.camera.fov = v; this.camera.updateProjectionMatrix(); }
     if (k === 'sensitivity') this.input.sensitivity = 0.0022 * v / 100;
@@ -423,6 +456,7 @@ export class Game {
     await this.save();
     if (this.net) this.net.close();
     this.input.unlock();
+    if (this.touch) { this.touch.destroy(); this.touch = null; }
     this.chunks.dispose();
     window.removeEventListener('resize', this._onResize);
     if (this.hooks.quit) this.hooks.quit();
@@ -1298,6 +1332,7 @@ export class Game {
     this.lastTime = now;
     this.governQuality(dt);
     if (dt > 250) dt = 250;
+    if (this.touch) this.touch.sync();
     this.handleFrameInput(dt);
     const pauseSim = this.ui.open === 'pause' && !this.net; // a shared world keeps running
     if (!pauseSim) {

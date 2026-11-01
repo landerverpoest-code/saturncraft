@@ -6,6 +6,7 @@ import { loadGame, deleteSave, listWorlds, renameWorld, MAX_WORLDS } from './wor
 import { startTitleScene, SPLASHES } from './ui/titleScene.js';
 import { loadPlayerName, savePlayerName, normalizeRoomCode } from './net/protocol.js';
 import { takeResume, storeResume, shouldRetryJoin, RECONNECT_MAX, reconnectDelay } from './net/social.js';
+import { wantTouch, readTouchEnv } from './ui/touchMath.js';
 
 const stopTitleScene = startTitleScene(document.getElementById('title-bg'));
 document.getElementById('splash').textContent = SPLASHES[Math.floor(Math.random() * SPLASHES.length)];
@@ -16,6 +17,10 @@ function loadSettings() {
 function saveSettings(s) { try { localStorage.setItem('saturncraft.settings', JSON.stringify(s)); } catch { /* storage unavailable */ } }
 
 const title = document.getElementById('title-screen');
+if (wantTouch(loadSettings(), location.search, readTouchEnv())) {
+  // phones and tablets: the keyboard hints on the title screen would only confuse
+  document.getElementById('controls-hint').textContent = 'Left thumb moves (push far to sprint) · drag to look · hold to mine · Use / Jump / Sneak buttons · Menu for pause and settings';
+}
 const loading = document.getElementById('loading');
 const settings = loadSettings();
 const rd = document.getElementById('t-rd');
@@ -115,7 +120,8 @@ async function start(saveData = null, net = null, slot = null) {
   window.__game = game;
   await game.start((f) => { loading.querySelector('.bar > div').style.width = `${Math.round(f * 100)}%`; });
   loading.classList.add('hidden');
-  game.hud.toast(net ? `Joined ${net.welcome.hostName}'s world · click to play` : 'Click to play · E for inventory · F3 debug');
+  if (game.touch) game.hud.toast(net ? `Joined ${net.welcome.hostName}'s world` : 'Left thumb moves · drag to look · hold to mine');
+  else game.hud.toast(net ? `Joined ${net.welcome.hostName}'s world · click to play` : 'Click to play · E for inventory · F3 debug');
 }
 
 /** Join a friend's world by room code (or join link). `resume`: coming back after a dropped link (tries a few times). */
