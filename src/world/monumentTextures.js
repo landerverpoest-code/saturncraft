@@ -1,24 +1,43 @@
 // Procedural block textures for the Tide Citadel (ocean monument) blocks.
 // Called from textures.js paint() with the shared 16x16 canvas and colour helpers.
 
+import { hashf } from './noise.js';
+
+/** Frames of the animated tidestone texture (tidestone_f0..): a slow shimmer that loops. */
+export const TIDE_FRAMES = 8;
+const th = (x, y, k) => hashf(7001, x, y, k); // (a fixed seed, so every frame has the same mottling and veins)
+const clamp01 = (v) => Math.max(0, Math.min(1, v));
+
+/**
+ * One frame of the tidestone: the same mottled sea-green stone in every frame, with a slow shimmer drifting over it
+ * (each 2x2 patch brightens and dims out of step with its neighbours) and pale veins that glint. The terrain shader
+ * swaps the frames on a timer (render/terrainMaterial.js), so no chunk is ever remeshed for it.
+ */
+export function tidestoneFrame(c, frame, { hex, mix }) {
+  const a = hex('#4f8f86'), b = hex('#6fb3a2'), d = hex('#3b6f6c'), pale = hex('#9fd6c4'), glint = hex('#d4f4ea');
+  const ph = (frame / TIDE_FRAMES) * Math.PI * 2;
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    const base = th(x >> 2, y >> 2, 1) * 0.55 + th(x >> 1, y >> 1, 2) * 0.3 + th(x, y, 0) * 0.15;
+    const n = clamp01(base + Math.sin(ph + th(x >> 1, y >> 1, 3) * Math.PI * 2) * 0.17);
+    c.set(x, y, n < 0.4 ? mix(d, a, n / 0.4) : mix(a, b, (n - 0.4) / 0.6));
+  }
+  for (let k = 0; k < 3; k++) {
+    let x = Math.floor(th(k, 0, 9) * 16), y = Math.floor(th(k, 1, 9) * 16);
+    for (let s = 0; s < 6; s++) {
+      const glow = 0.5 + 0.5 * Math.sin(ph * 2 - s * 0.9 + k * 2);
+      c.set(x & 15, y & 15, mix(pale, glint, glow * 0.7));
+      x += th(k, s, 10) < 0.5 ? 1 : 0; y += 1;
+    }
+  }
+}
+
 /**
  * @param {object} c   Canvas16 (set, get, h, rng, noiseFill)
  * @param {{hex: Function, mix: Function, shade: Function}} u colour helpers
  */
 export const MONUMENT_TEX = {
-  // mottled sea-green stone with lighter veins
-  tidestone: (c, { hex, mix }) => {
-    const a = hex('#4f8f86'), b = hex('#6fb3a2'), d = hex('#3b6f6c');
-    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
-      const n = c.h(x >> 2, y >> 2, 1) * 0.55 + c.h(x >> 1, y >> 1, 2) * 0.3 + c.h(x, y) * 0.15;
-      c.set(x, y, n < 0.4 ? mix(d, a, n / 0.4) : mix(a, b, (n - 0.4) / 0.6));
-    }
-    // a few pale veins
-    for (let k = 0; k < 3; k++) {
-      let x = Math.floor(c.rng() * 16), y = Math.floor(c.rng() * 16);
-      for (let s = 0; s < 6; s++) { c.set(x & 15, y & 15, hex('#9fd6c4')); x += c.rng() < 0.5 ? 1 : 0; y += 1; }
-    }
-  },
+  // mottled sea-green stone with lighter veins (frame 0 of the animation, see tidestoneFrame)
+  tidestone: (c, u) => tidestoneFrame(c, 0, u),
   // tidy blocks of light tidestone with deep teal grout
   tidestone_bricks: (c, { hex, shade }) => {
     const grout = hex('#2f5f5c');
@@ -68,3 +87,5 @@ export const MONUMENT_TEX = {
     for (let x = 0; x < 16; x += 3) c.set(x, 15, hex('#6a8a8a')); // a drip line
   },
 };
+// the frames the shader swaps between (world/textures.js lists them as layers)
+for (let i = 0; i < TIDE_FRAMES; i++) MONUMENT_TEX['tidestone_f' + i] = (c, u) => tidestoneFrame(c, i, u);

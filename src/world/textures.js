@@ -6,7 +6,7 @@ import { ARTS, paintingPart } from './paintings.js';
 import { mulberry32, hash4 } from './noise.js';
 import { DIM_TEX } from './dimensions/dimTextures.js';
 import { CIRCUIT_TEX } from './circuitTextures.js';
-import { MONUMENT_TEX } from './monumentTextures.js';
+import { MONUMENT_TEX, TIDE_FRAMES } from './monumentTextures.js';
 import { CAVE_TEX } from './caveTextures.js';
 import { HUSH_TEX } from './hushTextures.js';
 import { ARCH_TEX } from './archaeologyTextures.js';
@@ -61,6 +61,7 @@ addTex('stonecutter_blank'); addTex('stonecutter_saw'); for (let i = 0; i < 4; i
 for (let i = 0; i < 4; i++) addTex('sweet_berry_bush_' + i);
 for (let i = 0; i < 10; i++) addTex('destroy_' + i);
 addTex('mangrove_propagule_hanging');
+for (let i = 0; i < TIDE_FRAMES; i++) addTex('tidestone_f' + i); // the animated tidestone's frames (swapped in terrainMaterial)
 
 export function texId(name) { return texIndex.get(name); }
 

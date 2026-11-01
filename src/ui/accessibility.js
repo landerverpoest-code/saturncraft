@@ -39,7 +39,7 @@ export const CAPTION_TEXT = {
   fuse: 'Fuse hisses', rail: 'Rail clacks', croak: 'Croak', squish: 'Squish', clank: 'Clank', howl: 'Howl', grind: 'Grinding',
   saw: 'Stonecutter saws', shear: 'Shears snip', hmm: 'Villager mutters', page: 'Pages turn', chest_open: 'Chest opens',
   chest_close: 'Chest closes', drink: 'Drinking', glass_break: 'Glass shatters', brew: 'Brewing', bubble: 'Bubbles', land: 'Landing',
-  rocket: 'Rocket whooshes', rocket_burst: 'Rocket bursts', hush_sensor: 'Sensor trills', shriek: 'Shrieker screams',
+  rocket: 'Rocket whooshes', rocket_burst: 'Rocket bursts', rocket_blast: 'Large rocket booms', rocket_twinkle: 'Sparks crackle', hush_sensor: 'Sensor trills', shriek: 'Shrieker screams',
   hush_heart: 'Heartbeat', hush_growl: 'Deep growl', hush_sniff: 'Sniffing', emerge: 'Something emerges', sonic_charge: 'Sonic charge builds',
   sonic_boom: 'Sonic boom', catalyst: 'Catalyst spreads',
   bird_trill: 'Birdsong', cricket: 'Crickets chirp', owl: 'Owl hoots', drip: 'Water drips', lava_pop: 'Lava bubbles', rift_moan: 'Deep rift moans',

@@ -284,6 +284,8 @@ export class Audio {
       case 'land': this.noise(t, 0.12, 500, 1, 0.4 * gain, out, 'lowpass'); break;
       case 'rocket': this.noise(t, 0.7, 2200, 0.6, 0.3 * gain, out, 'highpass'); this.tone(t, 0.5, 300, 900, 0.06 * gain, out, 'sine'); break;
       case 'rocket_burst': this.noise(t, 0.4, 300, 0.5, 0.7 * gain, out, 'lowpass'); for (let k = 0; k < 6; k++) this.noise(t + 0.15 + Math.random() * 0.6, 0.03, 3500, 4, 0.15 * gain, out); break;
+      case 'rocket_blast': this.noise(t, 0.6, 220, 0.5, 0.9 * gain, out, 'lowpass'); this.tone(t, 0.35, 110, 45, 0.3 * gain, out, 'sine'); for (let k = 0; k < 8; k++) this.noise(t + 0.2 + Math.random() * 0.7, 0.03, 3200, 4, 0.14 * gain, out); break; // a large ball or a star-shaped burst
+      case 'rocket_twinkle': for (let k = 0; k < 9; k++) this.noise(t + Math.random() * 0.5, 0.02, 5200 + Math.random() * 1500, 6, 0.12 * gain, out, 'highpass'); break;
       // the Deep Hush (world/hushSystem.js, mobs/hushkeeper.js)
       case 'hush_sensor': this.tone(t, 0.25, 900, 1500, 0.06 * gain, out, 'sine'); this.noise(t, 0.2, 3000, 6, 0.08 * gain, out); break;
       case 'shriek':

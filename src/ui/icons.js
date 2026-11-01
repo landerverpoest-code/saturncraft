@@ -8,6 +8,7 @@ import { hasEnch, enchLines } from '../world/enchantments.js';
 import { POTIONS } from '../world/potions.js';
 import { bundleFill, bundleWeight, BUNDLE_CAPACITY } from '../world/bundles.js';
 import { SHERDS } from '../world/sherds.js';
+import { fwLines } from '../world/fireworks.js';
 import { BOOK_GENERATIONS, bookGeneration } from '../world/books.js';
 import { EFFECTS, effectLabel, formatTicks, LINGER_DURATION_FACTOR } from '../player/effects.js';
 import { TOOL_TEMPLATES, GEAR_TEMPLATES, paintTemplate, materialRamp, ramp, WOOD_HANDLE } from './toolArt.js';
@@ -421,6 +422,7 @@ export function tooltipHTML(st, extra = '') {
     if (d.potion.lingering) h += '<div class="tt-dura">Thrown: leaves a lingering cloud for 30 s</div>';
     else if (d.potion.splash) h += '<div class="tt-dura">Thrown: affects all within 4 blocks</div>';
   }
+  for (const l of fwLines(st)) h += `<div class="tt-dura">${esc(l)}</div>`; // a Firework Star's or Star Rocket's payload
   if (Array.isArray(st.sherds)) {
     // a Decorated Pot names the sherds on its sides
     for (const f of st.sherds) if (f > 0 && SHERDS[f - 1]) h += `<div class="tt-dura">${esc(SHERDS[f - 1].name)}</div>`;
