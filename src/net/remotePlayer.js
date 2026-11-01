@@ -12,10 +12,12 @@ import { heldLightLevel, ITEMS } from '../world/items.js';
 import { heldSpearModel, lightSpear } from '../render/spearModel.js';
 import { REMOTE_LIGHTS } from '../render/terrainMaterial.js';
 import { colorFromInt, effectSwirl } from '../player/effects.js';
+import { breaksSeat } from './social.js';
+import { applyEmote } from '../render/emotes.js';
 
 const SWING_MS = 300;
 
-function nameTagSprite(name) {
+function nameTagSprite(name, color = '#fff') {
   const c = document.createElement('canvas');
   const ctx = c.getContext('2d');
   ctx.font = 'bold 28px sans-serif';
@@ -24,7 +26,7 @@ function nameTagSprite(name) {
   ctx.font = 'bold 28px sans-serif';
   ctx.fillStyle = 'rgba(0,0,0,0.45)';
   ctx.fillRect(0, 0, w, 40);
-  ctx.fillStyle = '#fff';
+  ctx.fillStyle = color; // the team's colour
   ctx.textBaseline = 'middle';
   ctx.fillText(name, 10, 21);
   const tex = new THREE.CanvasTexture(c);
@@ -54,9 +56,11 @@ export class RemotePlayer {
     this.root = buildModel('player');
     this.root.visible = false;
     for (const k of ['head', 'hair']) this.root.userData.parts[k].rotation.order = 'YXZ';
+    this.tagColor = null;       // team colour of the name tag (net/social.js)
     this.tag = nameTagSprite(name);
     this.tag.position.set(0, 2.25, 0);
     this.root.add(this.tag);
+    this.emote = null;          // { k, at, x, z } while waving, pointing or sitting
     scene.add(this.root);
     this.anim = { id, type: 'player', limbSwing: 0, limbAmount: 0, hurtTime: 0, deathTime: 0, headPitch: 0, angry: false, target: null };
     this.state = null;          // latest received state
@@ -74,6 +78,22 @@ export class RemotePlayer {
       get x() { return rp.shown ? rp.shown.x : rp.x; }, get y() { return rp.shown ? rp.shown.y : rp.y; }, get z() { return rp.shown ? rp.shown.z : rp.z; },
       get yaw() { return rp.bodyYaw; }, get dead() { return !rp.state || !!rp.state.dead; },
     };
+  }
+
+  /** Redraw the name tag in a team colour (or white). */
+  retag(color) {
+    this.tagColor = color;
+    this.root.remove(this.tag);
+    this.tag.material.map.dispose(); this.tag.material.dispose();
+    this.tag = nameTagSprite(this.name, color || '#fff');
+    this.tag.position.set(0, 2.25, 0);
+    this.root.add(this.tag);
+  }
+
+  /** An emote (wave, point, sit) from this player. */
+  playEmote(kind, now = performance.now()) {
+    const p = this.shown || this.state || { x: 0, z: 0 };
+    this.emote = { k: kind, at: now, x: p.x, z: p.z };
   }
 
   /** Light level of what this player holds (0 when nothing lights). */
@@ -113,6 +133,8 @@ export class RemotePlayer {
 
   update(game, sec, now = performance.now()) {
     const s = this.state;
+    const col = this.session && this.session.social ? this.session.social.colorOf(this.name) : null;
+    if (col !== this.tagColor) this.retag(col);
     this.effectSwirl(game, s);
     if (!s || s.dead || s.invisible) { this.root.visible = false; return; } // Invisibility hides the whole player
     this.root.visible = true;
@@ -150,6 +172,10 @@ export class RemotePlayer {
     if (s.riding) parts.legL.rotation.x = parts.legR.rotation.x = -1.4;
     const t = (now - this.swingAt) / SWING_MS;
     if (t >= 0 && t < 1) parts.armR.rotation.x = -Math.sin(t * Math.PI) * 1.6 - 0.3;
+    const em = this.emote;
+    if (em && em.k === 'sit' && breaksSeat(em, cur)) this.emote = null; // walking off ends a seat
+    if (this.emote && s.sleeping) this.emote = null;
+    if (!applyEmote(this.root, this.emote ? this.emote.k : null, now - (this.emote ? this.emote.at : 0)) && this.emote) this.emote = null;
     this.setHeldItem(s.held);
     if (this.item && this.item.userData.spear) lightSpear(this.item, L);
   }

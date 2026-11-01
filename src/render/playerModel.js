@@ -9,6 +9,8 @@ import { SWING_TICKS } from '../player/interaction.js';
 import { wearArmor, lightArmor } from './armorModel.js';
 import { heldSpearModel, lightSpear } from './spearModel.js';
 import { ITEMS } from '../world/items.js';
+import { applyEmote } from './emotes.js';
+import { breaksSeat } from '../net/social.js';
 
 export class PlayerModel {
   constructor(scene) {
@@ -78,6 +80,10 @@ export class PlayerModel {
     const it = game.interaction;
     const t = it.swing > 0 ? Math.min(1, (SWING_TICKS - it.swing + alpha) / SWING_TICKS) : 0;
     if (t > 0) parts.armR.rotation.x = -Math.sin(t * Math.PI) * 1.6 - 0.3;
+    // an emote (wave, point, sit; net/social.js) we played: a seat ends when we walk off
+    const em = game.ownEmote;
+    if (em && em.k === 'sit' && breaksSeat(em, { x, z })) game.ownEmote = null;
+    if (!applyEmote(this.root, game.ownEmote ? game.ownEmote.k : null, performance.now() - (game.ownEmote ? game.ownEmote.at : 0)) && game.ownEmote) game.ownEmote = null;
     const st = p.inventory.selectedStack;
     this.setHeldItem(st ? st.id : null);
     if (this.item && this.item.userData.spear) {

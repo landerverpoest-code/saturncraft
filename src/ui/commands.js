@@ -25,6 +25,7 @@ import { nearestSanctum } from '../world/dimensions/sanctum.js';
 import { EFFECTS, EFFECT_KEYS, effectLabel } from '../player/effects.js';
 import { spawnCaravan } from '../mobs/peddler.js';
 import { SEASON_KEYS, SEASON_NAMES, MIN_DAYS, MAX_DAYS, DAY_TICKS } from '../world/seasons.js';
+import { EMOTES, emoteByName, gamemodeLabel } from '../net/social.js';
 
 /** item lookup by key ("diamond_sword", "oak_planks", "grass_block") and by display name */
 let ITEM_KEYS = null;
@@ -89,6 +90,9 @@ export const HELP = [
   '/raid <patrol|start [level]|stop|status>',
   '/caravan  (a Roving Peddler and its Packhorns camp nearby)',
   '/kill,  /clear,  /spawnpoint,  /seed,  /heal',
+  'Multiplayer: /list (who is here),  /msg <player> <text> (also /w, /tell; /r answers),  /ping (beacon for your team, key B),  /emote <wave|point|sit> (key V)',
+  '  /team create <name> [color],  /team join <name>,  /team leave,  /team list,  /team ff <on|off>,  /team color <color>,  /tc <text> (team chat)',
+  '  /spectate [player|next|off] (dead or creative players follow a friend);  host and ops: /kick <player> [reason],  /ban <player> [reason],  /pardon <player>,  /banlist;  host: /op, /deop, /oplist',
 ];
 
 export function runCommand(game, text) {
@@ -278,6 +282,33 @@ export function runCommand(game, text) {
     case 'spawnpoint': p.spawn = { x: p.x, y: p.y, z: p.z }; p.bed = null; return `Set spawn point to ${Math.floor(p.x)}, ${Math.floor(p.y)}, ${Math.floor(p.z)}`;
     case 'seed': return `Seed: [${game.seed}]`;
     case 'dimension': case 'dim': return game.dims ? game.dims.command(args[0]) : 'Dimensions unavailable';
+    // ---- multiplayer social layer (net/social.js); the host runs the ones that change shared state
+    case 'msg': case 'w': case 'tell': case 'm': case 'r': case 'team': case 'tc':
+    case 'kick': case 'ban': case 'pardon': case 'banlist': case 'op': case 'deop': case 'oplist':
+      if (!game.net) return 'This is for shared worlds: press Esc and choose Open to Friends first';
+      return game.net.socialCommand(text);
+    case 'list': case 'players': {
+      if (!game.net) return 'Just you - nobody else is here';
+      const rows = game.net.playerRows();
+      return [`Players (${rows.length}):`, ...rows.map((r) => `  ${r.name}${r.host ? ' (host)' : ''}${r.team ? ' [' + r.team + ']' : ''} - ${gamemodeLabel(r.gamemode)}${r.ping >= 0 ? ' - ' + r.ping + ' ms' : ''}`)];
+    }
+    case 'ping':
+      if (!game.net) return 'Pings are for shared worlds';
+      return game.net.pingAtCrosshair() ? 'Pinged' : null;
+    case 'emote': {
+      const e = emoteByName(args[0]);
+      if (!e) return `Usage: /emote <${EMOTES.join('|')}>  (or press V)`;
+      if (game.net) game.net.emote(e); else game.ownEmote = { k: e, at: performance.now(), x: p.x, z: p.z }; // visible in the third-person views
+      return null;
+    }
+    case 'spectate': case 'spec': {
+      const net = game.net;
+      if (!net) return 'You can only follow a friend in a shared world';
+      const a = (args[0] || '').toLowerCase();
+      if (a === 'off' || a === 'stop' || (!a && net.spectate)) return net.stopSpectate() ? 'You stopped following' : 'You are not following anybody';
+      if (net.spectate && (a === 'next' || a === 'prev')) { net.cycleSpectate(a === 'prev' ? -1 : 1); return null; }
+      return net.startSpectate(a === 'next' || a === 'prev' ? null : args[0]) || null;
+    }
     case 'locate': {
       const what = (args[0] || '').toLowerCase();
       if (what === 'sanctum') {
