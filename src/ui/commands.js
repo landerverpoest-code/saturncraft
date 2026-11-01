@@ -64,7 +64,7 @@ function nextTime(t0, pred) {
 }
 
 /** Game rules: command name -> settings key. */
-export const GAME_RULES = { doDaylightCycle: 'daylightCycle', doSeasons: 'seasons', doHostileSpawning: 'hostileMobs', fireworksHurtPlayers: 'fireworksHurtPlayers' };
+export const GAME_RULES = { doDaylightCycle: 'daylightCycle', doSeasons: 'seasons', doHostileSpawning: 'hostileMobs', doWorldEvents: 'worldEvents', fireworksHurtPlayers: 'fireworksHurtPlayers' };
 /** Rules that are off unless set (the others are on unless set to false). */
 export const RULES_DEFAULT_OFF = new Set(['fireworksHurtPlayers']);
 /** The current value of a game rule setting key. */
@@ -73,7 +73,8 @@ export const ruleValue = (settings, key) => (RULES_DEFAULT_OFF.has(key) ? settin
 export const HELP = [
   '/gamemode <survival|creative|adventure|spectator>  (or /gm 0|1|2|3)',
   '/time set <day|night|noon|midnight|ticks>,  /time add <ticks>,  /time query',
-  '/gamerule doDaylightCycle <true|false>,  /gamerule doSeasons <true|false>,  /gamerule doHostileSpawning <true|false>,  /gamerule fireworksHurtPlayers <true|false>',
+  '/gamerule doDaylightCycle <true|false>,  /gamerule doSeasons <true|false>,  /gamerule doHostileSpawning <true|false>,  /gamerule doWorldEvents <true|false>,  /gamerule fireworksHurtPlayers <true|false>',
+  '/event  (list),  /event trigger <starfall|dust|fog|festival|hush>,  /event stop <kind|all>  (world events: creative players and the host)',
   '/season  (query),  /season set <spring|summer|autumn|winter>,  /season length <days>',
   '/difficulty <peaceful|easy|normal|hard>',
   '/weather <clear|rain|thunder> [ticks]',
@@ -148,6 +149,7 @@ export function runCommand(game, text) {
       }
       return 'Usage: /season [query],  /season set <spring|summer|autumn|winter>,  /season length <days>';
     }
+    case 'event': case 'events': return game.worldEvents ? game.worldEvents.command(args) : 'There are no world events here';
     case 'difficulty': {
       const v = (args[0] || '').toLowerCase();
       if (!v) return `The difficulty is ${game.difficulty}`;

@@ -266,7 +266,7 @@ export class Player {
       jump: input.jump && !this.crawling && (this.jumpCooldown === 0 || b.inWater || b.inLava),
       sprint: this.sprinting, sneak: this.sneaking, crawl: this.crawling, swim: this.swimming, pitch: this.pitch,
       flying: this.flying, descend: this.flying && !!input.sneak,
-      speed: PHYS.WALK_SPEED * speedFactor(fx),
+      speed: PHYS.WALK_SPEED * speedFactor(fx) * (this.eventSlow || 1), // a dust storm slows travellers (world/events.js)
       jumpFactor: 1 + jumpBonus(fx) / PHYS.JUMP_VELOCITY,
       slowFall: !!fx.slow_falling,
       levitation: effectLevel(fx, 'levitation'),

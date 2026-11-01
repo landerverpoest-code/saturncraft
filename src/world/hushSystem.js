@@ -78,6 +78,9 @@ export class HushSystem {
   /** The frequency a Calibrated Hush Sensor is tuned to: the cinnabar signal reaching it from any side (0 = untuned, hears all). */
   tuning(x, y, z) { return powerInto(this.game.world, x, y, z); }
 
+  /** Sensors hear further on a Hush Night (world/events.js); 1 otherwise. */
+  rangeMul() { const e = this.game.worldEvents; return e ? e.sensorRangeMul() : 1; }
+
   get now() { return this.game.ticks; }
   playerName(p) { return (p && p.netName) || 'player'; }
 
@@ -156,13 +159,13 @@ export class HushSystem {
     if (this.noises.length > 48) this.noises.shift();
     const out = { sensors: [], shrieked: [], level: -1 };
     if (g.net && g.net.isClient) return out;
-    const near = findListeners(w, x, y, z, CALIBRATED_RANGE, LISTENERS);
+    const mul = this.rangeMul(), near = findListeners(w, x, y, z, Math.ceil(CALIBRATED_RANGE * mul), LISTENERS);
     if (!near.length) return out;
     const getBlock = (a, b, c) => w.getBlock(a, b, c);
     const ev = { x, y, z, kind, freq: vibrationFrequency(kind), player, steppedOn, shriekers: near.filter((s) => s.id === B.HUSH_SHRIEKER && s.d <= VIBRATION_RANGE) };
     let heard = false;
     for (const s of near) {
-      if (s.id === B.HUSH_SHRIEKER || s.d > sensorRange(s.id)) continue;
+      if (s.id === B.HUSH_SHRIEKER || s.d > sensorRange(s.id) * mul) continue;
       if (occluded(getBlock, x, y, z, s.x + 0.5, s.y + 0.5, s.z + 0.5)) continue; // wool in the way
       const delay = travelTicks(s.d, this.travel);
       if (delay > 0) {
@@ -194,7 +197,7 @@ export class HushSystem {
   hear(ev, s) {
     const w = this.game.world, now = this.now, id = w.getBlock(s.x, s.y, s.z);
     if (id !== B.HUSH_SENSOR && id !== B.CALIBRATED_HUSH_SENSOR) return false;
-    const k = `${s.x},${s.y},${s.z}`, range = sensorRange(id);
+    const k = `${s.x},${s.y},${s.z}`, range = sensorRange(id) * this.rangeMul();
     if (!sensorHears(s.d, w.getMeta(s.x, s.y, s.z), this.rest.get(k) || 0, now, range)) return false;
     if (id === B.CALIBRATED_HUSH_SENSOR && !calibratedHears(ev.freq, this.tuning(s.x, s.y, s.z))) return false;
     this.rest.set(k, now + SENSOR_PULSE + SENSOR_REST);

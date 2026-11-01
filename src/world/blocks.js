@@ -783,6 +783,11 @@ for (const [key, name, tex] of [['MASONRY_BENCH', 'Masonry Bench', 'masonry_benc
   def(B[key], name, { hardness: 2.5, resistance: 2.5, tool: TOOL.AXE, sound: 'wood', flammable: true, tex: { top: `${tex}_top`, bottom: 'spruce_planks', side: `${tex}_side`, front: `${tex}_front` } });
 }
 
+// Starfall Core (world/events.js): the glowing heart a fallen meteorite leaves at the bottom of its crater. It drops itself
+// when mined with an iron pickaxe or better, and lights its surroundings like a lantern.
+ext('STARFALL_CORE');
+def(B.STARFALL_CORE, 'Starfall Core', { hardness: 4, resistance: 8, tool: TOOL.PICKAXE, tier: TIER.IRON, sound: 'stone', emit: 13, tex: { all: 'starfall_core' } });
+
 export const NUM_BLOCKS = BLOCKS.length;
 
 // Flat lookup tables used by hot loops (mesher, lighting, physics) and workers.

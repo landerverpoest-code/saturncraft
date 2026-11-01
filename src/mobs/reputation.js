@@ -13,6 +13,7 @@ export const REP = {
   gift: 3, // an item the settler's trade has a use for
   treasure: 5, // beryl, gold, diamonds
   raid: 20, // a raid won while in the village
+  festival: 2, // staying for the Lantern Festival (world/events.js)
   hit: -3, // hitting a settler
   kill: -25, // killing one
 };
