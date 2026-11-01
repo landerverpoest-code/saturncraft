@@ -5,6 +5,8 @@
 //  * the distances walked, swum and glided are blocks (floats) added up from the per-tick movement,
 //  * play time counts the ticks the world has run under the player (20 per second).
 // Pure rules are exported for the tests.
+import { newGuide, loadGuide, guideOf, discover, LEVEL } from './fieldGuide.js';
+
 export const TICKS_PER_SECOND = 20;
 /** A move longer than this in one tick is a teleport, a respawn or a portal, not travel. */
 export const MAX_STEP = 4;
@@ -13,7 +15,7 @@ const MAX_KINDS = 200;
 const COUNTERS = ['blocksMined', 'blocksPlaced', 'kills', 'deaths', 'trades', 'walked', 'swum', 'glided', 'ticks'];
 
 /** Fresh statistics. */
-export const newStats = () => ({ blocksMined: 0, blocksPlaced: 0, kills: 0, killsBy: {}, deaths: 0, trades: 0, walked: 0, swum: 0, glided: 0, ticks: 0 });
+export const newStats = () => ({ blocksMined: 0, blocksPlaced: 0, kills: 0, killsBy: {}, deaths: 0, trades: 0, walked: 0, swum: 0, glided: 0, ticks: 0, guide: newGuide() });
 
 const num = (v) => (Number.isFinite(v) && v > 0 ? v : 0);
 
@@ -21,6 +23,7 @@ const num = (v) => (Number.isFinite(v) && v > 0 ? v : 0);
 export function loadStats(d) {
   const s = newStats();
   if (!d || typeof d !== 'object') return s;
+  s.guide = loadGuide(d.guide); // the Field Guide's discoveries (player/fieldGuide.js)
   for (const k of COUNTERS) s[k] = num(d[k]);
   for (const k of ['blocksMined', 'blocksPlaced', 'kills', 'deaths', 'trades', 'ticks']) s[k] = Math.floor(s[k]);
   if (d.killsBy && typeof d.killsBy === 'object') {
@@ -42,6 +45,7 @@ export function recordKill(s, type) {
   if (!type) return;
   if (!s.killsBy) s.killsBy = {};
   s.killsBy[type] = (s.killsBy[type] | 0) + 1;
+  discover(guideOf(s), 'creatures', type, LEVEL.KILLED, s.ticks | 0); // a defeated creature is in the Field Guide for good
 }
 
 /**

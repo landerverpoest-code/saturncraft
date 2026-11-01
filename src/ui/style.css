@@ -355,3 +355,18 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 #season-label[data-season="summer"] { color: #f4d35e; }
 #season-label[data-season="autumn"] { color: #f0a050; }
 #season-label[data-season="winter"] { color: #a9d4f5; }
+
+/* Field Guide (ui/screens.js showGuide; player/fieldGuide.js) */
+.guide-tabs { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 8px; }
+.btn.guide-tab { min-width: 0; width: auto; padding: 6px 12px; font-size: 14px; }
+.btn.guide-tab.on { border-color: var(--accent); background: linear-gradient(#8a6a2a, #5e4a20); }
+.guide-tabs, .guide-body { width: min(680px, 94vw); }
+.guide-body { max-height: 56vh; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 8px; outline-offset: 3px; text-align: left; }
+.guide-body:focus-visible, .guide-screen .btn:focus-visible { outline: 2px solid #f0b04a; }
+.guide-card { display: flex; gap: 10px; align-items: flex-start; padding: 8px; background: rgba(255,255,255,.06); border-radius: 4px; }
+.guide-card img { flex: none; width: 56px; height: 56px; image-rendering: pixelated; background: rgba(0,0,0,.25); border-radius: 4px; }
+.guide-card.unknown img { filter: brightness(0) opacity(.55); }
+.guide-card.unknown b { color: #9a9a9a; }
+.guide-info { min-width: 0; font-size: 13px; }
+.guide-info .d { color: #d8d0c0; margin-top: 2px; overflow-wrap: anywhere; }
+@media (max-width: 560px) { .guide-body { grid-template-columns: 1fr; } }
