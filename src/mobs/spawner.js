@@ -18,6 +18,7 @@ import { attemptDimensionSpawn } from './dimensionMobs.js';
 import { BIOMES } from '../world/biomes.js';
 import { outpostsNear } from '../world/temples.js';
 import { hutsNear, hutAt } from '../world/swampHuts.js';
+import { seasonalCreatureCap } from '../world/seasons.js';
 import { igloosNear, basementLayout } from '../world/igloos.js';
 import { sunkenRuinsNear, sunkenGuardSpots } from '../world/sunkenRuins.js';
 import { sunTombsNear, tombGuardSpots } from '../world/sunTombs.js';
@@ -303,7 +304,7 @@ export class MobSpawner {
     }
     hollowSpawnTick(this); // Hoverlings drifting through Hollow Cities
     caravanTick(this); // a Roving Peddler with Packhorns now and then (mobs/peddler.js)
-    if (g.ticks % CREATURE_SPAWN_INTERVAL === 0 && creatures < scaledCap(CATEGORY.CREATURE, chunks.length)) {
+    if (g.ticks % CREATURE_SPAWN_INTERVAL === 0 && creatures < seasonalCreatureCap(scaledCap(CATEGORY.CREATURE, chunks.length))) { // (more animals in spring, fewer in winter)
       for (const [cx, cz] of chunks) creatures += this.attempt(cx, cz, CATEGORY.CREATURE);
     }
   }

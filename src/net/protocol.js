@@ -316,7 +316,7 @@ export function roomFor(slots, st, maxStackOf, stackable = true) {
 }
 
 /** Chat commands that change the shared world: guests have the host run them. */
-export const WORLD_COMMANDS = new Set(['time', 'weather', 'gamerule', 'summon', 'dimension', 'dim']);
+export const WORLD_COMMANDS = new Set(['time', 'weather', 'gamerule', 'season', 'summon', 'dimension', 'dim']);
 export function commandName(text) { return (String(text).trim().replace(/^\//, '').split(/\s+/)[0] || '').toLowerCase(); }
 
 // ---- armour stands: a guest's request and the host's answer -------------------------------

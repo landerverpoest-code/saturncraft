@@ -5,6 +5,7 @@ import { generateTextureData, TEX_NAMES, TEX_SIZE, texId } from '../world/textur
 import { CLOUD_Y } from '../sky/clouds.js';
 import { HUSH_PULSE } from '../world/hushTextures.js';
 import { TIDE_FRAMES } from '../world/monumentTextures.js';
+import { BLOCKS } from '../world/blocks.js';
 
 // How strongly each light-giving texture glows when shaders are on (its bright
 // pixels are pushed above white so the bloom pass haloes them).
@@ -16,9 +17,20 @@ for (let i = 0; i < 8; i++) GLOW['fire_' + i] = 1;
 GLOW.hush_tendril_active = 0.9; GLOW.hush_catalyst_side = 0.5; GLOW.hush_catalyst_top = 0.5;
 // Deep Hush tiles (green channel): their bright cyan specks glow in slow waves, shaders on or off
 const PULSE = new Set(HUSH_PULSE);
+// Seasonal tint classes (blue channel of the same lookup): 1 = grass-tinted tiles, 2 = leaf-tinted tiles. The
+// shader shifts their colour with a few uniforms, so a season change never remeshes a chunk (world/seasons.js).
+function seasonTiles() {
+  const cls = new Map();
+  for (const d of BLOCKS) {
+    if (!d || !d.tint || !d.tex) continue;
+    if (d.tint === 'grass') cls.set(d.tex.top, 1); // (grass blocks are tinted on top only; tall grass is one tile)
+    else for (const n of new Set([d.tex.top, d.tex.side, d.tex.bottom])) if (n) cls.set(n, 2); // foliage, birch and spruce leaves, vines
+  }
+  return cls;
+}
 function glowTexture() {
-  const w = Math.max(512, TEX_NAMES.length), data = new Uint8Array(w * 4);
-  TEX_NAMES.forEach((n, i) => { if (GLOW[n]) data[i * 4] = Math.round(GLOW[n] * 200); if (PULSE.has(n)) data[i * 4 + 1] = 255; });
+  const w = Math.max(512, TEX_NAMES.length), data = new Uint8Array(w * 4), season = seasonTiles();
+  TEX_NAMES.forEach((n, i) => { if (GLOW[n]) data[i * 4] = Math.round(GLOW[n] * 200); if (PULSE.has(n)) data[i * 4 + 1] = 255; if (season.has(n)) data[i * 4 + 2] = season.get(n); });
   const t = new THREE.DataTexture(data, w, 1, THREE.RGBAFormat);
   t.needsUpdate = true;
   return t;
@@ -50,6 +62,12 @@ export const terrainUniforms = {
   uSkyTop: { value: new THREE.Color(0.3, 0.5, 0.9) },
   uSkyLow: { value: new THREE.Color(0.7, 0.8, 1.0) },
   uWet: { value: 0 },
+  // seasons: tint targets [r, g, b, strength] for grass and leaves, frost 0..1, autumn colour variety; uSeasonOn 0 = off (world/seasons.js)
+  uSeasonOn: { value: 0 },
+  uSeasonGrass: { value: new THREE.Vector4(1, 1, 1, 0) },
+  uSeasonLeaf: { value: new THREE.Vector4(1, 1, 1, 0) },
+  uSeasonFrost: { value: 0 },
+  uSeasonVar: { value: 0 },
   uCloudTex: { value: null },
   uCloud: { value: new THREE.Vector4(0, 0, 1, 0) }, // cover texture corner x, z, its size in blocks, shadow strength // how wet the open ground looks (rain)
 };
@@ -86,6 +104,9 @@ uniform float uTime;
 uniform float uWind;
 varying float vWave;
 varying float vUnder;
+flat varying float vSeasonCls;
+uniform float uSeasonOn;
+uniform sampler2D uGlowTiles;
 ${water ? 'varying vec3 vWN; uniform vec2 uWaterTiles; uniform float uGlow;' : ''}`)
       .replace('#include <begin_vertex>', `#include <begin_vertex>
 vTuv = tuv;
@@ -111,6 +132,7 @@ ${water ? `if (uGlow > 0.0 && (abs(lit.w - uWaterTiles.x) < 0.5 || abs(lit.w - u
   vWorld.y += wv * 0.035 - 0.04;
 }` : ''}
 vTile = lit.w;
+vSeasonCls = uSeasonOn > 0.5 ? texelFetch(uGlowTiles, ivec2(int(lit.w + 0.5), 0), 0).b * 255.0 : 0.0;
 ${water ? 'vWN = normal;' : ''}
 vShade = abs(normal.y) > 0.5 ? (normal.y > 0.0 ? 1.0 : 0.55) : (abs(normal.z) > 0.5 ? 0.82 : 0.68);
 `);
@@ -138,6 +160,11 @@ varying float vShade;
 flat varying float vTile;
 varying float vWave;
 varying float vUnder;
+flat varying float vSeasonCls;
+uniform vec4 uSeasonGrass;
+uniform vec4 uSeasonLeaf;
+uniform float uSeasonFrost;
+uniform float uSeasonVar;
 uniform vec3 uSunDir;
 uniform vec3 uSunCol;
 uniform vec3 uSkyTop;
@@ -153,7 +180,21 @@ float lightCurve(float f) {
   float g = 1.0 - pow(1.0 - b, 4.0);
   return mix(b, g, 0.55);
 }`)
-      .replace('#include <color_fragment>', 'diffuseColor.rgb *= pow(vColor, vec3(2.2));')
+      .replace('#include <color_fragment>', `diffuseColor.rgb *= pow(vColor, vec3(2.2));
+if (vSeasonCls > 0.5) {
+  // the season's grass and leaf colours (autumn leaves vary from tree to tree), and winter's frost on cold ground
+  bool leaf = vSeasonCls > 1.5;
+  vec4 sT = leaf ? uSeasonLeaf : uSeasonGrass;
+  float lum = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+  vec3 target = sT.rgb;
+  if (leaf && uSeasonVar > 0.0) target = mix(target, vec3(2.2, 1.45, 0.2), uSeasonVar * 0.7 * fract(sin(dot(floor(vWorld.xz * 0.2), vec2(12.9898, 78.233))) * 43758.5453));
+  diffuseColor.rgb = mix(diffuseColor.rgb, lum * target, sT.a);
+  if (uSeasonFrost > 0.0) {
+    float cold = 0.25 + 0.75 * smoothstep(-0.1, 0.2, vColor.b - vColor.r);
+    float fr = uSeasonFrost * cold * (leaf ? (vShade > 0.99 ? 0.55 : 0.15) : 0.9);
+    diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.72, 0.8, 0.88), fr * 0.85);
+  }
+}`)
       .replace('#include <map_fragment>', `
 vec2 tuv = vTuv;
 ${water ? 'if (abs(vTile - uWaterTiles.x) < 0.5) tuv += vec2(uTime * 0.02, uTime * 0.035); // still water drifts (not ice or glass)' : ''}

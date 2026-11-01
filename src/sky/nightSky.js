@@ -32,11 +32,11 @@ export function nightCharacter(day) {
  * `combined` the blended sunlight (0 at night), `rain` 0..1. Cold biomes see it most nights;
  * warm ones only on the great nights, and faintly.
  */
-export function auroraTarget(temp, combined, rain, day) {
+export function auroraTarget(temp, combined, rain, day, boost = 1) {
   const dark = Math.min(1, Math.max(0, 1 - combined * 3));
   if (dark <= 0 || rain >= 1) return 0;
   const n = nightCharacter(day);
-  const base = 0.06 + 0.94 * coldness(temp);
+  const base = (0.06 + 0.94 * coldness(temp)) * boost; // boost: winter's long nights (world/seasons.js climate.veil)
   const v = Math.min(1, base * n.veil * (n.great ? 1.8 : 1));
   return v * dark * (1 - rain);
 }

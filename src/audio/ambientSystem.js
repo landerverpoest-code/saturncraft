@@ -7,6 +7,7 @@
 import { BLOCKS, B } from '../world/blocks.js';
 import { BIOMES } from '../world/biomes.js';
 import { pickSoundscape, emptyFacts, bedFor, AmbientDirector, musicProfileFor } from './ambience.js';
+import { climate } from '../world/seasons.js';
 import { measureRoom, reverbFor, roofMaterial } from './acoustics.js';
 
 /** Sound material of a solid block, or null for anything sound passes through (air, plants, liquids). */
@@ -61,8 +62,8 @@ export class AmbientSystem {
     this.scape = pickSoundscape(f);
     this.musicProfile = musicProfileFor(this.scape);
     // looping bed (the rain has its own layer in Audio.setRain)
-    a.setBed(bedFor(this.scape, f.night));
-    for (const e of this.director.tick(dt, this.scape, f.night)) {
+    a.setBed(bedFor(this.scape, f.night, climate.on ? climate.amb : null));
+    for (const e of this.director.tick(dt, this.scape, f.night, climate.on ? climate.amb : null)) {
       a.play(e.sound, [p.x + e.dx, p.y + 1.6 + e.dy, p.z + e.dz], e.vol);
     }
     // room acoustics and the roof, measured from the head

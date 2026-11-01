@@ -348,3 +348,10 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 .trade-head .trade-gift { padding: 3px 10px; min-width: 0; width: auto; font-size: 12px; }
 .trade-head .trade-gift:disabled { opacity: .45; cursor: default; }
 .trade-row .slot.pricey { outline: 2px solid #d25a5a; outline-offset: -2px; }
+
+/* seasons (world/seasons.js): the calendar under the sun widget */
+#season-label { margin-top: 2px; font-size: 11px; font-weight: 600; letter-spacing: .02em; }
+#season-label[data-season="spring"] { color: #9fe08a; }
+#season-label[data-season="summer"] { color: #f4d35e; }
+#season-label[data-season="autumn"] { color: #f0a050; }
+#season-label[data-season="winter"] { color: #a9d4f5; }

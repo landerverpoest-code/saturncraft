@@ -98,7 +98,7 @@ export async function saveGame(game) {
     name: game.worldName || `World ${game.saveSlot || 1}`,
     seed: game.seed,
     time: game.time,
-    gameRules: { doDaylightCycle: game.settings.daylightCycle !== false, doHostileSpawning: game.settings.hostileMobs !== false, fireworksHurtPlayers: game.settings.fireworksHurtPlayers === true, difficulty: game.difficulty },
+    gameRules: { doDaylightCycle: game.settings.daylightCycle !== false, doSeasons: game.settings.seasons !== false, doHostileSpawning: game.settings.hostileMobs !== false, fireworksHurtPlayers: game.settings.fireworksHurtPlayers === true, difficulty: game.difficulty },
     savedAt: Date.now(),
     player: playerSaveData(p),
     furnaces: [...game.furnaces.values()],
@@ -113,6 +113,7 @@ export async function saveGame(game) {
     hoppers: [...(game.hoppers || new Map()).values()].map((h) => ({ x: h.x, y: h.y, z: h.z, slots: h.slots })),
     dispensers: [...(game.dispensers || new Map()).values()].map((d) => ({ x: d.x, y: d.y, z: d.z, slots: d.slots })),
     worldSpawn: game.worldSpawn,
+    seasons: game.seasons ? game.seasons.save() : undefined, // season length and the calendar offset set by /season (world/seasons.js)
     weather: game.weather.save(),
     milestones: game.milestones.save(),
     stats: saveStats(p.stats), // blocks, distances, kills, deaths, trades and play time (player/stats.js)
@@ -195,12 +196,14 @@ export function applySave(game, data) {
   // the world remembers its own rules (older saves keep the player's settings)
   if (data.gameRules) {
     if (typeof data.gameRules.doDaylightCycle === 'boolean') game.settings.daylightCycle = data.gameRules.doDaylightCycle;
+    if (typeof data.gameRules.doSeasons === 'boolean') game.settings.seasons = data.gameRules.doSeasons;
     if (typeof data.gameRules.doHostileSpawning === 'boolean') game.settings.hostileMobs = data.gameRules.doHostileSpawning;
     game.settings.fireworksHurtPlayers = data.gameRules.fireworksHurtPlayers === true; // (off unless the world turned it on)
     if (['peaceful', 'easy', 'normal', 'hard'].includes(data.gameRules.difficulty)) game.settings.difficulty = data.gameRules.difficulty;
   }
   game.netPlayers = data.netPlayers || {};
   game.weather.load(data.weather);
+  if (game.seasons) { game.seasons.load(data.seasons); game.seasons.enabled = game.settings.seasons !== false; }
   game.milestones.load(data.milestones);
   game.player.stats = loadStats(data.stats);
   if (game.raids) game.raids.load(data.raids);

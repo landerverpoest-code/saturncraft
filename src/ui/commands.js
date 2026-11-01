@@ -24,6 +24,7 @@ import { villageInRegion, VILLAGE_REGION } from '../world/villages.js';
 import { nearestSanctum } from '../world/dimensions/sanctum.js';
 import { EFFECTS, EFFECT_KEYS, effectLabel } from '../player/effects.js';
 import { spawnCaravan } from '../mobs/peddler.js';
+import { SEASON_KEYS, SEASON_NAMES, MIN_DAYS, MAX_DAYS, DAY_TICKS } from '../world/seasons.js';
 
 /** item lookup by key ("diamond_sword", "oak_planks", "grass_block") and by display name */
 let ITEM_KEYS = null;
@@ -63,7 +64,7 @@ function nextTime(t0, pred) {
 }
 
 /** Game rules: command name -> settings key. */
-export const GAME_RULES = { doDaylightCycle: 'daylightCycle', doHostileSpawning: 'hostileMobs', fireworksHurtPlayers: 'fireworksHurtPlayers' };
+export const GAME_RULES = { doDaylightCycle: 'daylightCycle', doSeasons: 'seasons', doHostileSpawning: 'hostileMobs', fireworksHurtPlayers: 'fireworksHurtPlayers' };
 /** Rules that are off unless set (the others are on unless set to false). */
 export const RULES_DEFAULT_OFF = new Set(['fireworksHurtPlayers']);
 /** The current value of a game rule setting key. */
@@ -72,7 +73,8 @@ export const ruleValue = (settings, key) => (RULES_DEFAULT_OFF.has(key) ? settin
 export const HELP = [
   '/gamemode <survival|creative|adventure|spectator>  (or /gm 0|1|2|3)',
   '/time set <day|night|noon|midnight|ticks>,  /time add <ticks>,  /time query',
-  '/gamerule doDaylightCycle <true|false>,  /gamerule doHostileSpawning <true|false>,  /gamerule fireworksHurtPlayers <true|false>',
+  '/gamerule doDaylightCycle <true|false>,  /gamerule doSeasons <true|false>,  /gamerule doHostileSpawning <true|false>,  /gamerule fireworksHurtPlayers <true|false>',
+  '/season  (query),  /season set <spring|summer|autumn|winter>,  /season length <days>',
   '/difficulty <peaceful|easy|normal|hard>',
   '/weather <clear|rain|thunder> [ticks]',
   '/tp <x> <y> <z>  (~ for relative)',
@@ -117,6 +119,34 @@ export function runCommand(game, text) {
         return `Set the time to ${t}`;
       }
       return 'Usage: /time <set|add|query> ...';
+    }
+    case 'season': {
+      const s = game.seasons;
+      if (!s) return 'There are no seasons here';
+      const sub = (args[0] || 'query').toLowerCase();
+      const describe = () => {
+        const st = s.at(game.time), left = (st.days - st.day) + 1;
+        const next = SEASON_NAMES[SEASON_KEYS[(st.index + 1) % 4]];
+        return `It is ${st.name}, day ${st.day} of ${st.days} (year ${st.year + 1}); ${next} comes in ${left} day${left === 1 ? '' : 's'}${game.seasonsOn ? '' : '  [seasons are off: /gamerule doSeasons true]'}`;
+      };
+      if (sub === 'query' || sub === 'get') return describe();
+      if (sub === 'set') {
+        const key = SEASON_KEYS.find((k) => k === (args[1] || '').toLowerCase() || (args[1] && k.startsWith(args[1].toLowerCase()) && args[1].length >= 2));
+        if (!key) return 'Usage: /season set <spring|summer|autumn|winter>';
+        s.setSeason(key, game.time);
+        if (game.updateSeasons) game.updateSeasons();
+        if (game.net && game.net.isHost && game.net.sendEnv) game.net.sendEnv();
+        return `Set the season to ${SEASON_NAMES[key]}`;
+      }
+      if (sub === 'length') {
+        const n = Number(args[1]);
+        if (!Number.isInteger(n) || n < MIN_DAYS || n > MAX_DAYS) return `Usage: /season length <${MIN_DAYS}-${MAX_DAYS} days per season>  (now ${s.days}; a day is ${DAY_TICKS} ticks)`;
+        s.setDays(n, game.time);
+        if (game.updateSeasons) game.updateSeasons();
+        if (game.net && game.net.isHost && game.net.sendEnv) game.net.sendEnv();
+        return `Each season now lasts ${n} day${n === 1 ? '' : 's'}`;
+      }
+      return 'Usage: /season [query],  /season set <spring|summer|autumn|winter>,  /season length <days>';
     }
     case 'difficulty': {
       const v = (args[0] || '').toLowerCase();

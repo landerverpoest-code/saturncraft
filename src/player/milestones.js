@@ -69,6 +69,7 @@ export const MILESTONES = [
   { id: 'meadow', title: 'Above the Tree Line', desc: 'Walk a Highland Meadow', icon: B.SKYBELL, tick: (g) => overworld(g) && g.world.biomeAt(Math.floor(g.player.x), Math.floor(g.player.z)) === BIOME.HIGHLAND_MEADOW },
   { id: 'great_rift', title: 'The Long Way Down', desc: 'Stand inside a Great Rift', icon: B.DEEPSTONE, tick: (g) => overworld(g) && inGreatRift(g.world.gen.seed, g.player.x, g.player.y, g.player.z) },
   { id: 'magma_lake', title: 'Lake of Fire', desc: 'Reach a Magma Lake deep underground', icon: B.SMOOTH_BASALT, tick: (g) => overworld(g) && inMagmaLake(g.world.gen.seed, g.player.x, g.player.y, g.player.z) },
+  { id: 'year', title: 'The Wheel Turns', desc: 'Live through a full year of the four seasons', icon: B.OAK_LEAVES, tick: (g) => !!g.seasons && g.seasonsOn && g.seasons.at(g.time).year >= 1 },
   { id: 'veilfire', title: 'Curtains of Light', desc: 'See Veilfire in the night sky', icon: B.BEACON, tick: (g) => g.world.dimension === 'overworld' && g.sky.aurora > AURORA_SEEN },
 ];
 

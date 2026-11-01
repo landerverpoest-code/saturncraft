@@ -35,6 +35,7 @@ import './peddler.js'; // registers the Roving Peddler and its Packhorns
 import { gazeProvokes } from './pumpkins.js';
 import { isShield, isCharm, shieldBlocks, disablesShield, wearShield, charmHealth, charmIgnores, offhandDrops, offhandFromSave, OFFHAND_KINDS } from './offhand.js';
 import { companionAI, companionSave, companionLoad } from './companions.js'; // tame Vixlings, Cragbucks, Hoppers, Bristlebacks and Frostbears
+import { breedCooldownTicks } from '../world/seasons.js'; // parents wait less in spring, longer in winter
 import { growStep, breedStep } from './youngAnimals.js'; // babies of Buzzlings, Packhorns, Gillnewts, Dolphins and Frostbears
 import { babySpeedFactor, babyAttackFactor, babyHealth, babyExplosion, babyXp, babyLoot } from './babies.js'; // spiderlings, Fizzlets, Brute cubs
 import './hoverling.js'; // registers the Hoverling
@@ -237,7 +238,7 @@ export class Mob {
     if (!baby) return;
     baby.setBaby(true);
     baby.home = this.home; baby.village = this.village;
-    this.age = mate.age = 6000;
+    this.age = mate.age = breedCooldownTicks();
     this.hearts(g, 6);
   }
 
@@ -303,7 +304,7 @@ export class Mob {
   breed(g, mate) {
     if (this.def.turtle) {
       // Shellbacks carry eggs back to their home beach instead
-      for (const m of [this, mate]) { m.loveTicks = 0; m.age = 6000; m.breedTime = 0; }
+      for (const m of [this, mate]) { m.loveTicks = 0; m.age = breedCooldownTicks(); m.breedTime = 0; }
       this.pregnant = true; this.hearts(g, 7);
       g.entities.spawnXp(this.x, this.y + 0.5, this.z, 1 + Math.floor(Math.random() * 7));
       if (g.milestones) g.milestones.event('breed');
@@ -315,7 +316,7 @@ export class Mob {
     baby.yaw = this.yaw;
     baby.persistent = true; // young animals stay (ambient ones such as Dolphins and Gillnewts would otherwise despawn)
     if (this.tamed) { baby.tamed = true; baby.health = baby.def.tamedHealth; baby.persistent = true; baby.ownerName = this.ownerName; } // pups of tame Howlers are tame and keep the owner
-    for (const m of [this, mate]) { m.loveTicks = 0; m.age = 6000; m.breedTime = 0; }
+    for (const m of [this, mate]) { m.loveTicks = 0; m.age = breedCooldownTicks(); m.breedTime = 0; }
     this.hearts(g, 7);
     g.entities.spawnXp(this.x, this.y + 0.5, this.z, 1 + Math.floor(Math.random() * 7));
     if (g.milestones) g.milestones.event('breed');

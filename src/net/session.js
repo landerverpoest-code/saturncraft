@@ -359,7 +359,7 @@ export class HostSession extends Session {
     c.ch.send({
       t: 'welcome', v: PROTOCOL_VERSION, id: c.id, name, hostName: this.name,
       seed: g.seed, time: g.time, weather: g.weather.save(), gamemode: p.gamemode, dim: g.world.dimension,
-      dl: g.daylightCycle, df: g.difficulty, pvp: this.pvp, gc: this.guestCommands,
+      dl: g.daylightCycle, df: g.difficulty, pvp: this.pvp, gc: this.guestCommands, se: g.seasons.save(),
       worldSpawn: g.worldSpawn, pos: { x: p.x, y: p.y, z: p.z, yaw: p.yaw },
       player: g.netPlayers[name] || null,
       signs: [...g.signs], frames: [...g.frames], pots: [...g.pots], lecterns: [...g.lecterns],
@@ -744,7 +744,7 @@ export class HostSession extends Session {
   sendEnv() {
     const g = this.game;
     // rb: the raid under way (mobs/raids.js raidStatus): guests near the village show its bar
-    this.broadcast({ t: 'env', time: g.time, w: g.weather.save(), dl: g.daylightCycle, df: g.difficulty, pvp: this.pvp, gc: this.guestCommands, rb: g.raids && g.raids.status ? g.raids.status() : null });
+    this.broadcast({ t: 'env', time: g.time, w: g.weather.save(), dl: g.daylightCycle, df: g.difficulty, pvp: this.pvp, gc: this.guestCommands, se: g.seasons.save(), rb: g.raids && g.raids.status ? g.raids.status() : null });
   }
 
   /** Night is skipped once everybody has been asleep for a while (the host in bed for 5 s). */
@@ -927,6 +927,18 @@ export class ClientSession extends Session {
   /** The dimension to start in (read by Game before the world is created). */
   get dimension() { return this.welcome ? this.welcome.dim || 'overworld' : 'overworld'; }
 
+  /**
+   * The host's calendar (`se`: { on, days, offset }, optional so older hosts still work). The season itself
+   * follows the synced world time, so only the season length, the offset and the on/off rule travel.
+   */
+  applySeasons(se) {
+    const g = this.game;
+    if (!se || typeof se !== 'object' || !g || !g.seasons) return;
+    g.seasons.load(se);
+    if (typeof se.on === 'boolean') g.settings.seasons = se.on;
+    g.seasons.enabled = g.seasonsOn;
+  }
+
   /** Called by Game.start once the world exists, before terrain loads around the player. */
   attach(game) {
     this.game = game;
@@ -942,6 +954,7 @@ export class ClientSession extends Session {
     if (game.proving) game.proving.vaults.load(w.vaults);
     if (typeof w.dl === 'boolean') game.settings.daylightCycle = w.dl;
     if (typeof w.df === 'string') game.settings.difficulty = w.df;
+    this.applySeasons(w.se);
     game.spawner.enabled = false;
     game.worldSpawn = { ...w.worldSpawn };
     const p = game.player;
@@ -989,6 +1002,7 @@ export class ClientSession extends Session {
         g.weather.load(m.w);
         if (typeof m.dl === 'boolean') g.settings.daylightCycle = m.dl;
         if (typeof m.df === 'string') g.settings.difficulty = m.df;
+        this.applySeasons(m.se);
         this.setOptions(m);
         this.onRaidStatus(m.rb || null);
         break;

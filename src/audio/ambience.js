@@ -9,6 +9,8 @@
 //     composes with, so Highland Meadows sound bright and open, Magma Lakes
 //     low and smouldering and Great Rifts vast and slow.
 
+import { ambienceRate, seasonBed } from '../world/seasons.js';
+
 export const MODES = {
   major: [0, 2, 4, 5, 7, 9, 11],
   minor: [0, 2, 3, 5, 7, 8, 10],
@@ -134,10 +136,12 @@ export const SOUNDSCAPES = {
 };
 
 /** Bed levels of a soundscape for the time of day; rain adds nothing here (the rain bed is separate). */
-export function bedFor(scape, night) {
+export function bedFor(scape, night, amb = null) {
   const s = SOUNDSCAPES[scape];
   if (!s) return {};
-  return (night && s.nightBed) || s.bed;
+  const bed = (night && s.nightBed) || s.bed;
+  // the season's wind and insects (surface soundscapes only; caves stay as they are)
+  return amb && s.music !== null ? seasonBed(bed, amb) : bed;
 }
 
 /**
@@ -158,7 +162,8 @@ export class AmbientDirector {
     this.timers = s ? s.events.map((e) => e.every[0] * (0.5 + this.rng())) : [];
   }
 
-  tick(dt, scape, night) {
+  /** `amb` is the season's sound table (world/seasons.js): birds sing more in spring, crickets chirp in summer, wolves howl in winter. */
+  tick(dt, scape, night, amb = null) {
     if (scape !== this.scape) this.reset(scape);
     const s = SOUNDSCAPES[scape];
     const out = [];
@@ -167,7 +172,10 @@ export class AmbientDirector {
       this.timers[i] -= dt;
       if (this.timers[i] > 0) continue;
       const e = s.events[i];
-      this.timers[i] = e.every[0] + this.rng() * (e.every[1] - e.every[0]);
+      // rate > 1 shortens the wait, a rate near 0 silences the sound for the season (the cave soundscapes have no music profile and stay untouched)
+      const rate = s.music !== null ? ambienceRate(e.sound, amb) : 1;
+      this.timers[i] = (e.every[0] + this.rng() * (e.every[1] - e.every[0])) / Math.max(rate, 0.05);
+      if (rate < 0.05) continue;
       if ((e.when === 'day' && night) || (e.when === 'night' && !night)) continue;
       const a = this.rng() * Math.PI * 2, d = e.dist[0] + this.rng() * (e.dist[1] - e.dist[0]);
       out.push({ sound: e.sound, dx: Math.cos(a) * d, dy: (this.rng() - 0.3) * 4, dz: Math.sin(a) * d, vol: e.vol * (0.7 + 0.3 * this.rng()) });

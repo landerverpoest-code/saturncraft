@@ -1180,6 +1180,7 @@ export class UI {
       <div class="sub" style="font-size:12px;opacity:.7;margin:-4px 0 6px">Laggy? Turn shaders off here or press F7 at any time</div>
       <div class="btn-row"><button class="btn" id="dlc">Day/night cycle: ${g.settings.daylightCycle !== false ? 'On' : 'Off'}</button>
       <button class="btn" id="hm">Hostile mobs: ${g.settings.hostileMobs !== false ? 'On' : 'Off'}</button></div>
+      <button class="btn" id="sea">Seasons: ${g.settings.seasons !== false ? 'On' : 'Off'}</button>
       <button class="btn" id="crd">Show coordinates: ${g.settings.showCoords ? 'On' : 'Off'}</button>
       <button class="btn" id="diff">Difficulty: ${cap(g.difficulty)}</button>
       <div class="btn-row"><button class="btn" data-a="controls">Controls</button>
@@ -1202,6 +1203,7 @@ export class UI {
       b.onclick = () => { const on = g.settings[key] === false; g.setSetting(key, on); b.textContent = `${label}: ${on ? 'On' : 'Off'}`; };
     };
     toggle('dlc', 'daylightCycle', 'Day/night cycle');
+    toggle('sea', 'seasons', 'Seasons');
     toggle('fx', 'shaders', 'Shaders');
     s.querySelector('#fast').onclick = () => {
       // everything that costs the most frames off at once: shaders, sun shadows, high pixel density, far chunks

@@ -3,6 +3,8 @@
 // offset. Pure math (no three.js) so it can be unit-tested and shared by the
 // renderer, the lighting uniforms and mob logic.
 
+import { climate, SUN_SEASONAL } from '../world/seasons.js';
+
 const TAU = Math.PI * 2;
 const DEG = Math.PI / 180;
 
@@ -46,6 +48,9 @@ export function sunAngle(sun, t) {
   return TAU * (((t / sun.period + sun.phase) % 1 + 1) % 1);
 }
 
+/** A sun's declination right now: its own plus the season's lift (high summer suns, low winter ones; world/seasons.js). */
+export function sunDeclination(sun) { return sun.declination + climate.sunDecl * 0.09 * (SUN_SEASONAL[sun.key] || 0); }
+
 /** Unit direction from the observer towards the sun. y is up, -z is north, +x is east. */
 export function sunDirection(sun, t, out = [0, 0, 0]) {
   const th = sunAngle(sun, t);
@@ -56,7 +61,7 @@ export function sunDirection(sun, t, out = [0, 0, 0]) {
   const V = [st * S[0], ct, st * S[2]];              // culmination direction
   const c = Math.cos(th), s = Math.sin(th);
   let x = c * R[0] + s * V[0];
-  let y = c * R[1] + s * V[1] + sun.declination;
+  let y = c * R[1] + s * V[1] + sunDeclination(sun);
   let z = c * R[2] + s * V[2];
   const l = Math.hypot(x, y, z);
   out[0] = x / l; out[1] = y / l; out[2] = z / l;
@@ -65,7 +70,7 @@ export function sunDirection(sun, t, out = [0, 0, 0]) {
 
 /** Fraction of each orbit spent above the horizon. */
 export function daylightFraction(sun) {
-  const k = -sun.declination / Math.cos(sun.tilt);
+  const k = -sunDeclination(sun) / Math.cos(sun.tilt);
   if (k <= -1) return 1;
   if (k >= 1) return 0;
   return 0.5 - Math.asin(k) / Math.PI;

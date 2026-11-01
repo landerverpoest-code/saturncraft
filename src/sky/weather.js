@@ -5,6 +5,7 @@
 // player down to the highest block of each column (so roofs keep it out).
 import * as THREE from 'three';
 import { BIOMES } from '../world/biomes.js';
+import { climate } from '../world/seasons.js';
 
 export const CLEAR_TICKS = [12000, 180000];
 export const RAIN_TICKS = [12000, 24000];
@@ -28,7 +29,8 @@ export class Weather {
   tick() {
     if (--this.timer <= 0) {
       this.raining = !this.raining;
-      this.timer = randRange(this.rng, this.raining ? RAIN_TICKS : CLEAR_TICKS);
+      // the season stretches or shortens the spells: spring is wet, summer long and clear (world/seasons.js)
+      this.timer = Math.max(600, Math.round(randRange(this.rng, this.raining ? RAIN_TICKS : CLEAR_TICKS) * (this.raining ? climate.rainLen : climate.rainClear)));
     }
     this.level = Math.max(0, Math.min(1, this.level + (this.raining ? 0.01 : -0.01)));
     if (--this.thunderTimer <= 0) {
@@ -41,11 +43,11 @@ export class Weather {
   /** How stormy it is (0..1): thunder only counts while it rains. */
   get storm() { return this.thunderLevel * this.level; }
 
-  /** 'rain', 'snow' or null for a biome. */
+  /** 'rain', 'snow' or null for a biome. Biomes colder than the season's snow line (0.15, higher in winter) get snow. */
   static precipitation(biomeId) {
     const b = BIOMES[biomeId];
     if (!b || b.dry) return null; // deserts, savannas and badlands never see rain
-    return b.temp < 0.15 ? 'snow' : 'rain';
+    return b.temp < climate.snowTemp ? 'snow' : 'rain';
   }
 
   /** Is it raining on this spot (open to the sky, in a rainy biome)? */

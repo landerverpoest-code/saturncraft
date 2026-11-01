@@ -28,6 +28,7 @@ import { PlayerModel } from './render/playerModel.js';
 import { Sky } from './sky/sky.js';
 import { Clouds, CLOUD_CELL } from './sky/clouds.js';
 import { Weather, WeatherRenderer } from './sky/weather.js';
+import { Seasons, climate } from './world/seasons.js';
 import { SignRenderer } from './render/signs.js';
 import { FrameRenderer } from './render/frames.js';
 import { PotRenderer } from './render/pots.js';
@@ -98,7 +99,7 @@ const DARK_FOG = new THREE.Color(0, 0, 0);
 export const DIFFICULTIES = ['peaceful', 'easy', 'normal', 'hard'];
 const FIREFLY_BIOMES = new Set(['swamp', 'forest', 'flower_forest', 'blossom_grove', 'mangrove_swamp', 'dark_forest', 'jungle', 'birch_forest']);
 
-export const DEFAULT_SETTINGS = { renderDistance: 8, fov: 75, sensitivity: 100, volume: 0.5, music: 0.5, shadows: true, shaders: true, shadowMapSize: 1024, pixelRatioCap: 1.25, daylightCycle: true, hostileMobs: true, fireworksHurtPlayers: false, difficulty: 'normal', showCoords: false, keys: {}, ...ACCESS_DEFAULTS };
+export const DEFAULT_SETTINGS = { renderDistance: 8, fov: 75, sensitivity: 100, volume: 0.5, music: 0.5, shadows: true, shaders: true, shadowMapSize: 1024, pixelRatioCap: 1.25, daylightCycle: true, seasons: true, hostileMobs: true, fireworksHurtPlayers: false, difficulty: 'normal', showCoords: false, keys: {}, ...ACCESS_DEFAULTS };
 
 export class Game {
   constructor(canvas, seed, settings, hooks = {}, saveData = null) {
@@ -109,6 +110,7 @@ export class Game {
     this.hooks = hooks;
     this.ticks = 0;
     this.time = 0;            // world time in ticks (drives the suns)
+    this.seasons = new Seasons(); // the calendar derived from the time (world/seasons.js); saved with the world
     this.running = false;
     this.paused = false;
     this.furnaces = new Map();
@@ -352,6 +354,7 @@ export class Game {
     if ((k === 'hostileMobs' && !v) || (k === 'difficulty' && v === 'peaceful')) this.removeHostileMobs();
     if (k === 'difficulty') this.player.difficulty = v;
     if (k === 'daylightCycle' && !v) this.freezeAtDay();
+    if (k === 'seasons') this.updateSeasons();
     if (this.hooks.saveSettings) this.hooks.saveSettings(this.settings);
   }
 
@@ -360,6 +363,18 @@ export class Game {
 
   /** Is the day/night cycle running (time advancing)? */
   get daylightCycle() { return this.settings.daylightCycle !== false; }
+
+  /** Are the seasons on? (gamerule doSeasons / the Seasons button; off = the original, season-less rules) */
+  get seasonsOn() { return this.settings.seasons !== false; }
+
+  /** Refresh the calendar and the shared climate from the world time (about once a second; the overworld only). */
+  updateSeasons() {
+    const s = this.seasons;
+    s.enabled = this.seasonsOn;
+    const prev = s.state.index;
+    s.update(this.time);
+    if (this.hud && s.enabled && prev !== s.state.index && this.ticks > 20) this.hud.toast(`${s.state.name} has come`);
+  }
 
   /** Hostile mobs switched off: clear the monsters that are already around (like peaceful). */
   /**
@@ -1091,6 +1106,7 @@ export class Game {
   tick() {
     this.ticks++;
     if (this.daylightCycle) this.time++;
+    if (this.ticks % 20 === 1) this.updateSeasons();
     // keep the sun state current for game logic (spawning, burning) even when no frame is rendered
     this.sky.state = skyState(this.time);
     const inp = this.input;
@@ -1320,6 +1336,17 @@ export class Game {
       terrainUniforms.uCloudTex.value = cl.shadowTex;
       terrainUniforms.uCloud.value.set(cl.origin[0], cl.origin[1], cl.shadowN * CLOUD_CELL, 0.55 * (1 - this.weather.level));
     } else terrainUniforms.uCloud.value.w = 0;
+    {
+      // the season's grass and leaf colours reach the terrain shader as uniforms (no chunk is remeshed)
+      const on = climate.on && this.world.dimension === 'overworld';
+      const tu = terrainUniforms;
+      tu.uSeasonOn.value = on ? 1 : 0;
+      if (on) {
+        tu.uSeasonGrass.value.set(climate.grass[0], climate.grass[1], climate.grass[2], climate.grass[3]);
+        tu.uSeasonLeaf.value.set(climate.leaf[0], climate.leaf[1], climate.leaf[2], climate.leaf[3]);
+        tu.uSeasonFrost.value = climate.frost; tu.uSeasonVar.value = climate.leafVar;
+      }
+    }
     terrainUniforms.uWet.value = this.world.dimension === 'overworld' && Weather.precipitation(this.world.biomeAt(Math.floor(x), Math.floor(z))) === 'rain' ? this.weather.level : 0;
     this.weatherFx.uniforms.uAlpha.value = this.postfx.enabled ? 0.55 : 1;
     terrainUniforms.uGlow.value = this.postfx.enabled ? 1 : 0;
@@ -1413,6 +1440,7 @@ export class Game {
       `Facing yaw ${(((p.yaw * 180 / Math.PI) % 360 + 360) % 360).toFixed(0)}°  pitch ${(p.pitch * 180 / Math.PI).toFixed(0)}°`,
       `${w.dimension === 'overworld' ? `Biome ${biomeName(w.biomeAt(bx, bz))}` : `Dimension ${DIMENSIONS[w.dimension].name}`}   chunks ${w.chunks.size}`,
       `Light: sky ${sky} (effective ${effectiveSkyLight(sky, st.skyDarken)})  block ${bl}`,
+      `Season ${this.seasonsOn ? `${this.seasons.state.name} day ${this.seasons.state.day}/${this.seasons.state.days}  year ${this.seasons.state.year + 1}  snow line ${climate.snowTemp.toFixed(2)}  growth x${climate.growth.toFixed(2)}` : 'off'}`,
       `Time ${this.time}  phase ${st.phase}  suns up ${st.aboveCount}  combined ${st.combined.toFixed(2)}  darken ${st.skyDarken}`,
       ...st.suns.map((s) => `  ${s.sun.name.padEnd(12)} elev ${(Math.asin(s.elevation) * 180 / Math.PI).toFixed(1).padStart(6)}°  light ${s.factor.toFixed(2)}`),
       `Mobs ${this.spawner.counts()}`,
