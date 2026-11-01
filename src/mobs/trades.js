@@ -184,16 +184,30 @@ export function cleanLevel(s) {
 export const DEMAND_STEP = 0.06;
 export const demandFactor = (uses) => 1 + DEMAND_STEP * Math.max(0, Math.min(MAX_USES, uses | 0));
 
+/** The most that a good name, the festival and Village Champion can take off a price together (half). */
+export const MAX_TOTAL_CUT = 0.5;
+
 /**
  * What an offer costs after the market (reputation and demand, when `market` = { rep } is given) and a price cut
  * (0..1, e.g. Village Champion's, see raids.js): the reference rule takes floor(cut x price) off, at least one
  * item, but never goes below one. Without `market` the price is the plain one, as in older versions.
+ *
+ * Balance (tests/balance.test.js): cuts only ever make what the player pays BERYL for cheaper. When the settler pays beryl for
+ * goods (get = beryl) a good name, the festival and a Champion do not make it ask for fewer goods per beryl: beryl prices
+ * bottom out at one, so the cut let a one-beryl "2 Hay Bales" offer be sold back to the farmer for 1.3-1.5 beryl and 4 Leather
+ * for 1.3 (an endless loop). A bad name still makes it ask for more. The cuts together never take more than half off.
  */
 export function offerPrice(offer, discount = 0, market = null) {
+  const paysBeryl = offer.get === I.BERYL;
+  if (paysBeryl) discount = 0;
   let price = offer.giveCount;
-  if (market) price = Math.max(1, Math.round(price * repFactor(market.rep || 0) * demandFactor(offer.uses) * (1 - (market.festival || 0)))); // market.festival: the Lantern Festival's cut (world/events.js)
+  if (market) {
+    const rep = paysBeryl ? Math.max(1, repFactor(market.rep || 0)) : repFactor(market.rep || 0);
+    price = Math.max(1, Math.round(price * rep * demandFactor(offer.uses) * (paysBeryl ? 1 : 1 - (market.festival || 0)))); // market.festival: the Lantern Festival's cut (world/events.js)
+  }
   if (!(discount > 0)) return price;
-  return Math.max(1, price - Math.max(1, Math.floor(discount * price)));
+  const cut = Math.max(1, price - Math.max(1, Math.floor(discount * price)));
+  return Math.max(cut, Math.min(price, Math.ceil(offer.giveCount * (1 - MAX_TOTAL_CUT))));
 }
 
 /** Can the inventory pay for an offer? (Not with a settler that has had enough of the player: see refusesTrade.) */

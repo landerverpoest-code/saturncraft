@@ -130,7 +130,7 @@ export function cleanEnch(e) {
   let out = null;
   for (const k of ENCH_KEYS) {
     const l = e[k] | 0;
-    if (l > 0) (out || (out = {}))[k] = Math.min(10, l);
+    if (l > 0) (out || (out = {}))[k] = Math.min(ENCHANTS[k].max, l); // (never above the enchantment's own top level: a hand-edited save or a guest cannot make Keen X)
   }
   return out;
 }

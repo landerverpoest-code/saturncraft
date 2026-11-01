@@ -628,6 +628,21 @@ Code: `src/world/dimensions/` (registry and scaling, generators, portal logic, s
   block set it rarely comes into play; full blocks always need a jump.
 * **Saving** keeps modified chunks, the player, time, furnaces and animals;
   hostile mobs, dropped items and in-flight fluids are not saved.
+* **Balance notes** (`node scripts/balance/report.mjs` prints the numbers, `tests/balance.test.js` keeps them in bounds). Found and fixed:
+  a good name, the Lantern Festival and Village Champion cut the *goods a settler asks for its beryl* as well as the beryl price of its
+  wares, and beryl prices bottom out at one, so "1 beryl -> 2 Hay Bales" sold back as 18 Wheat paid 1.3-1.5 beryl (and 4 Leather
+  bought for 1 beryl sold for 1.33): cuts now only lower what you pay *in* beryl, a bad name still raises what is asked, and
+  all cuts together take at most half off (Village Champion V + Hero + festival used to put a Diamond Chestplate at 7 beryl instead of 24);
+  Plunder no longer multiplies a Marauder's beryl (0.5 a kill became 2 at Plunder III, a 4x currency faucet in raids); an enchantment
+  loaded from a save, a guest or a mob's saved gear is clamped to its own top level (it was 10, so Keen X was possible). Checked and
+  left alone: no buy -> craft -> sell loop remains in any reputation/festival/Champion/demand state across all twelve trades and the Peddler;
+  no recipe chain multiplies resources and every craftable item is reachable (Cake needs an egg and milk, from a Cluckling and a Mooxen);
+  chest kinds hold 1-26 beryl of goods on average (Hollow Cities and Ruined Portals richest, Pillager Outposts poorest), at most 1 Diamond and
+  1.1 Gilded Apples per chest (Rimekeep barracks reuse the igloo table, so the Warden's keep always has two apples); fishing gives a Diamond
+  1.1 % of casts (2.3 % at Luck III); the Rimekeep Warden (90 hp, diamond armour) takes 30-58 sword blows and the Hushkeeper 50-84, a
+  fully drawn Strongdraw V arrow needs 18 and 34; four Bulwark IV pieces cap at 64 % off (diamond + Bulwark IV still takes 7 % of a hit);
+  food values and the XP curve (1395 points to level 30) follow the reference numbers; a year of seasons grows crops at 0.87x the old
+  rate (spring 1.35x, winter 0.35x), which is left as the price of having seasons.
 
 ## Performance
 
