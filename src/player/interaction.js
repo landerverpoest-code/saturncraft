@@ -29,7 +29,8 @@ import { choosePainting, placePainting } from '../world/paintings.js';
 import { standYaw, standAt, useStand, punchStand } from '../entities/armorStand.js';
 import { tryLightRift, findHollowRing, fillHollowGate } from '../world/dimensions/portal.js';
 import { LEAVES, SAPLING_TREE, growTree } from '../world/trees.js';
-import { useSkyRocket } from '../entities/skyRocket.js';
+import { useSkyRocket, launchRocket } from '../entities/skyRocket.js';
+import { crossbowLoad, loadedRocket } from '../world/fireworks.js';
 import { hushfruitTeleport } from '../world/dimensions/hushvine.js';
 import { cavePlaceMeta, waxCopper, scrapeCopper } from '../world/caves.js';
 import { canLeash, leash, unleash, isFencePost, tieToFence, untieFromFence, isHolder } from '../entities/leash.js';
@@ -576,9 +577,22 @@ export class Interaction {
     return true;
   }
 
-  /** A crossbow drawn for 1.25 s takes an arrow (none needed in creative or with Endless). */
+  /**
+   * A crossbow drawn for 1.25 s takes an arrow (none needed in creative or with Endless); drawn while sneaking it takes a
+   * Star Rocket instead (kept as the stack's fw; none needed in creative) and fires it straight ahead.
+   */
   loadCrossbow() {
     const g = this.game, p = g.player, inv = p.inventory, bow = inv.selectedStack;
+    if (p.sneaking) {
+      const rs = inv.slots.findIndex((s) => s && crossbowLoad(s));
+      if (rs < 0) return;
+      const fw = crossbowLoad(inv.slots[rs]);
+      if (!p.creative) inv.removeFromSlot(rs, 1);
+      inv.slots[inv.selected] = { ...inv.slots[inv.selected], id: I.CROSSBOW_LOADED, fw };
+      inv.changed();
+      g.audio.play('click', [p.x, p.y + 1, p.z]);
+      return;
+    }
     const free = p.creative || enchLevel(bow, 'endless') > 0;
     const slot = inv.slots.findIndex((s) => s && s.id === I.ARROW);
     if (slot < 0 && !free) return;
@@ -642,6 +656,16 @@ export class Interaction {
   fireCrossbow() {
     const g = this.game, p = g.player, inv = p.inventory, bow = inv.selectedStack;
     const [ex, ey, ez] = p.eyePos(), [dx, dy, dz] = p.lookDir();
+    const rocket = loadedRocket(bow);
+    if (rocket) { // a loaded Star Rocket flies straight and bursts on the first block or mob (entities/skyRocket.js)
+      const { fw, ...rest } = bow; // (the rocket leaves the bow)
+      launchRocket(g, ex + dx * 0.5, ey - 0.1 + dy * 0.5, ez + dz * 0.5, [dx, dy, dz], { id: I.SKY_ROCKET, count: 1, fw }, { shooter: p });
+      inv.slots[inv.selected] = { ...rest, id: I.CROSSBOW };
+      inv.changed();
+      inv.damageSelected(3); // (a rocket is heavier: reference durability cost 3)
+      this.swing = SWING_TICKS;
+      return;
+    }
     const arrow = g.entities.spawnArrow(ex, ey - 0.1, ez, dx * 3.15, dy * 3.15, dz * 3.15, p, true, null, enchLevel(bow, 'strongdraw'));
     if (arrow && (p.creative || enchLevel(bow, 'endless') > 0)) arrow.pickup = false;
     inv.slots[inv.selected] = { ...bow, id: I.CROSSBOW };

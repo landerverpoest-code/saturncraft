@@ -43,6 +43,7 @@ const OFFERS = {
   cartographer: [[BUY, I.PAPER, 24, I.BERYL, 1], [BUY, I.INK_SAC, 16, I.BERYL, 1], [BUY, I.COMPASS, 2, I.BERYL, 1],
     [SELL, I.BERYL, 2, I.EMPTY_MAP, 1], [SELL, I.BERYL, 3, I.COMPASS, 1], [SELL, I.BERYL, 4, I.CLOCK, 1],
     [SELL, I.BERYL, 8, CHARTS.outpost, 1], [SELL, I.BERYL, 10, CHARTS.skywatch, 1], [SELL, I.BERYL, 11, CHARTS.sunken, 1],
+    [SELL, I.BERYL, 12, CHARTS.sporehall, 1], [SELL, I.BERYL, 13, CHARTS.rimekeep, 1],
     [SELL, I.BERYL, 12, CHARTS.tomb, 1], [SELL, I.BERYL, 14, CHARTS.citadel, 1],
     [SELL, I.BERYL, 2, I.ITEM_FRAME, 2, 2], [SELL, I.BERYL, 2, I.PAINTING, 1, 3], [SELL, I.BERYL, 2, B.LANTERN, 1, 4], [SELL, I.BERYL, 4, I.BUNDLE, 1, 5]],
   // Masons (Masonry Bench): buy clay, bricks and rough stone; sell dressed stone, bricks and coloured building blocks.

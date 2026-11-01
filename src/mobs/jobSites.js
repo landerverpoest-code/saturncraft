@@ -22,7 +22,7 @@ export const JOB_SITES = {
   cartographer: [B.CARTOGRAPHY_DESK],
   mason: [B.MASONRY_BENCH],
   toolsmith: [B.WHETSTONE_STAND],
-  armorer: [B.ARMOR_RACK], // (last: the order numbers the trades, so new ones go at the end)
+  armorer: [B.ARMOR_RACK], // (the order numbers the trades, so new ones are added after these)
 };
 const TRADES = Object.keys(JOB_SITES);
 /** Block id -> 1 + index of its trade in TRADES (0: not a job site). */

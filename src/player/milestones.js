@@ -8,6 +8,8 @@ import { villagesNear } from '../world/villages.js';
 import { sunkenRuinsNear } from '../world/sunkenRuins.js';
 import { sunTombsNear } from '../world/sunTombs.js';
 import { skywatchesNear } from '../world/skywatch.js';
+import { rimekeepsNear } from '../world/rimekeep.js';
+import { sporehallsNear } from '../world/sporehall.js';
 import { inGreatRift } from '../world/carvers.js';
 import { inMagmaLake } from '../world/magmaLakes.js';
 
@@ -56,6 +58,8 @@ export const MILESTONES = [
   { id: 'sunken', title: 'Drowned Halls', desc: 'Find a Sunken Ruin on the sea floor', icon: B.CHISELED_STONE_BRICKS, tick: near(sunkenRuinsNear) },
   { id: 'tomb', title: 'Under the Three Suns', desc: 'Find a Sun Tomb', icon: B.SANDSTONE, tick: near(sunTombsNear) },
   { id: 'skywatch', title: 'Eyes on the Horizon', desc: 'Find a Skywatch Tower', icon: B.STONE_BRICKS, tick: near(skywatchesNear) },
+  { id: 'rimekeep', title: 'Frozen Halls', desc: 'Find a Rimekeep', icon: B.ICE, tick: near(rimekeepsNear) },
+  { id: 'sporehall', title: 'Heart of the Spores', desc: 'Find a Sporehall', icon: B.RED_MUSHROOM_BLOCK, tick: near(sporehallsNear) },
   { id: 'peddler', title: 'Wares from Afar', desc: 'Trade with a Roving Peddler', icon: I.BERYL, event: 'peddler' },
   { id: 'parry', title: 'Not Today', desc: 'Parry a blow by raising your shield just in time', icon: I.SHIELD, event: 'parry' },
   { id: 'offhand', title: 'Spoils of the Off-Hand', desc: 'Defeat a mob that carried something in its off-hand', icon: I.CHARM_OF_UNDYING, event: 'offhand' },

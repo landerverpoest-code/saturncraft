@@ -12,6 +12,8 @@ import { hutsNear } from '../world/swampHuts.js';
 import { nearestSunkenRuin } from '../world/sunkenRuins.js';
 import { nearestSunTomb } from '../world/sunTombs.js';
 import { nearestSkywatch } from '../world/skywatch.js';
+import { nearestRimekeep } from '../world/rimekeep.js';
+import { nearestSporehall } from '../world/sporehall.js';
 import { nearestMonument } from '../world/monuments.js';
 import { BLOCKS, isBlockId } from '../world/blocks.js';
 import { MOBS, MOB_KEYS } from '../mobs/mobTypes.js';
@@ -61,12 +63,16 @@ function nextTime(t0, pred) {
 }
 
 /** Game rules: command name -> settings key. */
-export const GAME_RULES = { doDaylightCycle: 'daylightCycle', doHostileSpawning: 'hostileMobs' };
+export const GAME_RULES = { doDaylightCycle: 'daylightCycle', doHostileSpawning: 'hostileMobs', fireworksHurtPlayers: 'fireworksHurtPlayers' };
+/** Rules that are off unless set (the others are on unless set to false). */
+export const RULES_DEFAULT_OFF = new Set(['fireworksHurtPlayers']);
+/** The current value of a game rule setting key. */
+export const ruleValue = (settings, key) => (RULES_DEFAULT_OFF.has(key) ? settings[key] === true : settings[key] !== false);
 
 export const HELP = [
   '/gamemode <survival|creative|adventure|spectator>  (or /gm 0|1|2|3)',
   '/time set <day|night|noon|midnight|ticks>,  /time add <ticks>,  /time query',
-  '/gamerule doDaylightCycle <true|false>,  /gamerule doHostileSpawning <true|false>',
+  '/gamerule doDaylightCycle <true|false>,  /gamerule doHostileSpawning <true|false>,  /gamerule fireworksHurtPlayers <true|false>',
   '/difficulty <peaceful|easy|normal|hard>',
   '/weather <clear|rain|thunder> [ticks]',
   '/tp <x> <y> <z>  (~ for relative)',
@@ -74,7 +80,7 @@ export const HELP = [
   '/enchant <name> [level]  (the held item; names: ' + ENCH_KEYS.join(', ') + ')',
   '/summon <mob> [x y z]',
   '/xp <amount> [levels]',
-  '/locate <village|temple|igloo|outpost|shipwreck|monument|mineshaft|sanctum|bastion|hut|ruin|buried|vaults|sunken|tomb|skywatch|city|gate> or /locate biome <name>',
+  '/locate <village|temple|igloo|outpost|shipwreck|monument|mineshaft|sanctum|bastion|hut|ruin|buried|vaults|sunken|tomb|skywatch|rimekeep|sporehall|city|gate> or /locate biome <name>',
   '/dimension <overworld|cinderdeep|hollow>',
   '/effect give <effect> [seconds] [level],  /effect clear  (effects: ' + EFFECT_KEYS.join(', ') + ')',
   '/raid <patrol|start [level]|stop|status>',
@@ -126,7 +132,7 @@ export function runCommand(game, text) {
       if (!rule) return usage;
       const key = GAME_RULES[rule];
       const v = (args[1] || '').toLowerCase();
-      if (v === '') return `Gamerule ${rule} is currently set to: ${game.settings[key] !== false}`;
+      if (v === '') return `Gamerule ${rule} is currently set to: ${ruleValue(game.settings, key)}`;
       if (v !== 'true' && v !== 'false') return usage;
       game.setSetting(key, v === 'true');
       return `Gamerule ${rule} is now set to: ${v}`;
@@ -295,6 +301,8 @@ export function runCommand(game, text) {
         [['sunken', 'sunken_ruin', 'drowned'], 'Sunken Ruin', null, nearestSunkenRuin],
         [['tomb', 'suntomb', 'sun_tomb', 'pyramid'], 'Sun Tomb', null, nearestSunTomb, (t) => `, ${t.style}`],
         [['skywatch', 'watchtower', 'summit'], 'Skywatch Tower', null, nearestSkywatch],
+        [['rimekeep', 'icekeep', 'ice_keep', 'frostkeep'], 'Rimekeep', null, nearestRimekeep],
+        [['sporehall', 'spore', 'fungal', 'overgrown'], 'Sporehall', null, nearestSporehall, (t) => `, ${t.style}`],
       ]) {
         if (!names.includes(what)) continue;
         if (game.world.dimension !== 'overworld') return `${label}s are only found in the overworld`;

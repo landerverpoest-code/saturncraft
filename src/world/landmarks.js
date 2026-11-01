@@ -17,6 +17,8 @@ import { monumentsNear, nearestMonument } from './monuments.js';
 import { sunkenRuinsNear, nearestSunkenRuin } from './sunkenRuins.js';
 import { sunTombsNear, nearestSunTomb } from './sunTombs.js';
 import { skywatchesNear, nearestSkywatch } from './skywatch.js';
+import { rimekeepsNear, nearestRimekeep } from './rimekeep.js';
+import { sporehallsNear, nearestSporehall } from './sporehall.js';
 
 export const SIGHT = 40;      // how close a holder must come to a structure for the map to note it
 export const MAX_MARKS = 48;  // marks one map keeps (destinations first)
@@ -34,6 +36,8 @@ const FINDERS = {
   sunken: { near: sunkenRuinsNear, nearest: nearestSunkenRuin },
   tomb: { near: sunTombsNear, nearest: nearestSunTomb },
   skywatch: { near: skywatchesNear, nearest: nearestSkywatch },
+  rimekeep: { near: rimekeepsNear, nearest: nearestRimekeep },
+  sporehall: { near: sporehallsNear, nearest: nearestSporehall },
 };
 
 /** Every landmark of every kind whose centre lies in the box: [{ kind, x, z }]. */
