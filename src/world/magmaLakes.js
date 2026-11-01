@@ -45,6 +45,17 @@ export function lakeFloor(lake, d) { return Math.max(LAKE_MIN_Y, lake.y - 1 - Ma
 /** Air above the lava at an inside column. */
 export function domeHeight(lake, d) { return Math.max(2, Math.floor(lake.h * Math.sqrt(Math.max(0, 1 - d * d)))); }
 
+/**
+ * Is the point (x, y, z) in the cavern of a Magma Lake: over the lake (its wobbling edge counted) and between
+ * a few blocks under the lava and the top of the dome? A pure lookup of the seed, used by the milestones.
+ */
+export function inMagmaLake(seed, x, y, z) {
+  const lake = lakeIn(seed, Math.floor(x / LAKE_REGION), Math.floor(z / LAKE_REGION));
+  if (!lake) return false;
+  const d = lakeDist(seed, lake, Math.floor(x), Math.floor(z));
+  return d < 1 && y >= lake.y - 7 && y <= lake.y + domeHeight(lake, d);
+}
+
 const SOFT = (id) => id === B.AIR || id === B.WATER || id === B.LAVA;
 
 /** Stamp the part of this region's lake that lies in chunk (cx, cz). Returns the number of lava blocks placed. */

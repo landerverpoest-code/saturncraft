@@ -245,6 +245,7 @@ export class Game {
       // parries, axe blows that knock the shield down and the wear on it (player/shield.js)
       const r = resolveBlock(p.shield, amount, attacker);
       this.audio.play(r.disabled ? 'shield_break' : r.parry ? 'parry' : 'shield', [p.x, p.y + 1, p.z]);
+      if (r.parry && !r.disabled) this.milestones.event('parry');
       if (r.disabled) { p.blocking = false; this.hud.toast('Your shield was knocked down!'); }
       if (!p.creative && r.wear) p.inventory.damageSelected(r.wear);
       if (attacker && attacker.body && attacker.kind === 'mob') {
@@ -406,6 +407,7 @@ export class Game {
 
   onDeath(cause) {
     const p = this.player;
+    p.stats.deaths++;
     for (let i = 0; i < p.inventory.slots.length; i++) {
       const st = p.inventory.slots[i];
       if (st) this.entities.spawnItem(p.x, p.y + 1, p.z, st, [(Math.random() - 0.5) * 0.5, 0.2, (Math.random() - 0.5) * 0.5]);
@@ -596,6 +598,7 @@ export class Game {
     const r = chartMap(this.world.gen, kind, this.player.x, this.player.z, id, this.world.dimension);
     if (!r) return null;
     this.maps.set(id, r.map);
+    this.milestones.event('chart');
     return { ...r, title: mapTitle(r.map) };
   }
 
@@ -1175,6 +1178,7 @@ export class Game {
       if (['inventory', 'workbench', 'furnace', 'chest', 'creative', 'trade', 'brewing'].includes(this.ui.open)) this.ui.close();
       else if (!this.ui.blocking) { this.input.unlock(); if (p.creative) this.ui.openCreative(); else this.ui.openInventory(); }
     }
+    if (this.ui.open === 'pause' && this.ui.padBack) this.ui.padNav(inp.pressed, inp.pad.ly); // gamepad on the Statistics and Milestones screens
     if (inp.wasPressed('pause') && this.ui.blocking) {
       if (this.ui.open === 'pause') { this.ui.open = null; this.ui.clear(); this.onUIClosed(); }
       else this.ui.close();

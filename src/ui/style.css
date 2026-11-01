@@ -325,3 +325,12 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 #captions { position: absolute; right: 12px; bottom: 120px; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; pointer-events: none; max-width: 40vw; }
 #captions .caption { background: rgba(0, 0, 0, .72); color: #fff; font: 15px/1.25 system-ui, sans-serif; padding: 3px 9px; border-radius: 3px; transition: opacity .3s; }
 @media (max-width: 560px) { .control-row { grid-template-columns: 1fr repeat(3, 64px); } .control-name { font-size: 12px; } }
+
+/* Statistics screen (ui/screens.js showStats) */
+.stats-body { width: min(520px, 92vw); max-height: 60vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; outline-offset: 3px; }
+.stats-body:focus-visible, .stats-screen .btn:focus-visible { outline: 2px solid #f0b04a; }
+.stats-table { width: 100%; border-collapse: collapse; background: rgba(255,255,255,.06); border-radius: 4px; }
+.stats-table caption { text-align: left; padding: 4px 6px; }
+.stats-table th, .stats-table td { padding: 5px 8px; border-top: 1px solid rgba(255,255,255,.08); font-weight: normal; }
+.stats-table th { text-align: left; }
+.stats-table td { text-align: right; font-variant-numeric: tabular-nums; color: #ffe2a6; }

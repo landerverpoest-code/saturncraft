@@ -830,6 +830,7 @@ export class Interaction {
       g.entities.spawnItem(t.x + 0.5, t.y + 0.5, t.z + 0.5, { id: I.PUMPKIN_SEEDS, count: CARVE_SEEDS, damage: 0 });
       if (!p.creative) p.inventory.damageSelected(1);
       g.audio.play('shear', [t.x + 0.5, t.y + 0.5, t.z + 0.5]);
+      if (g.milestones) g.milestones.event('carve');
       this.swing = SWING_TICKS;
       return true;
     }
@@ -1117,6 +1118,7 @@ export class Interaction {
       return true;
     }
     w.setBlockUrgent(px, py, pz, placeId, meta);
+    p.stats.blocksPlaced++;
     if (lift) { p.body.y = py + 1; p.body.vy = Math.max(p.body.vy, 0); }
     if (chestPair) w.setBlockUrgent(chestPair.x, chestPair.y, chestPair.z, B.CHEST, chestPair.meta);
     if (isBox(placeId) && g.onBoxPlaced) g.onBoxPlaced(px, py, pz, st); // the box unpacks what it carried
@@ -1364,6 +1366,7 @@ export class Interaction {
     if (p.intersectsBlock(x, y, z) && meta === SLAB_DOUBLE) return false;
     if (LEAVES.has(id)) meta = 1; // placed leaves never decay
     g.world.setBlockUrgent(x, y, z, id, meta);
+    p.stats.blocksPlaced++;
     if (id === B.PUMPKIN || id === B.CARVED_PUMPKIN || id === B.JACK_O_LANTERN) { if (!this.tryBuildIronguard(x, y, z)) this.tryBuildFrostling(x, y, z); }
     if (isRail(id)) updateRails(g.world, x, y, z);
     g.audio.play('place_' + BLOCKS[id].sound, [x + 0.5, y + 0.5, z + 0.5]);

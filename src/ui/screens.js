@@ -15,6 +15,8 @@ import { B, BLOCKS, isBox } from '../world/blocks.js';
 import { canTrade, doTrade, offerPrice, MAX_USES } from '../mobs/trades.js';
 import { championDiscount } from '../mobs/raids.js';
 import { MILESTONES } from '../player/milestones.js';
+import { statRows, killRows } from '../player/stats.js';
+import { MOBS } from '../mobs/mobTypes.js';
 import { ACTIONS, GROUPS, SLOT_KINDS, SLOT_NAMES, resolveBindings, toOverrides, setBinding, codeLabel } from './bindings.js';
 import { COLOR_BLIND_LABELS, nextColorBlind } from './accessibility.js';
 import { loadPlayerName } from '../net/protocol.js';
@@ -67,7 +69,14 @@ export class UI {
 
   get blocking() { return this.open !== null; }
 
-  clear() { if (this.game.input) this.game.input.capture = null; /* a controls screen waiting for a key */ if (this.lazy) { this.lazy.dispose(); this.lazy = null; } this.layer.innerHTML = ''; this.tooltipEl.classList.add('hidden'); }
+  clear() { if (this.game.input) this.game.input.capture = null; /* a controls screen waiting for a key */ if (this.lazy) { this.lazy.dispose(); this.lazy = null; } this.layer.innerHTML = ''; this.padBack = null; this.padScroll = null; this.tooltipEl.classList.add('hidden'); }
+
+  /** Gamepad on a sub-screen of the pause menu: B or Back returns to it, the left stick or D-pad scrolls. */
+  padNav(pressed, ly) {
+    if (this.padBack && (pressed.has('PadB') || pressed.has('PadBack'))) { const f = this.padBack; f(); return; }
+    const step = ((pressed.has('PadDown') ? 1 : 0) - (pressed.has('PadUp') ? 1 : 0)) * 60 + (ly || 0) * 14;
+    if (this.padScroll && step) this.padScroll(step);
+  }
 
   close() {
     if (this.open === 'death') return;
@@ -1051,7 +1060,7 @@ export class UI {
             if (left) g.entities.spawnItem(g.player.x, g.player.y + 1, g.player.z, { ...got, count: left });
             done++;
           }
-          if (done) { mob.traded = true; g.milestones.event('trade'); g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); g.entities.spawnXp(g.player.x, g.player.y + 1, g.player.z, 3 * done); }
+          if (done) { mob.traded = true; g.player.stats.trades += done; g.milestones.event('trade'); if (mob.def.trader) g.milestones.event('peddler'); g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); g.entities.spawnXp(g.player.x, g.player.y + 1, g.player.z, 3 * done); }
           this.refreshAll();
         });
         this.refreshers.push(() => {
@@ -1113,7 +1122,8 @@ export class UI {
       <button class="btn" id="diff">Difficulty: ${cap(g.difficulty)}</button>
       <div class="btn-row"><button class="btn" data-a="controls">Controls</button>
       <button class="btn" data-a="access">Accessibility</button></div>
-      <button class="btn" data-a="ms">Milestones</button>
+      <div class="btn-row"><button class="btn" data-a="ms">Milestones</button>
+      <button class="btn" data-a="stats">Statistics</button></div>
       <div class="net-box"></div>
       <button class="btn" data-a="title">${g.net && g.net.isClient ? 'Disconnect' : 'Save &amp; Quit to Title'}</button>
     </div>`);
@@ -1154,6 +1164,7 @@ export class UI {
       setTimeout(() => { sv.disabled = false; sv.textContent = 'Save Game'; }, 1500);
     };
     s.querySelector('[data-a=ms]').onclick = () => this.showMilestones();
+    s.querySelector('[data-a=stats]').onclick = () => this.showStats();
     s.querySelector('[data-a=controls]').onclick = () => this.showControls();
     s.querySelector('[data-a=access]').onclick = () => this.showAccessibility();
     this.layer.appendChild(s);
@@ -1504,7 +1515,45 @@ export class UI {
       list.appendChild(row);
     }
     s.querySelector('button').onclick = () => this.showPause();
+    this.padBack = () => this.showPause();
+    this.padScroll = (dy) => { list.scrollTop += dy; };
     this.layer.appendChild(s);
+  }
+
+  /**
+   * Statistics (player/stats.js): blocks, distances, play time, deaths, trades and the creatures
+   * defeated by kind. Reachable by keyboard (Tab to the list, arrows scroll, Backspace or Enter on Back
+   * returns) and gamepad (B or Back returns, the left stick or D-pad scrolls; see Game.loop -> padNav).
+   */
+  showStats() {
+    this.clear();
+    this.open = 'pause';
+    const g = this.game, st = g.player.stats;
+    const s = el(`<div class="screen pause-screen stats-screen"><h2>Statistics</h2>
+      <div class="stats-body" tabindex="0" role="region" aria-label="Statistics">
+        <table class="stats-table"><caption class="world-head">General</caption><tbody class="stats-general"></tbody></table>
+        <table class="stats-table"><caption class="world-head">Defeated</caption><tbody class="stats-kills"></tbody></table>
+      </div>
+      <button class="btn" data-a="back">Back</button></div>`);
+    const fill = (tbody, rows) => {
+      for (const [label, value] of rows) {
+        const tr = document.createElement('tr'), th = document.createElement('th'), td = document.createElement('td'); // (a <tr> cannot go through el(): a div drops it)
+        th.scope = 'row'; th.textContent = label; td.textContent = value;
+        tr.append(th, td);
+        tbody.appendChild(tr);
+      }
+    };
+    fill(s.querySelector('.stats-general'), statRows(st));
+    const kills = killRows(st, MOBS);
+    fill(s.querySelector('.stats-kills'), kills.length ? kills.map((k) => [k.name, String(k.count)]) : [['Nothing yet', '0']]);
+    const back = s.querySelector('[data-a=back]');
+    const body = s.querySelector('.stats-body');
+    back.onclick = () => this.showPause();
+    s.addEventListener('keydown', (e) => { if (e.key === 'Backspace') { e.preventDefault(); this.showPause(); } });
+    this.padBack = () => this.showPause();
+    this.padScroll = (dy) => { body.scrollTop += dy; };
+    this.layer.appendChild(s);
+    setTimeout(() => { if (this.open === 'pause' && back.isConnected) back.focus(); }, 0);
   }
 
   showDeath(cause) {

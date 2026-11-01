@@ -181,3 +181,22 @@ export function carveRifts(seed, cx, cz, blocks, surface) {
   }
   return ctx.carved;
 }
+
+/**
+ * Is the point (x, y, z) inside a Great Rift (any of the spheres of the rifts that start within reach
+ * of it, the carved shape a little widened)? A pure lookup of the seed, used by the milestones.
+ */
+export function inGreatRift(seed, x, y, z) {
+  const scx = Math.floor(x / 16), scz = Math.floor(z / 16);
+  for (let sx = scx - CARVE_RANGE; sx <= scx + CARVE_RANGE; sx++) for (let sz = scz - CARVE_RANGE; sz <= scz + CARVE_RANGE; sz++) {
+    if (!riftStarts(seed, sx, sz)) continue;
+    const ops = riftPaths(seed, sx, sz);
+    for (let i = 0; i < ops.length; i += OP) {
+      const h = ops[i + 3], v = ops[i + 4];
+      if (Math.abs(x - ops[i]) > h || Math.abs(z - ops[i + 2]) > h) continue;
+      const dx = (x - ops[i]) / h, dz = (z - ops[i + 2]) / h, dy = (y - ops[i + 1]) / v;
+      if (dx * dx + dz * dz + dy * dy < 1) return true;
+    }
+  }
+  return false;
+}

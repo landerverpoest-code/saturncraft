@@ -36,6 +36,7 @@ import { companionAI, companionSave, companionLoad } from './companions.js'; // 
 import { babySpeedFactor, babyAttackFactor, babyHealth, babyExplosion, babyXp, babyLoot } from './babies.js'; // spiderlings, Fizzlets, Brute cubs
 import './hoverling.js'; // registers the Hoverling
 import './gustling.js'; // registers the Gustling (Proving Vaults)
+import { recordKill } from '../player/stats.js';
 import { EFFECTS, addEffect, tickEffects, speedFactor, periodicActions, instantAmount, effectsColor, visibilityFactor, resistanceFactor } from '../player/effects.js';
 
 let nextMobId = 1_000_000;
@@ -440,18 +441,19 @@ export class Mob {
         const c = g.spawner.spawnMob('wobbler', this.x + (Math.random() - 0.5) * this.size * 0.5, this.y + 0.3, this.z + (Math.random() - 0.5) * this.size * 0.5);
         if (c) { c.setSize(this.size / 2); c.yaw = Math.random() * Math.PI * 2; }
       }
-      if (this.lastHurtByPlayer > 0) g.player.stats.kills++;
+      if (this.lastHurtByPlayer > 0) recordKill(g.player.stats, this.type);
       return; // only the smallest drop slimeballs
     }
     if (!g) return;
     const killedByPlayer = this.lastHurtByPlayer > 0;
     this.killedByPlayer = killedByPlayer;
-    if (killedByPlayer) g.player.stats.kills++;
+    if (killedByPlayer) recordKill(g.player.stats, this.type);
     if (killedByPlayer && this.def.category === CATEGORY.MONSTER && g.milestones) g.milestones.event('kill');
     if (this.def.onDeath) this.def.onDeath(this, g, killedByPlayer);
     if (this.captain && g.raids) g.raids.onCaptainKilled(this, killedByPlayer); // Dark Omen
     for (const st of equipmentDrops(this.equip, { killedByPlayer, plunder: source === 'player' ? this.plunder | 0 : 0, picked: this.equipPicked })) g.entities.spawnItem(this.x, this.y + 0.5, this.z, st);
     for (const st of offhandDrops(this.offhand, { killedByPlayer, plunder: source === 'player' ? this.plunder | 0 : 0 })) g.entities.spawnItem(this.x, this.y + 0.5, this.z, st);
+    if (killedByPlayer && this.offhand && g.milestones) g.milestones.event('offhand'); // it carried something in its off-hand (mobs/offhand.js)
     if (this.age < 0 && this.def.category !== CATEGORY.MONSTER) { this.killedByPlayer = false; return; } // baby animals drop nothing
     const plunder = source === 'player' ? this.plunder | 0 : 0; // set by the player's melee hit
     let drops = rollDrops(this.type, { killedByPlayer, onFire: this.fireTicks > 0, sheared: this.sheared, plunder });

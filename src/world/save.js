@@ -7,6 +7,7 @@ import { chunkKey } from './world.js';
 import { cleanEffects } from '../player/effects.js';
 import { liveStands, loadStands } from '../entities/armorStand.js';
 import { saveState as saveCaravanState, loadState as loadCaravanState } from '../mobs/peddler.js';
+import { saveStats, loadStats } from '../player/stats.js';
 
 const DB_NAME = 'saturncraft';
 const STORE = 'worlds';
@@ -112,6 +113,7 @@ export async function saveGame(game) {
     worldSpawn: game.worldSpawn,
     weather: game.weather.save(),
     milestones: game.milestones.save(),
+    stats: saveStats(p.stats), // blocks, distances, kills, deaths, trades and play time (player/stats.js)
     raids: game.raids ? game.raids.save() : null, // patrol timer and the raid under way (mobs/raids.js)
     boats: game.entities.list.filter((e) => e.kind === 'boat' && !e.dead).map((e) => ({ x: e.x, y: e.y, z: e.z, yaw: e.yaw, cart: !!e.cart })),
     armorStands: liveStands(game),
@@ -197,6 +199,7 @@ export function applySave(game, data) {
   game.netPlayers = data.netPlayers || {};
   game.weather.load(data.weather);
   game.milestones.load(data.milestones);
+  game.player.stats = loadStats(data.stats);
   if (game.raids) game.raids.load(data.raids);
   for (const b of data.boats || []) game.entities.spawnBoat(b.x, b.y, b.z, b.yaw, !!b.cart);
   loadStands(game, data.armorStands);
