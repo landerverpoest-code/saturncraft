@@ -116,9 +116,29 @@ Every player can do everything; the host's game decides what happens.
 | Time & weather | from the host, once a second |
 | Chat | `T`, messages go to everyone with the sender's name; join / leave notices |
 | Guest inventories | kept in the host's save by player name, restored on rejoin |
+| Player list | hold **Tab**: everyone with their team colour, game mode (Survival / Creative / Adventure / Spectator) and ping (measured by each guest, shown for all); `/list` prints the same |
+| Private messages | `/msg <player> <text>` (also `/w`, `/tell`), `/r <text>` answers the last one; only the two of them see it |
+| Teams | `/team create <name> [color]`, `/team join <name>`, `/team leave`, `/team list`, `/team color <color>`, `/team disband`, `/team ff <on\|off>`, `/tc <text>` for team chat. Members have coloured names (name tags, markers, chat, the Tab list). **Friendly fire is off by default**: team mates cannot hurt each other with melee, arrows or PvP until the team's owner (or an op) runs `/team ff on`. Teams are kept in the host's save |
+| Ping beacons | press **B** (or `/ping`) to drop a beacon on the block you look at: a glowing column and diamond in the world, shown on every team mate's HUD (pinned to the screen edge with an arrow and the distance when off screen) for 20 s. One per player, once a second, up to 250 blocks away; without a team it goes to everybody |
+| Emotes | press **V** for the wheel, or `/emote <wave\|point\|sit>`: the other players see the pose on your model (a seat lasts until you walk off); your own body shows it in the third-person views (F5) |
+| Spectating | dead guests get a **Spectate a Friend** button on the death screen; creative players (and the host) use `/spectate [player]`. The camera follows the friend's position and view, the mouse wheel picks the next one, **Shift** (or `/spectate off`) lets go and returns to the previous game mode |
+| Kick, ban, ops | host and ops: `/kick <player> [reason]`, `/ban <player> [reason]` (online or offline), `/pardon <player>`, `/banlist`; the host alone runs `/op`, `/deop`, `/oplist` (ops cannot remove the host or each other). The pause menu has a **Kick** button per guest. Ops, bans, teams and guest identities are saved with the world. Bans go by name *and* by a random token each browser keeps (`localStorage`), so a new name from the same browser stays banned; a different browser, or cleared site data, gets round it |
+| Names and identity | each browser sends a random token with its join; the host remembers which token first used a name, so a second browser cannot take over an op's, a team mate's or a guest's name (it joins as `Name-2`) |
+| Join code | the pause menu shows the room code and join link with **Copy Link** and **Copy Code** buttons; guests see (and can copy) the code too, to pass it on |
 
-Disconnects: a guest who leaves is removed for everyone; if the host quits or
-the connection drops, guests see a message and go back to the title screen.
+Compatibility: the social features add optional fields (`hello.tok`, `welcome.soc` / `.teams`) and new message
+types that older builds ignore, so `PROTOCOL_VERSION` stays 2 and old and new builds still join each other (the new
+commands tell a guest when the host is too old). Tests: `tests/social.test.js` (includes a loopback host and guest, the
+transport behind `?net=local`).
+
+Disconnects: a guest who leaves is removed for everyone. If a guest's link to the host drops (timeout, closed
+connection) the screen says so and **reconnects by itself** after a few seconds (or at once with **Reconnect now**):
+the page reloads and rejoins the same room, up to 5 times, and the guest comes back where they stood with their
+own inventory, health and experience (their game keeps a copy from the moment the link went; the host's copy,
+which also keeps their last position, is the fallback, and a guest who died is restored from the host's record
+because their things lie on the ground). The host replaces the old half-dead link of the same guest at once. A kick,
+a ban, a different game version, a full world or the host closing the world end at the title screen with the reason.
+If the host quits, guests see a message and go back to the title screen.
 Single-player is unchanged when no session is open (the networking code in
 `src/net/` is only loaded when hosting or joining).
 
@@ -168,7 +188,8 @@ src/
   audio/                   audio.js (procedural Web Audio effects)
   net/                     multiplayer: protocol.js (wire format), transport.js (PeerJS / loopback),
                            editSync.js (block edits), session.js (host & client), remotePlayer.js,
-                           entityMirror.js (guest copies of the host's entities)
+                           entityMirror.js (guest copies of the host's entities),
+                           social.js (teams, whispers, beacons, emotes, Tab list, ops / bans, reconnect rules)
 tests/                     vitest suites (95 tests)
 ```
 

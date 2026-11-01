@@ -7,6 +7,7 @@ import { ITEMS } from '../world/items.js';
 import { armorTotals } from '../player/armor.js';
 import { xpToNextLevel } from '../player/experience.js';
 import { PlayerMarkers } from './playerMarkers.js';
+import { PlayerList } from './playerList.js';
 import { dashGauge } from '../mobs/duneStrider.js';
 import { shieldGauge } from '../player/shield.js';
 import { paintGhostFace, ghostPose, GHOST_TICKS } from './ghostFace.js';
@@ -91,6 +92,7 @@ export class HUD {
     this.debugEl = this.root.querySelector('#debug');
     this.coordsEl = this.root.querySelector('#coords');
     this.markers = new PlayerMarkers(this.root.querySelector('#markers-root'));
+    this.playerList = new PlayerList(this.root); // Tab (net/social.js)
     this.skyCanvas = this.root.querySelector('#skyinfo canvas');
     this.phaseLabel = this.root.querySelector('#phase-label');
     this.timeLabel = this.root.querySelector('#time-label');
@@ -321,6 +323,7 @@ export class HUD {
     if (this.showDebug && this.frame % 6 === 0) this.debugEl.textContent = g.debugText();
     if (g.net) this.markers.update(g);
     else this.markers.clear();
+    this.playerList.update(g);
     // coordinates (pause menu setting); the F3 screen already shows them
     const coords = !!g.settings.showCoords && !this.showDebug;
     this.coordsEl.classList.toggle('hidden', !coords);

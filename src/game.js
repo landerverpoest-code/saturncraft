@@ -13,6 +13,7 @@ import { World } from './world/world.js';
 import { B, BLOCKS, SOLID, SHAPE, isFurnace, FURNACE_KIND, isBox } from './world/blocks.js';
 import { ITEMS, I, toolOf, heldLightLevel, DISCS } from './world/items.js';
 import { heldLights } from './net/remotePlayer.js';
+import { EMOTES } from './net/social.js';
 import { blockDrops } from './world/mining.js';
 import { withExtras, cleanContents } from './world/enchantments.js';
 import { runRandomTicks } from './world/randomTicks.js';
@@ -492,6 +493,16 @@ export class Game {
     }
     this.player.respawn();
     this.input.lock();
+  }
+
+  /** Dead in a shared world: come back as a spectator following a friend (Shift, or /spectate off, to rejoin the game). */
+  spectateAfterDeath() {
+    const net = this.net;
+    this.respawn();
+    if (!net) return;
+    this.player.setGamemode('spectator');
+    const err = net.startSpectate(null, 'survival');
+    if (err) { this.player.setGamemode('survival'); this.hud.toast(err); }
   }
 
   /** Rain on the ground: splashes near the player; puts out burning things. */
@@ -1273,6 +1284,16 @@ export class Game {
       if (this.ui.open === 'pause' && this.ui.inGuide) { this.ui.open = null; this.ui.clear(); this.onUIClosed(); }
       else if (!this.ui.blocking && this.running) { this.input.unlock(); this.ui.showGuide('creatures', true); }
     }
+    if (this.net && this.running && !this.ui.blocking) {
+      // multiplayer: ping a spot for the team (B), the emote wheel (V); a spectator's Shift lets go of the friend they follow
+      if (inp.wasPressed('ping')) this.net.pingAtCrosshair();
+      if (inp.wasPressed('emote')) { this.input.unlock(); this.ui.openEmotes(); }
+      if (this.net.spectate && inp.wasPressed('sneak')) { this.net.stopSpectate(); this.hud.toast('Stopped following'); }
+    }
+    if (this.ui.open === 'emotes') {
+      if (inp.wasPressed('emote')) this.ui.close();
+      else EMOTES.forEach((k, i) => { if (inp.codePressed('Digit' + (i + 1))) this.ui.pickEmote(k); });
+    }
     if (this.ui.open === 'pause' && this.ui.padBack) this.ui.padNav(inp.pressed, inp.pad.ly); // gamepad on the Statistics and Milestones screens
     if (inp.wasPressed('pause') && this.ui.blocking) {
       if (this.ui.open === 'pause') { this.ui.open = null; this.ui.clear(); this.onUIClosed(); }
@@ -1287,7 +1308,8 @@ export class Game {
       const sens = inp.sensitivity * (p.zooming && this.perspective === 0 ? 0.15 : 1); // steadier aim through a Farglass
       p.yaw -= m.dx * sens;
       p.pitch = Math.max(-Math.PI / 2 + 0.001, Math.min(Math.PI / 2 - 0.001, p.pitch - m.dy * sens));
-      if (m.wheel) p.inventory.selected = (p.inventory.selected + m.wheel + 9) % 9;
+      if (m.wheel && this.net && this.net.spectate) this.net.cycleSpectate(m.wheel); // the wheel picks the next friend to follow
+      else if (m.wheel) p.inventory.selected = (p.inventory.selected + m.wheel + 9) % 9;
       for (let i = 1; i <= 9; i++) if (inp.wasPressed('slot' + i)) p.inventory.selected = i - 1;
       if (inp.wasPressed('hotbarNext')) p.inventory.selected = (p.inventory.selected + 1) % 9;
       if (inp.wasPressed('hotbarPrev')) p.inventory.selected = (p.inventory.selected + 8) % 9;

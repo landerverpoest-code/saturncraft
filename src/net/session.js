@@ -15,6 +15,7 @@
 //   tickNear(entity), remoteTargets(proj), raycastPlayers(...), playerNames(),
 //   requestSpawn(kind, data), interactMob(mob), hitBoat(boat), ride(boat, on),
 //   openContainer / closeContainer / uiBefore / uiAfter, requestTrade(...),
+//   socialCommand(text), pingAtCrosshair(), emote(kind), playerRows(), startSpectate(name), stopSpectate(), blocksPvp(attacker, victim)  (net/social.js)
 //   sendCommand(text), requestTravel(dim, arrival), requestExplosion(...), sendVibration(k, x, y, z), sendNote(x, y, z),
 //   onSwitchDimension(dim, pos), onArrived(x, y, z), respawnNearHost(), useFence(x, y, z)
 import { doubleChestHalves, doubleChestView } from '../world/chests.js';
@@ -53,6 +54,12 @@ import { FATIGUE_AMP, FATIGUE_TICKS, needsFatigue } from '../mobs/oceanMobs.js';
 import { runCommand } from '../ui/commands.js';
 import { DIMENSIONS } from '../world/dimensions/dims.js';
 import { POTIONS } from '../world/potions.js';
+import {
+  SocialState, PingBoard, routePing, runSocial, nameKey, cleanToken, loadClientToken, cleanEmote, emoteByName, EMOTE_COOLDOWN_MS,
+  PM_FROM, PM_TO, PM_COLOR, TEAM_CHAT, PING_REACH, PING_FALLBACK, playerRows, cleanRoster, cleanPing, canSpectate, nextSpectateTarget,
+  makeResume, pickGuestRecord, reconnectDelay, GAMEMODE_LABEL, teamColor,
+} from './social.js';
+import { PingBeacons } from '../render/pingBeacons.js';
 
 const STATE_EVERY = 2;      // ticks between player / entity updates (10 Hz)
 const ENV_EVERY = 20;       // time + weather once a second (also the heartbeat)
@@ -109,6 +116,11 @@ class Session {
     this._applyingOther = false;
     this.pvp = true;            // host options (sent to guests)
     this.guestCommands = true;
+    this.social = new SocialState(); // teams, ops, bans (the host's copy is part of the save; guests mirror the teams)
+    this.pings = new PingBoard();    // short-lived beacons
+    this.beacons = null;             // their 3D markers (render/pingBeacons.js), made on first use
+    this.roster = [];                // [[id, name, gamemode, ping]] from the host, for the Tab list
+    this.spectate = null;            // { target, switched, prevMode } while following a friend
   }
 
   /** Random ticks (crops, grass, leaves) around our own player: the host runs them, also around guests. */
@@ -149,6 +161,110 @@ class Session {
   render(sec) {
     const now = performance.now();
     for (const rp of this.remotes.values()) rp.update(this.game, sec, now);
+    const act = this.activePings(now);
+    if (act.length || this.beacons) {
+      if (!this.beacons) this.beacons = new PingBeacons(this.game.scene);
+      this.beacons.set(act, now, sec);
+    }
+  }
+
+  // ---- social: names, colours, friendly fire -------------------------------------------------------
+  /** A player object (ours, or a guest's stand-in) -> its name. */
+  nameOf(o) { return o ? o.netName || (o.isPlayer ? this.name : null) : null; }
+  /** True when the attacker may not hurt the victim: same team, friendly fire off (net/social.js). */
+  blocksPvp(attacker, victim) { return this.social.blocksDamage(this.nameOf(attacker), this.nameOf(victim)); }
+  colorOf(name) { return this.social.colorOf(name); }
+
+  /** Beacons to show now (this dimension). */
+  activePings(now = performance.now()) { return this.game ? this.pings.active(now, this.game.world.dimension) : []; }
+
+  /** Ping the block under the crosshair: a beacon for the team (or everybody, without a team). */
+  pingAtCrosshair() {
+    const g = this.game, p = g.player, now = performance.now();
+    if (!p || p.dead) return false;
+    const [ex, ey, ez] = p.eyePos(), [dx, dy, dz] = p.lookDir();
+    const hit = g.world.raycast(ex, ey, ez, dx, dy, dz, PING_REACH, true);
+    if (!hit) { if (g.hud) g.hud.toast('Nothing there to ping', 1500); return false; }
+    if (!this.pings.ready(this.name, now)) return false;
+    const at = { x: hit.x + 0.5, y: hit.y + 1, z: hit.z + 0.5 };
+    if (this.isHost) this.handlePing(this.name, at, null);
+    else { this.send({ t: 'ping', x: at.x, y: at.y, z: at.z }); this.showPing({ from: this.name, ...at, dim: g.world.dimension, color: this.social.colorOf(this.name) }, now); }
+    return true;
+  }
+
+  showPing(ping, now = performance.now()) {
+    this.pings.add(ping, now);
+    if (this.game && this.game.audio) this.game.audio.play('orb');
+  }
+
+  // ---- social: emotes --------------------------------------------------------------------------------
+  /** Play an emote (wave, point, sit) for everybody. `kind` may be abbreviated. */
+  emote(kind) {
+    const e = cleanEmote(kind) || emoteByName(kind), now = performance.now();
+    if (!e || now - (this.lastEmote || -1e9) < EMOTE_COOLDOWN_MS) return false;
+    this.lastEmote = now;
+    const p = this.game.player;
+    this.game.ownEmote = { k: e, at: now, x: p.x, z: p.z }; // our own body in the third-person views
+    if (this.isHost) this.broadcast({ t: 'emote', id: 0, e }); else this.send({ t: 'emote', e });
+    return true;
+  }
+
+  // ---- social: the player list -------------------------------------------------------------------------
+  /** Rows for the Tab list: { name, gamemode, ping, team, color, host, op, you }. */
+  playerRows() {
+    return playerRows(this.currentRoster(), this.social, this.name, this.hostName());
+  }
+
+  // ---- social: following a friend ----------------------------------------------------------------------
+  spectateCandidates() { return [...this.remotes.values()].filter((rp) => rp.state && !rp.state.dead).map((rp) => rp.name); }
+
+  /** Follow `name` (or the first friend). Returns an error text, or null when it worked. */
+  startSpectate(name = null, restoreTo = null) {
+    const g = this.game, p = g.player;
+    if (!canSpectate(p)) return 'You can only follow a friend when you are dead or in creative mode';
+    const names = this.spectateCandidates();
+    const target = name ? names.find((n) => nameKey(n) === nameKey(name)) : nextSpectateTarget(names, null, 1);
+    if (!target) return name ? `No player called ${name} to follow` : 'There is nobody to follow';
+    if (!this.spectate) {
+      const switched = !!restoreTo || p.gamemode !== 'spectator'; // restoreTo: the mode to go back to (a dead player returns to survival)
+      this.spectate = { target, switched, prevMode: restoreTo || (switched ? p.gamemode : 'creative') };
+      if (p.gamemode !== 'spectator') p.setGamemode('spectator'); // flies free of everything; the camera is fixed to the friend
+    } else this.spectate.target = target;
+    if (g.hud) g.hud.toast(`Following ${target} - scroll for the next player, Shift to stop`, 3000);
+    return null;
+  }
+
+  /** Next (+1) or previous (-1) friend. */
+  cycleSpectate(dir) {
+    if (!this.spectate) return;
+    const t = nextSpectateTarget(this.spectateCandidates(), this.spectate.target, dir < 0 ? -1 : 1);
+    if (t) { this.spectate.target = t; if (this.game.hud) this.game.hud.toast(`Following ${t}`, 1500); }
+  }
+
+  stopSpectate() {
+    const s = this.spectate;
+    if (!s) return false;
+    this.spectate = null;
+    const p = this.game.player;
+    if (s.switched && p.gamemode === 'spectator') p.setGamemode(s.prevMode || 'survival');
+    return true;
+  }
+
+  /** Every tick: stay on the followed friend (their position and view). */
+  tickSpectate() {
+    const s = this.spectate, p = this.game.player;
+    if (!s) return;
+    if (p.gamemode !== 'spectator') { this.spectate = null; return; } // the player changed mode themselves
+    let rp = [...this.remotes.values()].find((r) => nameKey(r.name) === nameKey(s.target));
+    if (!rp || !rp.state || rp.state.dead) {
+      const t = nextSpectateTarget(this.spectateCandidates(), s.target, 1);
+      if (!t) { this.stopSpectate(); if (this.game.hud) this.game.hud.toast('Nobody left to follow', 2500); return; }
+      s.target = t;
+      rp = [...this.remotes.values()].find((r) => r.name === t);
+    }
+    const at = rp.shown || rp.state;
+    p.setPosition(at.x, at.y, at.z);
+    p.yaw = rp.state.yaw; p.pitch = rp.state.pitch;
   }
 
   /** True when this page itself stalled for a while (a long frame, a sleeping laptop): don't blame the peers. */
@@ -160,7 +276,11 @@ class Session {
 
   playerNames() { return [this.name, ...[...this.remotes.values()].map((r) => r.name)]; }
 
-  disposeRemotes() { for (const rp of this.remotes.values()) rp.dispose(); this.remotes.clear(); }
+  disposeRemotes() {
+    for (const rp of this.remotes.values()) rp.dispose();
+    this.remotes.clear();
+    if (this.beacons) { this.beacons.dispose(); this.beacons = null; }
+  }
 
   /** Another player under the crosshair (PvP): { target, dist } or null. */
   raycastPlayers(ox, oy, oz, dx, dy, dz, maxDist) {
@@ -208,6 +328,8 @@ export class HostSession extends Session {
     this.game = game;
     game.netPlayers = game.netPlayers || {};
     game.player.netName = this.name;
+    game.social = game.social || new SocialState(); // teams, ops and bans live in the save (world/save.js)
+    this.social = game.social;
     this.edits = new EditSync(game.world, { host: true });
     // lightning strikes are shown (and burn / hurt) on every client too
     const strike = game.strikeLightning.bind(game);
@@ -299,8 +421,23 @@ export class HostSession extends Session {
       case 'chat': {
         const text = String(m.m || '').slice(0, 256);
         if (!text) break;
-        g.chat.add(`<${c.name}> ${text}`);
+        g.chat.add(`<${c.name}> ${text}`, this.social.colorOf(c.name));
         this.broadcast({ t: 'chat', from: c.name, m: text }, c);
+        break;
+      }
+      case 'scmd': this.remoteSocial(c, m); break;
+      case 'pg': // ping + gamemode for the Tab list; answered at once so the guest can time the round trip
+        c.ping = cleanPing(m.rtt);
+        if (GAMEMODE_LABEL[m.gm]) c.gm = m.gm;
+        c.ch.send({ t: 'pong', ts: m.ts });
+        break;
+      case 'ping': this.handlePing(c.name, m, c); break;
+      case 'emote': {
+        const e = cleanEmote(m.e), now = performance.now();
+        if (!e || now - (c.lastEmote || -1e9) < EMOTE_COOLDOWN_MS) break;
+        c.lastEmote = now;
+        c.rp.playEmote(e, now);
+        this.broadcast({ t: 'emote', id: c.id, e }, c);
         break;
       }
       case 'hit': this.remoteHit(c, m); break;
@@ -355,19 +492,27 @@ export class HostSession extends Session {
   }
 
   welcome(c, m) {
-    const g = this.game;
+    const g = this.game, soc = this.social;
     if (m.v !== PROTOCOL_VERSION) { c.ch.send({ t: 'reject', reason: 'The host runs a different version of Saturncraft' }); setTimeout(() => this.drop(c), 500); return; }
+    const tok = cleanToken(m.tok), base = cleanName(m.name);
+    const ban = soc.banOf(base, tok);
+    if (ban) { c.ch.send({ t: 'reject', reason: `You are banned from this world${ban.reason ? ': ' + ban.reason : ''}` }); setTimeout(() => this.drop(c), 500); return; }
+    // the same guest coming back before the old link timed out: the old link goes, the name stays theirs
+    if (tok) for (const o of this.joined()) if (o !== c && o.tok === tok && nameKey(o.name) === nameKey(base)) this.drop(o);
     if (this.joined().length >= MAX_PLAYERS - 1) { c.ch.send({ t: 'reject', reason: `This world is full (${MAX_PLAYERS} players)` }); setTimeout(() => this.drop(c), 500); return; }
-    let name = cleanName(m.name);
-    const taken = new Set(this.playerNames());
-    for (let n = 2; taken.has(name); n++) name = cleanName(m.name).slice(0, 13) + '-' + n;
-    c.name = name;
+    let name = base;
+    const taken = new Set(this.playerNames().map(nameKey));
+    // a name belongs to the browser that first used it (ops, teams and saved belongings go by name)
+    for (let n = 2; taken.has(nameKey(name)) || !soc.identityFree(name, tok); n++) name = base.slice(0, 13) + '-' + n;
+    soc.bindIdentity(name, tok);
+    c.name = name; c.tok = tok;
     const p = g.player;
     const chunks = this.editedChunks();
     c.ch.send({
       t: 'welcome', v: PROTOCOL_VERSION, id: c.id, name, hostName: this.name,
       seed: g.seed, time: g.time, weather: g.weather.save(), gamemode: p.gamemode, dim: g.world.dimension,
       dl: g.daylightCycle, df: g.difficulty, pvp: this.pvp, gc: this.guestCommands, se: g.seasons.save(), ev: g.worldEvents ? g.worldEvents.syncOut() : undefined,
+      soc: 1, teams: soc.teamsToWire(), // optional: the social layer (net/social.js); older guests ignore both
       worldSpawn: g.worldSpawn, pos: { x: p.x, y: p.y, z: p.z, yaw: p.yaw },
       player: g.netPlayers[name] || null,
       signs: [...g.signs], frames: [...g.frames], pots: [...g.pots], lecterns: [...g.lecterns],
@@ -383,6 +528,7 @@ export class HostSession extends Session {
     this.remotes.set(c.id, c.rp);
     this.broadcast({ t: 'join', id: c.id, name }, c);
     g.chat.add(`${name} joined the game`);
+    this.sendRoster();
   }
 
   /** Every edited chunk of the current dimension (stored and loaded ones). */
@@ -401,9 +547,16 @@ export class HostSession extends Session {
     for (const v of this.viewers.values()) v.ids.delete(c.id);
     for (const e of this.game.entities.list) { if (e.remoteRider === c.id) e.remoteRider = null; if (e.passengerId === c.id) e.passengerId = null; }
     for (const mob of heldBy(this.game, c.rp.target)) unleash(this.game, mob, true); // the leads they held fall
+    // their record keeps the last place they stood (newer than the inventory copy of up to 5 s ago): a rejoin continues there
+    const rec = this.game.netPlayers && this.game.netPlayers[c.name];
+    if (rec && c.raw && finite(c.raw[0], c.raw[1], c.raw[2]) && !((c.raw[6] | 0) & 2)) { // (a dead guest's belongings lie on the ground: keep the older record)
+      rec.x = c.raw[0]; rec.y = c.raw[1]; rec.z = c.raw[2]; rec.yaw = c.raw[3]; rec.pitch = c.raw[4]; rec.dim = this.game.world.dimension;
+    }
+    if (this.spectate && nameKey(this.spectate.target) === nameKey(c.name)) this.cycleSpectate(1);
     c.rp.dispose();
     this.remotes.delete(c.id);
     this.broadcast({ t: 'leave', id: c.id, name: c.name });
+    this.sendRoster();
     if (why && this.game) this.game.chat.add(`${c.name} ${why}`);
   }
 
@@ -446,6 +599,7 @@ export class HostSession extends Session {
     const dmg = Math.max(0, Math.min(40, +m.d || 0));
     const victim = m.id === 0 ? g.player : (this.clients.get(m.id) || {}).rp;
     if (!victim) return;
+    if (this.blocksPvp(c.rp.target, m.id === 0 ? g.player : victim.target)) return; // team mates, friendly fire off
     const vx = victim.x, vy = victim.y, vz = victim.z;
     if (Math.hypot(vx - s.x, vy - s.y, vz - s.z) > 7) return;
     const src = 'player:' + c.name;
@@ -458,6 +612,7 @@ export class HostSession extends Session {
     const t = rp.target, c = this.clients.get(rp.id);
     if (!c || t.dead || amount <= 0 || (t.creative && source !== 'void')) return false;
     if (attacker && attacker.isPlayer && !this.pvp) return false;
+    if (attacker && attacker.isPlayer && this.blocksPvp(attacker, t)) return false; // team mates, friendly fire off
     if (attacker && attacker.kind === 'mob') t.lastHurtBy = attacker;
     const src = attacker && attacker.isPlayer && source === 'player' ? 'player:' + (attacker.netName || 'Player') : source;
     c.ch.send({ t: 'hurt', a: amount, s: src, x: attacker ? attacker.x : null, z: attacker ? attacker.z : null });
@@ -806,6 +961,91 @@ export class HostSession extends Session {
 
   onArrived(x, y, z) { this.broadcast({ t: 'arrived', x, y, z, d: this.game.world.dimension }); }
 
+  // ---- social: commands, messages, teams, beacons, the roster ------------------------------------------
+  hostName() { return this.name; }
+
+  socialEnv() {
+    return {
+      social: this.social, hostName: this.name,
+      online: () => this.playerNames(),
+      teamChanged: () => this.broadcastTeams(),
+      pm: (from, to, text) => this.deliverPm(from, to, text),
+      teamSay: (from, text) => this.deliverTeam(from, text),
+      kick: (name, reason) => this.kickPlayer(name, reason),
+      ban: (name, reason, by) => this.banPlayer(name, reason, by),
+    };
+  }
+
+  /** /msg, /team, /kick... typed by the host. */
+  socialCommand(text) { return runSocial(this.socialEnv(), this.name, text); }
+
+  /** The same typed by a guest: the host runs it for them and answers with the lines. */
+  remoteSocial(c, m) {
+    const text = String(m.text || '').slice(0, 256);
+    let out;
+    try { out = runSocial(this.socialEnv(), c.name, text); } catch (e) { out = ['Command failed: ' + e.message]; }
+    if (out.length) c.ch.send({ t: 'cmdout', lines: out });
+  }
+
+  clientByName(name) { return this.joined().find((c) => nameKey(c.name) === nameKey(name)) || null; }
+
+  /** A private message: the recipient and the sender (both get a line, colour-coded). */
+  deliverPm(from, to, text) {
+    const g = this.game;
+    const show = (who, line, m) => {
+      if (nameKey(who) === nameKey(this.name)) g.chat.add(line, PM_COLOR);
+      else { const c = this.clientByName(who); if (c) c.ch.send(m); }
+    };
+    show(to, PM_FROM(from, text), { t: 'pm', from, m: text });
+    show(from, PM_TO(to, text), { t: 'pm', to, m: text });
+  }
+
+  /** /tc: a line for every online member of the sender's team. */
+  deliverTeam(from, text) {
+    const t = this.social.teamOf(from);
+    if (!t) return;
+    for (const member of t.members) {
+      if (nameKey(member) === nameKey(this.name)) this.game.chat.add(TEAM_CHAT(t.name, from, text), t.color);
+      else { const c = this.clientByName(member); if (c) c.ch.send({ t: 'tchat', team: t.name, from, m: text }); }
+    }
+  }
+
+  broadcastTeams() { this.broadcast({ t: 'teams', teams: this.social.teamsToWire() }); }
+
+  kickPlayer(name, reason = '') {
+    const c = this.clientByName(name);
+    if (!c) return false;
+    c.ch.send({ t: 'bye', reason: `You were kicked from the world${reason ? ': ' + reason : ''}`, kick: 1 });
+    this.game.chat.add(`${c.name} was kicked${reason ? ' (' + reason + ')' : ''}`);
+    setTimeout(() => this.drop(c), 400); // (lets the message out first)
+    return true;
+  }
+
+  banPlayer(name, reason = '', by = '') {
+    const c = this.clientByName(name);
+    this.social.ban(name, reason, by, c ? c.tok : this.social.tokenOf(name));
+    return c ? this.kickPlayer(name, reason ? 'banned: ' + reason : 'banned') : false;
+  }
+
+  /** A beacon from `sender` (a guest's message or our own key press): checked, then shown to the team (or everybody). */
+  handlePing(sender, m, c) {
+    const g = this.game, now = performance.now();
+    const from = c ? c.rp.state : g.player;
+    const r = routePing(this.social, this.pings, sender, m, from, this.playerNames(), now, g.world.dimension);
+    if (!r.ok) return;
+    const msg = { t: 'ping', from: r.ping.from, x: r.ping.x, y: r.ping.y, z: r.ping.z, d: r.ping.dim, c: r.ping.color || undefined };
+    // the host sees it if it is the sender or on the team
+    if (!c || r.targets.some((n) => nameKey(n) === nameKey(this.name))) this.showPing(r.ping, now);
+    for (const n of r.targets) { const cl = this.clientByName(n); if (cl) cl.ch.send(msg); }
+  }
+
+  /** [[id, name, gamemode, ping]] of everybody here (the host's ping is shown as none). */
+  hostRoster() {
+    return [[0, this.name, this.game ? this.game.player.gamemode : 'survival', -1], ...this.joined().map((c) => [c.id, c.name, c.gm || 'survival', c.ping == null ? -1 : c.ping])];
+  }
+  currentRoster() { return this.hostRoster(); }
+  sendRoster() { this.broadcast({ t: 'roster', r: this.hostRoster() }); }
+
   sendChat(text) { this.broadcast({ t: 'chat', from: this.name, m: text }); }
   sendSign(x, y, z, l) { this.broadcast({ t: 'sign', x, y, z, l }); }
   sendFrame(x, y, z, st) { this.broadcast({ t: 'frame', x, y, z, st }); }
@@ -817,6 +1057,8 @@ export class HostSession extends Session {
     if (this.closed) return;
     const g = this.game;
     this.ticks++;
+    this.tickSpectate();
+    if (this.ticks % 40 === 0) this.sendRoster();
     if (this.stalled()) for (const c of this.clients.values()) c.lastSeen = performance.now();
     const e = this.edits.take();
     if (e.length) this.broadcast({ t: 'ed', e, d: g.world.dimension });
@@ -898,19 +1140,24 @@ export class ClientSession extends Session {
     this.cont = null; // the container screen we have open: { kind, x, y, z, obj, ep, seq, pending, snap }
     this.stands = new StandRequests(); // armour stand swaps waiting for the host's answer
     this.raidSeen = null; // the last raid status from the host (for the victory / defeat toasts)
+    this.tok = loadClientToken(); // who we are to the host, so our name (and ops, team, belongings) stay ours
+    this.code = null;     // the room code we joined with (to reconnect)
+    this.resume = null;   // what a dropped link left behind: our place and belongings (net/social.js makeResume)
+    this.rtt = -1;        // round trip to the host in ms (shown in the Tab list)
+    this.hostSocial = false; // does the host speak the social messages?
   }
 
   async connect(transport, code, onStatus = () => {}) {
     onStatus('Connecting…');
     const conn = await transport.join(code);
-    this.ch = new Channel(conn, (m) => this.onMessage(m), () => this.lost('Lost connection to the host'));
-    this.ch.send({ t: 'hello', v: PROTOCOL_VERSION, name: this.name });
+    this.ch = new Channel(conn, (m) => this.onMessage(m), () => this.lost('Lost connection to the host', true));
+    this.ch.send({ t: 'hello', v: PROTOCOL_VERSION, name: this.name, tok: this.tok });
     this.startBackground(); // keep-alives while the world downloads and the terrain loads
     onStatus('Downloading the world…');
     this.onStatus = onStatus;
     await new Promise((resolve, reject) => {
       this._ready = resolve; this._fail = reject;
-      this._joinTimer = setTimeout(() => this.lost('The host did not answer'), 60000);
+      this._joinTimer = setTimeout(() => this.lost('The host did not answer', true), 60000);
     });
     clearTimeout(this._joinTimer);
     return this;
@@ -921,7 +1168,7 @@ export class ClientSession extends Session {
   onMessage(m) {
     this.lastSeen = performance.now();
     if (!this.game) {
-      if (m.t === 'welcome') { this.welcome = m; this.id = m.id; this.name = m.name; this.setOptions(m); }
+      if (m.t === 'welcome') { this.welcome = m; this.id = m.id; this.name = m.name; this.setOptions(m); this.hostSocial = !!m.soc; this.social.teamsFromWire(m.teams); }
       else if (m.t === 'ck') { this.chunks.push(m); if (this.welcome && this.onStatus) this.onStatus(`Downloading the world… ${this.chunks.length}/${this.welcome.chunks} chunks`); }
       else if (m.t === 'ready') this._ready();
       else if (m.t === 'reject') this.lost(m.reason || 'The host refused the connection');
@@ -969,10 +1216,13 @@ export class ClientSession extends Session {
     game.worldSpawn = { ...w.worldSpawn };
     const p = game.player;
     p.netName = this.name;
-    if (w.player) applyPlayerSave(game, w.player);
+    // our own copy from just before the link dropped is newer than the host's (up to 5 s old); the host's is the fallback
+    const rec = pickGuestRecord(w.player, this.resume, game.world.dimension);
+    this.resume = null;
+    if (rec) applyPlayerSave(game, rec);
     p.stats.guide = loadGuestGuide(); // a guest's Field Guide lives on its own machine (player/fieldGuide.js)
-    if (!w.player || (w.player.dim || 'overworld') !== game.world.dimension) {
-      if (!w.player) { p.setGamemode(w.gamemode); p.spawn = { ...w.worldSpawn }; }
+    if (!rec || (rec.dim || 'overworld') !== game.world.dimension) {
+      if (!rec) { p.setGamemode(w.gamemode); p.spawn = { ...w.worldSpawn }; }
       p.setPosition(w.pos.x, w.pos.y, w.pos.z);
       p.yaw = w.pos.yaw;
     }
@@ -1000,7 +1250,18 @@ export class ClientSession extends Session {
       case 'pl': for (const a of m.p || []) { if (a[0] === this.id) continue; const rp = this.remotes.get(a[0]); if (rp) rp.setState(unpackPlayerState(a.slice(1))); } break;
       case 'join': this.addRemote(m.id, m.name); g.chat.add(`${m.name} joined the game`); break;
       case 'leave': { const rp = this.remotes.get(m.id); if (rp) { rp.dispose(); this.remotes.delete(m.id); } g.chat.add(`${m.name} left the game`); break; }
-      case 'chat': g.chat.add(`<${m.from}> ${m.m}`); break;
+      case 'chat': g.chat.add(`<${m.from}> ${m.m}`, this.social.colorOf(m.from)); break;
+      case 'pm': g.chat.add(m.from ? PM_FROM(String(m.from).slice(0, 16), String(m.m || '').slice(0, 256)) : PM_TO(String(m.to || '').slice(0, 16), String(m.m || '').slice(0, 256)), PM_COLOR); break;
+      case 'tchat': { const t = this.social.teamOf(m.from); g.chat.add(TEAM_CHAT(String(m.team || '').slice(0, 12), String(m.from || '').slice(0, 16), String(m.m || '').slice(0, 256)), t ? t.color : null); break; }
+      case 'teams': this.social.teamsFromWire(m.teams); break;
+      case 'roster': this.roster = cleanRoster(m.r); break;
+      case 'pong': { const r = performance.now() - m.ts; if (Number.isFinite(r) && r >= 0) this.rtt = this.rtt < 0 ? Math.round(r) : Math.round(this.rtt * 0.5 + r * 0.5); break; }
+      case 'ping': {
+        if (![m.x, m.y, m.z].every(Number.isFinite) || typeof m.from !== 'string') break;
+        this.showPing({ from: m.from, x: m.x, y: m.y, z: m.z, dim: typeof m.d === 'string' ? m.d : g.world.dimension, color: teamColor(m.c) || this.social.colorOf(m.from) });
+        break;
+      }
+      case 'emote': { const rp = this.remotes.get(m.id), e = cleanEmote(m.e); if (rp && e) rp.playEmote(e); break; }
       case 'sign': if (Array.isArray(m.l)) g.setSignText(m.x | 0, m.y | 0, m.z | 0, m.l, true); break;
       case 'frame': g.setFrameItem(m.x | 0, m.y | 0, m.z | 0, m.st || null, true); break;
       case 'pot': g.setPot(m.x | 0, m.y | 0, m.z | 0, m.f || null, true); break;
@@ -1157,6 +1418,7 @@ export class ClientSession extends Session {
   /** Another player hit by us (PvP). */
   targetHurt(rp, amount, source, attacker) {
     if (!this.pvp || attacker !== this.game.player || rp.target.dead) return false;
+    if (this.blocksPvp(attacker, rp.target)) return false; // team mates, friendly fire off
     this.send({ t: 'pvp', id: rp.id, d: Math.round(amount * 100) / 100 });
     return true;
   }
@@ -1271,6 +1533,23 @@ export class ClientSession extends Session {
   // ---- commands, dimensions, misc ---------------------------------------------------------
   sendCommand(text) { this.send({ t: 'cmd', text }); }
 
+  /** /msg, /team, /kick...: the host runs them and answers with the lines (as 'cmdout'). */
+  socialCommand(text) {
+    if (!this.hostSocial) return ['The host runs an older version of Saturncraft without these commands'];
+    this.send({ t: 'scmd', text });
+    return [];
+  }
+
+  hostName() { return this.welcome ? this.welcome.hostName : ''; }
+
+  /** The host's roster, or (older host) one we make out of the players we can see. */
+  currentRoster() {
+    const rows = this.roster.length ? this.roster.map((r) => r.slice()) : [[0, this.hostName(), 'survival', -1], ...[...this.remotes.values()].map((rp) => [rp.id, rp.name, 'survival', -1]), [this.id, this.name, 'survival', -1]];
+    const me = rows.find((r) => r[0] === this.id);
+    if (me) { me[3] = this.rtt; me[2] = GAMEMODE_LABEL[this.game.player.gamemode] ? this.game.player.gamemode : me[2]; }
+    return rows;
+  }
+
   sendChat(text) { this.send({ t: 'chat', m: text }); }
   sendSign(x, y, z, l) { this.send({ t: 'sign', x, y, z, l }); }
   sendFrame(x, y, z, st) { this.send({ t: 'frame', x, y, z, st }); }
@@ -1320,15 +1599,20 @@ export class ClientSession extends Session {
     if (this.closed) return;
     this.ticks++;
     if (this.stalled()) this.lastSeen = performance.now();
+    this.tickSpectate();
     const e = this.edits.take();
     if (e.length) this.send({ t: 'ed', e, d: this.game.world.dimension });
+    if (this.ticks % 40 === 0 && this.hostSocial) this.send({ t: 'pg', ts: performance.now(), rtt: this.rtt, gm: this.game.player.gamemode });
     if (this.ticks % STATE_EVERY === 0 && this.ch.backlog() < BACKLOG_LIMIT) this.send({ t: 'st', s: this.ownState() }); // skip while our upload is behind
     if (this.ticks % PSAVE_EVERY === 0) { this.send({ t: 'ps', p: playerSaveData(this.game.player) }); this.stands.expire(performance.now()); }
-    if (this.ticks % ENV_EVERY === 0 && performance.now() - this.lastSeen > TIMEOUT_MS) this.lost('Lost connection to the host (timed out)');
+    if (this.ticks % ENV_EVERY === 0 && performance.now() - this.lastSeen > TIMEOUT_MS) this.lost('Lost connection to the host (timed out)', true);
   }
 
-  /** Connection gone: back to the title screen. */
-  lost(msg) {
+  /**
+   * Connection gone. `retry`: it dropped (not a kick, a ban or the host closing the world), so the screen offers to
+   * reconnect - automatically after a moment - and keeps our place and belongings for the rejoin.
+   */
+  lost(msg, retry = false) {
     if (this.closed) return;
     this.closed = true;
     clearInterval(this.bgTimer); if (this.bgWorker) { this.bgWorker.terminate(); this.bgWorker = null; }
@@ -1341,9 +1625,21 @@ export class ClientSession extends Session {
     g.ui.open = 'netlost';
     const s = document.createElement('div');
     s.className = 'screen';
-    s.innerHTML = '<h2>Disconnected</h2><p class="sub"></p><button class="btn">Back to Title Screen</button>';
+    const canRetry = retry && this.code && g.hooks.reconnect;
+    s.innerHTML = `<h2>${canRetry ? 'Connection lost' : 'Disconnected'}</h2><p class="sub"></p>` +
+      (canRetry ? '<p class="sub net-retry"></p><button class="btn" data-a="now">Reconnect now</button>' : '') + '<button class="btn" data-a="title">Back to Title Screen</button>';
     s.querySelector('p').textContent = msg;
-    s.querySelector('button').onclick = () => { if (g.hooks.quit) g.hooks.quit(); };
+    s.querySelector('[data-a=title]').onclick = () => { if (this.retryTimer) clearInterval(this.retryTimer); if (g.hooks.quit) g.hooks.quit(); };
+    if (canRetry) {
+      const resume = makeResume(this.code, this.name, g.world.dimension, playerSaveData(g.player), g.player.dead);
+      const go = () => { clearInterval(this.retryTimer); g.hooks.reconnect(resume); };
+      let left = reconnectDelay(1);
+      const note = s.querySelector('.net-retry');
+      const show = () => { note.textContent = `Reconnecting in ${left} s - you will come back where you were`; };
+      show();
+      this.retryTimer = setInterval(() => { left--; if (left <= 0) go(); else show(); }, 1000);
+      s.querySelector('[data-a=now]').onclick = go;
+    }
     g.ui.layer.appendChild(s);
   }
 
@@ -1361,8 +1657,10 @@ export class ClientSession extends Session {
 }
 
 /** Connect to a friend's world; resolves once the world data has arrived. */
-export async function joinSession(code, name, onStatus, transport = createTransport()) {
+export async function joinSession(code, name, onStatus, transport = createTransport(), opts = {}) {
   const s = new ClientSession(cleanName(name));
+  s.code = code;
+  s.resume = opts.resume || null; // coming back after a dropped link (net/social.js)
   return s.connect(transport, code, onStatus);
 }
 

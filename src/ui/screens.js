@@ -27,6 +27,7 @@ import { ACTIONS, GROUPS, SLOT_KINDS, SLOT_NAMES, resolveBindings, toOverrides, 
 import { COLOR_BLIND_LABELS, nextColorBlind } from './accessibility.js';
 import { TOUCH_MODE_LABELS, SIZE_RANGE, OPACITY_RANGE, nextTouchMode, normalizeTouch, detectTouch, readTouchEnv } from './touchMath.js';
 import { loadPlayerName } from '../net/protocol.js';
+import { EMOTES, EMOTE_LABELS } from '../net/social.js';
 import { grindstoneAccepts, grindstoneResult, grindstoneXp, stonecutterOutputs, stonecutterAccepts, loomResult, loomAcceptsCloth, loomAcceptsDye, LOOM_BATCH } from '../world/workstations.js';
 import { BEACON_POWERS, POWER_LEVEL, SECONDARY, BEACON_PAYMENT, beaconLevel, beamColor, beaconMeta, beaconRange } from '../world/beacons.js';
 
@@ -990,6 +991,26 @@ export class UI {
     this.refreshAll();
   }
 
+  /** The emote wheel (V): click an emote or press its number. */
+  openEmotes() {
+    this.clear();
+    this.open = 'emotes';
+    this.game.input.unlock();
+    const s = el('<div class="screen emote-screen"><h2>Emote</h2><div class="emote-wheel"></div><p class="sub">Click one or press 1-3 - they show on your body for the others</p></div>');
+    const wheel = s.querySelector('.emote-wheel');
+    EMOTES.forEach((k, i) => {
+      const b = el(`<button class="btn emote-btn" style="--a:${Math.round(-90 + i * 360 / EMOTES.length)}deg"><b>${i + 1}</b> ${EMOTE_LABELS[k]}</button>`);
+      b.onclick = () => this.pickEmote(k);
+      wheel.appendChild(b);
+    });
+    this.layer.appendChild(s);
+  }
+
+  pickEmote(kind) {
+    this.close();
+    if (this.game.net) this.game.net.emote(kind);
+  }
+
   openChat(prefix = '') {
     this.open = 'chat';
     this.game.input.unlock();
@@ -1379,8 +1400,6 @@ export class UI {
       box.append(b, msg);
       return;
     }
-    const players = el('<p class="sub net-players"></p>');
-    players.textContent = `Players: ${net.playerNames().join(', ')}`;
     if (net.isHost) {
       const info = el(`<div class="net-room"><p class="sub">Open to friends · room code <b class="net-code"></b></p>
         <div class="join-row"><input type="text" readonly class="net-link"><button class="btn" data-a="copy">Copy Link</button></div></div>`);
@@ -1388,12 +1407,10 @@ export class UI {
       const link = info.querySelector('.net-link');
       link.value = net.link;
       link.onclick = () => link.select();
-      info.querySelector('[data-a=copy]').onclick = (e) => {
-        link.select();
-        const done = () => { e.target.textContent = 'Copied'; };
-        if (navigator.clipboard) navigator.clipboard.writeText(net.link).then(done, () => document.execCommand('copy'));
-        else { document.execCommand('copy'); done(); }
-      };
+      info.querySelector('[data-a=copy]').onclick = (e) => this.copyText(link, net.link, e.target);
+      const codeRow = el('<div class="join-row" style="justify-content:center"><button class="btn" data-a="copycode">Copy Code</button></div>');
+      codeRow.querySelector('button').onclick = (e) => this.copyText(link, net.code, e.target);
+      info.append(codeRow);
       box.append(info);
       // host options: PvP and guest commands
       const opts = el('<div class="btn-row"></div>');
@@ -1411,8 +1428,40 @@ export class UI {
       const info = el('<p class="sub"></p>');
       info.textContent = `Playing in ${net.welcome.hostName}'s world as ${net.name}`;
       box.append(info);
+      if (net.code) {
+        // the room code, to pass on to somebody else
+        const row = el('<div class="join-row"><input type="text" readonly class="net-link"><button class="btn" data-a="copycode">Copy Code</button></div>');
+        const inp = row.querySelector('input');
+        inp.value = net.code;
+        inp.onclick = () => inp.select();
+        row.querySelector('button').onclick = (e) => this.copyText(inp, net.code, e.target);
+        box.append(row);
+      }
     }
-    box.append(players);
+    // who is here, with their team; the host (and ops) can remove guests
+    const can = net.isHost || net.social.isOp(net.name, net.hostName());
+    const list = el('<div class="net-list"></div>');
+    for (const r of net.playerRows()) {
+      const row = el('<div class="net-row"><span class="nm"></span><span class="tm"></span></div>');
+      row.querySelector('.nm').textContent = r.name + (r.host ? ' (host)' : r.op ? ' (op)' : '') + (r.you ? ' - you' : '');
+      if (r.color) row.querySelector('.nm').style.color = r.color;
+      row.querySelector('.tm').textContent = r.team ? `[${r.team}]` : '';
+      if (can && !r.you && net.social.canKick(net.name, r.name, net.hostName())) {
+        const k = el('<button class="btn net-kick">Kick</button>');
+        k.onclick = () => { for (const l of [].concat(net.socialCommand(`/kick ${r.name}`))) this.game.chat.add(l); this.showPause(); };
+        row.append(k);
+      }
+      list.append(row);
+    }
+    box.append(list);
+  }
+
+  /** Copy `text` to the clipboard (selecting `input` as a fallback) and say so on `button`. */
+  copyText(input, text, button) {
+    input.select();
+    const done = () => { const was = button.textContent; button.textContent = 'Copied'; setTimeout(() => { button.textContent = was; }, 1500); };
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, () => { document.execCommand('copy'); done(); });
+    else { document.execCommand('copy'); done(); }
   }
 
   /** Name Tag: type the name the tag (in hotbar slot `slot`) gives the mob it is used on. */
@@ -1774,6 +1823,13 @@ export class UI {
     const text = msgs[cause] || (cause && cause.startsWith('mob:') ? `was slain by a ${cause.slice(4)}` : cause && cause.startsWith('player:') ? `was slain by ${cause.slice(7)}` : 'died');
     const s = el(`<div class="screen" id="death-screen"><h2>You Died!</h2><p class="sub">Player ${text}</p><button class="btn">Respawn</button></div>`);
     s.querySelector('button').onclick = () => { this.open = null; this.clear(); this.game.respawn(); };
+    const net = this.game.net;
+    if (net && net.spectateCandidates().length) {
+      // dead in a shared world: watch a friend instead of respawning right away
+      const w = el('<button class="btn">Spectate a Friend</button>');
+      w.onclick = () => { this.open = null; this.clear(); this.game.spectateAfterDeath(); };
+      s.appendChild(w);
+    }
     this.layer.appendChild(s);
   }
 }

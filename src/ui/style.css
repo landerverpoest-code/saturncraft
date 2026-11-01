@@ -371,6 +371,25 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 .guide-info .d { color: #d8d0c0; margin-top: 2px; overflow-wrap: anywhere; }
 @media (max-width: 560px) { .guide-body { grid-template-columns: 1fr; } }
 
+/* multiplayer social layer (net/social.js): ping beacons, the Tab list, the emote wheel, the room list */
+.marker.ping i { font-style: normal; font-size: 18px; text-shadow: 0 0 6px currentColor, 1px 1px 0 #000; }
+#tablist { position: absolute; top: 48px; left: 50%; transform: translateX(-50%); min-width: 380px; max-width: 94vw; background: rgba(8, 8, 18, .72); border: 2px solid #3c3c52; border-radius: 6px; padding: 8px 10px; font: 14px/1.5 sans-serif; color: #eee; text-shadow: 1px 1px 0 #000; pointer-events: none; z-index: 12; }
+#tablist.hidden { display: none; }
+#tablist .tl-head { text-align: center; color: #ffe2a6; font-weight: bold; margin-bottom: 4px; border-bottom: 1px solid #3c3c52; padding-bottom: 4px; }
+#tablist .tl-row { display: grid; grid-template-columns: 1fr auto auto 64px; gap: 12px; padding: 1px 4px; }
+#tablist .tl-row.you { background: rgba(255, 226, 166, .12); }
+#tablist .tl-team, #tablist .tl-mode { color: #b8b4c8; font-size: 12px; align-self: center; }
+#tablist .tl-ping { text-align: right; font-size: 12px; align-self: center; }
+#tablist .tl-ping.good { color: #7fe27f; } #tablist .tl-ping.ok { color: #ffd35a; } #tablist .tl-ping.bad { color: #ff6b6b; } #tablist .tl-ping.none { color: #888; }
+.emote-wheel { position: relative; width: 300px; height: 260px; }
+.emote-btn { position: absolute; left: 50%; top: 50%; min-width: 0; width: 110px; margin: -22px 0 0 -55px; transform: rotate(var(--a)) translate(95px) rotate(calc(-1 * var(--a))); }
+.emote-btn b { color: #ffe2a6; margin-right: 4px; }
+.net-list { display: flex; flex-direction: column; gap: 3px; width: 320px; max-height: 150px; overflow-y: auto; }
+.net-row { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.net-row .nm { flex: 1; text-align: left; }
+.net-row .tm { color: #b8b4c8; font-size: 12px; }
+.net-kick { min-width: 0; padding: 2px 8px; font-size: 12px; }
+
 /* ---- touch controls (src/ui/touch.js adds body.touch-on, and builds the overlay, only on touch devices) ---- */
 @media (max-width: 560px) { .screen h1 { font-size: 40px; } .screen h2 { font-size: 28px; } }
 body.touch-on {
