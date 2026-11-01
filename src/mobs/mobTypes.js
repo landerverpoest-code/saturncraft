@@ -10,6 +10,8 @@ export const MOBS = {
     name: 'Bristleback', role: 'pig', category: CATEGORY.CREATURE,
     health: 10, speed: 0.25, width: 0.9, height: 0.9, panicSpeed: 1.25, sound: 'oink',
     drops: [{ id: I.RAW_PORK, min: 1, max: 3, cooked: I.COOKED_PORK }], food: [I.CARROT, I.POTATO, I.BEETROOT],
+    // tame with a baked potato (1 in 3): follows, sits on command, snouts up a gift now and then and charges what threatens its owner (mobs/companions.js)
+    tamedHealth: 14, tamedAttack: 2, companion: { tameFood: [I.BAKED_POTATO], perk: 'forager', gifts: 'truffler', sitDrop: 0.12 },
   },
   mooxen: {
     name: 'Mooxen', role: 'cow', category: CATEGORY.CREATURE,
@@ -89,13 +91,14 @@ export const MOBS = {
   buzzling: {
     name: 'Buzzling', role: 'bee', category: CATEGORY.CREATURE, flying: true, bee: true, noFallDamage: true, noDespawn: true, sound: 'buzz',
     health: 10, speed: 0.3, width: 0.7, height: 0.6, attack: 2, drops: [],
+    food: [B.SUNPETAL, B.REDBLOOM], // fed a flower, two grown ones have a baby Buzzling (mobs/youngAnimals.js)
   },
   cragbuck: {
     name: 'Cragbuck', role: 'goat', category: CATEGORY.CREATURE, goat: true, sound: 'bleat', noFallDamage: true,
     health: 10, speed: 0.3, width: 0.9, height: 1.3, attack: 2, panicSpeed: 2,
     drops: [], food: [I.WHEAT],
     // tame with bread (1 in 3): follows, sits on command, and rams monsters that come near its owner (mobs/companions.js)
-    tamedHealth: 16, tamedAttack: 3, companion: { tameFood: [I.BREAD], perk: 'guard' },
+    tamedHealth: 16, tamedAttack: 3, companion: { tameFood: [I.BREAD], perk: 'guard', sitDrop: 0.34, kneel: true },
   },
   purrling: {
     name: 'Purrling', role: 'cat', category: CATEGORY.CREATURE, tameable: true, feline: true, noFallDamage: true,
@@ -131,7 +134,7 @@ export const MOBS = {
   // dolphins swim with players, leap out of the water and need to come up for air now and then
   dolphin: {
     name: 'Dolphin', role: 'dolphin', category: CATEGORY.AMBIENT, fish: true, dolphin: true, aquatic: true, sound: 'squish', noFallDamage: true,
-    health: 10, speed: 0.2, width: 0.9, height: 0.6, drops: [{ id: I.RAW_SILVERFIN, min: 0, max: 1 }],
+    health: 10, speed: 0.2, width: 0.9, height: 0.6, drops: [{ id: I.RAW_SILVERFIN, min: 0, max: 1 }], food: [I.RAW_SILVERFIN, I.RAW_REDFIN], // fed fish, a pair has a calf
     customRender: (m, mesh, alpha, sec) => {
       const pa = mesh.userData.parts; if (!pa || !pa.tail) return;
       pa.tail.rotation.x = Math.sin(sec * 8 + m.id) * 0.35;
@@ -155,7 +158,7 @@ export const MOBS = {
   // gillnewts live in the pools of lush caves, hunt fish and hostile swimmers and play dead when hurt
   gillnewt: {
     name: 'Gillnewt', role: 'axolotl', category: CATEGORY.AMBIENT, fish: true, newt: true, breathesWater: true, sound: 'squeak', noFallDamage: true,
-    health: 14, speed: 0.15, width: 0.75, height: 0.42, attack: 2, drops: [],
+    health: 14, speed: 0.15, width: 0.75, height: 0.42, attack: 2, drops: [], food: [I.GLIMMERFIN], // fed a glimmerfin, a pair has a hatchling in a blend of their colours
     customRender: (m, mesh, alpha, sec) => {
       const pa = mesh.userData.parts; if (!pa || !pa.tail) return;
       const swim = m.body.inWater ? 1 : 0.3;
@@ -177,18 +180,22 @@ export const MOBS = {
     name: 'Hopper', role: 'rabbit', category: CATEGORY.CREATURE, hops: true, sound: 'squeak',
     health: 3, speed: 0.3, width: 0.4, height: 0.5, panicSpeed: 2.2, noFallDamage: true,
     drops: [{ id: I.RAW_RABBIT, min: 0, max: 1, cooked: I.COOKED_RABBIT }, { id: I.RABBIT_HIDE, min: 0, max: 1 }], food: [I.CARROT, B.SUNPETAL],
+    // tame with a gilded carrot (1 in 3): follows, sits on command, nips what threatens its owner and digs up small gifts (mobs/companions.js)
+    tamedHealth: 8, tamedAttack: 2, companion: { tameFood: [I.GILDED_CARROT], perk: 'forager', gifts: 'burrow', sitDrop: 0.08 },
   },
   frostbear: {
     name: 'Frostbear', role: 'polar bear', category: CATEGORY.CREATURE, neutralBeast: true, sound: 'grunt',
     health: 30, speed: 0.25, width: 1.4, height: 1.4, attack: 6,
     drops: [{ id: I.RAW_SALMON_BEAR, min: 0, max: 2 }],
+    // fed raw silverfin two grown ones have a cub; offered raw redfin (1 in 3) a wild one becomes a companion that follows, sits and guards its owner (mobs/companions.js)
+    food: [I.RAW_SILVERFIN], tamedHealth: 40, tamedAttack: 5, companion: { tameFood: [I.RAW_REDFIN], perk: 'guard', sitDrop: 0.3 },
   },
   vixling: {
     name: 'Vixling', role: 'fox', category: CATEGORY.CREATURE, fox: true, sound: 'squeak',
     health: 10, speed: 0.3, width: 0.6, height: 0.7, attack: 2, panicSpeed: 1.8,
     drops: [], food: [I.APPLE],
     // sneak up and offer sweet or glow berries (1 in 3): follows, sits on command, bites what threatens its owner and now and then digs up a gift (mobs/companions.js)
-    tamedHealth: 14, tamedAttack: 3, companion: { tameFood: [I.SWEET_BERRIES, I.GLOW_BERRIES], perk: 'forager' },
+    tamedHealth: 14, tamedAttack: 3, companion: { tameFood: [I.SWEET_BERRIES, I.GLOW_BERRIES], perk: 'forager', sitDrop: 0.14 },
   },
   settler: {
     name: 'Settler', role: 'villager', category: CATEGORY.CREATURE, villager: true,

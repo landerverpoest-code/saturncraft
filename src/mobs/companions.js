@@ -1,10 +1,16 @@
 // Companion animals: tameable animals other than Howlers, Purrlings, Squawklets and Gallopers.
-// A mob type opts in with `companion: { tameFood: [item ids], perk }` (plus `tamedHealth` and
-// `tamedAttack`) on its definition:
+// A mob type opts in with `companion: { tameFood: [item ids], perk, gifts?, sitDrop? }` (plus
+// `tamedHealth` and `tamedAttack`) on its definition:
 //   * Vixling (fox):     sneak up and offer sweet or glow berries (1 in 3). Perk 'forager': now and
 //                        then, while it trots along by its owner, it digs up a small gift.
 //   * Cragbuck (goat):   offer bread (1 in 3). Perk 'guard': it rams monsters that come within
 //                        reach of its owner (3 damage and a good shove).
+//   * Hopper (rabbit):   offer a gilded carrot (1 in 3). Perk 'forager' with the 'burrow' gifts
+//                        (carrots, hides, a bone meal or a gold nugget turned up from its burrow).
+//   * Bristleback (pig): offer a baked potato (1 in 3). Perk 'forager' with the 'truffler' gifts
+//                        (potatoes, beetroot, mushrooms, an apple snouted out of the ground).
+//   * Frostbear:         offer raw redfin (1 in 3). Perk 'guard': a tame bear mauls monsters that
+//                        come within reach of its owner (5 damage). Raw silverfin still breeds it.
 // A tame companion sits and stands on a right-click (empty hand, owner only), follows its owner
 // (teleporting when over 12 blocks behind), fights what hurt the owner or what the owner hit, heals
 // and breeds with its usual food (young of tame parents are tame and keep the owner), and is saved
@@ -14,6 +20,7 @@
 // for the tests.
 import { CATEGORY } from './mobTypes.js';
 import { I } from '../world/items.js';
+import { B } from '../world/blocks.js';
 
 export const TAME_CHANCE = 1 / 3;        // per offered item
 export const FOLLOW_DISTANCE = 6;        // walk to the owner beyond this
@@ -38,17 +45,25 @@ export function companionFoods(def) {
 /** Ticks until the next gift (a fresh Vixling gets its first one after the same delay). */
 export const nextGiftDelay = (rng = Math.random) => GIFT_DELAY[0] + Math.floor(rng() * GIFT_DELAY[1]);
 
-/** What a forager digs up: [item id, weight]. */
+/** What a forager digs up: [item id, weight]. Foxes use the default table, `def.companion.gifts` names another. */
 export const GIFTS = [
   [I.SWEET_BERRIES, 3], [I.FEATHER, 3], [I.RABBIT_HIDE, 3], [I.BONE, 2], [I.APPLE, 2], [I.GLOW_BERRIES, 1], [I.RAW_RABBIT, 1],
 ];
+export const GIFT_TABLES = {
+  fox: GIFTS,
+  burrow: [[I.CARROT, 4], [I.RABBIT_HIDE, 3], [I.WHEAT_SEEDS, 2], [I.BONE_MEAL, 2], [I.CLAY_BALL, 1], [I.GOLD_NUGGET, 1]],
+  truffler: [[I.POTATO, 4], [I.BEETROOT, 3], [B.BROWN_MUSHROOM, 3], [I.APPLE, 2], [B.RED_MUSHROOM, 1], [I.BEETROOT_SEEDS, 2]],
+};
 
-/** One gift stack (weighted pick). */
-export function pickGift(rng = Math.random) {
-  const total = GIFTS.reduce((a, [, w]) => a + w, 0);
+/** The gift table of a companion definition. */
+export const giftTable = (def) => GIFT_TABLES[(def && def.companion && def.companion.gifts) || 'fox'] || GIFTS;
+
+/** One gift stack (weighted pick) from a table (the fox table by default). */
+export function pickGift(rng = Math.random, table = GIFTS) {
+  const total = table.reduce((a, [, w]) => a + w, 0);
   let r = rng() * total;
-  for (const [id, w] of GIFTS) { r -= w; if (r < 0) return { id, count: 1 }; }
-  return { id: GIFTS[0][0], count: 1 };
+  for (const [id, w] of table) { r -= w; if (r < 0) return { id, count: 1 }; }
+  return { id: table[0][0], count: 1 };
 }
 
 /**
@@ -158,7 +173,7 @@ function forage(m, g, p, pdist) {
   if (--m.giftIn > 0) return;
   m.giftIn = nextGiftDelay();
   const d = Math.hypot(p.x - m.x, p.z - m.z) || 1;
-  g.entities.spawnItem(m.x, m.y + 0.5, m.z, pickGift(), [(p.x - m.x) / d * 0.12, 0.18, (p.z - m.z) / d * 0.12]);
+  g.entities.spawnItem(m.x, m.y + 0.5, m.z, pickGift(Math.random, giftTable(m.def)), [(p.x - m.x) / d * 0.12, 0.18, (p.z - m.z) / d * 0.12]);
   m.hearts(g, 3, true);
   g.audio.play(m.def.sound, [m.x, m.y + 0.5, m.z], 0.6);
 }

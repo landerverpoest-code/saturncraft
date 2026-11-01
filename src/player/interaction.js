@@ -1242,7 +1242,7 @@ export class Interaction {
     const use = () => { if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1); this.swing = SWING_TICKS; };
     const companion = !!mob.def.companion;
     if (!mob.tamed) {
-      if (!st || mob.target || mob.ram) return false;
+      if (!st || mob.target || mob.ram || mob.enemy === 'player') return false; // (not while it is angry at you)
       if (companion ? !canTameWith(mob.def, st.id) : !(mob.def.tameFood || [I.BONE]).includes(st.id)) return false;
       use();
       if (Math.random() < (companion ? TAME_CHANCE : 1 / 3)) {

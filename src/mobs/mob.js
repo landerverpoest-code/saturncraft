@@ -32,7 +32,8 @@ import { moraleAI, soundAlarm } from './morale.js';
 import './peddler.js'; // registers the Roving Peddler and its Packhorns
 import { gazeProvokes } from './pumpkins.js';
 import { isShield, isCharm, shieldBlocks, disablesShield, wearShield, charmHealth, charmIgnores, offhandDrops, offhandFromSave, OFFHAND_KINDS } from './offhand.js';
-import { companionAI, companionSave, companionLoad } from './companions.js'; // tame Vixlings and Cragbucks
+import { companionAI, companionSave, companionLoad } from './companions.js'; // tame Vixlings, Cragbucks, Hoppers, Bristlebacks and Frostbears
+import { growStep, breedStep } from './youngAnimals.js'; // babies of Buzzlings, Packhorns, Gillnewts, Dolphins and Frostbears
 import { babySpeedFactor, babyAttackFactor, babyHealth, babyExplosion, babyXp, babyLoot } from './babies.js'; // spiderlings, Fizzlets, Brute cubs
 import './hoverling.js'; // registers the Hoverling
 import './gustling.js'; // registers the Gustling (Proving Vaults)
@@ -290,6 +291,7 @@ export class Mob {
     baby.setBaby(true);
     baby.woolColor = Math.random() < 0.5 ? this.woolColor : mate.woolColor; // (the reference blends dye colours)
     baby.yaw = this.yaw;
+    baby.persistent = true; // young animals stay (ambient ones such as Dolphins and Gillnewts would otherwise despawn)
     if (this.tamed) { baby.tamed = true; baby.health = baby.def.tamedHealth; baby.persistent = true; baby.ownerName = this.ownerName; } // pups of tame Howlers are tame and keep the owner
     for (const m of [this, mate]) { m.loveTicks = 0; m.age = 6000; m.breedTime = 0; }
     this.hearts(g, 7);
@@ -347,8 +349,8 @@ export class Mob {
       // Ironguards shrug off knockback and go after whoever hit them (players they made, never)
       this.body.vx *= 0.2; this.body.vz *= 0.2;
       if (attacker && attacker !== this && !(attacker.isPlayer && this.playerMade)) this.enemy = attacker.isPlayer ? 'player' : attacker;
-    } else if (this.def.neutralBeast) {
-      // Frostbears fight back, and the others nearby join in
+    } else if (this.def.neutralBeast && !this.tamed) {
+      // wild Frostbears fight back, and the others nearby join in
       const foe = attacker && attacker.isPlayer ? 'player' : attacker;
       if (foe && attacker !== this && g) for (const e of g.entities.list) if (e.type === this.type && !e.dead && Math.hypot(e.x - this.x, e.z - this.z) < 16) e.enemy = foe;
     } else if (this.def.aquatic) {
@@ -988,6 +990,8 @@ export class Mob {
       return d;
     };
     if (this.stung && --this.stung <= 0) { this.hurt(100, 'generic'); return; }
+    growStep(this); // a baby Buzzling grows up; fed adults find a mate (mobs/youngAnimals.js)
+    if (!(this.angryTicks > 0) && breedStep(this, g)) return;
     if (this.hive && !HIVES.has(w.getBlock(this.hive.x, this.hive.y, this.hive.z))) this.hive = null;
     if (!this.hive && g.ticks % 200 === this.id % 200) {
       // a homeless bee moves into a nest or hive within 8 blocks
@@ -1261,6 +1265,7 @@ export class Mob {
     const alive = (e) => e && (e === 'player' ? !p.dead && !p.creative && pdist < 24 : !e.dead && e.deathTime === 0);
     if (this.enemy && !alive(this.enemy)) this.enemy = null;
     if (this.enemy) { const t = this.enemy === 'player' ? p : this.enemy; this.chase(g, t, 1.4); this.howlerBite(g, t); return; }
+    if (breedStep(this, g)) return;
     this.wanderAI(g, 0.8);
   }
 
@@ -1287,6 +1292,8 @@ export class Mob {
   dolphinAI(g, p, pdist) {
     const b = this.body, w = g.world;
     if (!b.inWater) { this.move = null; if (g.ticks % 40 === 0 && b.onGround) this.hurt(1, 'drown'); return; }
+    growStep(this);
+    if (breedStep(this, g)) return;
     if (!this.swimDir || Math.random() < 0.01 || b.horizontalCollision) { const a = Math.random() * Math.PI * 2; this.swimDir = [Math.sin(a), 0, Math.cos(a)]; }
     let k = 0.02;
     if (pdist < 24 && pdist > 3 && !p.dead) {
@@ -1355,6 +1362,7 @@ export class Mob {
    */
   newtAI(g, p, pdist) {
     const b = this.body, w = g.world;
+    growStep(this);
     if (b.inWater) this.dry = 0;
     else if ((this.dry = (this.dry || 0) + 1) > 6000 && g.ticks % 20 === 0) this.hurt(1, 'drown');
     if (this.playDead > 0) {
@@ -1362,6 +1370,7 @@ export class Mob {
       if (g.ticks % 20 === 0 && this.health < this.maxHealth) this.health = Math.min(this.maxHealth, this.health + 1);
       return;
     }
+    if (!this.enemy && breedStep(this, g)) return;
     if (this.attackCooldown > 0) this.attackCooldown--;
     const prey = (e) => e && e.kind === 'mob' && !e.dead && e.deathTime === 0 && (e.def.fish && !e.def.newt && !e.def.dolphin || e.def.deepeye || e.type === 'sodden_shambler' || e === this.grudge);
     if (this.enemy && (!prey(this.enemy) || Math.hypot(this.enemy.x - this.x, this.enemy.y - this.y, this.enemy.z - this.z) > 12 || this.enemy.playDead > 0)) this.enemy = null;
@@ -1832,12 +1841,13 @@ export class Mob {
       parts.hornL.visible = (this.horns ?? 2) >= 1; parts.hornR.visible = (this.horns ?? 2) >= 2;
     }
     if (parts && parts.band && this.def.companion) {
-      // tame Vixlings and Cragbucks wear a band; sitting ones lie down (legs tucked, body lowered)
+      // tame companions (Vixlings, Cragbucks, Hoppers, Bristlebacks, Frostbears) wear a band; sitting ones lie down (legs tucked, body lowered)
       parts.band.visible = this.tamed;
       const sit = this.tamed && this.sitting && this.deathTime === 0;
       if (sit) {
-        m.position.y = py - (this.type === 'cragbuck' ? 0.34 : 0.14) * m.scale.y;
-        for (const k of ['legFL', 'legFR', 'legBL', 'legBR']) parts[k].rotation.x = this.type === 'cragbuck' ? 1.45 : (k.startsWith('legB') ? 1.3 : -0.25);
+        const cfg = this.def.companion;
+        m.position.y = py - (cfg.sitDrop ?? 0.14) * m.scale.y;
+        for (const k of ['legFL', 'legFR', 'legBL', 'legBR']) parts[k].rotation.x = cfg.kneel ? 1.45 : (k.startsWith('legB') ? 1.3 : -0.25);
         if (parts.tail) parts.tail.rotation.x = 0.9;
       }
     }
