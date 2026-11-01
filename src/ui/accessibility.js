@@ -43,6 +43,7 @@ export const CAPTION_TEXT = {
   hush_heart: 'Heartbeat', hush_growl: 'Deep growl', hush_sniff: 'Sniffing', emerge: 'Something emerges', sonic_charge: 'Sonic charge builds',
   sonic_boom: 'Sonic boom', catalyst: 'Catalyst spreads',
   bird_trill: 'Birdsong', cricket: 'Crickets chirp', owl: 'Owl hoots', drip: 'Water drips', lava_pop: 'Lava bubbles', rift_moan: 'Deep rift moans',
+  spear_throw: 'Spear thrown', spear_stick: 'Spear sticks', spear_return: 'Spear flies home', spear_surge: 'Surge rushes', stormcall: 'Stormcall crackles',
   breeze: 'Breeze sighs', ember_snap: 'Embers snap', void_whisper: 'Void whispers',
 };
 

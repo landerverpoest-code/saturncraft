@@ -236,6 +236,11 @@ export class Audio {
         this.noise(t, 1.6, 300, 0.5, 1.0 * gain, out, 'lowpass');
         this.tone(t, 0.8, 90, 30, 0.8 * gain, out, 'sine'); break;
       case 'bow': this.noise(t, 0.12, 1500, 3, 0.3 * gain, out); this.tone(t, 0.1, 300, 120, 0.2 * gain, out, 'triangle'); break;
+      case 'spear_throw': this.noise(t, 0.2, 900, 2, 0.3 * gain, out); this.tone(t, 0.18, 520, 160, 0.22 * gain, out, 'triangle'); break;
+      case 'spear_stick': this.noise(t, 0.06, 1400, 4, 0.3 * gain, out); this.tone(t, 0.25, 180, 110, 0.25 * gain, out, 'triangle'); break;
+      case 'spear_return': this.tone(t, 0.35, 300, 1100, 0.2 * gain, out, 'sine'); this.noise(t, 0.3, 2400, 1.5, 0.12 * gain, out, 'highpass'); break;
+      case 'spear_surge': this.noise(t, 0.6, 800, 0.8, 0.4 * gain, out); this.tone(t, 0.5, 200, 700, 0.2 * gain, out, 'sine'); break;
+      case 'stormcall': this.noise(t, 0.2, 7000, 0.3, 0.5 * gain, out, 'highpass'); this.tone(t, 0.3, 1400, 200, 0.2 * gain, out, 'sawtooth'); break;
       case 'arrow_hit': this.noise(t, 0.08, 1200, 4, 0.3 * gain, out); break;
       case 'splash': this.noise(t, 0.4, 1200, 0.8, 0.4 * gain, out); break;
       case 'bucket_fill': this.noise(t, 0.3, 900, 1, 0.3 * gain, out); break;

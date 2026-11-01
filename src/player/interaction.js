@@ -619,7 +619,8 @@ export class Interaction {
     this.surgeTicks = 20;
     this.surgeHit = new Set();
     p.inventory.damageSelected(1);
-    g.audio.play('splash', [p.x, p.y + 1, p.z], 0.9);
+    g.audio.play('spear_surge', [p.x, p.y + 1, p.z]);
+    if (g.milestones) g.milestones.event('spear_throw');
     this.swing = SWING_TICKS;
   }
 
@@ -648,7 +649,8 @@ export class Interaction {
     g.entities.spawnArrow(ex, ey - 0.1, ez, dx * 2.5, dy * 2.5, dz * 2.5, p, false, 'spear', 0, 0, { ...spear });
     if (!p.creative) inv.slots[inv.selected] = null;
     inv.changed();
-    g.audio.play('bow', [ex, ey, ez], 0.8);
+    g.audio.play('spear_throw', [ex, ey, ez]);
+    if (g.milestones) g.milestones.event('spear_throw');
     this.swing = SWING_TICKS;
   }
 

@@ -58,7 +58,7 @@ const ownerEye = (o) => [o.x, o.y + (o.eyeHeight || 1.62) - 0.1, o.z];
 function giveBack(a, game) {
   a.dead = true;
   const o = a.shooter;
-  game.audio.play('pop', [o.x, o.y + 1, o.z]);
+  game.audio.play('spear_return', [o.x, o.y + 1, o.z]);
   if (a.creativeThrow || !a.item) return; // a creative thrower still holds theirs
   if (game.net && game.net.isClient) return;
   const p = game.player;
@@ -99,7 +99,7 @@ export function tickSpear(a, game) {
     const lvl = enchLevel(a.item, 'stormcall');
     if (lvl && game.weather && game.strikeLightning) {
       const tx = Math.floor(target.x), ty = Math.floor(target.y), tz = Math.floor(target.z);
-      if (stormcallStrikes(lvl, game.weather.thundering && game.weather.level >= 0.2, w.heightAt(tx, tz) < ty)) game.strikeLightning(tx, ty, tz);
+      if (stormcallStrikes(lvl, game.weather.thundering && game.weather.level >= 0.2, w.heightAt(tx, tz) < ty)) { game.audio.play('stormcall', [tx + 0.5, ty, tz + 0.5]); game.strikeLightning(tx, ty, tz); }
     }
     // glance off and drop
     a.vx *= -0.01; a.vy *= -0.1; a.vz *= -0.01;
@@ -109,7 +109,7 @@ export function tickSpear(a, game) {
   if (hit) {
     a.x += ux * hit.dist; a.y += uy * hit.dist; a.z += uz * hit.dist;
     a.stuck = true; a.age = 0;
-    game.audio.play('arrow_hit', [a.x, a.y, a.z]);
+    game.audio.play('spear_stick', [a.x, a.y, a.z]);
     if (game.onProjectileHit) game.onProjectileHit(hit, a.x, a.y, a.z, 'spear'); // a target block answers
     return;
   }
