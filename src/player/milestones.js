@@ -78,6 +78,13 @@ export const MILESTONES = [
   { id: 'guide_biomes', title: 'Wanderer', desc: 'Fill the Biomes tab of the Field Guide', icon: B.GRASS, tick: (g) => tabComplete((g.player.stats || {}).guide, 'biomes') },
   { id: 'guide_structures', title: 'Surveyor', desc: 'Fill the Structures tab of the Field Guide', icon: B.STONE_BRICKS, tick: (g) => tabComplete((g.player.stats || {}).guide, 'structures') },
   { id: 'guide_items', title: 'Collector', desc: 'Fill the Items of note tab of the Field Guide', icon: I.DIAMOND, tick: (g) => tabComplete((g.player.stats || {}).guide, 'items') },
+  // world events (world/events.js)
+  { id: 'meteor', title: 'Wish Granted', desc: 'Watch a meteorite crash to the ground', icon: B.COAL_BLOCK, event: 'meteor' },
+  { id: 'meteor_core', title: 'Heart of a Star', desc: 'Mine a Starfall Core from a meteorite crater', icon: B.STARFALL_CORE, inv: (g) => has(g, B.STARFALL_CORE) },
+  { id: 'dust_storm', title: 'Sand in Everything', desc: 'Be caught out in a dust storm', icon: B.SANDSTONE, event: 'dust_storm' },
+  { id: 'ground_fog', title: 'Into the Mist', desc: 'Walk through the ground fog of a swamp or forest at dawn', icon: B.OAK_LEAVES, event: 'ground_fog' },
+  { id: 'lantern_fest', title: 'Festival of Lanterns', desc: 'Join a village for its Lantern Festival', icon: B.LANTERN, event: 'lantern_fest' },
+  { id: 'hush_night', title: 'Hold Your Breath', desc: 'Spend a Hush Night under the aurora', icon: B.HUSHMOSS, event: 'hush_night' },
 ];
 
 /** Veilfire counts as seen once its smoothed brightness (sky.aurora, 0..1) passes this. */

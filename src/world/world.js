@@ -14,6 +14,7 @@ import { railSupported, isRail } from './rails.js';
 import { spongeUpdate } from './sponge.js';
 import { paintingIntact } from './paintings.js';
 import { LISTENS } from './vibrations.js';
+import { RANDOM_TICKS } from './randomTicks.js';
 import { Circuits, CIRCUIT_BLOCK, CIRCUIT_REACT, CIRCUIT_SETTLE, supported as circuitSupported } from './circuits.js';
 import { updateSpike, crystalSupported } from './caves.js';
 import { scaffoldTick } from './scaffolding.js';
@@ -38,7 +39,10 @@ export class Chunk {
     this.blocks = d.blocks; this.meta = d.meta; this.light = d.light;
     this.biomes = d.biomes; this.colors = d.colors; this.heightmap = d.heightmap;
     this.modified = !!d.modified;
+    // content revision (bumped by setBlock and setLight) and the packed copy made at one (world/save.js packChunk); carried over from an unloaded chunk's copy
+    this.rev = d.rev || 0; this.packRev = d.packCache ? d.packRev : -1; this.packCache = d.packCache || null;
     this.sectionNonAir = new Uint16Array(SECTION_COUNT);
+    this.sectionTick = new Uint16Array(SECTION_COUNT); // blocks that react to random ticks per section (runRandomTicks skips sections without)
     // monster spawner positions (for the spawner logic)
     this.spawners = new Set();
     this.beacons = new Set(); // beacon positions (world/beacons.js)
@@ -47,14 +51,15 @@ export class Chunk {
     this.circuits = new Set();
     this.listeners = new Set(); // blocks that hear vibrations: Hush Sensors and Shriekers (world/vibrations.js)
     // one pass over the blocks: count each section's non-air blocks and note the special ones
-    const blocks = this.blocks, special = chunkScanTable();
+    const blocks = this.blocks, special = chunkScanTable(), rt = RANDOM_TICKS;
     for (let s = 0; s < SECTION_COUNT; s++) {
-      let n = 0;
+      let n = 0, t = 0;
       const end = (s + 1) * 4096;
       for (let i = s * 4096; i < end; i++) {
         const b = blocks[i];
         if (!b) continue;
         n++;
+        t += rt[b];
         let k = special[b];
         if (!k) continue;
         if (k & 8) this.listeners.add(i);
@@ -65,6 +70,7 @@ export class Chunk {
         (k === 1 ? this.spawners : k === 2 ? this.beacons : this.provers).add(pos);
       }
       this.sectionNonAir[s] = n;
+      this.sectionTick[s] = t;
     }
     this.dirty = new Set();
     for (let s = 0; s < SECTION_COUNT; s++) this.dirty.add(s);
@@ -137,6 +143,7 @@ export class World {
     const i = cidx(x & 15, y, z & 15);
     if (c.light[i] === v) return;
     c.light[i] = v;
+    c.rev++;
     this.markDirty(x, y, z);
   }
   skyLight(x, y, z) { return this.getLight(x, y, z) >> 4; }
@@ -198,9 +205,11 @@ export class World {
     if (CIRCUIT_SETTLE[id]) c.circuits.add(i);
     if (LISTENS[id]) c.listeners.add(i); else if (LISTENS[old]) c.listeners.delete(i);
     c.modified = true;
+    c.rev++;
     const s = (y - MIN_Y) >> 4;
     if (!old && id) c.sectionNonAir[s]++;
     else if (old && !id) c.sectionNonAir[s]--;
+    c.sectionTick[s] += RANDOM_TICKS[id] - RANDOM_TICKS[old];
     // heightmap
     const hi = (x & 15) + (z & 15) * 16;
     if (id && y > c.heightmap[hi]) c.heightmap[hi] = y;
@@ -422,7 +431,7 @@ export class World {
     const k = chunkKey(cx, cz);
     const c = this.chunks.get(k);
     if (!c) return null;
-    if (c.modified) this.saved.set(k, { blocks: c.blocks, meta: c.meta, light: c.light, biomes: c.biomes, colors: c.colors, heightmap: c.heightmap, modified: true });
+    if (c.modified) this.saved.set(k, { blocks: c.blocks, meta: c.meta, light: c.light, biomes: c.biomes, colors: c.colors, heightmap: c.heightmap, modified: true, rev: c.rev, packRev: c.packRev, packCache: c.packCache });
     this.chunks.delete(k);
     this._lastKey = -1;
     return c;

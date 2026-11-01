@@ -14,6 +14,7 @@ import { craft, consumeCraft, RECIPES, recipeLayout, chooseIngredients } from '.
 import { B, BLOCKS, isBox } from '../world/blocks.js';
 import { canTrade, affordableTimes, doTrade, offerPrice, MAX_USES, recordTrades, levelProgress, LEVEL_NAMES, giftValue, GIFT_COOLDOWN } from '../mobs/trades.js';
 import { getRep, standing, repHint, refusesTrade, REP } from '../mobs/reputation.js';
+import { tradeMarket } from '../world/events.js';
 import { repEvent } from '../mobs/villageRep.js';
 import { championDiscount } from '../mobs/raids.js';
 import { MILESTONES } from '../player/milestones.js';
@@ -1051,7 +1052,7 @@ export class UI {
     // Village Champions pay less (a guest pays from its own inventory, so its own effect sets the price)
     const cut = championDiscount(g.player.effects);
     const key = trader ? null : (mob.villageId ? mob.villageId(g) : mob.village) || null;
-    const market = () => ({ rep: getRep(g.player, key) });
+    const market = () => tradeMarket(g, key, g.player); // reputation, and the Lantern Festival's cut (world/events.js)
     const price = (o) => offerPrice(o, cut, market());
     this.showContainer('trade', title, (panel) => {
       let bar = null, repLine = null, gift = null;
@@ -1117,8 +1118,8 @@ export class UI {
           bar.querySelector('.trade-level-name').textContent = `${LEVEL_NAMES[lv - 1]} (level ${lv})`;
           bar.querySelector('.trade-bar-fill').style.width = `${Math.round(lp.frac * 100)}%`;
           bar.querySelector('.trade-level-count').textContent = lp.max ? 'Master' : `${lp.done} / ${lp.need} trades to ${LEVEL_NAMES[lp.level]}`;
-          const rep = market().rep, st = standing(rep);
-          repLine.textContent = key ? `Standing: ${st.name} (${rep > 0 ? '+' : ''}${Math.round(rep)}) - ${repHint(rep)}` : 'No village to speak for this settler';
+          const mk = market(), rep = mk.rep, st = standing(rep);
+          repLine.textContent = key ? `Standing: ${st.name} (${rep > 0 ? '+' : ''}${Math.round(rep)}) - ${repHint(rep)}${mk.festival ? `; Lantern Festival: a further ${Math.round(mk.festival * 100)} % off` : ''}` : 'No village to speak for this settler';
           repLine.dataset.standing = String(st.index);
           const sel = inv.selectedStack, worth = sel && key ? giftValue(mob.profession, sel.id) : 0;
           gift.disabled = !key || !worth || g.time - mob.lastGift < GIFT_COOLDOWN;

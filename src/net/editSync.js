@@ -94,6 +94,7 @@ export class EditSync {
     }
     const lx = x & 15, lz = z & 15, i = cidx(lx, y, lz), hi = lx + lz * 16;
     d.blocks[i] = id; d.meta[i] = meta; d.modified = true;
+    if (d.rev !== undefined) d.rev++; // (invalidates the packed copy kept for saving)
     if (id && y > d.heightmap[hi]) d.heightmap[hi] = y;
     else if (!id && y === d.heightmap[hi]) {
       let yy = y - 1;

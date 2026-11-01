@@ -80,6 +80,7 @@ import { BeaconBeams } from './render/beaconBeams.js';
 import { beaconLevel, beamColor, beaconEffects, beaconRange, beaconDuration, BEACON_PERIOD } from './world/beacons.js';
 import { PostFX } from './render/postfx.js';
 import { HushSystem } from './world/hushSystem.js';
+import { WorldEvents } from './world/events.js';
 import { darknessFactor } from './world/deepHush.js';
 import { resolveBlock } from './player/shield.js';
 
@@ -99,10 +100,11 @@ THREE.ShaderChunk.fog_vertex = `#ifdef USE_FOG
 
 const CAVE_FOG = new THREE.Color(0.012, 0.012, 0.018);
 const DARK_FOG = new THREE.Color(0, 0, 0);
+const EVENT_FOG = new THREE.Color(); // scratch colour for the dust storm / ground fog tint
 export const DIFFICULTIES = ['peaceful', 'easy', 'normal', 'hard'];
 const FIREFLY_BIOMES = new Set(['swamp', 'forest', 'flower_forest', 'blossom_grove', 'mangrove_swamp', 'dark_forest', 'jungle', 'birch_forest']);
 
-export const DEFAULT_SETTINGS = { renderDistance: 8, fov: 75, sensitivity: 100, volume: 0.5, music: 0.5, shadows: true, shaders: true, shadowMapSize: 1024, pixelRatioCap: 1.25, daylightCycle: true, seasons: true, hostileMobs: true, fireworksHurtPlayers: false, difficulty: 'normal', showCoords: false, keys: {}, ...ACCESS_DEFAULTS, ...TOUCH_DEFAULTS };
+export const DEFAULT_SETTINGS = { renderDistance: 8, fov: 75, sensitivity: 100, volume: 0.5, music: 0.5, shadows: true, shaders: true, shadowMapSize: 1024, pixelRatioCap: 1.25, daylightCycle: true, seasons: true, worldEvents: true, hostileMobs: true, fireworksHurtPlayers: false, difficulty: 'normal', showCoords: false, keys: {}, ...ACCESS_DEFAULTS, ...TOUCH_DEFAULTS };
 
 export class Game {
   constructor(canvas, seed, settings, hooks = {}, saveData = null) {
@@ -214,6 +216,7 @@ export class Game {
     this.overlay = new BlockOverlay(this.scene);
     this.enchantBooks = new EnchantBooks(this.scene); // floating books over enchanting tables
     this.hush = new HushSystem(this); // the Deep Hush: sensors, shriekers, catalysts and the Hushkeeper (world/hushSystem.js)
+    this.worldEvents = new WorldEvents(this); // meteorites, dust storms, ground fog, the Lantern Festival, Hush Nights (world/events.js)
     this.dims = new DimensionManager(this); // the Cinderdeep and the Hollow (world/dimensions/)
     this.dims.applyLook();
 
@@ -391,6 +394,7 @@ export class Game {
     if (k === 'difficulty') this.player.difficulty = v;
     if (k === 'daylightCycle' && !v) this.freezeAtDay();
     if (k === 'seasons') this.updateSeasons();
+    if (k === 'worldEvents' && this.worldEvents) this.worldEvents.onRule();
     if (this.hooks.saveSettings) this.hooks.saveSettings(this.settings);
   }
 
@@ -1150,17 +1154,24 @@ export class Game {
     const w = this.world, ci = w.circuits;
     ci.enabled = !(this.net && this.net.isClient); // guests apply the host's results
     if (!ci.enabled) { if (ci.queue.size) ci.queue.clear(); return; }
-    const weighted = new Map(); // weighted plates: key -> [x, y, z, count]
-    for (const [ex, ey, ez, living] of this.pressers()) {
+    // (no per-entity arrays: this runs every tick for every entity; the plates themselves are rare)
+    let weighted = null; // weighted plates: key -> [x, y, z, count]
+    const press = (ex, ey, ez, living) => {
       const bx = Math.floor(ex), by = Math.floor(ey + 0.05), bz = Math.floor(ez);
       const id = w.getBlock(bx, by, bz);
       if (id === B.WOODEN_PRESSURE_PLATE || (id === B.STONE_PRESSURE_PLATE && living)) ci.press(bx, by, bz);
       else if (id === B.LIGHT_WEIGHTED_PLATE || id === B.HEAVY_WEIGHTED_PLATE) {
-        const k = `${bx},${by},${bz}`, c = weighted.get(k);
+        const k = `${bx},${by},${bz}`;
+        if (!weighted) weighted = new Map();
+        const c = weighted.get(k);
         if (c) c[3]++; else weighted.set(k, [bx, by, bz, 1]);
       }
-    }
-    for (const [bx, by, bz, n] of weighted.values()) ci.press(bx, by, bz, n);
+    };
+    const p = this.player;
+    if (!p.dead && !p.spectator) press(p.x, p.y, p.z, true);
+    for (const e of this.entities.list) if (!e.dead && e.body && e.kind !== 'xp') press(e.x, e.y, e.z, e.kind === 'mob');
+    if (this.net && this.net.isHost) for (const rp of this.net.remotes.values()) if (rp.state) press(rp.state.x, rp.state.y, rp.state.z, true);
+    if (weighted) for (const [bx, by, bz, n] of weighted.values()) ci.press(bx, by, bz, n);
     for (const e of this.entities.list) if (e.cart && !e.dead && w.getBlock(Math.floor(e.x), Math.floor(e.y + 0.05), Math.floor(e.z)) === B.DETECTOR_RAIL) ci.detect(Math.floor(e.x), Math.floor(e.y + 0.05), Math.floor(e.z));
   }
 
@@ -1232,6 +1243,7 @@ export class Game {
       if (id) this.audio.play('step_' + BLOCKS[id].sound);
     }
     this.hush.tick(); // footsteps and landings shake the Deep Hush awake
+    this.worldEvents.tick(); // returns at once on 19 ticks of 20 when nothing is going on
     this.archaeology.tick(this.world, this.ticks); // digs nobody brushes fill back in
     if (this.player.landedFrom > 1.5) { this.audio.play('land'); }
     // landing on farmland can trample it back to dirt (chance = fall distance - 0.5)
@@ -1450,6 +1462,15 @@ export class Game {
     }
     else if (b.eyeInLava) { this.scene.fog.color.setRGB(0.6, 0.15, 0.02); this.scene.fog.near = 0; this.scene.fog.far = 2; }
     else { this.scene.fog.near = R * (0.65 - cd * 0.45); this.scene.fog.far = R * (1 - cd * 0.25); this.dims.adjustFog(this.scene.fog, R); }
+    {
+      // dust storms and ground fog (world/events.js): the fog closes in and takes on a tint; not underground, not under water
+      const fx = this.worldEvents.fogState();
+      if (fx && !b.eyeInWater && !b.eyeInLava && this.world.dimension === 'overworld') {
+        const f = this.scene.fog, k = fx.k * (1 - cd), day = 0.12 + 0.88 * Math.min(1, st.combined);
+        f.color.lerp(EVENT_FOG.setRGB(fx.r * day, fx.g * day, fx.b * day), k);
+        f.near *= 1 - (1 - fx.near) * (1 - cd); f.far *= 1 - (1 - fx.far) * (1 - cd);
+      }
+    }
     if (this.darkness > 0) {
       const f = this.scene.fog, k = this.darkness;
       f.color.lerp(DARK_FOG, k); f.near *= 1 - k; f.far = f.far + (Math.min(f.far, 14) - f.far) * k;

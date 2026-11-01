@@ -588,17 +588,23 @@ export class EntityManager {
       const items = this.list.filter((e) => e.kind === 'item' && !e.dead);
       for (let i = 0; i < items.length; i++) for (let j = i + 1; j < items.length; j++) {
         const a = items[i], b = items[j];
-        if (a.dead || b.dead || !canStack(a.stack, b.stack)) continue;
-        if (Math.abs(a.x - b.x) < 0.5 && Math.abs(a.y - b.y) < 0.5 && Math.abs(a.z - b.z) < 0.5 && a.stack.count + b.stack.count <= maxStack(a.stack.id)) {
+        // (the cheap distance test first: most pairs are far apart, and canStack compares enchantments and fireworks)
+        if (a.dead || b.dead || Math.abs(a.x - b.x) >= 0.5 || Math.abs(a.y - b.y) >= 0.5 || Math.abs(a.z - b.z) >= 0.5 || !canStack(a.stack, b.stack)) continue;
+        if (a.stack.count + b.stack.count <= maxStack(a.stack.id)) {
           a.stack.count += b.stack.count; b.dead = true;
         }
       }
     }
     // remove dead
-    for (const e of this.list) if (e.dead && e.kind !== 'mob') this.removeMesh(e);
-    this.list = this.list.filter((e) => !e.dead || (e.kind === 'mob' && !e.removed));
-    for (const e of this.list) if (e.kind === 'mob' && e.removed) this.removeMesh(e);
-    this.list = this.list.filter((e) => !(e.kind === 'mob' && e.removed));
+    // (in place: no new arrays every tick) dead non-mobs and removed mobs leave the list; a dead mob stays for its death animation
+    const list = this.list;
+    let w = 0;
+    for (let r = 0; r < list.length; r++) {
+      const e = list[r];
+      if (e.kind === 'mob' ? e.removed : e.dead) { this.removeMesh(e); continue; }
+      list[w++] = e;
+    }
+    list.length = w;
   }
 
   removeMesh(e) {

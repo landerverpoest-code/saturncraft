@@ -196,6 +196,15 @@ export class Mob {
       if (dx * dx + dz * dz < 64) { this.steer(this.x + dx * 4, this.z + dz * 4, this.def.panicSpeed); return; }
     }
     const night = g.sky.state.aboveCount === 0 || raid;
+    // the Lantern Festival (world/events.js): the village gathers round the well in the evening
+    const meet = !raid && g.worldEvents && g.worldEvents.fest.size ? g.worldEvents.gatherPoint(this) : null;
+    if (meet) {
+      if (Math.hypot(meet.x - this.x, meet.z - this.z) > 1.5) {
+        if (!this.path || g.ticks % 40 === 0) this.pathTo(g, Math.floor(meet.x), Math.floor(meet.y), Math.floor(meet.z));
+        if (!this.followPath(g, 1)) this.steer(meet.x, meet.z, 1);
+      } else if (pdist < 6 && !p.dead) this.yaw = Math.atan2(-(p.x - this.x), -(p.z - this.z)); // (and turn to whoever has come to join in)
+      return;
+    }
     if (h) {
       const dh = Math.hypot(h.x - this.x, h.z - this.z);
       if (dh > (night ? 1.5 : 24)) {
@@ -784,7 +793,7 @@ export class Mob {
     }
     if (b.y < -128) { this.removed = true; this.dead = true; }
     // ambient sounds
-    if (Math.random() < 1 / 160) g.audio.play(this.def.sound, [this.x, this.y + 1, this.z], 0.7);
+    if (Math.random() < 1 / 160 * (this.def.category === CATEGORY.MONSTER && g.worldEvents ? g.worldEvents.monsterVoice() : 1)) g.audio.play(this.def.sound, [this.x, this.y + 1, this.z], 0.7); // (monsters hold their tongues on a Hush Night, world/events.js)
   }
 
   // ---------------------------------------------------------------------------

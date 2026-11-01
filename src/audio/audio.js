@@ -316,6 +316,9 @@ export class Audio {
       case 'lava_pop': this.tone(t, 0.14, 110 + Math.random() * 40, 55, 0.2 * gain, out, 'sine'); this.noise(t, 0.12, 700, 1.5, 0.13 * gain, out, 'lowpass'); this.noise(t + 0.09, 0.05, 3000, 3, 0.05 * gain, out); break;
       case 'rift_moan': this.tone(t, 3.2, 58, 46, 0.13 * gain, out, 'sine'); this.tone(t + 0.4, 2.6, 87, 70, 0.05 * gain, out, 'triangle'); this.noise(t, 3.2, 260, 0.8, 0.12 * gain, out, 'lowpass'); break;
       case 'breeze': this.noise(t, 1.8, 600, 0.5, 0.1 * gain, out); this.noise(t + 0.3, 1.5, 1400, 0.6, 0.04 * gain, out); break;
+      case 'meteor_boom': // a meteorite lands: a deep boom, rolling rumble and a crackle of falling grit
+        this.tone(t, 1.1, 80, 28, 0.9 * gain, out, 'sine'); this.noise(t, 2.4, 240, 0.5, 0.8 * gain, out, 'lowpass');
+        this.noise(t + 0.15, 0.9, 1800, 0.8, 0.25 * gain, out); this.tone(t + 0.05, 0.5, 220, 60, 0.3 * gain, out, 'sawtooth'); break;
       case 'ember_snap': this.noise(t, 0.03, 2800, 5, 0.12 * gain, out); this.tone(t, 0.05, 1300, 700, 0.04 * gain, out, 'square'); break;
       case 'void_whisper': this.tone(t, 2.0, 1150, 1090, 0.03 * gain, out, 'sine'); this.tone(t + 0.1, 1.8, 1740, 1660, 0.02 * gain, out, 'sine'); this.noise(t, 1.8, 3200, 4, 0.04 * gain, out); break;
       default: this.tone(t, 0.1, 440, 440, 0.1 * gain, out);

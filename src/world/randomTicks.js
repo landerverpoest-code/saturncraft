@@ -206,7 +206,7 @@ export function runRandomTicks(world, cx, cz, radius, rng = Math.random) {
     if (!c) continue;
     const bx = (cx + dx) * 16, bz = (cz + dz) * 16;
     for (let s = 0; s < SECTION_COUNT; s++) {
-      if (!c.sectionNonAir[s]) continue;
+      if (!c.sectionTick[s]) continue; // no block in this section reacts to a random tick (the common case underground)
       for (let k = 0; k < RANDOM_TICK_SPEED; k++) {
         const r = (rng() * 4096) | 0;
         const lx = r & 15, lz = (r >> 4) & 15, y = MIN_Y + s * 16 + (r >> 8);

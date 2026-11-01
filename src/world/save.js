@@ -17,16 +17,17 @@ const slotKey = (slot) => `slot${slot}`;
 
 /** Run-length encoding as [value, count] pairs (16-bit values, so block ids above 255 fit). */
 export function rleEncode(arr) {
-  const out = [];
-  let i = 0;
-  while (i < arr.length) {
-    const v = arr[i];
-    let n = 1;
-    while (i + n < arr.length && arr[i + n] === v && n < 255) n++;
-    out.push(v, n);
-    i += n;
+  const n = arr.length, T = arr instanceof Uint16Array ? Uint16Array : Uint8Array;
+  let buf = new T(4096), o = 0, i = 0;
+  while (i < n) {
+    const v = arr[i], lim = Math.min(n, i + 255);
+    let j = i + 1;
+    while (j < lim && arr[j] === v) j++;
+    if (o + 2 > buf.length) { const nb = new T(buf.length * 2); nb.set(buf); buf = nb; }
+    buf[o++] = v; buf[o++] = j - i;
+    i = j;
   }
-  return arr instanceof Uint16Array ? Uint16Array.from(out) : Uint8Array.from(out);
+  return buf.slice(0, o);
 }
 
 export function rleDecode(enc, length, Type = Uint8Array) {
@@ -57,11 +58,20 @@ function txn(db, mode, fn) {
   });
 }
 
+export const packStats = { packed: 0, reused: 0 };
+/**
+ * A chunk's saved form. Chunks keep the packed copy and the revision it was made at (World.setBlock and setLight bump
+ * `rev`), so the minute-by-minute autosave only re-encodes chunks that changed since the last one.
+ */
 export function packChunk(c) {
-  return {
+  if (c.packCache && c.packRev === c.rev) { packStats.reused++; return c.packCache; }
+  packStats.packed++;
+  const p = {
     blocks: rleEncode(c.blocks), meta: rleEncode(c.meta), light: rleEncode(c.light),
     biomes: c.biomes.slice(), colors: c.colors.slice(), heightmap: new Int16Array(c.heightmap),
   };
+  if (c.rev !== undefined) { c.packCache = p; c.packRev = c.rev; }
+  return p;
 }
 export function unpackChunk(p) {
   const V = 16 * 16 * 384;
@@ -98,7 +108,7 @@ export async function saveGame(game) {
     name: game.worldName || `World ${game.saveSlot || 1}`,
     seed: game.seed,
     time: game.time,
-    gameRules: { doDaylightCycle: game.settings.daylightCycle !== false, doSeasons: game.settings.seasons !== false, doHostileSpawning: game.settings.hostileMobs !== false, fireworksHurtPlayers: game.settings.fireworksHurtPlayers === true, difficulty: game.difficulty },
+    gameRules: { doDaylightCycle: game.settings.daylightCycle !== false, doSeasons: game.settings.seasons !== false, doHostileSpawning: game.settings.hostileMobs !== false, fireworksHurtPlayers: game.settings.fireworksHurtPlayers === true, doWorldEvents: game.settings.worldEvents !== false, difficulty: game.difficulty },
     savedAt: Date.now(),
     player: playerSaveData(p),
     furnaces: [...game.furnaces.values()],
@@ -113,6 +123,7 @@ export async function saveGame(game) {
     hoppers: [...(game.hoppers || new Map()).values()].map((h) => ({ x: h.x, y: h.y, z: h.z, slots: h.slots })),
     dispensers: [...(game.dispensers || new Map()).values()].map((d) => ({ x: d.x, y: d.y, z: d.z, slots: d.slots })),
     worldSpawn: game.worldSpawn,
+    worldEvents: game.worldEvents ? game.worldEvents.save() : undefined, // the last meteorite slot, craters, festival lanterns (world/events.js)
     seasons: game.seasons ? game.seasons.save() : undefined, // season length and the calendar offset set by /season (world/seasons.js)
     weather: game.weather.save(),
     milestones: game.milestones.save(),
@@ -197,6 +208,7 @@ export function applySave(game, data) {
   if (data.gameRules) {
     if (typeof data.gameRules.doDaylightCycle === 'boolean') game.settings.daylightCycle = data.gameRules.doDaylightCycle;
     if (typeof data.gameRules.doSeasons === 'boolean') game.settings.seasons = data.gameRules.doSeasons;
+    if (typeof data.gameRules.doWorldEvents === 'boolean') game.settings.worldEvents = data.gameRules.doWorldEvents;
     if (typeof data.gameRules.doHostileSpawning === 'boolean') game.settings.hostileMobs = data.gameRules.doHostileSpawning;
     game.settings.fireworksHurtPlayers = data.gameRules.fireworksHurtPlayers === true; // (off unless the world turned it on)
     if (['peaceful', 'easy', 'normal', 'hard'].includes(data.gameRules.difficulty)) game.settings.difficulty = data.gameRules.difficulty;
@@ -204,6 +216,7 @@ export function applySave(game, data) {
   game.netPlayers = data.netPlayers || {};
   game.weather.load(data.weather);
   if (game.seasons) { game.seasons.load(data.seasons); game.seasons.enabled = game.settings.seasons !== false; }
+  if (game.worldEvents) game.worldEvents.load(data.worldEvents);
   game.milestones.load(data.milestones);
   game.player.stats = loadStats(data.stats);
   if (game.raids) game.raids.load(data.raids);
