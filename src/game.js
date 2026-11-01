@@ -1113,17 +1113,24 @@ export class Game {
     const w = this.world, ci = w.circuits;
     ci.enabled = !(this.net && this.net.isClient); // guests apply the host's results
     if (!ci.enabled) { if (ci.queue.size) ci.queue.clear(); return; }
-    const weighted = new Map(); // weighted plates: key -> [x, y, z, count]
-    for (const [ex, ey, ez, living] of this.pressers()) {
+    // (no per-entity arrays: this runs every tick for every entity; the plates themselves are rare)
+    let weighted = null; // weighted plates: key -> [x, y, z, count]
+    const press = (ex, ey, ez, living) => {
       const bx = Math.floor(ex), by = Math.floor(ey + 0.05), bz = Math.floor(ez);
       const id = w.getBlock(bx, by, bz);
       if (id === B.WOODEN_PRESSURE_PLATE || (id === B.STONE_PRESSURE_PLATE && living)) ci.press(bx, by, bz);
       else if (id === B.LIGHT_WEIGHTED_PLATE || id === B.HEAVY_WEIGHTED_PLATE) {
-        const k = `${bx},${by},${bz}`, c = weighted.get(k);
+        const k = `${bx},${by},${bz}`;
+        if (!weighted) weighted = new Map();
+        const c = weighted.get(k);
         if (c) c[3]++; else weighted.set(k, [bx, by, bz, 1]);
       }
-    }
-    for (const [bx, by, bz, n] of weighted.values()) ci.press(bx, by, bz, n);
+    };
+    const p = this.player;
+    if (!p.dead && !p.spectator) press(p.x, p.y, p.z, true);
+    for (const e of this.entities.list) if (!e.dead && e.body && e.kind !== 'xp') press(e.x, e.y, e.z, e.kind === 'mob');
+    if (this.net && this.net.isHost) for (const rp of this.net.remotes.values()) if (rp.state) press(rp.state.x, rp.state.y, rp.state.z, true);
+    if (weighted) for (const [bx, by, bz, n] of weighted.values()) ci.press(bx, by, bz, n);
     for (const e of this.entities.list) if (e.cart && !e.dead && w.getBlock(Math.floor(e.x), Math.floor(e.y + 0.05), Math.floor(e.z)) === B.DETECTOR_RAIL) ci.detect(Math.floor(e.x), Math.floor(e.y + 0.05), Math.floor(e.z));
   }
 

@@ -69,7 +69,7 @@ export function cleanFw(fw) {
 }
 
 /** Same firework data? (stack merging and sync) */
-export const sameFw = (a, b) => JSON.stringify(a ? cleanFw(a) : null) === JSON.stringify(b ? cleanFw(b) : null);
+export const sameFw = (a, b) => (!a && !b) || JSON.stringify(a ? cleanFw(a) : null) === JSON.stringify(b ? cleanFw(b) : null);
 
 /** Is this star the plain single-colour ball of the original items (needs no fw data)? */
 const isPlainStar = (s) => s.c.length === 1 && s.s === 0 && !s.t && !s.w && !(s.f && s.f.length);

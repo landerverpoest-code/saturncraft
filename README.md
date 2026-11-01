@@ -646,6 +646,17 @@ Code: `src/world/dimensions/` (registry and scaling, generators, portal logic, s
   chunk, output byte-identical). The mob spawner backs off to a rotating quarter of the chunks
   per tick while a sweep keeps finding nothing (e.g. the daylight surface pass) and caches its chunk
   list; the creative catalogue draws icons only for the rows in view (`src/ui/lazyIcons.js`).
+* Third pass (after seasons, soundscapes, the new structures, companions and fireworks; `tests/perf_pass3.test.js`).
+  Measured with Playwright (headless swiftshader, seed 42, render distance 4) and node: the new structure
+  stamps cost under 0.01 ms per chunk each (sites are cached per region; generation stays ~16 ms/chunk, mostly
+  ore veins and noise), a frame costs under 1 ms of JavaScript apart from the GL submit, the soundscape/acoustics
+  rays ~0.05 ms once a second, and the heap stays flat over 12 000 simulated ticks. Fixed: random ticks skip
+  sections without a tickable block (per-section counts kept by `setBlock`, 0.62 → 0.42 ms/tick), the entity list
+  is compacted in place and item stacks test distance before comparing stacks, pressure plates no longer allocate
+  an array per entity per tick (circuits 0.135 → 0.03 ms), `sameFw` skips serialising when neither stack has
+  firework data, and the autosave encodes run lengths into typed arrays (1.6x) and keeps each chunk's packed
+  copy until its blocks or light change. Tick cost with ~70 entities: 1.9 → 1.2 ms. The worker messages are
+  transfers (generation ~0.4 MB per chunk, a mesh request 23 KB), nothing is copied.
 * Shadows: three 1024² maps over a ±44-block area. The brightest sun's map is
   redrawn every 3rd frame and the others every 6th (the suns move ~0.3°/s;
   all three are redrawn right after a block edit). The shadow pass only draws
