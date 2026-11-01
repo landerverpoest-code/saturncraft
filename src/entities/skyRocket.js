@@ -15,6 +15,7 @@ import * as THREE from 'three';
 import { SOLID } from '../world/blocks.js';
 import { ITEMS } from '../world/items.js';
 import { rocketLifetime } from '../player/glider.js';
+import { rocketStrike } from '../world/signalBlocks.js';
 import { COLORS } from '../world/colors.js';
 import { rocketOfStack, burstVelocities, burstDamage, fadeAmount, mixRgb } from '../world/fireworks.js';
 
@@ -76,7 +77,7 @@ export class SkyRocket {
     if (this.age < 31) { this.vx *= 1.15; this.vz *= 1.15; } // (a longer flight climbs on, but does not veer further)
     this.vy = Math.min(1.3, this.vy + 0.04);
     const nx = this.x + this.vx, ny = this.y + this.vy, nz = this.z + this.vz;
-    if (SOLID[game.world.getBlock(Math.floor(nx), Math.floor(ny), Math.floor(nz))]) { this.burst(game); return; }
+    if (SOLID[game.world.getBlock(Math.floor(nx), Math.floor(ny), Math.floor(nz))]) { rocketStrike(game, [this.x, this.y, this.z], [nx, ny, nz]); this.burst(game); return; }
     this.x = nx; this.y = ny; this.z = nz;
     game.particles.emit(this.x, this.y - 0.2, this.z, (Math.random() - 0.5) * 0.03, -0.05, (Math.random() - 0.5) * 0.03, 1, 0.75, 0.4, 12, 0.01);
     if (++this.age >= this.life) this.burst(game);
@@ -87,7 +88,7 @@ export class SkyRocket {
     const steps = Math.max(1, Math.ceil(this.speed / 0.4));
     for (let k = 0; k < steps; k++) {
       const nx = this.x + this.vx / steps, ny = this.y + this.vy / steps, nz = this.z + this.vz / steps;
-      if (SOLID[game.world.getBlock(Math.floor(nx), Math.floor(ny), Math.floor(nz))]) { this.burst(game); return; }
+      if (SOLID[game.world.getBlock(Math.floor(nx), Math.floor(ny), Math.floor(nz))]) { rocketStrike(game, [this.x, this.y, this.z], [nx, ny, nz]); this.burst(game); return; }
       this.x = nx; this.y = ny; this.z = nz;
       if (this.mobAt(game)) { this.burst(game); return; }
       game.particles.emit(this.x, this.y, this.z, (Math.random() - 0.5) * 0.02, (Math.random() - 0.5) * 0.02, (Math.random() - 0.5) * 0.02, 1, 0.75, 0.4, 10, 0.005);

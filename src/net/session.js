@@ -15,7 +15,7 @@
 //   tickNear(entity), remoteTargets(proj), raycastPlayers(...), playerNames(),
 //   requestSpawn(kind, data), interactMob(mob), hitBoat(boat), ride(boat, on),
 //   openContainer / closeContainer / uiBefore / uiAfter, requestTrade(...),
-//   sendCommand(text), requestTravel(dim, arrival), requestExplosion(...), sendVibration(k, x, y, z),
+//   sendCommand(text), requestTravel(dim, arrival), requestExplosion(...), sendVibration(k, x, y, z), sendNote(x, y, z),
 //   onSwitchDimension(dim, pos), onArrived(x, y, z), respawnNearHost(), useFence(x, y, z)
 import { doubleChestHalves, doubleChestView } from '../world/chests.js';
 import { igniteTNT, PrimedTNT } from '../entities/tnt.js';
@@ -279,6 +279,12 @@ export class HostSession extends Session {
         if (!finite(m.x, m.y, m.z) || !this.near(c, m.x, m.y, m.z, 12)) break;
         g.setLectern(m.x | 0, m.y | 0, m.z | 0, m.s || null, true);
         this.broadcast({ t: 'lectern', x: m.x | 0, y: m.y | 0, z: m.z | 0, s: g.lecterns.get(`${m.x | 0},${m.y | 0},${m.z | 0}`) || null }, c);
+        break;
+      }
+      case 'note': {
+        // a guest punched or retuned a Chime Block: the host plays it and tells the others (rings from signals travel as block edits)
+        if (!finite(m.x, m.y, m.z) || !this.near(c, m.x, m.y, m.z, 12) || m.d !== g.world.dimension) break;
+        if (g.playChime(m.x | 0, m.y | 0, m.z | 0, { fromNet: true })) this.broadcast({ t: 'note', x: m.x | 0, y: m.y | 0, z: m.z | 0, d: g.world.dimension }, c);
         break;
       }
       case 'vault': this.remoteVault(c, m); break;
@@ -803,6 +809,7 @@ export class HostSession extends Session {
   sendFrame(x, y, z, st) { this.broadcast({ t: 'frame', x, y, z, st }); }
   sendPot(x, y, z, f) { this.broadcast({ t: 'pot', x, y, z, f }); }
   sendLectern(x, y, z, s) { this.broadcast({ t: 'lectern', x, y, z, s }); }
+  sendNote(x, y, z) { this.broadcast({ t: 'note', x, y, z, d: this.game.world.dimension }); }
 
   tick() {
     if (this.closed) return;
@@ -994,6 +1001,7 @@ export class ClientSession extends Session {
       case 'frame': g.setFrameItem(m.x | 0, m.y | 0, m.z | 0, m.st || null, true); break;
       case 'pot': g.setPot(m.x | 0, m.y | 0, m.z | 0, m.f || null, true); break;
       case 'lectern': g.setLectern(m.x | 0, m.y | 0, m.z | 0, m.s || null, true); break;
+      case 'note': if (finite(m.x, m.y, m.z) && m.d === g.world.dimension) g.playChime(m.x | 0, m.y | 0, m.z | 0, { fromNet: true }); break;
       case 'vaultset': if (g.proving && typeof m.k === 'string' && /^-?\d+,-?\d+,-?\d+$/.test(m.k)) g.proving.vaults.set(m.k, m.n); break;
       case 'vaultno': if (g.hud) g.hud.toast(String(m.m || '').slice(0, 80)); break;
       case 'cmdout': for (const l of m.lines || []) g.chat.add(String(l)); break;
@@ -1263,6 +1271,7 @@ export class ClientSession extends Session {
   sendFrame(x, y, z, st) { this.send({ t: 'frame', x, y, z, st }); }
   sendPot(x, y, z, f) { this.send({ t: 'pot', x, y, z, f }); }
   sendLectern(x, y, z, s) { this.send({ t: 'lectern', x, y, z, s }); }
+  sendNote(x, y, z) { this.send({ t: 'note', x, y, z, d: this.game.world.dimension }); }
   /** Use the Vault at x,y,z with the held stack `st` (the host checks its ledger). */
   useVault(x, y, z, st) { this.send({ t: 'vault', x, y, z, st: st ? { id: st.id, count: 1 } : null }); }
 

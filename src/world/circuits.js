@@ -35,6 +35,7 @@ import { comparatorOutput, daylightLevel } from './comparators.js';
 import { LECTERN_POWERED, LECTERN_PULSE_TICKS } from './books.js';
 import { TARGET_TICKS_STUCK } from './signalBlocks.js';
 import { SENSOR_PULSE } from './deepHush.js';
+import { chimeSoundAt } from './chimes.js';
 
 export const MAX_PUSH = 12;
 export const BUTTON_TICKS = 20;
@@ -773,7 +774,7 @@ export function changeSound(w, x, y, z, old, id) {
       const open = isDoorId(id) ? DOOR_OPEN : BLOCKS[id].shape === SHAPE.TRAPDOOR ? TRAPDOOR_OPEN : GATE_OPEN;
       return m & open ? 'door_open' : 'door_close';
     }
-    if (id === B.CHIME_BLOCK && m & CHIME_POWERED) return 'chime_' + (m & 31);
+    if (id === B.CHIME_BLOCK && m & CHIME_POWERED) return chimeSoundAt(w, x, y, z); // the block under it picks the instrument (world/chimes.js)
     return null;
   }
   if (isBulb(old) && isBulb(id)) return 'click'; // a Copper Bulb switching

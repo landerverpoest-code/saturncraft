@@ -1,6 +1,7 @@
 // Procedural Web Audio sound effects (no audio files). Every sound is
 // synthesised from noise and oscillators so all audio is original.
 import { REVERB_DECAYS, roofVoice, rainUnderCover } from './acoustics.js';
+import { parseChimeSound, chimeVoices } from '../world/chimes.js';
 
 // Looping noise layers of the ambient bed (levels come from ambience.js). Each has a slow
 // tremolo (lfo Hz, depth 0..1) so wind swells and crickets pulse.
@@ -204,9 +205,12 @@ export class Audio {
     else if (name === 'step_mud') { this.noise(t, 0.09, 420, 1.2, 0.14 * gain, out); this.tone(t + 0.02, 0.08, 160, 90, 0.05 * gain, out, 'sine'); } // a wet squelch
     else if (name.startsWith('step_')) this.noise(t, 0.07, matFreq * 0.7, 1.5, 0.12 * gain, out);
     else if (name.startsWith('chime_')) {
-      // chime block: 25 semitones from F#3 like the reference note block, a bell-like pair of sines
-      const f = 185 * Math.pow(2, (+name.slice(6) || 0) / 12);
-      this.tone(t, 0.9, f, f * 0.995, 0.22 * gain, out, 'sine'); this.tone(t, 0.5, f * 2.01, f * 2, 0.07 * gain, out, 'sine');
+      // chime block: 25 semitones from F#3, the timbre chosen by the block under it (world/chimes.js)
+      const note = parseChimeSound(name);
+      if (note) for (const v of chimeVoices(note.instrument, note.pitch)) {
+        if (v.k === 'tone') this.tone(t + v.dt, v.dur, v.f0, v.f1, v.gain * gain, out, v.type);
+        else this.noise(t + v.dt, v.dur, v.freq, v.q, v.gain * gain, out, v.filter);
+      }
     }
     else switch (name) {
       case 'pop': this.tone(t, 0.08, 600 + Math.random() * 400, 1400, 0.2 * gain, out, 'triangle'); break;
@@ -236,6 +240,11 @@ export class Audio {
         this.noise(t, 1.6, 300, 0.5, 1.0 * gain, out, 'lowpass');
         this.tone(t, 0.8, 90, 30, 0.8 * gain, out, 'sine'); break;
       case 'bow': this.noise(t, 0.12, 1500, 3, 0.3 * gain, out); this.tone(t, 0.1, 300, 120, 0.2 * gain, out, 'triangle'); break;
+      case 'spear_throw': this.noise(t, 0.2, 900, 2, 0.3 * gain, out); this.tone(t, 0.18, 520, 160, 0.22 * gain, out, 'triangle'); break;
+      case 'spear_stick': this.noise(t, 0.06, 1400, 4, 0.3 * gain, out); this.tone(t, 0.25, 180, 110, 0.25 * gain, out, 'triangle'); break;
+      case 'spear_return': this.tone(t, 0.35, 300, 1100, 0.2 * gain, out, 'sine'); this.noise(t, 0.3, 2400, 1.5, 0.12 * gain, out, 'highpass'); break;
+      case 'spear_surge': this.noise(t, 0.6, 800, 0.8, 0.4 * gain, out); this.tone(t, 0.5, 200, 700, 0.2 * gain, out, 'sine'); break;
+      case 'stormcall': this.noise(t, 0.2, 7000, 0.3, 0.5 * gain, out, 'highpass'); this.tone(t, 0.3, 1400, 200, 0.2 * gain, out, 'sawtooth'); break;
       case 'arrow_hit': this.noise(t, 0.08, 1200, 4, 0.3 * gain, out); break;
       case 'splash': this.noise(t, 0.4, 1200, 0.8, 0.4 * gain, out); break;
       case 'bucket_fill': this.noise(t, 0.3, 900, 1, 0.3 * gain, out); break;
