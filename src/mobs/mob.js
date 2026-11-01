@@ -154,6 +154,7 @@ export class Mob {
     if (s.raider) { this.raider = true; this.raidId = s.raidId || null; }
     if (s.size) { this.setSize(s.size); this.health = s.health; }
     if (this.type === 'galloper') { if (s.coat !== undefined) this.coat = s.coat; this.temper = s.temper || 0; this.saddled = !!s.saddled; if (s.maxHp) this.maxHp = s.maxHp; }
+    if (s.maxHp && !this.maxHp) this.maxHp = s.maxHp; // boosted hit points of named guardians (world/rimekeep.js)
     if (s.tamed) { this.tamed = true; this.sitting = !!s.sitting; if (s.ownerName) this.ownerName = s.ownerName; }
     if (this.def.companion) companionLoad(this, s); // a Vixling's gift timer
     if (this.def.loadExtra) this.def.loadExtra(this, s); // Dune Striders' saddles, Hoverlings' items

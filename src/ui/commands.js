@@ -12,6 +12,8 @@ import { hutsNear } from '../world/swampHuts.js';
 import { nearestSunkenRuin } from '../world/sunkenRuins.js';
 import { nearestSunTomb } from '../world/sunTombs.js';
 import { nearestSkywatch } from '../world/skywatch.js';
+import { nearestRimekeep } from '../world/rimekeep.js';
+import { nearestSporehall } from '../world/sporehall.js';
 import { nearestMonument } from '../world/monuments.js';
 import { BLOCKS, isBlockId } from '../world/blocks.js';
 import { MOBS, MOB_KEYS } from '../mobs/mobTypes.js';
@@ -74,7 +76,7 @@ export const HELP = [
   '/enchant <name> [level]  (the held item; names: ' + ENCH_KEYS.join(', ') + ')',
   '/summon <mob> [x y z]',
   '/xp <amount> [levels]',
-  '/locate <village|temple|igloo|outpost|shipwreck|monument|mineshaft|sanctum|bastion|hut|ruin|buried|vaults|sunken|tomb|skywatch|city|gate> or /locate biome <name>',
+  '/locate <village|temple|igloo|outpost|shipwreck|monument|mineshaft|sanctum|bastion|hut|ruin|buried|vaults|sunken|tomb|skywatch|rimekeep|sporehall|city|gate> or /locate biome <name>',
   '/dimension <overworld|cinderdeep|hollow>',
   '/effect give <effect> [seconds] [level],  /effect clear  (effects: ' + EFFECT_KEYS.join(', ') + ')',
   '/raid <patrol|start [level]|stop|status>',
@@ -295,6 +297,8 @@ export function runCommand(game, text) {
         [['sunken', 'sunken_ruin', 'drowned'], 'Sunken Ruin', null, nearestSunkenRuin],
         [['tomb', 'suntomb', 'sun_tomb', 'pyramid'], 'Sun Tomb', null, nearestSunTomb, (t) => `, ${t.style}`],
         [['skywatch', 'watchtower', 'summit'], 'Skywatch Tower', null, nearestSkywatch],
+        [['rimekeep', 'icekeep', 'ice_keep', 'frostkeep'], 'Rimekeep', null, nearestRimekeep],
+        [['sporehall', 'spore', 'fungal', 'overgrown'], 'Sporehall', null, nearestSporehall, (t) => `, ${t.style}`],
       ]) {
         if (!names.includes(what)) continue;
         if (game.world.dimension !== 'overworld') return `${label}s are only found in the overworld`;

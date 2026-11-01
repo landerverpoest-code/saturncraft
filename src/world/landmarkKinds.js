@@ -12,6 +12,8 @@ export const LANDMARK_KINDS = [
   { key: 'sunken', name: 'Sunken Ruins', color: '#3a7ae0', shape: 'diamond' },
   { key: 'tomb', name: 'Sun Tomb', color: '#ffd040', shape: 'pyramid' },
   { key: 'skywatch', name: 'Skywatch Tower', color: '#e0e0f0', shape: 'tower' },
+  { key: 'rimekeep', name: 'Rimekeep', color: '#8fd4f4', shape: 'star' },
+  { key: 'sporehall', name: 'Sporehall', color: '#9ccc40', shape: 'dome' },
 ];
 export const LANDMARK_BY_KEY = Object.fromEntries(LANDMARK_KINDS.map((k) => [k.key, k]));
 export const isLandmarkKind = (k) => typeof k === 'string' && Object.hasOwn(LANDMARK_BY_KEY, k);

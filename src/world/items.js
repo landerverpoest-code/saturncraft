@@ -411,3 +411,9 @@ export function heldLightLevel(id) {
   cp.stack = 1;
   cp.armor = { slot: 0, piece: 'helmet', material: 'pumpkin', defense: 0, toughness: 0, pumpkin: true };
 }
+
+// More Explorer Charts, appended here so no item id shifts: Rimekeep and Sporehall (world/rimekeep.js, world/sporehall.js).
+for (const [kind, name, p, e, g, w] of [
+  ['rimekeep', 'Rimekeep Chart', '#e4f0f8', '#5a8aa8', '#8fd4f4', '#4a7aa0'],
+  ['sporehall', 'Sporehall Chart', '#dfe8c8', '#5a7a30', '#9ccc40', '#6a8a3a'],
+]) CHARTS[kind] = item(`chart_${kind}`, name, { stack: 16, chart: kind, iconStyle: ['map', { p, e, g, w }] }).id;
