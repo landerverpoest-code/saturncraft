@@ -69,6 +69,18 @@ export function canTrade(offer, inventory, discount = 0) {
   return offer.uses < MAX_USES && inventory.count(offer.give) >= offerPrice(offer, discount);
 }
 
+/**
+ * How many times (at most `times`) the inventory can pay for an offer right now. A guest asks the host for this many,
+ * not for `times`: the host counts every requested trade as used, so asking for more than can be afforded would sell
+ * the offer out without the guest getting the goods.
+ */
+export function affordableTimes(offer, inventory, discount = 0, times = 1) {
+  const price = offerPrice(offer, discount);
+  if (!(price > 0)) return 0;
+  const room = MAX_USES - offer.uses;
+  return Math.max(0, Math.min(times | 0, room, Math.floor(inventory.count(offer.give) / price)));
+}
+
 /** Take the price from the inventory; returns the goods (caller puts them in the inventory). */
 export function doTrade(offer, inventory, discount = 0) {
   if (!canTrade(offer, inventory, discount)) return null;
