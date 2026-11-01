@@ -29,7 +29,8 @@ import { choosePainting, placePainting } from '../world/paintings.js';
 import { standYaw, standAt, useStand, punchStand } from '../entities/armorStand.js';
 import { tryLightRift, findHollowRing, fillHollowGate } from '../world/dimensions/portal.js';
 import { LEAVES, SAPLING_TREE, growTree } from '../world/trees.js';
-import { useSkyRocket } from '../entities/skyRocket.js';
+import { useSkyRocket, launchRocket } from '../entities/skyRocket.js';
+import { crossbowLoad, loadedRocket } from '../world/fireworks.js';
 import { hushfruitTeleport } from '../world/dimensions/hushvine.js';
 import { cavePlaceMeta, waxCopper, scrapeCopper } from '../world/caves.js';
 import { canLeash, leash, unleash, isFencePost, tieToFence, untieFromFence, isHolder } from '../entities/leash.js';
@@ -277,7 +278,7 @@ export class Interaction {
     }
     // Sky Rockets: a boost while gliding, or launched from the clicked block
     if (d && d.rocket && input.rightPressed && !(this.target && USABLE_BLOCKS.has(this.target.id) && !p.sneaking)) {
-      if (useSkyRocket(g, this.target, d.rocketStar ?? null)) { if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1); this.swing = SWING_TICKS; }
+      if (useSkyRocket(g, this.target, d.rocketStar ?? null, p.inventory.selectedStack)) { if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1); this.swing = SWING_TICKS; }
       return;
     }
     // a Gale Rod: burst upwards (mobs/gustling.js)
@@ -397,6 +398,7 @@ export class Interaction {
     }
     if (!this.breaking || this.breaking.x !== t.x || this.breaking.y !== t.y || this.breaking.z !== t.z || this.breaking.id !== t.id) {
       this.breaking = { x: t.x, y: t.y, z: t.z, id: t.id, progress: 0 };
+      if (t.id === B.CHIME_BLOCK) g.playChime(t.x, t.y, t.z); // punching a Chime Block plays its note
     }
     const tool = toolOf(p.inventory.selectedStack);
     const per = breakProgressPerTick(t.id, tool, { onGround: p.body.onGround || p.body.inWater, inWater: p.body.eyeInWater, swiftdig: enchLevel(p.inventory.selectedStack, 'swiftdig'), haste: p.effectLevel ? p.effectLevel('haste') : 0, fatigue: p.effectLevel ? p.effectLevel('mining_fatigue') : 0 });
@@ -576,9 +578,22 @@ export class Interaction {
     return true;
   }
 
-  /** A crossbow drawn for 1.25 s takes an arrow (none needed in creative or with Endless). */
+  /**
+   * A crossbow drawn for 1.25 s takes an arrow (none needed in creative or with Endless); drawn while sneaking it takes a
+   * Star Rocket instead (kept as the stack's fw; none needed in creative) and fires it straight ahead.
+   */
   loadCrossbow() {
     const g = this.game, p = g.player, inv = p.inventory, bow = inv.selectedStack;
+    if (p.sneaking) {
+      const rs = inv.slots.findIndex((s) => s && crossbowLoad(s));
+      if (rs < 0) return;
+      const fw = crossbowLoad(inv.slots[rs]);
+      if (!p.creative) inv.removeFromSlot(rs, 1);
+      inv.slots[inv.selected] = { ...inv.slots[inv.selected], id: I.CROSSBOW_LOADED, fw };
+      inv.changed();
+      g.audio.play('click', [p.x, p.y + 1, p.z]);
+      return;
+    }
     const free = p.creative || enchLevel(bow, 'endless') > 0;
     const slot = inv.slots.findIndex((s) => s && s.id === I.ARROW);
     if (slot < 0 && !free) return;
@@ -605,7 +620,8 @@ export class Interaction {
     this.surgeTicks = 20;
     this.surgeHit = new Set();
     p.inventory.damageSelected(1);
-    g.audio.play('splash', [p.x, p.y + 1, p.z], 0.9);
+    g.audio.play('spear_surge', [p.x, p.y + 1, p.z]);
+    if (g.milestones) g.milestones.event('spear_throw');
     this.swing = SWING_TICKS;
   }
 
@@ -634,7 +650,8 @@ export class Interaction {
     g.entities.spawnArrow(ex, ey - 0.1, ez, dx * 2.5, dy * 2.5, dz * 2.5, p, false, 'spear', 0, 0, { ...spear });
     if (!p.creative) inv.slots[inv.selected] = null;
     inv.changed();
-    g.audio.play('bow', [ex, ey, ez], 0.8);
+    g.audio.play('spear_throw', [ex, ey, ez]);
+    if (g.milestones) g.milestones.event('spear_throw');
     this.swing = SWING_TICKS;
   }
 
@@ -642,6 +659,16 @@ export class Interaction {
   fireCrossbow() {
     const g = this.game, p = g.player, inv = p.inventory, bow = inv.selectedStack;
     const [ex, ey, ez] = p.eyePos(), [dx, dy, dz] = p.lookDir();
+    const rocket = loadedRocket(bow);
+    if (rocket) { // a loaded Star Rocket flies straight and bursts on the first block or mob (entities/skyRocket.js)
+      const { fw, ...rest } = bow; // (the rocket leaves the bow)
+      launchRocket(g, ex + dx * 0.5, ey - 0.1 + dy * 0.5, ez + dz * 0.5, [dx, dy, dz], { id: I.SKY_ROCKET, count: 1, fw }, { shooter: p });
+      inv.slots[inv.selected] = { ...rest, id: I.CROSSBOW };
+      inv.changed();
+      inv.damageSelected(3); // (a rocket is heavier: reference durability cost 3)
+      this.swing = SWING_TICKS;
+      return;
+    }
     const arrow = g.entities.spawnArrow(ex, ey - 0.1, ez, dx * 3.15, dy * 3.15, dz * 3.15, p, true, null, enchLevel(bow, 'strongdraw'));
     if (arrow && (p.creative || enchLevel(bow, 'endless') > 0)) arrow.pickup = false;
     inv.slots[inv.selected] = { ...bow, id: I.CROSSBOW };
@@ -830,6 +857,7 @@ export class Interaction {
       g.entities.spawnItem(t.x + 0.5, t.y + 0.5, t.z + 0.5, { id: I.PUMPKIN_SEEDS, count: CARVE_SEEDS, damage: 0 });
       if (!p.creative) p.inventory.damageSelected(1);
       g.audio.play('shear', [t.x + 0.5, t.y + 0.5, t.z + 0.5]);
+      if (g.milestones) g.milestones.event('carve');
       this.swing = SWING_TICKS;
       return true;
     }
@@ -880,7 +908,8 @@ export class Interaction {
         const um = circuitUseMeta(t.id, w.getMeta(t.x, t.y, t.z));
         if (um >= 0) {
           w.setBlockUrgent(t.x, t.y, t.z, t.id, um);
-          g.audio.play(t.id === B.CHIME_BLOCK ? 'chime_' + (um & 31) : 'click', [t.x + 0.5, t.y + 0.5, t.z + 0.5]);
+          if (t.id === B.CHIME_BLOCK) g.playChime(t.x, t.y, t.z, { toast: true }); // the new pitch rings (and is named)
+          else g.audio.play('click', [t.x + 0.5, t.y + 0.5, t.z + 0.5]);
           if (t.id === B.LEVER || t.id === B.STONE_BUTTON) this.shake(um & CIRCUIT_ON ? 'activate' : 'deactivate', t.x, t.y, t.z);
         }
         this.swing = SWING_TICKS;
@@ -1117,6 +1146,7 @@ export class Interaction {
       return true;
     }
     w.setBlockUrgent(px, py, pz, placeId, meta);
+    p.stats.blocksPlaced++;
     if (lift) { p.body.y = py + 1; p.body.vy = Math.max(p.body.vy, 0); }
     if (chestPair) w.setBlockUrgent(chestPair.x, chestPair.y, chestPair.z, B.CHEST, chestPair.meta);
     if (isBox(placeId) && g.onBoxPlaced) g.onBoxPlaced(px, py, pz, st); // the box unpacks what it carried
@@ -1242,7 +1272,7 @@ export class Interaction {
     const use = () => { if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1); this.swing = SWING_TICKS; };
     const companion = !!mob.def.companion;
     if (!mob.tamed) {
-      if (!st || mob.target || mob.ram) return false;
+      if (!st || mob.target || mob.ram || mob.enemy === 'player') return false; // (not while it is angry at you)
       if (companion ? !canTameWith(mob.def, st.id) : !(mob.def.tameFood || [I.BONE]).includes(st.id)) return false;
       use();
       if (Math.random() < (companion ? TAME_CHANCE : 1 / 3)) {
@@ -1364,6 +1394,7 @@ export class Interaction {
     if (p.intersectsBlock(x, y, z) && meta === SLAB_DOUBLE) return false;
     if (LEAVES.has(id)) meta = 1; // placed leaves never decay
     g.world.setBlockUrgent(x, y, z, id, meta);
+    p.stats.blocksPlaced++;
     if (id === B.PUMPKIN || id === B.CARVED_PUMPKIN || id === B.JACK_O_LANTERN) { if (!this.tryBuildIronguard(x, y, z)) this.tryBuildFrostling(x, y, z); }
     if (isRail(id)) updateRails(g.world, x, y, z);
     g.audio.play('place_' + BLOCKS[id].sound, [x + 0.5, y + 0.5, z + 0.5]);

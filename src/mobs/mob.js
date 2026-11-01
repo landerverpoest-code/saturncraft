@@ -15,7 +15,9 @@ import { buildModel, animateModel, addCaptainBanner } from './models.js';
 import { entityGlow } from '../render/entityLight.js';
 import { randomSheepColor, WOOL_RGB } from '../world/colors.js';
 import { WOOL_ITEMS } from '../world/items.js';
-import { RESTOCK_TICKS } from './trades.js';
+import { RESTOCK_TICKS, cleanLevel } from './trades.js';
+import { isVillageKey, villageKey } from './reputation.js';
+import { settlerWronged } from './villageRep.js';
 import { villagesNear } from '../world/villages.js';
 import { findJobSite, claimedSites, takeJobSite, checkJobSite, cleanJobSite, siteKey, SEARCH_TICKS, CHECK_TICKS } from './jobSites.js';
 import { marauderAI } from './raids.js';
@@ -32,10 +34,13 @@ import { moraleAI, soundAlarm } from './morale.js';
 import './peddler.js'; // registers the Roving Peddler and its Packhorns
 import { gazeProvokes } from './pumpkins.js';
 import { isShield, isCharm, shieldBlocks, disablesShield, wearShield, charmHealth, charmIgnores, offhandDrops, offhandFromSave, OFFHAND_KINDS } from './offhand.js';
-import { companionAI, companionSave, companionLoad } from './companions.js'; // tame Vixlings and Cragbucks
+import { companionAI, companionSave, companionLoad } from './companions.js'; // tame Vixlings, Cragbucks, Hoppers, Bristlebacks and Frostbears
+import { breedCooldownTicks } from '../world/seasons.js'; // parents wait less in spring, longer in winter
+import { growStep, breedStep } from './youngAnimals.js'; // babies of Buzzlings, Packhorns, Gillnewts, Dolphins and Frostbears
 import { babySpeedFactor, babyAttackFactor, babyHealth, babyExplosion, babyXp, babyLoot } from './babies.js'; // spiderlings, Fizzlets, Brute cubs
 import './hoverling.js'; // registers the Hoverling
 import './gustling.js'; // registers the Gustling (Proving Vaults)
+import { recordKill } from '../player/stats.js';
 import { EFFECTS, addEffect, tickEffects, speedFactor, periodicActions, instantAmount, effectsColor, visibilityFactor, resistanceFactor } from '../player/effects.js';
 
 let nextMobId = 1_000_000;
@@ -97,6 +102,8 @@ export class Mob {
     // settlers: profession, trade offers and the house they live in
     this.profession = null; this.trades = []; this.home = null; this.lastRestock = 0;
     this.jobSite = null; this.traded = false; // the job-site block it has claimed (mobs/jobSites.js); traded with: keeps its trade
+    this.tradeCount = 0; this.level = 1; // trades done and the level they brought (mobs/trades.js)
+    this.village = undefined; this.lastGift = -1e9; // key of its village (reputation, mobs/reputation.js; null: none) and when it last took a gift
     // Howlers: tamed by the player (owner), sitting, current enemy
     this.tamed = false; this.sitting = false; this.enemy = null;
     // Gallopers: coat colour, temper (rises with every failed ride), saddle
@@ -138,7 +145,7 @@ export class Mob {
   }
 
   /** State kept when the mob is saved with its chunk. */
-  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor, profession: this.profession, trades: this.trades, home: this.home, lastRestock: this.lastRestock, jobSite: this.jobSite || undefined, traded: this.traded || undefined, size: this.size, coat: this.coat, temper: this.temper, saddled: this.saddled, maxHp: this.maxHp, playerMade: this.playerMade, tamed: this.tamed, sitting: this.sitting, ownerName: this.ownerName, horns: this.horns, hive: this.hive, nectar: this.nectar, beach: this.beach, pregnant: this.pregnant, captain: this.captain || undefined, raider: this.raider || undefined, raidId: this.raidId || undefined, customName: this.customName || undefined, leash: leashSaveData(this), offhand: this.offhand || undefined, equip: this.equip || undefined, equipPicked: this.equipPicked || undefined, canPickUp: this.canPickUp || undefined, ...(this.def.companion ? companionSave(this) : {}), ...(this.def.saveExtra ? this.def.saveExtra(this) : {}) }; }
+  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor, profession: this.profession, trades: this.trades, home: this.home, lastRestock: this.lastRestock, jobSite: this.jobSite || undefined, traded: this.traded || undefined, tradeCount: this.tradeCount || undefined, level: this.level > 1 ? this.level : undefined, village: this.village || undefined, lastGift: this.lastGift > -1e8 ? this.lastGift : undefined, size: this.size, coat: this.coat, temper: this.temper, saddled: this.saddled, maxHp: this.maxHp, playerMade: this.playerMade, tamed: this.tamed, sitting: this.sitting, ownerName: this.ownerName, horns: this.horns, hive: this.hive, nectar: this.nectar, beach: this.beach, pregnant: this.pregnant, captain: this.captain || undefined, raider: this.raider || undefined, raidId: this.raidId || undefined, customName: this.customName || undefined, leash: leashSaveData(this), offhand: this.offhand || undefined, equip: this.equip || undefined, equipPicked: this.equipPicked || undefined, canPickUp: this.canPickUp || undefined, ...(this.def.companion ? companionSave(this) : {}), ...(this.def.saveExtra ? this.def.saveExtra(this) : {}) }; }
   loadData(s) {
     this.health = s.health; this.yaw = s.yaw;
     if (s.age < 0) { this.setBaby(true); this.age = s.age; } else { if (this.age < 0) this.setBaby(false); this.age = s.age || 0; }
@@ -152,6 +159,7 @@ export class Mob {
     if (s.raider) { this.raider = true; this.raidId = s.raidId || null; }
     if (s.size) { this.setSize(s.size); this.health = s.health; }
     if (this.type === 'galloper') { if (s.coat !== undefined) this.coat = s.coat; this.temper = s.temper || 0; this.saddled = !!s.saddled; if (s.maxHp) this.maxHp = s.maxHp; }
+    if (s.maxHp && !this.maxHp) this.maxHp = s.maxHp; // boosted hit points of named guardians (world/rimekeep.js)
     if (s.tamed) { this.tamed = true; this.sitting = !!s.sitting; if (s.ownerName) this.ownerName = s.ownerName; }
     if (this.def.companion) companionLoad(this, s); // a Vixling's gift timer
     if (this.def.loadExtra) this.def.loadExtra(this, s); // Dune Striders' saddles, Hoverlings' items
@@ -160,7 +168,12 @@ export class Mob {
     this.offhand = offhandFromSave(s.offhand); this.equip = equipFromSave(s.equip); this.equipPicked = s.equipPicked | 0; this.canPickUp = !!s.canPickUp;
     if (this.mount) this.dismount(true); // (a fresh spawn's jockey roll does not apply to a loaded mob)
     if (s.profession) { this.profession = s.profession; this.trades = s.trades || []; this.lastRestock = s.lastRestock || 0; }
-    if (this.def.villager) { this.home = s.home || null; this.jobSite = cleanJobSite(s.jobSite); this.traded = !!s.traded; }
+    if (this.def.villager) {
+      this.home = s.home || null; this.jobSite = cleanJobSite(s.jobSite); this.traded = !!s.traded;
+      const lv = cleanLevel(s); this.tradeCount = lv.tradeCount; this.level = lv.level; // (older saves have neither)
+      if (isVillageKey(s.village)) this.village = s.village;
+      if (Number.isFinite(s.lastGift)) this.lastGift = s.lastGift;
+    }
   }
 
   /** Settlers flee Shamblers, keep near their house (inside it at night), restock, and watch nearby players. */
@@ -202,6 +215,17 @@ export class Mob {
     this.wanderAI(g, 0.8);
   }
 
+  /** The key of the village this settler belongs to (reputation, mobs/reputation.js), or null; found from its house the first time. */
+  villageId(g) {
+    if (this.village === undefined) {
+      const h = this.home, gen = g && g.world && g.world.gen;
+      if (!h || !gen) return null;
+      const v = villagesNear(gen, h.x, h.z, h.x, h.z)[0];
+      this.village = v ? villageKey(v.cx, v.cz) : null;
+    }
+    return this.village;
+  }
+
   trySettlerBreed(g) {
     const mate = g.entities.list.find((e) => e !== this && e.def && e.def.villager && !e.dead && e.age === 0 && Math.hypot(e.x - this.x, e.z - this.z) < 8);
     if (!mate) return;
@@ -213,8 +237,8 @@ export class Mob {
     const baby = g.spawner.spawnMob('settler', (this.x + mate.x) / 2, this.y, (this.z + mate.z) / 2);
     if (!baby) return;
     baby.setBaby(true);
-    baby.home = this.home;
-    this.age = mate.age = 6000;
+    baby.home = this.home; baby.village = this.village;
+    this.age = mate.age = breedCooldownTicks();
     this.hearts(g, 6);
   }
 
@@ -280,7 +304,7 @@ export class Mob {
   breed(g, mate) {
     if (this.def.turtle) {
       // Shellbacks carry eggs back to their home beach instead
-      for (const m of [this, mate]) { m.loveTicks = 0; m.age = 6000; m.breedTime = 0; }
+      for (const m of [this, mate]) { m.loveTicks = 0; m.age = breedCooldownTicks(); m.breedTime = 0; }
       this.pregnant = true; this.hearts(g, 7);
       g.entities.spawnXp(this.x, this.y + 0.5, this.z, 1 + Math.floor(Math.random() * 7));
       if (g.milestones) g.milestones.event('breed');
@@ -290,8 +314,9 @@ export class Mob {
     baby.setBaby(true);
     baby.woolColor = Math.random() < 0.5 ? this.woolColor : mate.woolColor; // (the reference blends dye colours)
     baby.yaw = this.yaw;
+    baby.persistent = true; // young animals stay (ambient ones such as Dolphins and Gillnewts would otherwise despawn)
     if (this.tamed) { baby.tamed = true; baby.health = baby.def.tamedHealth; baby.persistent = true; baby.ownerName = this.ownerName; } // pups of tame Howlers are tame and keep the owner
-    for (const m of [this, mate]) { m.loveTicks = 0; m.age = 6000; m.breedTime = 0; }
+    for (const m of [this, mate]) { m.loveTicks = 0; m.age = breedCooldownTicks(); m.breedTime = 0; }
     this.hearts(g, 7);
     g.entities.spawnXp(this.x, this.y + 0.5, this.z, 1 + Math.floor(Math.random() * 7));
     if (g.milestones) g.milestones.event('breed');
@@ -321,9 +346,10 @@ export class Mob {
     // natural armour (every source) and worn armour (what stops the player's armour too)
     if (this.def.armor || this.equip) dmg = mobDamageTaken(dmg, this.def.armor || 0, this.equip, source);
     dmg *= resistanceFactor(this.effects, source); // Resistance (a Turtle Master elixir, a beacon)
+    let freshHit = true;
     if (this.invulnerable > 10) {
       if (dmg <= this.lastHurt) return false;
-      const extra = dmg - this.lastHurt; this.lastHurt = dmg; dmg = extra;
+      const extra = dmg - this.lastHurt; this.lastHurt = dmg; dmg = extra; freshHit = false;
     } else { this.lastHurt = dmg; this.invulnerable = 20; this.hurtTime = 10; }
     this.health -= dmg;
     this.noActionTime = 0;
@@ -342,13 +368,15 @@ export class Mob {
     if (this.def.villager && attacker && attacker.isPlayer && g) {
       // hurting a Settler angers the village's Ironguards
       for (const e of g.entities.list) if (e.def && e.def.guard && !e.dead && Math.hypot(e.x - this.x, e.z - this.z) < 32) { e.lastSettlerAttacker = 'player'; e.enemy = 'player'; }
+      this.lastPlayerHurter = attacker;
+      if (freshHit && !this.netProxy) settlerWronged(g, attacker, this.villageId(g), false); // the village thinks less of whoever it was
     }
     if (this.def.guard) {
       // Ironguards shrug off knockback and go after whoever hit them (players they made, never)
       this.body.vx *= 0.2; this.body.vz *= 0.2;
       if (attacker && attacker !== this && !(attacker.isPlayer && this.playerMade)) this.enemy = attacker.isPlayer ? 'player' : attacker;
-    } else if (this.def.neutralBeast) {
-      // Frostbears fight back, and the others nearby join in
+    } else if (this.def.neutralBeast && !this.tamed) {
+      // wild Frostbears fight back, and the others nearby join in
       const foe = attacker && attacker.isPlayer ? 'player' : attacker;
       if (foe && attacker !== this && g) for (const e of g.entities.list) if (e.type === this.type && !e.dead && Math.hypot(e.x - this.x, e.z - this.z) < 16) e.enemy = foe;
     } else if (this.def.aquatic) {
@@ -440,18 +468,20 @@ export class Mob {
         const c = g.spawner.spawnMob('wobbler', this.x + (Math.random() - 0.5) * this.size * 0.5, this.y + 0.3, this.z + (Math.random() - 0.5) * this.size * 0.5);
         if (c) { c.setSize(this.size / 2); c.yaw = Math.random() * Math.PI * 2; }
       }
-      if (this.lastHurtByPlayer > 0) g.player.stats.kills++;
+      if (this.lastHurtByPlayer > 0) recordKill(g.player.stats, this.type);
       return; // only the smallest drop slimeballs
     }
     if (!g) return;
     const killedByPlayer = this.lastHurtByPlayer > 0;
     this.killedByPlayer = killedByPlayer;
-    if (killedByPlayer) g.player.stats.kills++;
+    if (killedByPlayer) recordKill(g.player.stats, this.type);
+    if (killedByPlayer && this.def.villager && this.lastPlayerHurter && !this.netProxy) settlerWronged(g, this.lastPlayerHurter, this.villageId(g), true);
     if (killedByPlayer && this.def.category === CATEGORY.MONSTER && g.milestones) g.milestones.event('kill');
     if (this.def.onDeath) this.def.onDeath(this, g, killedByPlayer);
     if (this.captain && g.raids) g.raids.onCaptainKilled(this, killedByPlayer); // Dark Omen
     for (const st of equipmentDrops(this.equip, { killedByPlayer, plunder: source === 'player' ? this.plunder | 0 : 0, picked: this.equipPicked })) g.entities.spawnItem(this.x, this.y + 0.5, this.z, st);
     for (const st of offhandDrops(this.offhand, { killedByPlayer, plunder: source === 'player' ? this.plunder | 0 : 0 })) g.entities.spawnItem(this.x, this.y + 0.5, this.z, st);
+    if (killedByPlayer && this.offhand && g.milestones) g.milestones.event('offhand'); // it carried something in its off-hand (mobs/offhand.js)
     if (this.age < 0 && this.def.category !== CATEGORY.MONSTER) { this.killedByPlayer = false; return; } // baby animals drop nothing
     const plunder = source === 'player' ? this.plunder | 0 : 0; // set by the player's melee hit
     let drops = rollDrops(this.type, { killedByPlayer, onFire: this.fireTicks > 0, sheared: this.sheared, plunder });
@@ -988,6 +1018,8 @@ export class Mob {
       return d;
     };
     if (this.stung && --this.stung <= 0) { this.hurt(100, 'generic'); return; }
+    growStep(this); // a baby Buzzling grows up; fed adults find a mate (mobs/youngAnimals.js)
+    if (!(this.angryTicks > 0) && breedStep(this, g)) return;
     if (this.hive && !HIVES.has(w.getBlock(this.hive.x, this.hive.y, this.hive.z))) this.hive = null;
     if (!this.hive && g.ticks % 200 === this.id % 200) {
       // a homeless bee moves into a nest or hive within 8 blocks
@@ -1261,6 +1293,7 @@ export class Mob {
     const alive = (e) => e && (e === 'player' ? !p.dead && !p.creative && pdist < 24 : !e.dead && e.deathTime === 0);
     if (this.enemy && !alive(this.enemy)) this.enemy = null;
     if (this.enemy) { const t = this.enemy === 'player' ? p : this.enemy; this.chase(g, t, 1.4); this.howlerBite(g, t); return; }
+    if (breedStep(this, g)) return;
     this.wanderAI(g, 0.8);
   }
 
@@ -1287,6 +1320,8 @@ export class Mob {
   dolphinAI(g, p, pdist) {
     const b = this.body, w = g.world;
     if (!b.inWater) { this.move = null; if (g.ticks % 40 === 0 && b.onGround) this.hurt(1, 'drown'); return; }
+    growStep(this);
+    if (breedStep(this, g)) return;
     if (!this.swimDir || Math.random() < 0.01 || b.horizontalCollision) { const a = Math.random() * Math.PI * 2; this.swimDir = [Math.sin(a), 0, Math.cos(a)]; }
     let k = 0.02;
     if (pdist < 24 && pdist > 3 && !p.dead) {
@@ -1355,6 +1390,7 @@ export class Mob {
    */
   newtAI(g, p, pdist) {
     const b = this.body, w = g.world;
+    growStep(this);
     if (b.inWater) this.dry = 0;
     else if ((this.dry = (this.dry || 0) + 1) > 6000 && g.ticks % 20 === 0) this.hurt(1, 'drown');
     if (this.playDead > 0) {
@@ -1362,6 +1398,7 @@ export class Mob {
       if (g.ticks % 20 === 0 && this.health < this.maxHealth) this.health = Math.min(this.maxHealth, this.health + 1);
       return;
     }
+    if (!this.enemy && breedStep(this, g)) return;
     if (this.attackCooldown > 0) this.attackCooldown--;
     const prey = (e) => e && e.kind === 'mob' && !e.dead && e.deathTime === 0 && (e.def.fish && !e.def.newt && !e.def.dolphin || e.def.deepeye || e.type === 'sodden_shambler' || e === this.grudge);
     if (this.enemy && (!prey(this.enemy) || Math.hypot(this.enemy.x - this.x, this.enemy.y - this.y, this.enemy.z - this.z) > 12 || this.enemy.playDead > 0)) this.enemy = null;
@@ -1770,7 +1807,7 @@ export class Mob {
     const parts = m.userData.parts;
     if (parts && parts.robe && this.def.villager && m.userData.prof !== (this.profession || 'none')) {
       m.userData.prof = this.profession || 'none';
-      const col = { farmer: '#8a6a3a', librarian: '#e4dccb', smith: '#34343a', shepherd: '#9a9a88', butcher: '#c8c4b4', fletcher: '#6a7a3a', cleric: '#7a3a8a', cartographer: '#2a5a7a' }[this.profession] || '#a8987a'; // no trade: a plain undyed smock
+      const col = { farmer: '#8a6a3a', librarian: '#e4dccb', smith: '#34343a', shepherd: '#9a9a88', butcher: '#c8c4b4', fletcher: '#6a7a3a', cleric: '#7a3a8a', cartographer: '#2a5a7a', mason: '#8a8a8e', toolsmith: '#5a4632', armorer: '#6a6e78' }[this.profession] || '#a8987a'; // no trade: a plain undyed smock
       parts.robe.children[0].material.userData.base.set(col);
     }
     if (parts && parts.wool) {
@@ -1832,12 +1869,13 @@ export class Mob {
       parts.hornL.visible = (this.horns ?? 2) >= 1; parts.hornR.visible = (this.horns ?? 2) >= 2;
     }
     if (parts && parts.band && this.def.companion) {
-      // tame Vixlings and Cragbucks wear a band; sitting ones lie down (legs tucked, body lowered)
+      // tame companions (Vixlings, Cragbucks, Hoppers, Bristlebacks, Frostbears) wear a band; sitting ones lie down (legs tucked, body lowered)
       parts.band.visible = this.tamed;
       const sit = this.tamed && this.sitting && this.deathTime === 0;
       if (sit) {
-        m.position.y = py - (this.type === 'cragbuck' ? 0.34 : 0.14) * m.scale.y;
-        for (const k of ['legFL', 'legFR', 'legBL', 'legBR']) parts[k].rotation.x = this.type === 'cragbuck' ? 1.45 : (k.startsWith('legB') ? 1.3 : -0.25);
+        const cfg = this.def.companion;
+        m.position.y = py - (cfg.sitDrop ?? 0.14) * m.scale.y;
+        for (const k of ['legFL', 'legFR', 'legBL', 'legBR']) parts[k].rotation.x = cfg.kneel ? 1.45 : (k.startsWith('legB') ? 1.3 : -0.25);
         if (parts.tail) parts.tail.rotation.x = 0.9;
       }
     }

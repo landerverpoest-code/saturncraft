@@ -50,7 +50,7 @@ export class HUD {
       <canvas id="overlay-ghost" class="hidden" width="48" height="48"></canvas>
       <div id="crosshair"></div>
       <div id="attack-indicator" class="hidden"><div></div></div>
-      <div id="skyinfo"><canvas width="192" height="96"></canvas><div><div id="phase-label">Day</div><div id="time-label" style="opacity:.7;font-size:11px"></div></div></div>
+      <div id="skyinfo"><canvas width="192" height="96"></canvas><div><div id="phase-label">Day</div><div id="time-label" style="opacity:.7;font-size:11px"></div><div id="season-label"></div></div></div>
       <div id="effects"></div>
       <div id="debug" class="hidden"></div>
       <div id="coords" class="hidden"></div>
@@ -94,6 +94,7 @@ export class HUD {
     this.skyCanvas = this.root.querySelector('#skyinfo canvas');
     this.phaseLabel = this.root.querySelector('#phase-label');
     this.timeLabel = this.root.querySelector('#time-label');
+    this.seasonLabel = this.root.querySelector('#season-label');
     this.toastEl = this.root.querySelector('#toast');
     this.effectsEl = this.root.querySelector('#effects');
     this.effectsKey = '';
@@ -379,5 +380,10 @@ export class HUD {
     const label = { day: 'Day', twilight: 'Twilight', night: 'Night' }[st.phase];
     if (this.phaseLabel.textContent !== label) this.phaseLabel.textContent = label;
     this.timeLabel.textContent = `${st.aboveCount}/3 suns up · light ${15 - st.skyDarken}`;
+    // the season (world/seasons.js), hidden when the rule is off or outside the overworld
+    const sg = this.game.seasons, show = !!sg && this.game.seasonsOn && this.game.world.dimension === 'overworld';
+    const stext = show ? `${sg.state.name} · day ${sg.state.day}/${sg.state.days}` : '';
+    if (this.seasonLabel.textContent !== stext) { this.seasonLabel.textContent = stext; this.seasonLabel.dataset.season = show ? sg.state.key : ''; }
+    this.seasonLabel.style.display = show ? '' : 'none';
   }
 }

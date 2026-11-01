@@ -17,6 +17,7 @@ import { MODELS, FACES } from './models.js';
 import { I } from '../world/items.js';
 import { B, SOLID, isFluid } from '../world/blocks.js';
 import { makeTrades } from './trades.js';
+import { breedStep } from './youngAnimals.js';
 
 export const DAY_TICKS = 24000;
 export const STAY_TICKS = 24000;          // a caravan stays one day
@@ -157,6 +158,8 @@ function packhornAI(m, g, p, pdist) {
   if (g.ticks % 20 === m.id % 20 || m._lead === undefined) m._lead = leaderOf(g.entities.list, m.convoy);
   const lead = m._lead;
   if (lead && !lead.removed) {
+    if (m.age > 0) m.age--; // (alone, passiveAI below keeps the cooldown and the mating)
+    if (breedStep(m, g)) return;
     const d = Math.hypot(lead.x - m.x, lead.z - m.z), mode = followMode(d);
     if (mode !== 'idle') {
       if (!m.path || g.ticks % 30 === m.id % 30) m.pathTo(g, Math.floor(lead.x), Math.floor(lead.y), Math.floor(lead.z));
@@ -252,7 +255,7 @@ export const PEDDLER = {
 export const PACKHORN = {
   name: 'Packhorn', role: 'llama', category: CATEGORY.CREATURE, sound: 'neigh', noFallDamage: true,
   health: 22, speed: 0.22, width: 0.9, height: 1.87, panicSpeed: 1.5,
-  drops: [{ id: I.LEATHER, min: 0, max: 2 }], food: [],
+  drops: [{ id: I.LEATHER, min: 0, max: 2 }], food: [I.WHEAT, B.HAY_BALE], // bred with wheat or hay (mobs/youngAnimals.js)
   ownAI: packhornAI, customRender: packhornRender,
   onSpawn: (m) => { m.convoy = null; m.woolColor = Math.floor(Math.random() * BLANKETS.length); },
   onHurt: (m, dmg, source, attacker) => {

@@ -15,7 +15,7 @@
 //   tickNear(entity), remoteTargets(proj), raycastPlayers(...), playerNames(),
 //   requestSpawn(kind, data), interactMob(mob), hitBoat(boat), ride(boat, on),
 //   openContainer / closeContainer / uiBefore / uiAfter, requestTrade(...),
-//   sendCommand(text), requestTravel(dim, arrival), requestExplosion(...), sendVibration(k, x, y, z),
+//   sendCommand(text), requestTravel(dim, arrival), requestExplosion(...), sendVibration(k, x, y, z), sendNote(x, y, z),
 //   onSwitchDimension(dim, pos), onArrived(x, y, z), respawnNearHost(), useFence(x, y, z)
 import { doubleChestHalves, doubleChestView } from '../world/chests.js';
 import { igniteTNT, PrimedTNT } from '../entities/tnt.js';
@@ -27,7 +27,9 @@ import {
 } from './protocol.js';
 import { heldBy, unleash, tieToFence, untieFromFence, isFencePost } from '../entities/leash.js';
 import { raidBarFor, championDiscount } from '../mobs/raids.js';
-import { offerPrice } from '../mobs/trades.js';
+import { offerPrice, recordTrades, giftValue, GIFT_COOLDOWN } from '../mobs/trades.js';
+import { getRep, setRep, cleanReputation, refusesTrade, REP } from '../mobs/reputation.js';
+import { repEvent } from '../mobs/villageRep.js';
 import { EditSync } from './editSync.js';
 import { createTransport } from './transport.js';
 import { RemotePlayer } from './remotePlayer.js';
@@ -279,6 +281,12 @@ export class HostSession extends Session {
         this.broadcast({ t: 'lectern', x: m.x | 0, y: m.y | 0, z: m.z | 0, s: g.lecterns.get(`${m.x | 0},${m.y | 0},${m.z | 0}`) || null }, c);
         break;
       }
+      case 'note': {
+        // a guest punched or retuned a Chime Block: the host plays it and tells the others (rings from signals travel as block edits)
+        if (!finite(m.x, m.y, m.z) || !this.near(c, m.x, m.y, m.z, 12) || m.d !== g.world.dimension) break;
+        if (g.playChime(m.x | 0, m.y | 0, m.z | 0, { fromNet: true })) this.broadcast({ t: 'note', x: m.x | 0, y: m.y | 0, z: m.z | 0, d: g.world.dimension }, c);
+        break;
+      }
       case 'vault': this.remoteVault(c, m); break;
       case 'sign': {
         if (!finite(m.x, m.y, m.z) || !this.near(c, m.x, m.y, m.z, 12) || !Array.isArray(m.l)) break;
@@ -295,11 +303,12 @@ export class HostSession extends Session {
       }
       case 'hit': this.remoteHit(c, m); break;
       case 'pvp': this.remotePvp(c, m); break;
-      case 'ps': if (m.p && Array.isArray(m.p.slots)) g.netPlayers[c.name] = { ...m.p, dim: g.world.dimension }; break;
+      case 'ps': if (m.p && Array.isArray(m.p.slots)) g.netPlayers[c.name] = { ...m.p, reputation: cleanReputation(c.rp && c.rp.target.reputation), dim: g.world.dimension }; break;
       case 'spawn': this.remoteSpawn(c, m); break;
       case 'take': this.remoteTake(c, m); break;
       case 'mi': this.remoteInteract(c, m); break;
       case 'trade': this.remoteTrade(c, m); break;
+      case 'gift': this.remoteGift(c, m); break;
       case 'open': this.openFor(c, m); break;
       case 'close': { const v = this.viewers.get(contKey(m.k, m.x, m.y, m.z)); if (v) v.ids.delete(c.id); break; }
       case 'cset': this.containerSet(c, m); break;
@@ -356,7 +365,7 @@ export class HostSession extends Session {
     c.ch.send({
       t: 'welcome', v: PROTOCOL_VERSION, id: c.id, name, hostName: this.name,
       seed: g.seed, time: g.time, weather: g.weather.save(), gamemode: p.gamemode, dim: g.world.dimension,
-      dl: g.daylightCycle, df: g.difficulty, pvp: this.pvp, gc: this.guestCommands,
+      dl: g.daylightCycle, df: g.difficulty, pvp: this.pvp, gc: this.guestCommands, se: g.seasons.save(),
       worldSpawn: g.worldSpawn, pos: { x: p.x, y: p.y, z: p.z, yaw: p.yaw },
       player: g.netPlayers[name] || null,
       signs: [...g.signs], frames: [...g.frames], pots: [...g.pots], lecterns: [...g.lecterns],
@@ -368,6 +377,7 @@ export class HostSession extends Session {
     c.ch.send({ t: 'ready' });
     c.joined = true;
     c.rp = new RemotePlayer(g.scene, c.id, name, this);
+    c.rp.target.reputation = cleanReputation((g.netPlayers[name] || {}).reputation); // (the host's copy is the true one)
     this.remotes.set(c.id, c.rp);
     this.broadcast({ t: 'join', id: c.id, name }, c);
     g.chat.add(`${name} joined the game`);
@@ -556,7 +566,7 @@ export class HostSession extends Session {
     const held = m.st && ITEMS[m.st.id] ? withExtras({ id: m.st.id, count: Math.max(1, Math.min(64, m.st.count | 0)), damage: m.st.damage | 0 }, m.st) : null; // (a Name Tag keeps its label)
     const d = held && ITEMS[held.id];
     if ((mob.def.villager || mob.def.trader) && mob.deathTime === 0 && mob.trades.length && !(d && d.food && mob.def.food)) {
-      c.ch.send({ t: 'trades', id: mob.id, prof: mob.profession, trades: mob.trades });
+      c.ch.send({ t: 'trades', id: mob.id, prof: mob.profession, trades: mob.trades, tc: mob.tradeCount | 0, lv: mob.level | 0, vil: mob.villageId ? mob.villageId(g) : null, gift: mob.lastGift });
       return;
     }
     const ops = { consume: 0, damage: 0 };
@@ -581,10 +591,32 @@ export class HostSession extends Session {
     if (!mob || !mob.trades || !s || Math.hypot(mob.x - s.x, mob.z - s.z) > 8) return;
     const o = mob.trades[m.i | 0];
     if (!o) return;
-    const n = Math.max(0, Math.min(m.n | 0, MAX_USES - o.uses));
+    const key = mob.villageId ? mob.villageId(this.game) : null, who = c.rp.target;
+    const n = refusesTrade(getRep(who, key)) ? 0 : Math.max(0, Math.min(m.n | 0, MAX_USES - o.uses)); // a village that has turned on the guest trades with nobody of theirs
     o.uses += n;
-    if (n > 0) mob.traded = true; // it keeps its trade now even if its job-site block goes (mobs/jobSites.js)
-    c.ch.send({ t: 'traded', id: mob.id, i: m.i | 0, n, trades: mob.trades });
+    if (n > 0) { mob.traded = true; recordTrades(mob, n); } // it keeps its trade now even if its job-site block goes (mobs/jobSites.js); trades count towards its level
+    c.ch.send({ t: 'traded', id: mob.id, i: m.i | 0, n, trades: mob.trades, tc: mob.tradeCount | 0, lv: mob.level | 0 });
+    if (n > 0 && key) repEvent(this.game, who, key, REP.trade * n, 'trade');
+  }
+
+  /** A guest hands a settler the item it holds as a gift (the guest takes it from its own hand if this says yes). */
+  remoteGift(c, m) {
+    const g = this.game, mob = this.entity(m.id), s = c.rp.state;
+    if (!mob || !mob.trades || !mob.def.villager || !s || Math.hypot(mob.x - s.x, mob.z - s.z) > 8) return;
+    const item = c.rp.state.held, key = mob.villageId(g), who = c.rp.target;
+    const worth = item == null || !key ? 0 : giftValue(mob.profession, item);
+    const ok = worth > 0 && g.time - mob.lastGift >= GIFT_COOLDOWN;
+    if (ok) { mob.lastGift = g.time; repEvent(g, who, key, worth); }
+    c.ch.send({ t: 'gifted', id: mob.id, ok: ok ? 1 : 0, item: item == null ? -1 : item, gift: mob.lastGift });
+  }
+
+  /** The host tells a guest of a change to its reputation (the host's copy is the true one; it is saved with the guest's record). */
+  sendReputation(who, key, value) {
+    const c = who && who.remote ? this.clients.get(who.remote.id) : null;
+    if (!c) return;
+    const rec = this.game.netPlayers[c.name];
+    if (rec) rec.reputation = cleanReputation(who.reputation);
+    c.ch.send({ t: 'rep', k: key, v: value });
   }
 
   remoteBoatHit(c, m) {
@@ -718,7 +750,7 @@ export class HostSession extends Session {
   sendEnv() {
     const g = this.game;
     // rb: the raid under way (mobs/raids.js raidStatus): guests near the village show its bar
-    this.broadcast({ t: 'env', time: g.time, w: g.weather.save(), dl: g.daylightCycle, df: g.difficulty, pvp: this.pvp, gc: this.guestCommands, rb: g.raids && g.raids.status ? g.raids.status() : null });
+    this.broadcast({ t: 'env', time: g.time, w: g.weather.save(), dl: g.daylightCycle, df: g.difficulty, pvp: this.pvp, gc: this.guestCommands, se: g.seasons.save(), rb: g.raids && g.raids.status ? g.raids.status() : null });
   }
 
   /** Night is skipped once everybody has been asleep for a while (the host in bed for 5 s). */
@@ -777,6 +809,7 @@ export class HostSession extends Session {
   sendFrame(x, y, z, st) { this.broadcast({ t: 'frame', x, y, z, st }); }
   sendPot(x, y, z, f) { this.broadcast({ t: 'pot', x, y, z, f }); }
   sendLectern(x, y, z, s) { this.broadcast({ t: 'lectern', x, y, z, s }); }
+  sendNote(x, y, z) { this.broadcast({ t: 'note', x, y, z, d: this.game.world.dimension }); }
 
   tick() {
     if (this.closed) return;
@@ -901,6 +934,18 @@ export class ClientSession extends Session {
   /** The dimension to start in (read by Game before the world is created). */
   get dimension() { return this.welcome ? this.welcome.dim || 'overworld' : 'overworld'; }
 
+  /**
+   * The host's calendar (`se`: { on, days, offset }, optional so older hosts still work). The season itself
+   * follows the synced world time, so only the season length, the offset and the on/off rule travel.
+   */
+  applySeasons(se) {
+    const g = this.game;
+    if (!se || typeof se !== 'object' || !g || !g.seasons) return;
+    g.seasons.load(se);
+    if (typeof se.on === 'boolean') g.settings.seasons = se.on;
+    g.seasons.enabled = g.seasonsOn;
+  }
+
   /** Called by Game.start once the world exists, before terrain loads around the player. */
   attach(game) {
     this.game = game;
@@ -916,6 +961,7 @@ export class ClientSession extends Session {
     if (game.proving) game.proving.vaults.load(w.vaults);
     if (typeof w.dl === 'boolean') game.settings.daylightCycle = w.dl;
     if (typeof w.df === 'string') game.settings.difficulty = w.df;
+    this.applySeasons(w.se);
     game.spawner.enabled = false;
     game.worldSpawn = { ...w.worldSpawn };
     const p = game.player;
@@ -955,6 +1001,7 @@ export class ClientSession extends Session {
       case 'frame': g.setFrameItem(m.x | 0, m.y | 0, m.z | 0, m.st || null, true); break;
       case 'pot': g.setPot(m.x | 0, m.y | 0, m.z | 0, m.f || null, true); break;
       case 'lectern': g.setLectern(m.x | 0, m.y | 0, m.z | 0, m.s || null, true); break;
+      case 'note': if (finite(m.x, m.y, m.z) && m.d === g.world.dimension) g.playChime(m.x | 0, m.y | 0, m.z | 0, { fromNet: true }); break;
       case 'vaultset': if (g.proving && typeof m.k === 'string' && /^-?\d+,-?\d+,-?\d+$/.test(m.k)) g.proving.vaults.set(m.k, m.n); break;
       case 'vaultno': if (g.hud) g.hud.toast(String(m.m || '').slice(0, 80)); break;
       case 'cmdout': for (const l of m.lines || []) g.chat.add(String(l)); break;
@@ -963,6 +1010,7 @@ export class ClientSession extends Session {
         g.weather.load(m.w);
         if (typeof m.dl === 'boolean') g.settings.daylightCycle = m.dl;
         if (typeof m.df === 'string') g.settings.difficulty = m.df;
+        this.applySeasons(m.se);
         this.setOptions(m);
         this.onRaidStatus(m.rb || null);
         break;
@@ -1017,10 +1065,13 @@ export class ClientSession extends Session {
         const mob = this.ents.byNetId(m.id);
         if (!mob) break;
         mob.trades = m.trades; mob.profession = m.prof;
+        mob.tradeCount = m.tc | 0; mob.level = Math.max(1, m.lv | 0); mob.village = typeof m.vil === 'string' ? m.vil : null; mob.lastGift = Number.isFinite(m.gift) ? m.gift : -1e9;
         if (!g.ui.blocking) { g.ui.openTrade(mob); g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); }
         break;
       }
       case 'traded': this.onTraded(m); break;
+      case 'gifted': this.onGifted(m); break;
+      case 'rep': if (typeof m.k === 'string' && Number.isFinite(m.v)) setRep(g.player, m.k, m.v); break;
       case 'cont': this.onContainerState(m, false); break;
       case 'cack': case 'cnak': this.onContainerReply(m); break;
       case 'cclose': if (this.cont && this.cont.kind === m.k && this.cont.x === m.x && this.cont.y === m.y && this.cont.z === m.z && g.ui.open === (m.k === 'chest2' ? 'chest' : m.k)) g.ui.close(); break;
@@ -1106,15 +1157,19 @@ export class ClientSession extends Session {
   }
 
   requestTrade(mob, i, times) { this.send({ t: 'trade', id: mob.netId, i, n: times }); }
+  requestGift(mob) { this.send({ t: 'gift', id: mob.netId }); }
 
   onTraded(m) {
     const g = this.game, inv = g.player.inventory, mob = this.ents.byNetId(m.id);
+    const grew = !!(mob && mob.trades && m.trades && m.trades.length !== mob.trades.length); // a new level brought new offers
     if (mob && mob.trades) (m.trades || []).forEach((t, i) => { if (mob.trades[i]) mob.trades[i].uses = t.uses; }); // keep the open screen's offers
+    if (mob) { mob.tradeCount = m.tc | 0; mob.level = Math.max(1, m.lv | 0); }
     const o = m.trades && m.trades[m.i];
     if (!o) return;
     let done = 0;
-    const price = offerPrice(o, championDiscount(g.player.effects)); // a Village Champion pays less
+    const market = mob && mob.village ? { rep: getRep(g.player, mob.village) } : null; // our copy of the host's reputation
     for (let k = 0; k < m.n; k++) {
+      const price = offerPrice({ ...o, uses: o.uses - m.n + k }, championDiscount(g.player.effects), market); // a Village Champion pays less; demand raised the price with every use
       if (inv.count(o.give) < price) break;
       let left = price;
       for (let i = 0; i < inv.slots.length && left; i++) {
@@ -1129,7 +1184,19 @@ export class ClientSession extends Session {
       done++;
     }
     inv.changed();
-    if (done) { g.milestones.event('trade'); if (mob) g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); g.entities.spawnXp(g.player.x, g.player.y + 1, g.player.z, 3 * done); }
+    if (done) { g.player.stats.trades += done; g.milestones.event('trade'); if (mob && mob.def && mob.def.trader) g.milestones.event('peddler'); if (mob) g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); g.entities.spawnXp(g.player.x, g.player.y + 1, g.player.z, 3 * done); }
+    if (grew) mob.trades = m.trades;
+    if (g.ui.open === 'trade') { if (grew) g.ui.openTrade(mob); else g.ui.refreshAll(); }
+  }
+
+  /** The host's answer to our gift: a yes takes one of the item from our hand. */
+  onGifted(m) {
+    const g = this.game, p = g.player, mob = this.ents.byNetId(m.id);
+    if (mob) mob.lastGift = Number.isFinite(m.gift) ? m.gift : mob.lastGift;
+    const st = p.inventory.selectedStack;
+    if (m.ok && st && st.id === m.item && !p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
+    if (g.hud) g.hud.toast(m.ok ? 'The settler is delighted' : 'The settler has no use for that right now', 2500);
+    if (m.ok && mob) g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]);
     if (g.ui.open === 'trade') g.ui.refreshAll();
   }
 
@@ -1204,6 +1271,7 @@ export class ClientSession extends Session {
   sendFrame(x, y, z, st) { this.send({ t: 'frame', x, y, z, st }); }
   sendPot(x, y, z, f) { this.send({ t: 'pot', x, y, z, f }); }
   sendLectern(x, y, z, s) { this.send({ t: 'lectern', x, y, z, s }); }
+  sendNote(x, y, z) { this.send({ t: 'note', x, y, z, d: this.game.world.dimension }); }
   /** Use the Vault at x,y,z with the held stack `st` (the host checks its ledger). */
   useVault(x, y, z, st) { this.send({ t: 'vault', x, y, z, st: st ? { id: st.id, count: 1 } : null }); }
 

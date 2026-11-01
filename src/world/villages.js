@@ -17,7 +17,21 @@ const REACH = 56; // how far buildings may reach from the centre
 /** Professions of the settlers village houses are planned with (changing this would change villages not yet generated). */
 export const PROFESSIONS = ['farmer', 'librarian', 'smith', 'shepherd', 'butcher', 'fletcher', 'cleric'];
 /** Every trade a settler can take up: the village ones, and those that only come with a job-site block placed by a player. */
-export const TRADE_PROFESSIONS = [...PROFESSIONS, 'cartographer'];
+export const TRADE_PROFESSIONS = [...PROFESSIONS, 'cartographer', 'mason', 'toolsmith', 'armorer'];
+/**
+ * House variants: now and then (3 in 10) a house is planned for one of these instead of the plan's profession, with a
+ * look of its own (a stone base and chimney, a porch with torches, cobblestone corners) and its own job-site block.
+ * They are chosen from the house's seed alone, so the rest of a village plan stays what it was.
+ */
+export const VARIANT_PROFESSIONS = ['mason', 'toolsmith', 'armorer'];
+export const VARIANT_CHANCE = 0.3;
+/** Every profession a village house can be planned with. */
+export const VILLAGE_PROFESSIONS = [...PROFESSIONS, ...VARIANT_PROFESSIONS];
+/** The profession a house with this seed gets, given the one the plan had. */
+export function houseProfession(planned, seed) {
+  const r = mulberry32((seed ^ 0x6d2b79f5) >>> 0);
+  return r() < VARIANT_CHANCE ? VARIANT_PROFESSIONS[Math.floor(r() * VARIANT_PROFESSIONS.length)] : planned;
+}
 
 const STYLES = {
   plains: { corner: B.OAK_LOG, wall: B.OAK_PLANKS, floor: B.COBBLESTONE, roof: B.OAK_STAIRS, roofSlab: B.OAK_SLAB, fence: B.OAK_FENCE },
@@ -85,6 +99,7 @@ function planVillage(gen, rx, rz) {
       p.facing = alongX ? (side > 0 ? 0 : 2) : (side > 0 ? 3 : 1);
       if (type === 'house') p.profession = PROFESSIONS[(houseNo++ + Math.floor(rng() * 5)) % PROFESSIONS.length];
       p.seed = Math.floor(rng() * 1e9);
+      if (p.profession) p.profession = houseProfession(p.profession, p.seed);
       pieces.push(p);
     }
     pieces.push({ type: 'lamp', x0: cx + dx * (len + 1) + (dz ? 2 : 0), x1: cx + dx * (len + 1) + (dz ? 2 : 0), z0: cz + dz * (len + 1) + (dx ? 2 : 0), z1: cz + dz * (len + 1) + (dx ? 2 : 0), y: gen.surfaceAt(cx + dx * (len + 1) + (dz ? 2 : 0), cz + dz * (len + 1) + (dx ? 2 : 0)) + 1, seed: 1 });
@@ -165,6 +180,30 @@ export function stampVillages(gen, blocks, meta, cx, cz) {
   }
 }
 
+/**
+ * What sets the houses of the variant professions apart (see houseProfession): a mason's has a stone base course and a
+ * chimney, a toolsmith's a porch of two fence posts with torches beside the door, an armorer's cobblestone corners and roof.
+ */
+function houseVariant(p, set, W, dx, dz) {
+  const y = p.y, f = p.facing;
+  const [fx, , fz] = SIDE_DIRS[f], [lx, , lz] = SIDE_DIRS[(f + 1) & 3];
+  if (p.profession === 'mason') {
+    for (let x = p.x0; x <= p.x1; x++) for (let z = p.z0; z <= p.z1; z++) {
+      const ex = x === p.x0 || x === p.x1, ez = z === p.z0 || z === p.z1;
+      if ((ex || ez) && !(ex && ez) && !(x === dx && z === dz)) set(x, y, z, B.STONE_BRICKS);
+    }
+    for (let h = W; h <= W + 3; h++) set(p.x0, y + h, p.z0, B.STONE_BRICKS); // the chimney
+  } else if (p.profession === 'toolsmith') {
+    for (const s of [-1, 1]) {
+      const x = dx + fx + lx * s, z = dz + fz + lz * s;
+      set(x, y, z, B.OAK_FENCE); set(x, y + 1, z, B.OAK_FENCE); set(x, y + 2, z, B.TORCH, 0);
+    }
+  } else if (p.profession === 'armorer') {
+    for (const x of [p.x0, p.x1]) for (const z of [p.z0, p.z1]) for (let h = 0; h < W; h++) set(x, y + h, z, B.COBBLESTONE);
+    for (let x = p.x0 + 1; x < p.x1; x++) for (let z = p.z0 + 1; z < p.z1; z++) set(x, y + W + 1, z, B.COBBLESTONE_SLAB, 0);
+  }
+}
+
 const BUILDERS = {
   well(p, st, set) {
     const y = p.y;
@@ -221,6 +260,7 @@ const BUILDERS = {
     const door = st.door || B.DOOR;
     set(dx, y, dz, door, f); set(dx, y + 1, dz, door, f | DOOR_UPPER);
     set(dx + fx, y - 1, dz + fz, B.DIRT_PATH);
+    houseVariant(p, set, W, dx, dz);
     // windows in the two side walls
     const left = (f + 1) & 3, right = (f + 3) & 3;
     for (const s of [left, right]) {

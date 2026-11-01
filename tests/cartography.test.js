@@ -137,8 +137,8 @@ describe('Explorer Charts', () => {
     expect(chartMap(gen, 'bogus', 0, 0, 79)).toBe(null);
   });
 
-  it('exist for five kinds, as new items after the old ones', () => {
-    expect(Object.keys(CHARTS).sort()).toEqual(['citadel', 'outpost', 'sunken', 'skywatch', 'tomb'].sort());
+  it('exist for seven kinds, as new items after the old ones', () => {
+    expect(Object.keys(CHARTS).sort()).toEqual(['citadel', 'outpost', 'sunken', 'skywatch', 'tomb', 'rimekeep', 'sporehall'].sort());
     for (const [kind, id] of Object.entries(CHARTS)) {
       expect(ITEMS[id].chart).toBe(kind);
       expect(isLandmarkKind(kind)).toBe(true);

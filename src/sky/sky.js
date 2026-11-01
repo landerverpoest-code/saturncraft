@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { SUNS, skyState } from './suns.js';
 import { skyVertex, skyFragment } from './skyShader.js';
 import { RingSystem } from './gasGiant.js';
+import { climate } from '../world/seasons.js';
 import { auroraTarget, nightCharacter, Meteors, DAY_TICKS } from './nightSky.js';
 
 const DEG = Math.PI / 180;
@@ -126,6 +127,9 @@ export class Sky {
       mix(nightH[1], dayH[1], d) + warm * 0.14,
       mix(nightH[2], dayH[2], d) * (1 - warm * 0.4),
     );
+    // the season tints the sky a little (warm autumn, pale cold winter)
+    const stint = climate.skyTint;
+    if (climate.on) for (const c of [this.zenith, this.horizon]) c.setRGB(c.r * stint[0], c.g * stint[1], c.b * stint[2]);
     // overcast: rain greys and darkens the sky
     const rain = this.rain || 0;
     if (rain > 0) for (const c of [this.zenith, this.horizon]) {
@@ -141,7 +145,7 @@ export class Sky {
     const dtS = Math.min(0.25, Math.max(0, seconds - this.lastSeconds)); this.lastSeconds = seconds;
     const dayNo = Math.floor(t / DAY_TICKS);
     const dark = Math.min(1, Math.max(0, 1 - st.combined * 3));
-    this.aurora += (auroraTarget(this.biomeTemp, st.combined, rain, dayNo) - this.aurora) * Math.min(1, dtS * 0.4);
+    this.aurora += (auroraTarget(this.biomeTemp, st.combined, rain, dayNo, climate.veil) - this.aurora) * Math.min(1, dtS * 0.4);
     u.uAurora.value = this.aurora < 0.004 ? 0 : this.aurora;
     const m = this.meteors.update(dtS, dark, nightCharacter(dayNo).starfall, 1 - rain);
     if (m) { u.uMeteorHead.value.set(m.head[0], m.head[1], m.head[2]); u.uMeteorTail.value.set(m.tail[0], m.tail[1], m.tail[2]); }

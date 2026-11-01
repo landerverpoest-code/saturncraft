@@ -2,6 +2,7 @@
 // passive-mob persistence across chunk unloads and mob caps.
 import { villagesNear, houseHome, houseJobSite } from '../world/villages.js';
 import { makeTrades } from './trades.js';
+import { villageKey } from './reputation.js';
 import { Mob, HUT_CAT_COAT } from './mob.js';
 import { MOBS, CATEGORY } from './mobTypes.js';
 import {
@@ -9,6 +10,7 @@ import {
   SPAWN_MIN_DIST, DESPAWN_FAR, CREATURE_SPAWN_INTERVAL, CHUNK_GEN_CREATURE_CHANCE,
 } from './spawnRules.js';
 import { B, SOLID, OPAQUE, isFluid } from '../world/blocks.js';
+import { I } from '../world/items.js';
 import { LEAVES } from '../world/trees.js';
 import { MIN_Y } from '../world/constants.js';
 import { chunkKey } from '../world/world.js';
@@ -16,10 +18,13 @@ import { attemptDimensionSpawn } from './dimensionMobs.js';
 import { BIOMES } from '../world/biomes.js';
 import { outpostsNear } from '../world/temples.js';
 import { hutsNear, hutAt } from '../world/swampHuts.js';
+import { seasonalCreatureCap } from '../world/seasons.js';
 import { igloosNear, basementLayout } from '../world/igloos.js';
 import { sunkenRuinsNear, sunkenGuardSpots } from '../world/sunkenRuins.js';
 import { sunTombsNear, tombGuardSpots } from '../world/sunTombs.js';
 import { skywatchesNear, skywatchGuards } from '../world/skywatch.js';
+import { rimekeepsNear, rimekeepGuards, RIMEKEEP_WARDEN } from '../world/rimekeep.js';
+import { sporehallsNear, sporehallGuards } from '../world/sporehall.js';
 import { HUT_MONSTERS, isNewtPoolFloor } from './spawnRules.js';
 import { soddenSpawnChance } from './hostileVariants.js';
 import { babyHealth } from './babies.js';
@@ -299,7 +304,7 @@ export class MobSpawner {
     }
     hollowSpawnTick(this); // Hoverlings drifting through Hollow Cities
     caravanTick(this); // a Roving Peddler with Packhorns now and then (mobs/peddler.js)
-    if (g.ticks % CREATURE_SPAWN_INTERVAL === 0 && creatures < scaledCap(CATEGORY.CREATURE, chunks.length)) {
+    if (g.ticks % CREATURE_SPAWN_INTERVAL === 0 && creatures < seasonalCreatureCap(scaledCap(CATEGORY.CREATURE, chunks.length))) { // (more animals in spring, fewer in winter)
       for (const [cx, cz] of chunks) creatures += this.attempt(cx, cz, CATEGORY.CREATURE);
     }
   }
@@ -323,6 +328,7 @@ export class MobSpawner {
         const m = this.spawnMob('settler', h.x, h.y, h.z);
         m.profession = p.profession; m.home = h; m.trades = makeTrades(p.profession); m.lastRestock = this.game.time;
         m.jobSite = houseJobSite(p); // bound to the job-site block built beside the door (mobs/jobSites.js)
+        m.village = villageKey(v.cx, v.cz); // its village's reputation counts for the player (mobs/reputation.js)
       }
     }
     // Marauders guard their outposts
@@ -359,13 +365,24 @@ export class MobSpawner {
       const m = this.spawnMob('settler', c.x + 0.5, c.y, c.z + 0.5);
       if (m) { m.profession = 'cleric'; m.home = { x: c.x + 0.5, y: c.y, z: c.z + 0.5 }; m.trades = makeTrades('cleric'); m.lastRestock = this.game.time; m.persistent = true; }
     }
-    // guards of the large structures (world/sunkenRuins.js, sunTombs.js, skywatch.js), placed once with the chunk that holds their spot
+    // guards of the large structures (world/sunkenRuins.js, sunTombs.js, skywatch.js, rimekeep.js, sporehall.js), placed once with the chunk that holds their spot
     if (this.hostileEnabled()) {
       const gen = this.game.world.gen, X0 = cx * 16, Z0 = cz * 16, inChunk = (x, z) => Math.floor(x / 16) === cx && Math.floor(z / 16) === cz;
-      const guard = (type, x, y, z) => { if (!inChunk(x, z)) return; const m = this.spawnMob(type, x + 0.5, y, z + 0.5); if (m) m.persistent = true; };
+      const guard = (type, x, y, z, warden = false) => {
+        if (!inChunk(x, z)) return;
+        const m = this.spawnMob(type, x + 0.5, y, z + 0.5);
+        if (!m) return;
+        m.persistent = true;
+        if (warden) { // the Rimekeep Warden: named, tough and in diamond armour with a bow
+          m.customName = RIMEKEEP_WARDEN.name; m.maxHp = m.health = RIMEKEEP_WARDEN.hp;
+          m.equip = { hand: { id: I.BOW, count: 1, damage: 0 }, armor: [I.DIAMOND_HELMET, I.DIAMOND_CHESTPLATE, I.DIAMOND_LEGGINGS, I.DIAMOND_BOOTS].map((id) => ({ id, count: 1, damage: 0 })) };
+        }
+      };
       for (const r of sunkenRuinsNear(gen, X0, Z0, X0 + 15, Z0 + 15)) for (const [x, y, z] of sunkenGuardSpots(r)) guard('sodden_shambler', x, y, z);
       for (const t of sunTombsNear(gen, X0, Z0, X0 + 15, Z0 + 15)) for (const [x, y, z] of tombGuardSpots(t)) guard('dune_shambler', x, y, z);
       for (const t of skywatchesNear(gen, X0, Z0, X0 + 15, Z0 + 15)) for (const g of skywatchGuards(t)) guard(g.type, g.x, g.y, g.z);
+      for (const t of rimekeepsNear(gen, X0, Z0, X0 + 15, Z0 + 15)) for (const g of rimekeepGuards(t)) guard(g.type, g.x, g.y, g.z, !!g.warden);
+      for (const t of sporehallsNear(gen, X0, Z0, X0 + 15, Z0 + 15)) for (const g of sporehallGuards(t)) guard(g.type, g.x, g.y, g.z);
     }
     // three Elder Deepeyes in every Tide Citadel
     if (this.hostileEnabled()) spawnElders(this, cx, cz);

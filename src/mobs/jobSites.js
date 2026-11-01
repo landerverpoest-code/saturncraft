@@ -19,7 +19,10 @@ export const JOB_SITES = {
   butcher: [B.SMOKER, B.SMOKER_LIT],
   fletcher: [B.FLETCHING_TABLE],
   cleric: [B.BREWING_STAND],
-  cartographer: [B.CARTOGRAPHY_DESK], // (last: the order numbers the trades)
+  cartographer: [B.CARTOGRAPHY_DESK],
+  mason: [B.MASONRY_BENCH],
+  toolsmith: [B.WHETSTONE_STAND],
+  armorer: [B.ARMOR_RACK], // (the order numbers the trades, so new ones are added after these)
 };
 const TRADES = Object.keys(JOB_SITES);
 /** Block id -> 1 + index of its trade in TRADES (0: not a job site). */
@@ -89,6 +92,7 @@ export function takeJobSite(mob, site, time = 0) {
   mob.trades = makeTrades(site.profession);
   mob.lastRestock = time;
   mob.traded = false;
+  mob.tradeCount = 0; mob.level = 1; // a new trade starts as a Novice (mobs/trades.js)
   return true;
 }
 

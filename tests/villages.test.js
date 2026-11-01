@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { TerrainGenerator } from '../src/world/generator.js';
-import { villageInRegion, villagesNear, PROFESSIONS } from '../src/world/villages.js';
+import { villageInRegion, villagesNear, PROFESSIONS, VILLAGE_PROFESSIONS } from '../src/world/villages.js';
 import { makeTrades, canTrade, doTrade, MAX_USES } from '../src/mobs/trades.js';
 import { Inventory } from '../src/player/inventory.js';
 import { B } from '../src/world/blocks.js';
@@ -30,7 +30,7 @@ describe('villages', () => {
     }
     expect(v).toBeTruthy();
     const house = v.pieces.find((p) => p.type === 'house');
-    expect(PROFESSIONS).toContain(house.profession);
+    expect(VILLAGE_PROFESSIONS).toContain(house.profession);
     let doors = 0, beds = 0;
     for (let cx = Math.floor(house.x0 / 16); cx <= Math.floor(house.x1 / 16); cx++) for (let cz = Math.floor(house.z0 / 16); cz <= Math.floor(house.z1 / 16); cz++) {
       const c = gen.generate(cx, cz);

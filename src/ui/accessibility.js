@@ -1,5 +1,6 @@
 // Accessibility options: sound captions, reduced motion / flashing, and colour-blind friendly HUD
 // palettes. Everything here is pure (no DOM), so game.js, hud.js and the tests share it.
+import { chimeCaption } from '../world/chimes.js';
 
 export const ACCESS_DEFAULTS = { captions: false, reduceMotion: false, reduceFlashing: false, colorBlind: 'off' };
 export const COLOR_BLIND_MODES = ['off', 'redgreen', 'blueyellow'];
@@ -39,10 +40,11 @@ export const CAPTION_TEXT = {
   fuse: 'Fuse hisses', rail: 'Rail clacks', croak: 'Croak', squish: 'Squish', clank: 'Clank', howl: 'Howl', grind: 'Grinding',
   saw: 'Stonecutter saws', shear: 'Shears snip', hmm: 'Villager mutters', page: 'Pages turn', chest_open: 'Chest opens',
   chest_close: 'Chest closes', drink: 'Drinking', glass_break: 'Glass shatters', brew: 'Brewing', bubble: 'Bubbles', land: 'Landing',
-  rocket: 'Rocket whooshes', rocket_burst: 'Rocket bursts', hush_sensor: 'Sensor trills', shriek: 'Shrieker screams',
+  rocket: 'Rocket whooshes', rocket_burst: 'Rocket bursts', rocket_blast: 'Large rocket booms', rocket_twinkle: 'Sparks crackle', hush_sensor: 'Sensor trills', shriek: 'Shrieker screams',
   hush_heart: 'Heartbeat', hush_growl: 'Deep growl', hush_sniff: 'Sniffing', emerge: 'Something emerges', sonic_charge: 'Sonic charge builds',
   sonic_boom: 'Sonic boom', catalyst: 'Catalyst spreads',
   bird_trill: 'Birdsong', cricket: 'Crickets chirp', owl: 'Owl hoots', drip: 'Water drips', lava_pop: 'Lava bubbles', rift_moan: 'Deep rift moans',
+  spear_throw: 'Spear thrown', spear_stick: 'Spear sticks', spear_return: 'Spear flies home', spear_surge: 'Surge rushes', stormcall: 'Stormcall crackles',
   breeze: 'Breeze sighs', ember_snap: 'Embers snap', void_whisper: 'Void whispers',
 };
 
@@ -53,7 +55,7 @@ const UI_WHEN_UNPLACED = new Set(['click', 'pop', 'equip', 'page']);
 function prefixedCaption(name) {
   if (name.startsWith('break_')) return 'Block broken';
   if (name.startsWith('place_')) return 'Block placed';
-  if (name.startsWith('chime_')) return 'Chime plays';
+  if (name.startsWith('chime_')) return chimeCaption(name) || 'Chime plays';
   if (name.startsWith('step_') || name.startsWith('hit_')) return null;
   return undefined;
 }

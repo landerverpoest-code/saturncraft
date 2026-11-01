@@ -22,6 +22,8 @@ import { stampBuriedRuins } from './buriedRuins.js';
 import { stampSunkenRuins } from './sunkenRuins.js';
 import { stampSunTombs } from './sunTombs.js';
 import { stampSkywatches } from './skywatch.js';
+import { stampRimekeeps } from './rimekeep.js';
+import { stampSporehalls } from './sporehall.js';
 import { BIOME, BIOMES } from './biomes.js';
 import { MIN_Y, WORLD_HEIGHT, SEA_LEVEL, CHUNK_VOLUME, cidx } from './constants.js';
 import { grassColor, foliageColor } from './textures.js';
@@ -502,6 +504,8 @@ export class TerrainGenerator {
     stampSunkenRuins(this, blocks, meta, cx, cz); // Sunken Ruins on deep ocean floors (world/sunkenRuins.js)
     stampSunTombs(this, blocks, meta, cx, cz);    // Sun Tombs in deserts and badlands (world/sunTombs.js)
     stampSkywatches(this, blocks, meta, cx, cz);  // Skywatch Towers on mountain summits (world/skywatch.js)
+    stampRimekeeps(this, blocks, meta, cx, cz);   // Rimekeeps on snowy plains and taiga (world/rimekeep.js)
+    stampSporehalls(this, blocks, meta, cx, cz);  // Sporehalls in jungles and Highland Meadows (world/sporehall.js)
 
     // Final heightmap: highest non-air block
     for (let z = 0; z < 16; z++) for (let x = 0; x < 16; x++) {

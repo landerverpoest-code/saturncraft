@@ -24,6 +24,8 @@
 // as it is won, Village Champion too.
 import { captainOffhand } from './offhand.js';
 import { villagesNear } from '../world/villages.js';
+import { villageKey, REP } from './reputation.js';
+import { repEvent } from './villageRep.js';
 import { SOLID, OPAQUE, isFluid } from '../world/blocks.js';
 import { effectLevel } from '../player/effects.js';
 
@@ -401,12 +403,15 @@ export class Raids {
     if (p.addEffect) p.addEffect('village_champion', CHAMPION_TICKS, r.omenLevel - 1);
     if (g.hud) g.hud.toast('Victory! The village is saved', 4000);
     if (g.milestones) g.milestones.event('raid');
+    const vkey = villageKey(r.cx, r.cz);
+    repEvent(g, p, vkey, REP.raid); // the village remembers who saved it (mobs/reputation.js)
     if (g.audio) g.audio.play('levelup');
     if (g.entities.spawnXp) g.entities.spawnXp(p.x, p.y + 1, p.z, 20 * r.omenLevel);
     // guests who fought for the village are its champions too (their own game applies the effect)
     if (g.net && g.net.isHost) {
       for (const o of championsOf(g.net.players().slice(1).map((pl) => pl.obj), r)) {
         if (o.addEffect) o.addEffect('village_champion', CHAMPION_TICKS, r.omenLevel - 1);
+        repEvent(g, o, vkey, REP.raid);
         if (g.entities.spawnXp) g.entities.spawnXp(o.x, o.y + 1, o.z, 20 * r.omenLevel);
       }
     }

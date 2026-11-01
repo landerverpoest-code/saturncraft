@@ -12,6 +12,7 @@ import { newXp } from './experience.js';
 import { protectionFactor, protectionReduce } from '../world/enchantments.js';
 import { crawlNext } from './crawl.js';
 import { newShield, shieldTick } from './shield.js';
+import { newStats, recordMove, moveMode } from './stats.js';
 import { gliderUsable, canStartGliding, glideStep, rocketBoost, wallDamage, wearsThisTick } from './glider.js';
 import { EFFECTS, addEffect as stackEffect, tickEffects, effectLevel, speedFactor, jumpBonus, fallDamageWithEffects, periodicActions, instantAmount, resistanceFactor } from './effects.js';
 
@@ -39,7 +40,8 @@ export class Player {
     this.jumpCooldown = 0;
     this.attackTicks = 100;     // ticks since last swing (attack cooldown)
     this.listeners = { hurt: [], death: [] };
-    this.stats = { blocksMined: 0, kills: 0 };
+    this.stats = newStats();    // blocks, distances, kills, deaths, trades, play time (player/stats.js)
+    this.reputation = {};       // village key -> -100..100: what each village thinks of the player (mobs/reputation.js)
     this.xp = newXp();
     this.gamemode = 'survival';  // or 'creative'
     this.flying = false;
@@ -207,6 +209,7 @@ export class Player {
   tick(world, input) {
     const b = this.body;
     this.prev = { x: b.x, y: b.y, z: b.z };
+    this.stats.ticks++;
     if (this.dead) return;
     if (this.invulnerable > 0) this.invulnerable--;
     if (this.xpDelay > 0) this.xpDelay--;
@@ -340,6 +343,8 @@ export class Player {
     if (Object.keys(this.effects).length !== before) for (const f of this.listeners.effect || []) f(null);
 
     if (!this.creative) this.hunger.tick(this);
+    const mode = moveMode(this);
+    if (mode) recordMove(this.stats, b.x - this.prev.x, b.z - this.prev.z, mode); // distance walked, swum or glided (player/stats.js)
   }
 
   /** One tick of gliding flight: reference physics, rocket boosts, wall damage and wing wear. */

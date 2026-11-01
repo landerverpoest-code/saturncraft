@@ -15,6 +15,8 @@ import { spearDropChance, soddenSpawnChance } from '../src/mobs/hostileVariants.
 import { SPAWN_TABLES } from '../src/mobs/spawnRules.js';
 import { SEA_LEVEL } from '../src/world/constants.js';
 import { rng } from './helpers.js';
+import { MILESTONES, Milestones } from '../src/player/milestones.js';
+import { captionText } from '../src/ui/accessibility.js';
 
 const spear = (ench) => ({ id: I.TIDESPEAR, count: 1, damage: 0, ...(ench ? { ench } : {}) });
 const fish = { def: MOBS.silverfin }, shambler = { def: MOBS.shambler };
@@ -294,5 +296,59 @@ describe('Sodden Shambler and its Tidespear', () => {
     let n = 0;
     for (let i = 0; i < 30000; i++) if (soddenSpawnChance('frozen_river', SEA_LEVEL - 1, SEA_LEVEL, r)) n++;
     expect(n / 30000).toBeCloseTo(1 / 15, 2);
+  });
+});
+
+describe('Tidespear sounds, captions and milestone', () => {
+  const sounds = ['spear_throw', 'spear_stick', 'spear_return', 'spear_surge', 'stormcall'];
+  const recorder = () => { const log = []; return { log, play: (n) => log.push(n) }; };
+  it('every Tidespear sound has its own caption', () => {
+    for (const n of sounds) { const c = captionText(n); expect(c).toBeTruthy(); expect(c).not.toBe(captionText('sonic_hum')); }
+    expect(captionText('spear_stick')).toBe('Spear sticks');
+  });
+  it('sticking into a block, returning and Stormcall each play their sound', () => {
+    const p = fakePlayer(), audio = recorder();
+    const game = fakeGame({ player: p }); game.audio = audio;
+    const a = new Arrow(0, 61, 0, 0, -2, 0, p, false, 'spear');
+    a.item = spear(); a.pickup = true;
+    a.tick(game);
+    expect(audio.log).toContain('spear_stick');
+    const back = fakePlayer(); back.x = 0; back.y = 60; back.z = 0;
+    const g2 = fakeGame({ player: back }); g2.audio = recorder();
+    const r = new Arrow(0, 62, 0, 0, 0, 0, back, false, 'spear');
+    r.item = spear({ homing_tide: 3 }); r.returning = true;
+    r.tick(g2);
+    expect(g2.audio.log).toContain('spear_return');
+    const mob = { kind: 'mob', def: MOBS.shambler, x: 3.5, y: 64, z: 3.5, hurt: () => true };
+    const g3 = fakeGame({ player: fakePlayer(), thundering: true, mobs: [mob] }); g3.audio = recorder();
+    const s = new Arrow(3.5, 65, 0, 0, 0, 2.5, fakePlayer(), false, 'spear');
+    s.item = spear({ stormcall: 1 });
+    s.tick(g3);
+    expect(g3.audio.log).toContain('stormcall');
+  });
+  it('throwing and surging play their sounds and unlock Tide Caller', () => {
+    const m = MILESTONES.find((x) => x.id === 'spear_throw');
+    expect(m && m.event).toBe('spear_throw');
+    expect(m.icon).toBe(I.TIDESPEAR);
+    const mk = (stack, inWater) => {
+      const slots = [stack];
+      const inv = { slots, selected: 0, get selectedStack() { return slots[0]; }, damageSelected() {}, changed() {} };
+      const player = { inventory: inv, creative: false, body: { vx: 0, vy: 0, vz: 0, onGround: false, inWater, fallDistance: 0 }, x: 0, y: 64, z: 0, eyePos: () => [0, 65.6, 0], lookDir: () => [0, 0, -1] };
+      const audio = recorder(), events = [];
+      const game = { player, world: { rainingAt: () => false }, audio, milestones: { event: (e) => events.push(e) }, entities: { list: [], spawnArrow: () => ({}) } };
+      const it = Object.create(Interaction.prototype); it.game = game; it.bowDraw = 0;
+      return { it, audio, events };
+    };
+    const t = mk(spear(), false); t.it.throwSpear();
+    expect(t.audio.log).toEqual(['spear_throw']); expect(t.events).toEqual(['spear_throw']);
+    const u = mk(spear({ tidal_surge: 1 }), true); u.it.surge(1);
+    expect(u.audio.log).toEqual(['spear_surge']); expect(u.events).toEqual(['spear_throw']);
+  });
+  it('the milestone is unlocked by the event, once, and saved', () => {
+    const toasts = [], g = { hud: { milestone: (x) => toasts.push(x.id) }, audio: { play() {} } };
+    const ms = new Milestones(g);
+    ms.event('spear_throw'); ms.event('spear_throw');
+    expect(toasts).toEqual(['spear_throw']);
+    expect(ms.save()).toContain('spear_throw');
   });
 });

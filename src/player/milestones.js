@@ -2,10 +2,28 @@
 // names): checked when the inventory changes, on game events and every few
 // seconds; each pops a toast once and is saved with the world.
 import { B } from '../world/blocks.js';
-import { I } from '../world/items.js';
+import { I, CHARTS } from '../world/items.js';
+import { BIOME } from '../world/biomes.js';
 import { villagesNear } from '../world/villages.js';
+import { sunkenRuinsNear } from '../world/sunkenRuins.js';
+import { sunTombsNear } from '../world/sunTombs.js';
+import { skywatchesNear } from '../world/skywatch.js';
+import { rimekeepsNear } from '../world/rimekeep.js';
+import { sporehallsNear } from '../world/sporehall.js';
+import { inGreatRift } from '../world/carvers.js';
+import { inMagmaLake } from '../world/magmaLakes.js';
 
 const has = (g, ...ids) => ids.some((id) => g.player.inventory.count(id) > 0);
+
+/** Within this many blocks of a large structure's footprint counts as having found it. */
+export const SIGHT_RANGE = 12;
+const overworld = (g) => g.world.dimension === 'overworld' && !!g.world.gen;
+/** Is a structure of one kind (a `*Near` lookup) in sight of the player? */
+const near = (lookup) => (g) => {
+  if (!overworld(g)) return false;
+  const { x, z } = g.player;
+  return lookup(g.world.gen, x - SIGHT_RANGE, z - SIGHT_RANGE, x + SIGHT_RANGE, z + SIGHT_RANGE).length > 0;
+};
 
 export const MILESTONES = [
   { id: 'wood', title: 'Timber!', desc: 'Get a log', icon: B.OAK_LOG, inv: (g) => has(g, B.OAK_LOG, B.BIRCH_LOG, B.SPRUCE_LOG, B.JUNGLE_LOG, B.ACACIA_LOG, B.DARK_OAK_LOG, B.BLOSSOM_LOG, B.MANGROVE_LOG) },
@@ -35,7 +53,29 @@ export const MILESTONES = [
   { id: 'anvil', title: 'Good as New', desc: 'Repair or combine gear at an anvil', icon: B.ANVIL, event: 'anvil' },
   { id: 'beacon', title: 'Light of Three Suns', desc: 'Give a beacon its power', icon: B.BEACON, event: 'beacon' },
   { id: 'raid', title: 'Shield of the Hamlet', desc: 'Win a raid and save a village', icon: I.CROSSBOW, event: 'raid' },
+  // places and finds added later (their structures and rules live in world/ and mobs/)
+  { id: 'chart', title: 'X Marks the Spot', desc: 'Read an Explorer Chart to map a distant structure', icon: CHARTS.sunken, event: 'chart' },
+  { id: 'sunken', title: 'Drowned Halls', desc: 'Find a Sunken Ruin on the sea floor', icon: B.CHISELED_STONE_BRICKS, tick: near(sunkenRuinsNear) },
+  { id: 'tomb', title: 'Under the Three Suns', desc: 'Find a Sun Tomb', icon: B.SANDSTONE, tick: near(sunTombsNear) },
+  { id: 'skywatch', title: 'Eyes on the Horizon', desc: 'Find a Skywatch Tower', icon: B.STONE_BRICKS, tick: near(skywatchesNear) },
+  { id: 'rimekeep', title: 'Frozen Halls', desc: 'Find a Rimekeep', icon: B.ICE, tick: near(rimekeepsNear) },
+  { id: 'sporehall', title: 'Heart of the Spores', desc: 'Find a Sporehall', icon: B.RED_MUSHROOM_BLOCK, tick: near(sporehallsNear) },
+  { id: 'peddler', title: 'Wares from Afar', desc: 'Trade with a Roving Peddler', icon: I.BERYL, event: 'peddler' },
+  { id: 'parry', title: 'Not Today', desc: 'Parry a blow by raising your shield just in time', icon: I.SHIELD, event: 'parry' },
+  { id: 'offhand', title: 'Spoils of the Off-Hand', desc: 'Defeat a mob that carried something in its off-hand', icon: I.CHARM_OF_UNDYING, event: 'offhand' },
+  { id: 'carve', title: 'A Face in the Patch', desc: 'Carve a pumpkin with shears', icon: B.CARVED_PUMPKIN, event: 'carve' },
+  { id: 'auto_rail', title: 'On the Right Track', desc: 'Get a cinnabar-driven rail', icon: B.POWERED_RAIL, inv: (g) => has(g, B.POWERED_RAIL, B.DETECTOR_RAIL, B.ACTIVATOR_RAIL) },
+  { id: 'auto_plate', title: 'Mind Your Step', desc: 'Get a pressure plate that senses weight', icon: B.HEAVY_WEIGHTED_PLATE, inv: (g) => has(g, B.STONE_PRESSURE_PLATE, B.LIGHT_WEIGHTED_PLATE, B.HEAVY_WEIGHTED_PLATE) },
+  { id: 'meadow', title: 'Above the Tree Line', desc: 'Walk a Highland Meadow', icon: B.SKYBELL, tick: (g) => overworld(g) && g.world.biomeAt(Math.floor(g.player.x), Math.floor(g.player.z)) === BIOME.HIGHLAND_MEADOW },
+  { id: 'great_rift', title: 'The Long Way Down', desc: 'Stand inside a Great Rift', icon: B.DEEPSTONE, tick: (g) => overworld(g) && inGreatRift(g.world.gen.seed, g.player.x, g.player.y, g.player.z) },
+  { id: 'magma_lake', title: 'Lake of Fire', desc: 'Reach a Magma Lake deep underground', icon: B.SMOOTH_BASALT, tick: (g) => overworld(g) && inMagmaLake(g.world.gen.seed, g.player.x, g.player.y, g.player.z) },
+  { id: 'year', title: 'The Wheel Turns', desc: 'Live through a full year of the four seasons', icon: B.OAK_LEAVES, tick: (g) => !!g.seasons && g.seasonsOn && g.seasons.at(g.time).year >= 1 },
+  { id: 'spear_throw', title: 'Tide Caller', desc: 'Hurl a Tidespear, or ride a Tidal Surge', icon: I.TIDESPEAR, event: 'spear_throw' },
+  { id: 'veilfire', title: 'Curtains of Light', desc: 'See Veilfire in the night sky', icon: B.BEACON, tick: (g) => g.world.dimension === 'overworld' && g.sky.aurora > AURORA_SEEN },
 ];
+
+/** Veilfire counts as seen once its smoothed brightness (sky.aurora, 0..1) passes this. */
+export const AURORA_SEEN = 0.25;
 
 export class Milestones {
   constructor(game) {

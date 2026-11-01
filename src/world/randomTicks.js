@@ -10,6 +10,7 @@ import { LEAVES, SAPLING_TREE, growTree, leavesConnected } from './trees.js';
 import { CIRCUIT_SETTLE } from './circuits.js';
 import { tickHushFlower } from './dimensions/hushvine.js';
 import { caveRandomTick, CAVE_TICKING } from './caves.js';
+import { climate, seasonalChance } from './seasons.js';
 
 export const RANDOM_TICK_SPEED = 3;
 
@@ -49,6 +50,24 @@ export function growthSpeed(world, x, y, z, crop = B.WHEAT) {
 
 /** Chance per random tick that a crop with growth speed f advances a stage. */
 export function cropGrowthChance(f) { return 1 / (Math.floor(25 / f) + 1); }
+
+/** The same, scaled by the season (crops sleep in winter and race in spring, overworld only; world/seasons.js). */
+export function seasonalCropChance(world, f) {
+  const p = cropGrowthChance(f);
+  return !world.dimension || world.dimension === 'overworld' ? seasonalChance(p) : p;
+}
+
+/**
+ * Does the snow layer at x,y,z melt this random tick? Only open-sky snow in a biome that is warmer than
+ * the season's snow line (the snow that winter laid over temperate land goes with the thaw).
+ */
+export function snowThaws(world, x, y, z, rng = Math.random) {
+  if (climate.snowTemp >= 0.62) return false;
+  const bd = BIOMES[world.biomeAt(x, z)];
+  if (!bd || bd.temp < climate.snowTemp || bd.temp < 0.15) return false;
+  if (world.heightAt(x, z) > y) return false; // sheltered snow (under a roof or trees) stays a while
+  return rng() < 0.08;
+}
 
 export function randomTickBlock(world, x, y, z, id, rng = Math.random) {
   if (id === B.GRASS) {
@@ -122,6 +141,7 @@ export function randomTickBlock(world, x, y, z, id, rng = Math.random) {
   } else if (id === B.SNOW_LAYER || id === B.ICE) {
     // torches and other lights melt snow and ice
     if (rawBlockLight(world, x, y + (id === B.ICE ? 1 : 0), z) > 11) world.setBlock(x, y, z, id === B.ICE ? B.WATER : B.AIR);
+    else if (id === B.SNOW_LAYER && snowThaws(world, x, y, z, rng)) world.setBlock(x, y, z, B.AIR);
   } else if (id === B.LAVA) {
     lavaIgnite(world, x, y, z, rng);
   } else if (id === B.FIRE) {
@@ -139,7 +159,7 @@ export function randomTickBlock(world, x, y, z, id, rng = Math.random) {
     if (rawLight(world, x, y + 1, z) < 9) return;
     if (stage >= 7 && STEM_FRUIT[id]) {
       // a ripe stem sets a melon / pumpkin on a free neighbouring spot of soil
-      if (rng() >= cropGrowthChance(growthSpeed(world, x, y, z, id))) return;
+      if (rng() >= seasonalCropChance(world, growthSpeed(world, x, y, z, id))) return;
       if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => world.getBlock(x + dx, y, z + dz) === STEM_FRUIT[id])) return;
       const [dx, dz] = [[1, 0], [-1, 0], [0, 1], [0, -1]][Math.floor(rng() * 4)];
       const below = world.getBlock(x + dx, y - 1, z + dz);
@@ -147,7 +167,7 @@ export function randomTickBlock(world, x, y, z, id, rng = Math.random) {
       return;
     }
     if (stage >= 7) return;
-    if (rng() < cropGrowthChance(growthSpeed(world, x, y, z, id))) world.setBlock(x, y, z, id, stage + 1);
+    if (rng() < seasonalCropChance(world, growthSpeed(world, x, y, z, id))) world.setBlock(x, y, z, id, stage + 1);
   }
 }
 
@@ -161,10 +181,10 @@ export function snowfall(world, px, pz, rng = Math.random, tries = 4) {
     const x = Math.floor(px + (rng() - 0.5) * 96), z = Math.floor(pz + (rng() - 0.5) * 96);
     if (!world.isLoaded(x, z)) continue;
     const bd = BIOMES[world.biomeAt(x, z)];
-    if (!bd || bd.temp >= 0.15) continue;
+    if (!bd || bd.dry || bd.temp >= climate.snowTemp) continue; // (the snow line climbs in winter, see world/seasons.js)
     const y = world.heightAt(x, z), top = world.getBlock(x, y, z);
     if (rawBlockLight(world, x, y + 1, z) > 11) continue;
-    if (top === B.WATER && world.getMeta(x, y, z) === 0) { world.setBlock(x, y, z, B.ICE); continue; }
+    if (top === B.WATER && world.getMeta(x, y, z) === 0) { if (bd.temp < 0.15) world.setBlock(x, y, z, B.ICE); continue; } // only the always-cold biomes freeze over
     if (top === B.SNOW_LAYER || world.getBlock(x, y + 1, z)) continue;
     if ((SOLID[top] && OPAQUE[top]) || LEAVES.has(top)) world.setBlock(x, y + 1, z, B.SNOW_LAYER, 0);
   }

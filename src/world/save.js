@@ -7,6 +7,8 @@ import { chunkKey } from './world.js';
 import { cleanEffects } from '../player/effects.js';
 import { liveStands, loadStands } from '../entities/armorStand.js';
 import { saveState as saveCaravanState, loadState as loadCaravanState } from '../mobs/peddler.js';
+import { saveStats, loadStats } from '../player/stats.js';
+import { cleanReputation } from '../mobs/reputation.js';
 
 const DB_NAME = 'saturncraft';
 const STORE = 'worlds';
@@ -76,6 +78,7 @@ export function playerSaveData(p) {
     food: p.hunger.food, saturation: p.hunger.saturation, exhaustion: p.hunger.exhaustion,
     air: p.air, spawn: p.spawn, bed: p.bed || null, slots: p.inventory.slots, armor: p.inventory.armor, xp: p.xp, gamemode: p.gamemode, flying: p.flying, selected: p.inventory.selected, enchSeed: p.enchSeed,
     effects: p.effects,
+    reputation: cleanReputation(p.reputation), // what villages think of the player (mobs/reputation.js)
   };
 }
 
@@ -95,7 +98,7 @@ export async function saveGame(game) {
     name: game.worldName || `World ${game.saveSlot || 1}`,
     seed: game.seed,
     time: game.time,
-    gameRules: { doDaylightCycle: game.settings.daylightCycle !== false, doHostileSpawning: game.settings.hostileMobs !== false, difficulty: game.difficulty },
+    gameRules: { doDaylightCycle: game.settings.daylightCycle !== false, doSeasons: game.settings.seasons !== false, doHostileSpawning: game.settings.hostileMobs !== false, fireworksHurtPlayers: game.settings.fireworksHurtPlayers === true, difficulty: game.difficulty },
     savedAt: Date.now(),
     player: playerSaveData(p),
     furnaces: [...game.furnaces.values()],
@@ -110,8 +113,10 @@ export async function saveGame(game) {
     hoppers: [...(game.hoppers || new Map()).values()].map((h) => ({ x: h.x, y: h.y, z: h.z, slots: h.slots })),
     dispensers: [...(game.dispensers || new Map()).values()].map((d) => ({ x: d.x, y: d.y, z: d.z, slots: d.slots })),
     worldSpawn: game.worldSpawn,
+    seasons: game.seasons ? game.seasons.save() : undefined, // season length and the calendar offset set by /season (world/seasons.js)
     weather: game.weather.save(),
     milestones: game.milestones.save(),
+    stats: saveStats(p.stats), // blocks, distances, kills, deaths, trades and play time (player/stats.js)
     raids: game.raids ? game.raids.save() : null, // patrol timer and the raid under way (mobs/raids.js)
     boats: game.entities.list.filter((e) => e.kind === 'boat' && !e.dead).map((e) => ({ x: e.x, y: e.y, z: e.z, yaw: e.yaw, cart: !!e.cart })),
     armorStands: liveStands(game),
@@ -191,12 +196,16 @@ export function applySave(game, data) {
   // the world remembers its own rules (older saves keep the player's settings)
   if (data.gameRules) {
     if (typeof data.gameRules.doDaylightCycle === 'boolean') game.settings.daylightCycle = data.gameRules.doDaylightCycle;
+    if (typeof data.gameRules.doSeasons === 'boolean') game.settings.seasons = data.gameRules.doSeasons;
     if (typeof data.gameRules.doHostileSpawning === 'boolean') game.settings.hostileMobs = data.gameRules.doHostileSpawning;
+    game.settings.fireworksHurtPlayers = data.gameRules.fireworksHurtPlayers === true; // (off unless the world turned it on)
     if (['peaceful', 'easy', 'normal', 'hard'].includes(data.gameRules.difficulty)) game.settings.difficulty = data.gameRules.difficulty;
   }
   game.netPlayers = data.netPlayers || {};
   game.weather.load(data.weather);
+  if (game.seasons) { game.seasons.load(data.seasons); game.seasons.enabled = game.settings.seasons !== false; }
   game.milestones.load(data.milestones);
+  game.player.stats = loadStats(data.stats);
   if (game.raids) game.raids.load(data.raids);
   for (const b of data.boats || []) game.entities.spawnBoat(b.x, b.y, b.z, b.yaw, !!b.cart);
   loadStands(game, data.armorStands);
@@ -235,6 +244,7 @@ export function applyPlayerSave(game, d) {
   if (d.xp) p.xp = { ...d.xp };
   if (Number.isInteger(d.enchSeed)) p.enchSeed = d.enchSeed;
   p.effects = cleanEffects(d.effects);
+  p.reputation = cleanReputation(d.reputation); // (older saves have none)
   if (d.gamemode) p.setGamemode(d.gamemode);
   p.flying = !!d.flying && p.creative;
   p.inventory.selected = d.selected;

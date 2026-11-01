@@ -9,6 +9,7 @@ import { B, BLOCKS, SHAPE } from './blocks.js';
 import { mulberry32 } from './noise.js';
 import { cleanPotFaces } from './archaeology.js';
 import { copyBookFields, sameBook } from './books.js';
+import { cleanFw, sameFw } from './fireworks.js';
 
 const lin = (base, per) => (l) => base + (l - 1) * per;
 
@@ -120,7 +121,7 @@ export function sameEnch(a, b) {
 
 /** Can two stacks be merged into one? Never for durability items, nor enchanted with plain. */
 export function canStack(a, b) {
-  return !!a && !!b && a.id === b.id && !(ITEMS[a.id] && ITEMS[a.id].durability) && sameEnch(a.ench, b.ench) && (a.rw | 0) === (b.rw | 0) && a.map === b.map && (a.label || '') === (b.label || '') && String(a.sherds || '') === String(b.sherds || '') && sameBook(a, b);
+  return !!a && !!b && a.id === b.id && !(ITEMS[a.id] && ITEMS[a.id].durability) && sameEnch(a.ench, b.ench) && (a.rw | 0) === (b.rw | 0) && a.map === b.map && (a.label || '') === (b.label || '') && String(a.sherds || '') === String(b.sherds || '') && sameFw(a.fw, b.fw) && sameBook(a, b);
 }
 
 /** A cleaned copy of an enchantment map from untrusted data (network, saves). */
@@ -148,6 +149,8 @@ export function withExtras(dst, src) {
   if (bundle) dst.bundle = bundle; // a Bundle's contents (world/bundles.js)
   const f = src && src.sherds && cleanPotFaces(src.sherds); // a Decorated Pot's sides (world/archaeology.js)
   if (f) dst.sherds = f;
+  const fw = src && src.fw && cleanFw(src.fw); // a Firework Star's or Star Rocket's payload (world/fireworks.js)
+  if (fw) dst.fw = fw;
   copyBookFields(dst, src); // a book's pages, title and author (world/books.js)
   return dst;
 }
@@ -174,6 +177,8 @@ export function cleanBundle(list) {
     const l = cleanLabel(s.label);
     if (l) st.label = l;
     if (Array.isArray(s.bundle)) { const b = cleanBundle(s.bundle); if (b) st.bundle = b; }
+    const fw = cleanFw(s.fw);
+    if (fw) st.fw = fw;
     copyBookFields(st, s); // a book keeps its text
     out.push(st);
   }
@@ -197,6 +202,8 @@ export function cleanContents(list) {
     if (s.rw > 0) st.rw = s.rw | 0;
     const l = cleanLabel(s.label);
     if (l) st.label = l;
+    const fw = cleanFw(s.fw);
+    if (fw) st.fw = fw;
     copyBookFields(st, s); // a book keeps its text
     out[i] = st; any = true;
   }

@@ -73,6 +73,19 @@ describe('guest trading', () => {
     }
   });
 
+  it('follows the rising price of a busy offer (reputation and demand) exactly like doTrade', () => {
+    for (const rep of [0, 10, -10]) {
+      const market = { rep };
+      for (const [price, have] of [[2, 30], [5, 80], [1, 9]]) {
+        const o = offer(I.BERYL, price), bag = inv(I.BERYL, have);
+        const want = affordableTimes(o, bag, 0, 64, market);
+        let done = 0;
+        while (canTrade(o, bag, 0, market) && done < 64) { doTrade(o, bag, 0, market); done++; }
+        expect(done).toBe(want);
+      }
+    }
+  });
+
   it('works for every offer a cartographer or peddler can roll', () => {
     for (const prof of ['cartographer', 'peddler']) {
       for (let s = 0; s < 30; s++) {

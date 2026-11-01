@@ -39,7 +39,7 @@ describe('companion definitions', () => {
   it('Vixlings and Cragbucks are companions with their own taming items', () => {
     expect(isCompanion(MOBS.vixling)).toBe(true);
     expect(isCompanion(MOBS.cragbuck)).toBe(true);
-    expect(isCompanion(MOBS.hopper)).toBe(false);
+    expect(isCompanion(MOBS.fleecer)).toBe(false);
     expect(canTameWith(MOBS.vixling, I.SWEET_BERRIES)).toBe(true);
     expect(canTameWith(MOBS.vixling, I.GLOW_BERRIES)).toBe(true);
     expect(canTameWith(MOBS.vixling, I.APPLE)).toBe(false); // apples still only breed

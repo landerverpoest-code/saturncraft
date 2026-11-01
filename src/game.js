@@ -28,12 +28,14 @@ import { PlayerModel } from './render/playerModel.js';
 import { Sky } from './sky/sky.js';
 import { Clouds, CLOUD_CELL } from './sky/clouds.js';
 import { Weather, WeatherRenderer } from './sky/weather.js';
+import { Seasons, climate } from './world/seasons.js';
 import { SignRenderer } from './render/signs.js';
 import { FrameRenderer } from './render/frames.js';
 import { PotRenderer } from './render/pots.js';
 import { BrushSites, isSuspicious, cleanPotFaces } from './world/archaeology.js';
 import { cleanLectern, lecternMeta } from './world/books.js';
 import { projectileHit } from './world/signalBlocks.js';
+import { chimeSoundAt, pitchOf, noteName, noteColor } from './world/chimes.js';
 import { Lightning } from './sky/lightning.js';
 import { snowfall } from './world/randomTicks.js';
 import { igniteTNT, PrimedTNT } from './entities/tnt.js';
@@ -69,7 +71,7 @@ import { EnchantBooks } from './render/enchantBooks.js';
 import { newStand, tickStand } from './world/brewing.js';
 import { effectsColor, effectSwirl } from './player/effects.js';
 import { changeSound, CIRCUIT_BLOCK } from './world/circuits.js';
-import { onChimeChanged } from './mobs/hoverling.js';
+import { onChimeChanged, hearChime } from './mobs/hoverling.js';
 import { FACING6 } from './world/circuitShapes.js';
 import { findStormRod, lightningCleanCopper } from './world/caves.js';
 import { BeaconBeams } from './render/beaconBeams.js';
@@ -98,7 +100,7 @@ const DARK_FOG = new THREE.Color(0, 0, 0);
 export const DIFFICULTIES = ['peaceful', 'easy', 'normal', 'hard'];
 const FIREFLY_BIOMES = new Set(['swamp', 'forest', 'flower_forest', 'blossom_grove', 'mangrove_swamp', 'dark_forest', 'jungle', 'birch_forest']);
 
-export const DEFAULT_SETTINGS = { renderDistance: 8, fov: 75, sensitivity: 100, volume: 0.5, music: 0.5, shadows: true, shaders: true, shadowMapSize: 1024, pixelRatioCap: 1.25, daylightCycle: true, hostileMobs: true, difficulty: 'normal', showCoords: false, keys: {}, ...ACCESS_DEFAULTS };
+export const DEFAULT_SETTINGS = { renderDistance: 8, fov: 75, sensitivity: 100, volume: 0.5, music: 0.5, shadows: true, shaders: true, shadowMapSize: 1024, pixelRatioCap: 1.25, daylightCycle: true, seasons: true, hostileMobs: true, fireworksHurtPlayers: false, difficulty: 'normal', showCoords: false, keys: {}, ...ACCESS_DEFAULTS };
 
 export class Game {
   constructor(canvas, seed, settings, hooks = {}, saveData = null) {
@@ -109,6 +111,7 @@ export class Game {
     this.hooks = hooks;
     this.ticks = 0;
     this.time = 0;            // world time in ticks (drives the suns)
+    this.seasons = new Seasons(); // the calendar derived from the time (world/seasons.js); saved with the world
     this.running = false;
     this.paused = false;
     this.furnaces = new Map();
@@ -245,6 +248,7 @@ export class Game {
       // parries, axe blows that knock the shield down and the wear on it (player/shield.js)
       const r = resolveBlock(p.shield, amount, attacker);
       this.audio.play(r.disabled ? 'shield_break' : r.parry ? 'parry' : 'shield', [p.x, p.y + 1, p.z]);
+      if (r.parry && !r.disabled) this.milestones.event('parry');
       if (r.disabled) { p.blocking = false; this.hud.toast('Your shield was knocked down!'); }
       if (!p.creative && r.wear) p.inventory.damageSelected(r.wear);
       if (attacker && attacker.body && attacker.kind === 'mob') {
@@ -351,6 +355,7 @@ export class Game {
     if ((k === 'hostileMobs' && !v) || (k === 'difficulty' && v === 'peaceful')) this.removeHostileMobs();
     if (k === 'difficulty') this.player.difficulty = v;
     if (k === 'daylightCycle' && !v) this.freezeAtDay();
+    if (k === 'seasons') this.updateSeasons();
     if (this.hooks.saveSettings) this.hooks.saveSettings(this.settings);
   }
 
@@ -359,6 +364,18 @@ export class Game {
 
   /** Is the day/night cycle running (time advancing)? */
   get daylightCycle() { return this.settings.daylightCycle !== false; }
+
+  /** Are the seasons on? (gamerule doSeasons / the Seasons button; off = the original, season-less rules) */
+  get seasonsOn() { return this.settings.seasons !== false; }
+
+  /** Refresh the calendar and the shared climate from the world time (about once a second; the overworld only). */
+  updateSeasons() {
+    const s = this.seasons;
+    s.enabled = this.seasonsOn;
+    const prev = s.state.index;
+    s.update(this.time);
+    if (this.hud && s.enabled && prev !== s.state.index && this.ticks > 20) this.hud.toast(`${s.state.name} has come`);
+  }
 
   /** Hostile mobs switched off: clear the monsters that are already around (like peaceful). */
   /**
@@ -406,6 +423,7 @@ export class Game {
 
   onDeath(cause) {
     const p = this.player;
+    p.stats.deaths++;
     for (let i = 0; i < p.inventory.slots.length; i++) {
       const st = p.inventory.slots[i];
       if (st) this.entities.spawnItem(p.x, p.y + 1, p.z, st, [(Math.random() - 0.5) * 0.5, 0.2, (Math.random() - 0.5) * 0.5]);
@@ -596,6 +614,7 @@ export class Game {
     const r = chartMap(this.world.gen, kind, this.player.x, this.player.z, id, this.world.dimension);
     if (!r) return null;
     this.maps.set(id, r.map);
+    this.milestones.event('chart');
     return { ...r, title: mapTitle(r.map) };
   }
 
@@ -859,6 +878,29 @@ export class Game {
     if (!fromNet && this.net && this.net.sendLectern) this.net.sendLectern(x, y, z, s);
   }
 
+  /**
+   * A Chime Block at x,y,z sounds (punched, retuned, or - fromNet - heard from another player): the instrument comes from
+   * the block under it, the pitch from its meta; a coloured note rises from it. Multiplayer: the note is sent on so that
+   * everyone hears a punch (rings from cinnabar signals arrive with the block edits instead).
+   */
+  playChime(x, y, z, { fromNet = false, toast = false } = {}) {
+    const w = this.world;
+    if (w.getBlock(x, y, z) !== B.CHIME_BLOCK) return false;
+    this.audio.play(chimeSoundAt(w, x, y, z), [x + 0.5, y + 0.5, z + 0.5]);
+    this.chimeNote(x, y, z);
+    if (toast && this.hud) this.hud.toast('Note ' + noteName(pitchOf(w.getMeta(x, y, z))));
+    if (!fromNet && this.net && this.net.sendNote) this.net.sendNote(x, y, z);
+    if (!this.net || this.net.isHost) hearChime(this.entities.list, x, y, z, this.ticks); // Hoverlings nearby remember where it rang
+    return true;
+  }
+
+  /** The note particle over a Chime Block: a few specks in a colour that follows its pitch. */
+  chimeNote(x, y, z) {
+    if (!this.particles) return;
+    const [r, g, b] = noteColor(pitchOf(this.world.getMeta(x, y, z)));
+    for (let k = 0; k < 3; k++) this.particles.emit(x + 0.3 + Math.random() * 0.4, y + 1.05, z + 0.3 + Math.random() * 0.4, (Math.random() - 0.5) * 0.02, 0.05 + Math.random() * 0.02, (Math.random() - 0.5) * 0.02, r, g, b, 22, -0.001);
+  }
+
   /** A projectile (kind 'arrow', 'spear', 'snowball', 'egg', 'potion') struck a block at the world point x,y,z: a target block answers. */
   onProjectileHit(hit, x, y, z, kind) {
     if (this.net && this.net.isClient) return; // the host's arrows hit for everyone
@@ -1029,6 +1071,7 @@ export class Game {
       if (!ci.acting && !(this.net && this.net.applyingRemote)) return;
       const s = changeSound(w, x, y, z, old, id);
       if (s) this.audio.play(s, [x + 0.5, y + 0.5, z + 0.5]);
+      if (s && id === B.CHIME_BLOCK) this.chimeNote(x, y, z);
     });
     w.on('circuitFx', (x, y, z, kind) => {
       if (kind === 'burnout') { this.particles.smoke(x + 0.5, y + 0.7, z + 0.5, 6, 0.3); this.audio.play('burnout', [x + 0.5, y + 0.5, z + 0.5]); }
@@ -1088,6 +1131,7 @@ export class Game {
   tick() {
     this.ticks++;
     if (this.daylightCycle) this.time++;
+    if (this.ticks % 20 === 1) this.updateSeasons();
     // keep the sun state current for game logic (spawning, burning) even when no frame is rendered
     this.sky.state = skyState(this.time);
     const inp = this.input;
@@ -1175,6 +1219,7 @@ export class Game {
       if (['inventory', 'workbench', 'furnace', 'chest', 'creative', 'trade', 'brewing'].includes(this.ui.open)) this.ui.close();
       else if (!this.ui.blocking) { this.input.unlock(); if (p.creative) this.ui.openCreative(); else this.ui.openInventory(); }
     }
+    if (this.ui.open === 'pause' && this.ui.padBack) this.ui.padNav(inp.pressed, inp.pad.ly); // gamepad on the Statistics and Milestones screens
     if (inp.wasPressed('pause') && this.ui.blocking) {
       if (this.ui.open === 'pause') { this.ui.open = null; this.ui.clear(); this.onUIClosed(); }
       else this.ui.close();
@@ -1316,6 +1361,17 @@ export class Game {
       terrainUniforms.uCloudTex.value = cl.shadowTex;
       terrainUniforms.uCloud.value.set(cl.origin[0], cl.origin[1], cl.shadowN * CLOUD_CELL, 0.55 * (1 - this.weather.level));
     } else terrainUniforms.uCloud.value.w = 0;
+    {
+      // the season's grass and leaf colours reach the terrain shader as uniforms (no chunk is remeshed)
+      const on = climate.on && this.world.dimension === 'overworld';
+      const tu = terrainUniforms;
+      tu.uSeasonOn.value = on ? 1 : 0;
+      if (on) {
+        tu.uSeasonGrass.value.set(climate.grass[0], climate.grass[1], climate.grass[2], climate.grass[3]);
+        tu.uSeasonLeaf.value.set(climate.leaf[0], climate.leaf[1], climate.leaf[2], climate.leaf[3]);
+        tu.uSeasonFrost.value = climate.frost; tu.uSeasonVar.value = climate.leafVar;
+      }
+    }
     terrainUniforms.uWet.value = this.world.dimension === 'overworld' && Weather.precipitation(this.world.biomeAt(Math.floor(x), Math.floor(z))) === 'rain' ? this.weather.level : 0;
     this.weatherFx.uniforms.uAlpha.value = this.postfx.enabled ? 0.55 : 1;
     terrainUniforms.uGlow.value = this.postfx.enabled ? 1 : 0;
@@ -1409,6 +1465,7 @@ export class Game {
       `Facing yaw ${(((p.yaw * 180 / Math.PI) % 360 + 360) % 360).toFixed(0)}°  pitch ${(p.pitch * 180 / Math.PI).toFixed(0)}°`,
       `${w.dimension === 'overworld' ? `Biome ${biomeName(w.biomeAt(bx, bz))}` : `Dimension ${DIMENSIONS[w.dimension].name}`}   chunks ${w.chunks.size}`,
       `Light: sky ${sky} (effective ${effectiveSkyLight(sky, st.skyDarken)})  block ${bl}`,
+      `Season ${this.seasonsOn ? `${this.seasons.state.name} day ${this.seasons.state.day}/${this.seasons.state.days}  year ${this.seasons.state.year + 1}  snow line ${climate.snowTemp.toFixed(2)}  growth x${climate.growth.toFixed(2)}` : 'off'}`,
       `Time ${this.time}  phase ${st.phase}  suns up ${st.aboveCount}  combined ${st.combined.toFixed(2)}  darken ${st.skyDarken}`,
       ...st.suns.map((s) => `  ${s.sun.name.padEnd(12)} elev ${(Math.asin(s.elevation) * 180 / Math.PI).toFixed(1).padStart(6)}°  light ${s.factor.toFixed(2)}`),
       `Mobs ${this.spawner.counts()}`,
