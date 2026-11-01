@@ -35,6 +35,7 @@ import { createTransport } from './transport.js';
 import { RemotePlayer } from './remotePlayer.js';
 import { EntityMirror } from './entityMirror.js';
 import { packChunk, unpackChunk, playerSaveData, applyPlayerSave } from '../world/save.js';
+import { loadGuestGuide, saveGuestGuide, guideOf } from '../player/fieldGuide.js';
 import { chunkKey } from '../world/world.js';
 import { B, isFurnace, isBox, BOX_COLORS } from '../world/blocks.js';
 import { I, ITEMS } from '../world/items.js';
@@ -967,6 +968,7 @@ export class ClientSession extends Session {
     const p = game.player;
     p.netName = this.name;
     if (w.player) applyPlayerSave(game, w.player);
+    p.stats.guide = loadGuestGuide(); // a guest's Field Guide lives on its own machine (player/fieldGuide.js)
     if (!w.player || (w.player.dim || 'overworld') !== game.world.dimension) {
       if (!w.player) { p.setGamemode(w.gamemode); p.spawn = { ...w.worldSpawn }; }
       p.setPosition(w.pos.x, w.pos.y, w.pos.z);
@@ -1344,6 +1346,7 @@ export class ClientSession extends Session {
 
   close() {
     if (this.closed) return;
+    if (this.isClient) saveGuestGuide(guideOf(this.game.player.stats));
     try { this.send({ t: 'ps', p: playerSaveData(this.game.player) }); this.send({ t: 'bye' }); } catch { /* gone */ }
     this.closed = true;
     clearInterval(this.bgTimer); if (this.bgWorker) { this.bgWorker.terminate(); this.bgWorker = null; }

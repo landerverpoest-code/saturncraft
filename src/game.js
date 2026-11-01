@@ -44,6 +44,7 @@ import { Chat } from './ui/chat.js';
 import { Music } from './audio/music.js';
 import { AmbientSystem } from './audio/ambientSystem.js';
 import { Milestones } from './player/milestones.js';
+import { GuideTracker } from './player/fieldGuideTracker.js';
 import { Raids } from './mobs/raids.js';
 import { effectiveSkyLight, skyState } from './sky/suns.js';
 import { SIDE_DIRS, BED_HEAD } from './world/shapes.js';
@@ -191,8 +192,9 @@ export class Game {
     this.spawner = new MobSpawner(this);
     this.spawnerBlocks = new SpawnerBlocks(this);
     this.milestones = new Milestones(this);
+    this.guide = new GuideTracker(this); // Field Guide discoveries (player/fieldGuideTracker.js)
     this.raids = new Raids(this); // Marauder patrols and village raids
-    this.player.inventory.listeners.push(() => this.milestones.checkInventory());
+    this.player.inventory.listeners.push(() => { this.milestones.checkInventory(); this.guide.checkInventory(); });
     this.interaction = new Interaction(this);
     this.input = new Input(this.canvas);
     this.input.sensitivity = 0.0022 * s.sensitivity / 100;
@@ -615,6 +617,7 @@ export class Game {
     if (!r) return null;
     this.maps.set(id, r.map);
     this.milestones.event('chart');
+    this.guide.located(kind, r.site); // the chart's destination is now in the Field Guide
     return { ...r, title: mapTitle(r.map) };
   }
 
@@ -1177,6 +1180,7 @@ export class Game {
     if (!this.net || this.net.isHost) this.proving.tick(); // Proving Spawner waves (world/provingSystem.js)
     if (!this.net || this.net.isHost) this.raids.tick();
     this.tickMaps();
+    this.guide.tick();
     if (!this.net || this.net.isHost) { this.tickFurnaces(); this.tickBrewing(); this.tickHoppers(); } // guests see the host's furnaces and alembics
     this.effectParticles();
     this.particles.tick();
@@ -1225,6 +1229,10 @@ export class Game {
     if (inp.wasPressed('inventory')) {
       if (['inventory', 'workbench', 'furnace', 'chest', 'creative', 'trade', 'brewing'].includes(this.ui.open)) this.ui.close();
       else if (!this.ui.blocking) { this.input.unlock(); if (p.creative) this.ui.openCreative(); else this.ui.openInventory(); }
+    }
+    if (inp.wasPressed('guide')) {
+      if (this.ui.open === 'pause' && this.ui.inGuide) { this.ui.open = null; this.ui.clear(); this.onUIClosed(); }
+      else if (!this.ui.blocking && this.running) { this.input.unlock(); this.ui.showGuide('creatures', true); }
     }
     if (this.ui.open === 'pause' && this.ui.padBack) this.ui.padNav(inp.pressed, inp.pad.ly); // gamepad on the Statistics and Milestones screens
     if (inp.wasPressed('pause') && this.ui.blocking) {

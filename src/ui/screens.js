@@ -12,12 +12,15 @@ import { spendLevels } from '../player/experience.js';
 import { mulberry32 } from '../world/noise.js';
 import { craft, consumeCraft, RECIPES, recipeLayout, chooseIngredients } from '../player/crafting.js';
 import { B, BLOCKS, isBox } from '../world/blocks.js';
-import { canTrade, doTrade, offerPrice, MAX_USES, recordTrades, levelProgress, LEVEL_NAMES, giftValue, GIFT_COOLDOWN } from '../mobs/trades.js';
+import { canTrade, affordableTimes, doTrade, offerPrice, MAX_USES, recordTrades, levelProgress, LEVEL_NAMES, giftValue, GIFT_COOLDOWN } from '../mobs/trades.js';
 import { getRep, standing, repHint, refusesTrade, REP } from '../mobs/reputation.js';
 import { repEvent } from '../mobs/villageRep.js';
 import { championDiscount } from '../mobs/raids.js';
 import { MILESTONES } from '../player/milestones.js';
-import { statRows, killRows } from '../player/stats.js';
+import { statRows, killRows, formatTime } from '../player/stats.js';
+import { guideOf, recordOf, LEVEL, TABS } from '../player/fieldGuide.js';
+import { entriesOf, guideProgress, guideRows, TAB_LABELS, itemName } from '../player/fieldGuideEntries.js';
+import { creatureIcon, structureIcon } from './guideArt.js';
 import { MOBS } from '../mobs/mobTypes.js';
 import { ACTIONS, GROUPS, SLOT_KINDS, SLOT_NAMES, resolveBindings, toOverrides, setBinding, codeLabel } from './bindings.js';
 import { COLOR_BLIND_LABELS, nextColorBlind } from './accessibility.js';
@@ -71,11 +74,12 @@ export class UI {
 
   get blocking() { return this.open !== null; }
 
-  clear() { if (this.game.input) this.game.input.capture = null; /* a controls screen waiting for a key */ if (this.lazy) { this.lazy.dispose(); this.lazy = null; } this.layer.innerHTML = ''; this.padBack = null; this.padScroll = null; this.tooltipEl.classList.add('hidden'); }
+  clear() { if (this.game.input) this.game.input.capture = null; /* a controls screen waiting for a key */ if (this.lazy) { this.lazy.dispose(); this.lazy = null; } this.layer.innerHTML = ''; this.padBack = null; this.padScroll = null; this.padTab = null; this.inGuide = false; this.tooltipEl.classList.add('hidden'); }
 
   /** Gamepad on a sub-screen of the pause menu: B or Back returns to it, the left stick or D-pad scrolls. */
   padNav(pressed, ly) {
     if (this.padBack && (pressed.has('PadB') || pressed.has('PadBack'))) { const f = this.padBack; f(); return; }
+    if (this.padTab && (pressed.has('PadLB') || pressed.has('PadRB'))) { this.padTab(pressed.has('PadRB') ? 1 : -1); return; }
     const step = ((pressed.has('PadDown') ? 1 : 0) - (pressed.has('PadUp') ? 1 : 0)) * 60 + (ly || 0) * 14;
     if (this.padScroll && step) this.padScroll(step);
   }
@@ -1070,7 +1074,7 @@ export class UI {
         btn.addEventListener('mousedown', (e) => {
           e.preventDefault();
           const times = e.shiftKey ? 64 : 1;
-          if (mob.netProxy) { if (canTrade(o, inv, cut, market())) g.net.requestTrade(mob, mob.trades.indexOf(o), times); return; } // the host keeps count
+          if (mob.netProxy) { const n = affordableTimes(o, inv, cut, times, market()); if (n > 0) g.net.requestTrade(mob, mob.trades.indexOf(o), n); return; } // the host keeps count (and is asked only for trades we can pay for)
           let done = 0;
           for (let k = 0; k < times && canTrade(o, inv, cut, market()); k++) {
             const got = doTrade(o, inv, cut, market());
@@ -1187,6 +1191,7 @@ export class UI {
       <button class="btn" data-a="access">Accessibility</button></div>
       <div class="btn-row"><button class="btn" data-a="ms">Milestones</button>
       <button class="btn" data-a="stats">Statistics</button></div>
+      <button class="btn" data-a="guide">Field Guide (${codeLabel(resolveBindings(g.settings.keys).guide[0])})</button>
       <div class="net-box"></div>
       <button class="btn" data-a="title">${g.net && g.net.isClient ? 'Disconnect' : 'Save &amp; Quit to Title'}</button>
     </div>`);
@@ -1229,6 +1234,7 @@ export class UI {
     };
     s.querySelector('[data-a=ms]').onclick = () => this.showMilestones();
     s.querySelector('[data-a=stats]').onclick = () => this.showStats();
+    s.querySelector('[data-a=guide]').onclick = () => this.showGuide();
     s.querySelector('[data-a=controls]').onclick = () => this.showControls();
     s.querySelector('[data-a=access]').onclick = () => this.showAccessibility();
     this.layer.appendChild(s);
@@ -1596,6 +1602,7 @@ export class UI {
     const s = el(`<div class="screen pause-screen stats-screen"><h2>Statistics</h2>
       <div class="stats-body" tabindex="0" role="region" aria-label="Statistics">
         <table class="stats-table"><caption class="world-head">General</caption><tbody class="stats-general"></tbody></table>
+        <table class="stats-table"><caption class="world-head">Field Guide</caption><tbody class="stats-guide"></tbody></table>
         <table class="stats-table"><caption class="world-head">Defeated</caption><tbody class="stats-kills"></tbody></table>
       </div>
       <button class="btn" data-a="back">Back</button></div>`);
@@ -1608,6 +1615,7 @@ export class UI {
       }
     };
     fill(s.querySelector('.stats-general'), statRows(st));
+    fill(s.querySelector('.stats-guide'), guideRows(guideOf(st)));
     const kills = killRows(st, MOBS);
     fill(s.querySelector('.stats-kills'), kills.length ? kills.map((k) => [k.name, String(k.count)]) : [['Nothing yet', '0']]);
     const back = s.querySelector('[data-a=back]');
@@ -1618,6 +1626,109 @@ export class UI {
     this.padScroll = (dy) => { body.scrollTop += dy; };
     this.layer.appendChild(s);
     setTimeout(() => { if (this.open === 'pause' && back.isConnected) back.focus(); }, 0);
+  }
+
+  /**
+   * The Field Guide (player/fieldGuide.js, fieldGuideEntries.js): Creatures, Biomes, Structures and Items of note,
+   * generated from the game's data tables, with silhouettes for what is not yet discovered. Each tab is built the
+   * first time it is shown. Keyboard: Left / Right on the tabs, Tab to the list (arrows and Page keys scroll),
+   * Backspace or the Back button returns (and the Field Guide key closes it). Gamepad: LB / RB switch tabs, the
+   * D-pad or left stick scrolls, B or Back returns.
+   */
+  showGuide(tab = 'creatures', fromKey = false) {
+    this.clear();
+    this.open = 'pause';
+    this.inGuide = true;
+    const g = this.game, guide = guideOf(g.player.stats);
+    const s = el(`<div class="screen pause-screen guide-screen"><h2>Field Guide</h2>
+      <div class="guide-tabs" role="tablist" aria-label="Field Guide tabs"></div>
+      <div class="guide-body" tabindex="0" role="tabpanel" aria-label="Entries"></div>
+      <button class="btn" data-a="back">Back</button></div>`);
+    const tabsEl = s.querySelector('.guide-tabs'), body = s.querySelector('.guide-body');
+    const built = new Map(); // tab -> its cards, built on first view
+    const leave = () => { if (fromKey) { this.open = null; this.clear(); g.onUIClosed(); } else this.showPause(); };
+    const buttons = new Map();
+    const labelOf = (p) => `${p.label} ${p.found}/${p.total}`;
+    const refreshLabels = () => { for (const p of guideProgress(guide)) buttons.get(p.tab).textContent = labelOf(p); };
+    let current = TABS.includes(tab) ? tab : 'creatures';
+    const select = (t, focus = false) => {
+      current = t;
+      for (const [k, b] of buttons) { b.setAttribute('aria-selected', String(k === t)); b.tabIndex = k === t ? 0 : -1; b.classList.toggle('on', k === t); }
+      if (!built.has(t)) built.set(t, this.buildGuideTab(t, guide));
+      body.replaceChildren(built.get(t));
+      body.scrollTop = 0;
+      body.setAttribute('aria-label', TAB_LABELS[t]);
+      if (focus) buttons.get(t).focus();
+    };
+    for (const p of guideProgress(guide)) {
+      const b = document.createElement('button');
+      b.className = 'btn guide-tab'; b.type = 'button'; b.setAttribute('role', 'tab'); b.textContent = labelOf(p);
+      b.onclick = () => select(p.tab);
+      buttons.set(p.tab, b); tabsEl.appendChild(b);
+    }
+    tabsEl.addEventListener('keydown', (e) => {
+      const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+      if (d) { e.preventDefault(); select(TABS[(TABS.indexOf(current) + d + TABS.length) % TABS.length], true); }
+    });
+    s.addEventListener('keydown', (e) => { if (e.key === 'Backspace') { e.preventDefault(); leave(); } });
+    s.querySelector('[data-a=back]').onclick = leave;
+    this.padBack = leave;
+    this.padScroll = (dy) => { body.scrollTop += dy; };
+    this.padTab = (d) => select(TABS[(TABS.indexOf(current) + d + TABS.length) % TABS.length]);
+    refreshLabels();
+    select(current);
+    this.layer.appendChild(s);
+    this.inGuide = true;
+    setTimeout(() => { if (this.open === 'pause' && this.inGuide && buttons.get(current).isConnected) buttons.get(current).focus(); }, 0);
+  }
+
+  /** The cards of one Field Guide tab as a fragment (see showGuide). */
+  buildGuideTab(tab, guide) {
+    const frag = document.createDocumentFragment();
+    const list = (names) => names.join(', ');
+    const when = (rec) => `First entry after ${formatTime(rec.t)} of play`;
+    for (const e of entriesOf(tab)) {
+      const rec = recordOf(guide, tab, e.key);
+      const card = document.createElement('div');
+      card.className = 'guide-card' + (rec ? '' : ' unknown');
+      const img = document.createElement('img'); img.alt = ''; img.width = img.height = 56;
+      const info = document.createElement('div'); info.className = 'guide-info';
+      const h = document.createElement('b'); h.textContent = rec ? e.name : '???';
+      const lines = [];
+      if (tab === 'creatures') {
+        img.src = creatureIcon(e.key, MOBS[e.key]);
+        if (rec) {
+          lines.push(`${e.kind}${e.traits.length ? ': ' + list(e.traits) : ''}`, `Lives in: ${list(e.habitat)}`);
+          if (e.feeds.length) lines.push(`Likes: ${list(e.feeds.map(itemName))}`);
+          if (e.tames.length) lines.push(`Tamed with: ${list(e.tames.map(itemName))}`);
+          lines.push(rec.l >= LEVEL.KILLED ? `Drops: ${e.drops.length ? list(e.drops.map(itemName)) : 'nothing'}` : 'Defeat one to learn what it drops.', when(rec));
+        } else lines.push('Not yet seen.');
+      } else if (tab === 'biomes') {
+        img.src = swatch(e.climate);
+        if (rec) {
+          lines.push(`${e.climate} (temperature ${e.temp}), humidity ${e.humid}`, list(e.features));
+          if (e.wildlife.length) lines.push(`Wildlife: ${list(e.wildlife)}`);
+          lines.push(when(rec));
+        } else lines.push('Not yet visited.');
+      } else if (tab === 'structures') {
+        img.src = structureIcon(e.shape, e.color);
+        if (rec) {
+          lines.push(e.note, rec.l >= LEVEL.FOUND ? 'Visited' : 'Located with an Explorer Chart, not yet visited');
+          if (Number.isFinite(rec.x)) lines.push(`Seen at x ${rec.x}, z ${rec.z}`);
+          if (e.chart) lines.push(`Found with: ${e.chart}`);
+        } else lines.push('Not yet found.');
+      } else {
+        img.src = iconURL(e.id);
+        if (rec) {
+          lines.push(e.from.length ? `Dropped by: ${list(e.from)}` : 'A rare find.', `First obtained after ${formatTime(rec.t)} of play`);
+        } else lines.push('Not yet obtained.');
+      }
+      info.appendChild(h);
+      for (const t of lines) { const d = document.createElement('div'); d.className = 'd'; d.textContent = t; info.appendChild(d); }
+      card.append(img, info);
+      frag.appendChild(card);
+    }
+    return frag;
   }
 
   showDeath(cause) {
@@ -1635,6 +1746,18 @@ export class UI {
     s.querySelector('button').onclick = () => { this.open = null; this.clear(); this.game.respawn(); };
     this.layer.appendChild(s);
   }
+}
+
+const CLIMATE_COLOR = { Frozen: '#cfeaff', Cold: '#8fb8d0', Temperate: '#6aaa4a', Warm: '#cbb850', Hot: '#d2894a' };
+const swatchCache = new Map();
+/** A plain colour square for a biome's climate (a data URL, so the card can use an image like the others). */
+function swatch(climate) {
+  if (swatchCache.has(climate)) return swatchCache.get(climate);
+  const c = document.createElement('canvas'); c.width = c.height = 8;
+  const x = c.getContext('2d'); x.fillStyle = CLIMATE_COLOR[climate] || '#888'; x.fillRect(0, 0, 8, 8);
+  x.fillStyle = 'rgba(0,0,0,.18)'; x.fillRect(0, 5, 8, 3);
+  const url = c.toDataURL(); swatchCache.set(climate, url);
+  return url;
 }
 
 function cap(w) { return w[0].toUpperCase() + w.slice(1); }

@@ -12,6 +12,7 @@ import { rimekeepsNear } from '../world/rimekeep.js';
 import { sporehallsNear } from '../world/sporehall.js';
 import { inGreatRift } from '../world/carvers.js';
 import { inMagmaLake } from '../world/magmaLakes.js';
+import { tabComplete } from './fieldGuideEntries.js';
 
 const has = (g, ...ids) => ids.some((id) => g.player.inventory.count(id) > 0);
 
@@ -72,6 +73,11 @@ export const MILESTONES = [
   { id: 'year', title: 'The Wheel Turns', desc: 'Live through a full year of the four seasons', icon: B.OAK_LEAVES, tick: (g) => !!g.seasons && g.seasonsOn && g.seasons.at(g.time).year >= 1 },
   { id: 'spear_throw', title: 'Tide Caller', desc: 'Hurl a Tidespear, or ride a Tidal Surge', icon: I.TIDESPEAR, event: 'spear_throw' },
   { id: 'veilfire', title: 'Curtains of Light', desc: 'See Veilfire in the night sky', icon: B.BEACON, tick: (g) => g.world.dimension === 'overworld' && g.sky.aurora > AURORA_SEEN },
+  // the Field Guide (player/fieldGuide.js): every entry of a tab discovered
+  { id: 'guide_creatures', title: 'Naturalist', desc: 'Fill the Creatures tab of the Field Guide', icon: I.BOOK, tick: (g) => tabComplete((g.player.stats || {}).guide, 'creatures') },
+  { id: 'guide_biomes', title: 'Wanderer', desc: 'Fill the Biomes tab of the Field Guide', icon: B.GRASS, tick: (g) => tabComplete((g.player.stats || {}).guide, 'biomes') },
+  { id: 'guide_structures', title: 'Surveyor', desc: 'Fill the Structures tab of the Field Guide', icon: B.STONE_BRICKS, tick: (g) => tabComplete((g.player.stats || {}).guide, 'structures') },
+  { id: 'guide_items', title: 'Collector', desc: 'Fill the Items of note tab of the Field Guide', icon: I.DIAMOND, tick: (g) => tabComplete((g.player.stats || {}).guide, 'items') },
 ];
 
 /** Veilfire counts as seen once its smoothed brightness (sky.aurora, 0..1) passes this. */

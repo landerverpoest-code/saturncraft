@@ -33,6 +33,7 @@ export const ACTIONS = [
   { id: 'perspective', label: 'Change camera', group: 'Interface', def: ['F5', null, 'PadUp'] },
   { id: 'hud', label: 'Hide / show HUD', group: 'Interface', def: ['F1', null, null] },
   { id: 'debug', label: 'Debug screen', group: 'Interface', def: ['F3', null, null] },
+  { id: 'guide', label: 'Field Guide', group: 'Interface', def: ['KeyJ', null, 'PadX'] },
   { id: 'shaders', label: 'Shaders on / off', group: 'Interface', def: ['F7', null, null] },
   ...Array.from({ length: 9 }, (_, i) => ({ id: 'slot' + (i + 1), label: 'Hotbar slot ' + (i + 1), group: 'Hotbar', def: ['Digit' + (i + 1), null, null] })),
 ];
