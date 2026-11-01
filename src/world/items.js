@@ -368,7 +368,9 @@ item('gale_rod', 'Gale Rod', { galeRod: true, iconStyle: ['stick', { s: '#bfe4f0
 item('tattered_book', 'Tattered Book', { stack: 16, written: true, tattered: true, iconStyle: ['book', { h: '#5a4a3a', H: '#7a6650', w: '#cdbf9c' }] });
 // Firework Stars (entities/skyRocket.js; reference: firework stars): blast powder and a dye (white: bone meal) press a
 // star of that colour; paper, blast powder and a star make three Star Rockets that burst in the star's colour and hurt
-// mobs near the burst. One item per colour, so the colour travels with the stack through saves, chests and the network.
+// mobs near the burst. One item per colour, so the colour travels with the stack through saves, chests and the network;
+// stars of several colours, shapes (ball, large ball, star, burst, Fizzler face) and effects (trail, twinkle), and rockets
+// with several stars and a longer flight carry them in the stack's `fw` field (world/fireworks.js).
 export const FIREWORK_STARS = [], STAR_ROCKETS = [];
 {
   const hex = (rgb, k = 1) => '#' + rgb.map((v) => Math.min(255, Math.round(v * k)).toString(16).padStart(2, '0')).join('');

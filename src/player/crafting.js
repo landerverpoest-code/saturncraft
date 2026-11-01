@@ -5,6 +5,7 @@ import { potFacesFromGrid } from '../world/archaeology.js';
 import { withExtras } from '../world/enchantments.js';
 import { bookCopy } from '../world/books.js';
 import { COLOR } from '../world/colors.js';
+import { fireworkRecipe } from '../world/fireworks.js';
 
 const TAGS = {
   planks: [B.BAMBOO_PLANKS, B.OAK_PLANKS, B.SPRUCE_PLANKS, B.BIRCH_PLANKS, B.JUNGLE_PLANKS, B.ACACIA_PLANKS, B.DARK_OAK_PLANKS, B.BLOSSOM_PLANKS, B.MANGROVE_PLANKS],
@@ -203,6 +204,8 @@ shaped([' R ', 'CCC'], { R: I.EMBER_ROD, C: 'stone_mat' }, B.BREWING_STAND, 1);
 export function craft(grid, w) {
   const copy = bookCopy(grid); // a Written Book with Writable Books: copies (world/books.js)
   if (copy) return copy.result;
+  const fw = fireworkRecipe(grid.filter(Boolean)); // stars of several colours, shapes and effects; rockets with several stars (world/fireworks.js)
+  if (fw) return fw;
   const h = grid.length / w;
   const ids = grid.map((s) => (s ? s.id : null));
   // bounding box of used cells

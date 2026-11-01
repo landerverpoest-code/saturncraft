@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { generateTextureData, TEX_NAMES, TEX_SIZE, texId } from '../world/textures.js';
 import { CLOUD_Y } from '../sky/clouds.js';
 import { HUSH_PULSE } from '../world/hushTextures.js';
+import { TIDE_FRAMES } from '../world/monumentTextures.js';
 
 // How strongly each light-giving texture glows when shaders are on (its bright
 // pixels are pushed above white so the bloom pass haloes them).
@@ -38,6 +39,8 @@ export const terrainUniforms = {
   uFireFrames: { value: texId('fire_0') },
   uSaw: { value: texId('stonecutter_saw') },
   uSawFrames: { value: texId('stonecutter_saw_0') },
+  uTide: { value: texId('tidestone') },
+  uTideFrames: { value: texId('tidestone_f0') },
   uGlowTiles: { value: null },
   uGlow: { value: 0 }, // 0 with shaders off
   // water surfaces reflect the sky and glint where the brightest sun catches the ripples
@@ -125,6 +128,8 @@ uniform float uFire;
 uniform float uFireFrames;
 uniform float uSaw;
 uniform float uSawFrames;
+uniform float uTide;
+uniform float uTideFrames;
 uniform sampler2D uGlowTiles;
 uniform float uGlow;
 varying vec2 vTuv;
@@ -155,6 +160,7 @@ ${water ? 'if (abs(vTile - uWaterTiles.x) < 0.5) tuv += vec2(uTime * 0.02, uTime
 float tile = vTile;
 if (abs(tile - uFire) < 0.5) tile = uFireFrames + mod(floor(uTime * 12.0), 8.0); // animated fire
 else if (abs(tile - uSaw) < 0.5) tile = uSawFrames + mod(floor(uTime * 16.0), 4.0); // the stonecutter's spinning blade
+else if (abs(tile - uTide) < 0.5) tile = uTideFrames + mod(floor(uTime * 2.0), ${TIDE_FRAMES}.0); // tidestone shimmers (a frame swap, no remeshing)
 vec4 texel = texture(uAtlas, vec3(tuv, tile));
 diffuseColor *= texel;`)
       .replace(

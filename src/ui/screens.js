@@ -278,7 +278,7 @@ export class UI {
         if (e.shiftKey) {
           for (let n = 0; n < 64; n++) {
             const rr = result();
-            if (!rr || rr.id !== r.id) break;
+            if (!rr || !canStack(rr, r)) break;
             const left = inv.add({ ...rr, damage: 0 });
             consume();
             if (left) { this.game.entities.spawnItem(this.game.player.x, this.game.player.y + 1, this.game.player.z, { ...rr, count: left }); break; }
