@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { texturePixels } from '../world/textures.js';
 import { BLOCKS } from '../world/blocks.js';
+import { fadeAmount } from '../world/fireworks.js';
 
 const MAX = 2000;
 const lin = (c) => Math.pow(c / 255, 2.2); // texture colours are sRGB
@@ -13,6 +14,10 @@ export class Particles {
     this.vel = new Float32Array(MAX * 3);
     this.life = new Float32Array(MAX);
     this.grav = new Float32Array(MAX);
+    // sparks that fade (Firework Stars with fade colours): start colour, fade colour and full life (0 = no fade)
+    this.col0 = new Float32Array(MAX * 3);
+    this.fade = new Float32Array(MAX * 3);
+    this.life0 = new Float32Array(MAX);
     this.n = 0;
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(this.pos, 3));
@@ -23,12 +28,18 @@ export class Particles {
     scene.add(this.points);
   }
 
-  emit(x, y, z, vx, vy, vz, r, gcol, b, life, grav = 0.04) {
+  /** `fade`: an optional [r, g, b] the particle turns to over its life (fireworks). */
+  emit(x, y, z, vx, vy, vz, r, gcol, b, life, grav = 0.04, fade = null) {
     let i = this.n < MAX ? this.n++ : Math.floor(Math.random() * MAX);
     this.pos[i * 3] = x; this.pos[i * 3 + 1] = y; this.pos[i * 3 + 2] = z;
     this.vel[i * 3] = vx; this.vel[i * 3 + 1] = vy; this.vel[i * 3 + 2] = vz;
     this.col[i * 3] = r; this.col[i * 3 + 1] = gcol; this.col[i * 3 + 2] = b;
     this.life[i] = life; this.grav[i] = grav;
+    if (fade) {
+      this.col0[i * 3] = r; this.col0[i * 3 + 1] = gcol; this.col0[i * 3 + 2] = b;
+      this.fade[i * 3] = fade[0]; this.fade[i * 3 + 1] = fade[1]; this.fade[i * 3 + 2] = fade[2];
+      this.life0[i] = life;
+    } else this.life0[i] = 0;
   }
 
   blockBreak(x, y, z, id, light = 1) {
@@ -97,9 +108,14 @@ export class Particles {
         const last = --this.n;
         for (let k = 0; k < 3; k++) {
           this.pos[i * 3 + k] = this.pos[last * 3 + k]; this.vel[i * 3 + k] = this.vel[last * 3 + k]; this.col[i * 3 + k] = this.col[last * 3 + k];
+          this.col0[i * 3 + k] = this.col0[last * 3 + k]; this.fade[i * 3 + k] = this.fade[last * 3 + k];
         }
-        this.life[i] = this.life[last]; this.grav[i] = this.grav[last];
+        this.life[i] = this.life[last]; this.grav[i] = this.grav[last]; this.life0[i] = this.life0[last];
         continue;
+      }
+      if (this.life0[i] > 0) {
+        const f = fadeAmount(this.life0[i] - this.life[i], this.life0[i]);
+        for (let k = 0; k < 3; k++) this.col[i * 3 + k] = this.col0[i * 3 + k] + (this.fade[i * 3 + k] - this.col0[i * 3 + k]) * f;
       }
       this.vel[i * 3 + 1] -= this.grav[i];
       for (let k = 0; k < 3; k++) { this.pos[i * 3 + k] += this.vel[i * 3 + k]; this.vel[i * 3 + k] *= 0.94; }

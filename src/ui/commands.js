@@ -61,12 +61,16 @@ function nextTime(t0, pred) {
 }
 
 /** Game rules: command name -> settings key. */
-export const GAME_RULES = { doDaylightCycle: 'daylightCycle', doHostileSpawning: 'hostileMobs' };
+export const GAME_RULES = { doDaylightCycle: 'daylightCycle', doHostileSpawning: 'hostileMobs', fireworksHurtPlayers: 'fireworksHurtPlayers' };
+/** Rules that are off unless set (the others are on unless set to false). */
+export const RULES_DEFAULT_OFF = new Set(['fireworksHurtPlayers']);
+/** The current value of a game rule setting key. */
+export const ruleValue = (settings, key) => (RULES_DEFAULT_OFF.has(key) ? settings[key] === true : settings[key] !== false);
 
 export const HELP = [
   '/gamemode <survival|creative|adventure|spectator>  (or /gm 0|1|2|3)',
   '/time set <day|night|noon|midnight|ticks>,  /time add <ticks>,  /time query',
-  '/gamerule doDaylightCycle <true|false>,  /gamerule doHostileSpawning <true|false>',
+  '/gamerule doDaylightCycle <true|false>,  /gamerule doHostileSpawning <true|false>,  /gamerule fireworksHurtPlayers <true|false>',
   '/difficulty <peaceful|easy|normal|hard>',
   '/weather <clear|rain|thunder> [ticks]',
   '/tp <x> <y> <z>  (~ for relative)',
@@ -126,7 +130,7 @@ export function runCommand(game, text) {
       if (!rule) return usage;
       const key = GAME_RULES[rule];
       const v = (args[1] || '').toLowerCase();
-      if (v === '') return `Gamerule ${rule} is currently set to: ${game.settings[key] !== false}`;
+      if (v === '') return `Gamerule ${rule} is currently set to: ${ruleValue(game.settings, key)}`;
       if (v !== 'true' && v !== 'false') return usage;
       game.setSetting(key, v === 'true');
       return `Gamerule ${rule} is now set to: ${v}`;
