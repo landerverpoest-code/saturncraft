@@ -31,10 +31,12 @@ export const ACTIONS = [
   { id: 'chat', label: 'Open chat', group: 'Interface', def: ['KeyT', null, null] },
   { id: 'command', label: 'Open chat with /', group: 'Interface', def: ['Slash', null, null] },
   { id: 'perspective', label: 'Change camera', group: 'Interface', def: ['F5', null, 'PadUp'] },
-  { id: 'hud', label: 'Hide / show HUD', group: 'Interface', def: ['F1', null, null] },
+  { id: 'hud', label: 'Hide / show HUD', group: 'Interface', def: ['F2', null, null] },
   { id: 'debug', label: 'Debug screen', group: 'Interface', def: ['F3', null, null] },
   { id: 'guide', label: 'Field Guide', group: 'Interface', def: ['KeyJ', null, 'PadX'] },
   { id: 'shaders', label: 'Shaders on / off', group: 'Interface', def: ['F7', null, null] },
+  { id: 'help', label: 'Help and how-to topics', group: 'Interface', def: ['F1', null, null] },
+  { id: 'dismissHint', label: 'Dismiss the hint on screen', group: 'Interface', def: ['KeyH', null, 'PadBack'] },
   ...Array.from({ length: 9 }, (_, i) => ({ id: 'slot' + (i + 1), label: 'Hotbar slot ' + (i + 1), group: 'Hotbar', def: ['Digit' + (i + 1), null, null] })),
 ];
 export const ACTION_IDS = ACTIONS.map((a) => a.id);

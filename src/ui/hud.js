@@ -56,6 +56,7 @@ export class HUD {
       <div id="coords" class="hidden"></div>
       <div id="markers-root"></div>
       <div id="toast"></div>
+      <div id="steps" class="hidden" aria-label="First Steps"><div class="st-head"><b>First Steps</b><button type="button" class="st-skip">Skip</button></div><ol class="st-list"></ol><div class="st-tip"></div><div class="st-foot"></div></div>
       <div id="captions" aria-live="polite"></div>
       <div id="raidbar" class="hidden"><div class="rb-name"></div><div class="rb-track"><div class="rb-fill"></div></div></div>
       <div id="item-name"></div>
@@ -96,6 +97,14 @@ export class HUD {
     this.timeLabel = this.root.querySelector('#time-label');
     this.seasonLabel = this.root.querySelector('#season-label');
     this.toastEl = this.root.querySelector('#toast');
+    this.stepsEl = this.root.querySelector('#steps');
+    this.stepsEl.querySelector('.st-skip').addEventListener('click', () => { if (game.onboarding) game.onboarding.skipSteps(); });
+    // a hint card lives outside the HUD so it also shows over open screens (chests, trading) and survives F2
+    this.hintEl = document.createElement('div');
+    this.hintEl.id = 'hint-card'; this.hintEl.className = 'hidden'; this.hintEl.setAttribute('role', 'status'); this.hintEl.setAttribute('aria-live', 'polite');
+    this.hintEl.innerHTML = '<div class="hc-title"></div><div class="hc-text"></div><div class="hc-foot"></div>';
+    this.hintEl.addEventListener('click', () => { if (game.onboarding) game.onboarding.dismiss(); });
+    document.body.appendChild(this.hintEl);
     this.effectsEl = this.root.querySelector('#effects');
     this.effectsKey = '';
     this.itemNameEl = this.root.querySelector('#item-name');
@@ -188,6 +197,37 @@ export class HUD {
     this.root.appendChild(card);
     setTimeout(() => card.classList.add('out'), 4500);
     setTimeout(() => card.remove(), 5200);
+  }
+
+  /** A one-time hint card (player/onboarding.js): a title, the text and a footer naming the keys. */
+  showHint(title, text, foot, id = '') {
+    const el = this.hintEl;
+    el.querySelector('.hc-title').textContent = title;
+    el.querySelector('.hc-text').textContent = text;
+    el.querySelector('.hc-foot').textContent = foot;
+    el.dataset.hint = id;
+    el.classList.remove('hidden');
+  }
+
+  hideHint() { this.hintEl.classList.add('hidden'); }
+
+  /** The First Steps card (player/onboarding.js stepsView), or null to hide it. Redrawn only when it changes. */
+  renderSteps(view) {
+    const el = this.stepsEl;
+    el.classList.toggle('hidden', !view);
+    if (!view) return;
+    el.classList.toggle('complete', !!view.complete);
+    const list = el.querySelector('.st-list');
+    list.textContent = '';
+    for (const it of view.items) {
+      const li = document.createElement('li');
+      li.textContent = (it.done ? '\u2713 ' : '\u25CB ') + it.label;
+      li.className = it.done ? 'done' : it.current ? 'current' : '';
+      list.appendChild(li);
+    }
+    el.querySelector('.st-tip').textContent = view.complete ? 'All done. Good luck out there!' : view.tip;
+    el.querySelector('.st-foot').textContent = view.skip;
+    el.querySelector('.st-skip').classList.toggle('hidden', !!view.complete);
   }
 
   /** The raid bar (mobs/raids.js): { label, progress 0..1, state } or null to hide it. */

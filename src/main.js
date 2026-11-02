@@ -6,6 +6,7 @@ import { loadGame, deleteSave, listWorlds, renameWorld, MAX_WORLDS } from './wor
 import { startTitleScene, SPLASHES } from './ui/titleScene.js';
 import { loadPlayerName, savePlayerName, normalizeRoomCode } from './net/protocol.js';
 import { wantTouch, readTouchEnv } from './ui/touchMath.js';
+import { resolveBindings, codeLabel } from './ui/bindings.js';
 
 const stopTitleScene = startTitleScene(document.getElementById('title-bg'));
 document.getElementById('splash').textContent = SPLASHES[Math.floor(Math.random() * SPLASHES.length)];
@@ -18,7 +19,7 @@ function saveSettings(s) { try { localStorage.setItem('saturncraft.settings', JS
 const title = document.getElementById('title-screen');
 if (wantTouch(loadSettings(), location.search, readTouchEnv())) {
   // phones and tablets: the keyboard hints on the title screen would only confuse
-  document.getElementById('controls-hint').textContent = 'Left thumb moves (push far to sprint) · drag to look · hold to mine · Use / Jump / Sneak buttons · Menu for pause and settings';
+  document.getElementById('controls-hint').textContent = 'Left thumb moves (push far to sprint) · drag to look · hold to mine · Use / Jump / Sneak buttons · Menu for pause, settings and Help';
 }
 const loading = document.getElementById('loading');
 const settings = loadSettings();
@@ -117,8 +118,8 @@ async function start(saveData = null, net = null, slot = null) {
   window.__game = game;
   await game.start((f) => { loading.querySelector('.bar > div').style.width = `${Math.round(f * 100)}%`; });
   loading.classList.add('hidden');
-  if (game.touch) game.hud.toast(net ? `Joined ${net.welcome.hostName}'s world` : 'Left thumb moves · drag to look · hold to mine');
-  else game.hud.toast(net ? `Joined ${net.welcome.hostName}'s world · click to play` : 'Click to play · E for inventory · F3 debug');
+  if (game.touch) game.hud.toast(net ? `Joined ${net.welcome.hostName}'s world` : 'Left thumb moves · drag to look · hold to mine · Menu > Help');
+  else game.hud.toast(net ? `Joined ${net.welcome.hostName}'s world · click to play` : `Click to play · E for inventory · ${codeLabel(resolveBindings(settings.keys).help[0])} for help`);
 }
 
 /** Join a friend's world by room code (or join link). */

@@ -101,6 +101,7 @@ export class Milestones {
     this.done.add(m.id);
     this.game.hud.milestone(m);
     this.game.audio.play('levelup');
+    if (this.game.onboarding) this.game.onboarding.milestone(m.id); // First Steps and the village hint (player/onboarding.js)
   }
 
   /** Inventory changed. */

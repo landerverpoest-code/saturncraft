@@ -127,6 +127,7 @@ export async function saveGame(game) {
     seasons: game.seasons ? game.seasons.save() : undefined, // season length and the calendar offset set by /season (world/seasons.js)
     weather: game.weather.save(),
     milestones: game.milestones.save(),
+    onboarding: game.onboarding ? game.onboarding.save() : undefined, // hints shown and First Steps ticked (player/onboarding.js)
     stats: saveStats(p.stats), // blocks, distances, kills, deaths, trades and play time (player/stats.js)
     raids: game.raids ? game.raids.save() : null, // patrol timer and the raid under way (mobs/raids.js)
     boats: game.entities.list.filter((e) => e.kind === 'boat' && !e.dead).map((e) => ({ x: e.x, y: e.y, z: e.z, yaw: e.yaw, cart: !!e.cart })),
@@ -218,6 +219,7 @@ export function applySave(game, data) {
   if (game.seasons) { game.seasons.load(data.seasons); game.seasons.enabled = game.settings.seasons !== false; }
   if (game.worldEvents) game.worldEvents.load(data.worldEvents);
   game.milestones.load(data.milestones);
+  if (game.onboarding) game.onboarding.load(data.onboarding);
   game.player.stats = loadStats(data.stats);
   if (game.raids) game.raids.load(data.raids);
   for (const b of data.boats || []) game.entities.spawnBoat(b.x, b.y, b.z, b.yaw, !!b.cart);
