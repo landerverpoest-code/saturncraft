@@ -7,7 +7,7 @@ import { bookCopy } from '../world/books.js';
 import { COLOR } from '../world/colors.js';
 import { fireworkRecipe } from '../world/fireworks.js';
 
-const TAGS = {
+export const TAGS = {
   planks: [B.BAMBOO_PLANKS, B.OAK_PLANKS, B.SPRUCE_PLANKS, B.BIRCH_PLANKS, B.JUNGLE_PLANKS, B.ACACIA_PLANKS, B.DARK_OAK_PLANKS, B.BLOSSOM_PLANKS, B.MANGROVE_PLANKS],
   log: [B.OAK_LOG, B.SPRUCE_LOG, B.BIRCH_LOG, B.JUNGLE_LOG, B.ACACIA_LOG, B.DARK_OAK_LOG, B.BLOSSOM_LOG, B.MANGROVE_LOG],
   stone_mat: [B.COBBLESTONE, B.COBBLED_DEEPSTONE],

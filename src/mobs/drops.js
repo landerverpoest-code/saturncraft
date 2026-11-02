@@ -22,7 +22,7 @@ export function rollDrops(type, ctx = {}, rng = Math.random) {
     if (d.notSheared && ctx.sheared) continue;
     if (d.chance !== undefined && rng() >= d.chance + (d.plunderChance || 0) * (ctx.plunder | 0)) continue;
     let n = d.min + Math.floor(rng() * (d.max - d.min + 1));
-    if (ctx.plunder > 0 && ctx.killedByPlayer && d.max > 0) n = Math.max(0, n) + Math.floor(rng() * (ctx.plunder + 1));
+    if (ctx.plunder > 0 && ctx.killedByPlayer && d.max > 0 && !d.noPlunder) n = Math.max(0, n) + Math.floor(rng() * (ctx.plunder + 1)); // (noPlunder: the currency, a Marauder's beryl, stays 0-1 whatever the sword)
     if (n <= 0) continue;
     out.push({ id: ctx.onFire && d.cooked ? d.cooked : d.id, count: n });
   }

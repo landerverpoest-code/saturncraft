@@ -56,7 +56,7 @@ export class Chat {
         if (text.startsWith('/') && net && net.isClient && WORLD_COMMANDS.has(commandName(text))) { net.sendCommand(text); this.game.ui.close(); return; }
         const out = text.startsWith('/') ? runCommand(this.game, text) : null;
         if (!text.startsWith('/')) {
-          this.add(`<${net ? net.name : 'Player'}> ${text}`);
+          this.add(`<${net ? net.name : 'Player'}> ${text}`, net && net.social ? net.social.colorOf(net.name) : null);
           if (net) net.sendChat(text);
         }
         else for (const line of [].concat(out || [])) this.add(line);
@@ -65,10 +65,12 @@ export class Chat {
     this.game.ui.close();
   }
 
-  add(text) {
+  /** `color`: a CSS colour for the line (a team's chat, a private message). */
+  add(text, color = null) {
     const line = document.createElement('div');
     line.className = 'chat-line';
     line.textContent = text;
+    if (color) line.style.color = color;
     this.log.appendChild(line);
     while (this.log.children.length > 50) this.log.firstChild.remove();
     setTimeout(() => line.classList.add('faded'), 10000);

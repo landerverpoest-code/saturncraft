@@ -59,11 +59,11 @@ export class SpawnerBlocks {
 }
 
 // Dungeon chest loot: a few valuable rolls and three rolls of mob junk.
-const LOOT_A = [
+export const LOOT_A = [
   [I.IRON_INGOT, 1, 4, 10], [I.GOLD_INGOT, 1, 4, 5], [I.BREAD, 1, 1, 20], [I.WHEAT, 1, 4, 20], [I.COAL, 1, 4, 15],
   [I.CINNABAR, 1, 4, 15], [I.BUCKET, 1, 1, 10], [I.CARROT, 1, 3, 10], [I.DIAMOND, 1, 2, 3], [I.IRON_CHESTPLATE, 1, 1, 2], [I.GILDED_APPLE, 1, 1, 15], [I.NAME_TAG, 1, 1, 20], [I.LEAD, 1, 1, 10], ...DISCS.map((id) => [id, 1, 1, 2]),
 ];
-const LOOT_B = [[I.BONE, 1, 8, 10], [I.GUNPOWDER, 1, 8, 10], [I.ROTTEN_FLESH, 1, 8, 10], [I.STRING, 1, 8, 10]];
+export const LOOT_B = [[I.BONE, 1, 8, 10], [I.GUNPOWDER, 1, 8, 10], [I.ROTTEN_FLESH, 1, 8, 10], [I.STRING, 1, 8, 10]];
 
 function pick(table, rng) {
   let total = 0;
@@ -77,7 +77,7 @@ function pick(table, rng) {
 // Structure loot (chest meta bits 4-7): [table, rolls min, rolls max, always?] per structure
 // (`always`: [id, min, max] stacks every such chest holds besides its rolls)
 export const LOOT = { DEEP_HUSH: 12, DUNGEON: 0, MINESHAFT: 1, DESERT: 2, JUNGLE: 3, IGLOO: 4, WRECK: 5, OUTPOST: 6, RUIN: 7, WRECK_TREASURE: 8, WRECK_MAP: 9, HOLLOW_CITY: LOOT_CITY, HOLLOW_SHIP: LOOT_SHIP };
-const STRUCTURE_LOOT = {
+export const STRUCTURE_LOOT = {
   [LOOT.MINESHAFT]: [[[I.GILDED_APPLE, 1, 1, 20], [I.IRON_INGOT, 1, 5, 10], [I.GOLD_INGOT, 1, 3, 5], [I.CINNABAR, 4, 9, 5], [I.AZURITE, 4, 9, 5], [I.DIAMOND, 1, 2, 3], [I.COAL, 3, 8, 10], [I.BREAD, 1, 3, 15], [B.RAIL, 4, 8, 20], [I.MELON_SLICE, 2, 4, 10], [I.PUMPKIN_PIE, 1, 2, 5], [I.IRON_PICKAXE, 1, 1, 2]], 3, 6],
   [LOOT.DESERT]: [[[I.GILDED_APPLE, 1, 1, 20], [I.DIAMOND, 1, 3, 5], [I.IRON_INGOT, 1, 5, 15], [I.GOLD_INGOT, 2, 7, 15], [I.BERYL, 1, 3, 15], [I.BONE, 4, 6, 25], [I.SPIDER_EYE, 1, 3, 25], [I.ROTTEN_FLESH, 3, 7, 25], [I.SADDLE, 1, 1, 20], [I.GOLD_CHESTPLATE, 1, 1, 3]], 2, 5],
   [LOOT.JUNGLE]: [[[I.DIAMOND, 1, 3, 3], [I.IRON_INGOT, 1, 5, 10], [I.GOLD_INGOT, 2, 7, 15], [I.BERYL, 1, 3, 2], [I.BONE, 4, 6, 20], [I.ROTTEN_FLESH, 3, 7, 16], [I.SADDLE, 1, 1, 3], [I.COCOA_BEANS, 2, 5, 10]], 2, 6],

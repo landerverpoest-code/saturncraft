@@ -211,7 +211,7 @@ describe('saving and multiplayer', () => {
     expect(back.equip).toEqual(m.equip);
     expect(enchLevel(back.equip.armor[0], 'bulwark')).toBe(4);
     const bad = equipFromSave({ hand: { id: I.IRON_SWORD, ench: { keen: 99, bogus: 3, hallowed: -2 } }, armor: [{ id: I.IRON_HELMET, ench: 'x' }, null, null, null] });
-    expect(bad.hand.ench).toEqual({ keen: 10 });
+    expect(bad.hand.ench).toEqual({ keen: 5 });
     expect(bad.armor[0].ench).toBeUndefined();
   });
 

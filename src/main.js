@@ -5,6 +5,7 @@ import { stringToSeed } from './world/noise.js';
 import { loadGame, deleteSave, listWorlds, renameWorld, MAX_WORLDS } from './world/save.js';
 import { startTitleScene, SPLASHES } from './ui/titleScene.js';
 import { loadPlayerName, savePlayerName, normalizeRoomCode } from './net/protocol.js';
+import { takeResume, storeResume, shouldRetryJoin, RECONNECT_MAX, reconnectDelay } from './net/social.js';
 import { wantTouch, readTouchEnv } from './ui/touchMath.js';
 import { resolveBindings, codeLabel } from './ui/bindings.js';
 
@@ -111,6 +112,8 @@ async function start(saveData = null, net = null, slot = null) {
   game = new Game(canvas, seed, settings, {
     saveSettings,
     quit: () => { if (net) location.href = titleURL(); else location.reload(); },
+    // the link to the host dropped: come back with the same place and belongings (net/social.js)
+    reconnect: (resume) => { storeResume(resume); location.reload(); },
   }, saveData);
   game.saveSlot = slot || 1;
   game.worldName = worldName || `World ${game.saveSlot}`;
@@ -122,21 +125,24 @@ async function start(saveData = null, net = null, slot = null) {
   else game.hud.toast(net ? `Joined ${net.welcome.hostName}'s world · click to play` : `Click to play · E for inventory · ${codeLabel(resolveBindings(settings.keys).help[0])} for help`);
 }
 
-/** Join a friend's world by room code (or join link). */
-async function join(input) {
+/** Join a friend's world by room code (or join link). `resume`: coming back after a dropped link (tries a few times). */
+async function join(input, resume = null) {
   const msg = document.getElementById('join-msg'), btn = document.getElementById('join');
   const code = normalizeRoomCode(input);
   if (!code) { msg.textContent = 'Enter the room code from your friend\'s pause menu'; return; }
   savePlayerName(pname.value);
   btn.disabled = true;
-  let session;
-  try {
-    const { joinSession } = await import('./net/session.js');
-    session = await joinSession(code, loadPlayerName(), (s) => { msg.textContent = s; });
-  } catch (e) {
-    msg.textContent = e.message || String(e);
-    btn.disabled = false;
-    return;
+  let session = null;
+  const { joinSession } = await import('./net/session.js');
+  for (let attempt = 1; !session; attempt++) {
+    try {
+      session = await joinSession(code, loadPlayerName(), (s) => { msg.textContent = resume ? `Reconnecting (${attempt}/${RECONNECT_MAX})... ${s}` : s; }, undefined, { resume });
+    } catch (e) {
+      const why = e.message || String(e);
+      if (!resume || attempt >= RECONNECT_MAX || !shouldRetryJoin(why)) { msg.textContent = why; btn.disabled = false; return; }
+      msg.textContent = `${why} - trying again in ${reconnectDelay(attempt)} s (${attempt}/${RECONNECT_MAX})`;
+      await new Promise((r) => setTimeout(r, reconnectDelay(attempt) * 1000));
+    }
   }
   msg.textContent = '';
   start(null, session);
@@ -146,7 +152,9 @@ document.getElementById('join-code').addEventListener('keydown', (e) => { if (e.
 
 playBtn.addEventListener('click', () => start());
 const params = new URLSearchParams(location.search);
-if (params.get('join')) { document.getElementById('join-code').value = params.get('join'); join(params.get('join')); }
+const resume = takeResume(); // a dropped link: rejoin the same world and continue where we stood
+if (resume) { document.getElementById('join-code').value = resume.code; join(resume.code, resume); }
+else if (params.get('join')) { document.getElementById('join-code').value = params.get('join'); join(params.get('join')); }
 if (params.has('autostart')) {
   if (params.get('seed')) document.getElementById('seed').value = params.get('seed');
   if (params.get('rd')) rd.value = params.get('rd');

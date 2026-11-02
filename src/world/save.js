@@ -9,6 +9,7 @@ import { liveStands, loadStands } from '../entities/armorStand.js';
 import { saveState as saveCaravanState, loadState as loadCaravanState } from '../mobs/peddler.js';
 import { saveStats, loadStats } from '../player/stats.js';
 import { cleanReputation } from '../mobs/reputation.js';
+import { SocialState } from '../net/social.js';
 
 const DB_NAME = 'saturncraft';
 const STORE = 'worlds';
@@ -139,6 +140,7 @@ export async function saveGame(game) {
     // which dimension the player (and the fields above) are in, plus the other dimensions' state
     ...(game.dims ? game.dims.saveData(packChunk) : {}),
     netPlayers: game.netPlayers || {}, // multiplayer guests' state by name
+    social: game.social ? game.social.save() : undefined, // multiplayer teams, the op list, bans and who is who (net/social.js)
   };
   const db = await openDB();
   await txn(db, 'readwrite', (s) => s.put(data, slotKey(game.saveSlot || 1)));
@@ -215,6 +217,7 @@ export function applySave(game, data) {
     if (['peaceful', 'easy', 'normal', 'hard'].includes(data.gameRules.difficulty)) game.settings.difficulty = data.gameRules.difficulty;
   }
   game.netPlayers = data.netPlayers || {};
+  if (data.social) game.social = SocialState.from(data.social);
   game.weather.load(data.weather);
   if (game.seasons) { game.seasons.load(data.seasons); game.seasons.enabled = game.settings.seasons !== false; }
   if (game.worldEvents) game.worldEvents.load(data.worldEvents);

@@ -37,6 +37,9 @@ export const ACTIONS = [
   { id: 'shaders', label: 'Shaders on / off', group: 'Interface', def: ['F7', null, null] },
   { id: 'help', label: 'Help and how-to topics', group: 'Interface', def: ['F1', null, null] },
   { id: 'dismissHint', label: 'Dismiss the hint on screen', group: 'Interface', def: ['KeyH', null, 'PadBack'] },
+  { id: 'players', label: 'Player list (hold)', group: 'Multiplayer', def: ['Tab', null, null] },
+  { id: 'ping', label: 'Ping a spot for your team', group: 'Multiplayer', def: ['KeyB', null, null] },
+  { id: 'emote', label: 'Emote wheel', group: 'Multiplayer', def: ['KeyV', null, null] },
   ...Array.from({ length: 9 }, (_, i) => ({ id: 'slot' + (i + 1), label: 'Hotbar slot ' + (i + 1), group: 'Hotbar', def: ['Digit' + (i + 1), null, null] })),
 ];
 export const ACTION_IDS = ACTIONS.map((a) => a.id);

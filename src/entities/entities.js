@@ -550,7 +550,7 @@ export class EntityManager {
     if (this.game.net) cands.push(...this.game.net.remoteTargets(proj));
     for (const e of cands) {
       if (e === proj.shooter || (proj.shooter && proj.shooter.isPlayer && e.isPlayer && proj.age < 5)) continue;
-      if (this.game.net && !this.game.net.pvp && proj.shooter && proj.shooter.isPlayer && e.isPlayer) continue; // PvP off
+      if (this.game.net && proj.shooter && proj.shooter.isPlayer && e.isPlayer && (!this.game.net.pvp || this.game.net.blocksPvp(proj.shooter, e))) continue; // PvP off, or team mates with friendly fire off (net/social.js)
       const hw = e.width / 2 + 0.3;
       const t = rayAABB(ox, oy, oz, dx, dy, dz, e.x - hw, e.y - 0.3, e.z - hw, e.x + hw, e.y + e.height + 0.3, e.z + hw);
       if (t !== null && t <= maxDist && t < bestT) { best = e; bestT = t; }
