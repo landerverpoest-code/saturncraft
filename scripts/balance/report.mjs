@@ -58,8 +58,8 @@ if (on('combat')) {
   for (const d of [2, 3, 5, 7, 10, 15, 30]) console.log(String(d).padEnd(6) + Object.values(sets).map((s) => `${f(damageAfter(d, s))}/${f(damageAfter(d, s, 16))}`.padStart(18)).join(''));
   console.log('melee monsters (attack): ' + meleeMobs().map((m) => `${m.name} ${m.attack}`).join(', '));
   head('Combat: hits to kill the bosses');
-  console.log('weapon'.padEnd(22) + 'Warden (90 hp, diamond)'.padEnd(26) + 'Hushkeeper (500 hp)');
-  for (const r of bossTable()) console.log(r.weapon.padEnd(22) + String(r.warden).padEnd(26) + r.hushkeeper);
+  console.log('weapon'.padEnd(22) + 'Warden (90 hp, diamond)'.padEnd(26) + 'Hushkeeper (500 hp)'.padEnd(26) + 'Slag Colossus (400 hp, armour 6)');
+  for (const r of bossTable()) console.log(r.weapon.padEnd(22) + String(r.warden).padEnd(26) + String(r.hushkeeper).padEnd(26) + r.colossus);
 }
 
 if (on('misc')) {

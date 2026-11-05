@@ -19,6 +19,7 @@ import { SIDE_DIRS, BED_HEAD } from '../shapes.js';
 import './register.js';
 import '../../mobs/gloomshell.js'; // the Hollow Cities' Gloomshells
 import '../../mobs/cinderMobs.js'; // the Cinderdeep sub-biomes' Capwalkers and Dirge Wailers
+import '../../mobs/slagColossus.js'; // the Slag Colossus of the Cinderforges
 
 export const PORTAL_TICKS = 80; // 4 s standing in a Rift (instant in creative)
 const WYRM_MAX = 200;

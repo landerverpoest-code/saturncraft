@@ -12,7 +12,7 @@ import { MIN_Y } from '../world/constants.js';
 import { addXp, splitOrbs } from '../player/experience.js';
 import { RAIL_EXITS, RAIL_UP, RAIL_ON, railHeight, railShapeOf, isRail } from '../world/rails.js';
 import { railSpeed } from '../world/automation.js';
-import { withExtras, canStack, isGlinting, arrowDamage } from '../world/enchantments.js';
+import { withExtras, canStack, isGlinting, arrowDamage, mendFromXp } from '../world/enchantments.js';
 import { splashPotion } from './splash.js';
 import { ArmorStand, STAND_WIDTH, STAND_HEIGHT } from './armorStand.js';
 import { tickSpear } from './tidespear.js';
@@ -537,6 +537,9 @@ export class Arrow {
 
 const tmpBox = new THREE.Box3();
 
+/** Most items, orbs and arrows kept frozen in unloaded chunks (see EntityManager.trimFrozen). */
+export const MAX_FROZEN = 192;
+
 /** A chest or a furnace box on a boat or cart: textured like the blocks, its front towards -z. The materials join the model's (`userData.mats`) so they are lit and freed with it. */
 function addCargoBox(g, variant, w, h, d, x, y, z) {
   const tex = (n) => new THREE.MeshLambertMaterial({ map: blockFaceTexture(n) });
@@ -682,7 +685,11 @@ export class EntityManager {
         const b = p.body.box();
         if (e.x > b[0] - 0.5 && e.x < b[3] + 0.5 && e.y > b[1] - 0.5 && e.y < b[4] + 0.5 && e.z > b[2] - 0.5 && e.z < b[5] + 0.5) {
           p.xpDelay = 2;
-          const levelled = addXp(p.xp, e.value);
+          // Sunmend gear on you (worn, or in the held slot) is mended first; what it does not take is yours
+          const inv = p.inventory, worn = inv.armor.concat([inv.selectedStack]);
+          const left = mendFromXp(worn, e.value);
+          if (left < e.value) inv.changed();
+          const levelled = left > 0 ? addXp(p.xp, left) : false;
           g.audio.play(levelled && p.xp.level % 5 === 0 ? 'levelup' : 'orb');
           e.dead = true;
         }
@@ -696,6 +703,7 @@ export class EntityManager {
         }
       }
     }
+    if (g.ticks % 200 === 0) this.trimFrozen();
     // merge nearby identical item stacks
     if (g.ticks % 10 === 0) {
       const items = this.list.filter((e) => e.kind === 'item' && !e.dead);
@@ -718,6 +726,18 @@ export class EntityManager {
       list[w++] = e;
     }
     list.length = w;
+  }
+
+  /**
+   * Items, orbs and arrows left in chunks that are no longer loaded wait there frozen (they are not saved, and a player who
+   * wanders far - mining, exploring - leaves more behind all the time). Only the newest MAX_FROZEN are kept; the rest
+   * vanish, oldest first, so the list (which every tick and every ray walks) cannot grow without end.
+   */
+  trimFrozen() {
+    const frozen = [];
+    for (const e of this.list) if ((e.kind === 'item' || e.kind === 'xp' || e.kind === 'arrow') && !e.dead && !e.netProxy && this.frozen(e)) frozen.push(e);
+    for (let i = 0; i < frozen.length - MAX_FROZEN; i++) frozen[i].dead = true;
+    return Math.max(0, frozen.length - MAX_FROZEN);
   }
 
   removeMesh(e) {

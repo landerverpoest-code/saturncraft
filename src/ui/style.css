@@ -271,6 +271,15 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 #raidbar .rb-fill { height: 100%; width: 0; background: linear-gradient(#e0484a, #9a1a22); transition: width .4s; }
 #raidbar.won .rb-fill { background: linear-gradient(#7ad870, #2e8a2a); }
 .trade-row .slot.discounted { outline: 2px solid #5ad25a; outline-offset: -2px; }
+/* Bosses: the boss bar (ui/bossBar.js), phase marks at the thresholds; it moves down while a raid bar is up */
+#bossbar { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); width: min(480px, calc(100vw - 32px)); text-align: center; pointer-events: none; z-index: 4; }
+#bossbar.hidden { display: none; }
+#raidbar:not(.hidden) ~ #bossbar { top: 58px; }
+#bossbar .bb-name { font-size: 14px; text-shadow: 2px 2px 0 #000; margin-bottom: 3px; color: #ffe8c8; letter-spacing: .02em; }
+#bossbar .bb-track { position: relative; height: 10px; background: #1e1214; border: 2px solid #000; box-shadow: inset 0 0 0 1px rgba(255,200,120,.2); }
+#bossbar .bb-fill { height: 100%; width: 100%; background: linear-gradient(#ffb43a, #c8421c); transition: width .25s; }
+#bossbar.shielded .bb-fill { background: linear-gradient(#e8e0d0, #9a8a78); }
+#bossbar .bb-pip { position: absolute; top: -2px; bottom: -2px; width: 2px; margin-left: -1px; background: #000; box-shadow: 0 0 0 1px rgba(255,255,255,.35); }
 /* Darkness (Hush Shriekers): a black shroud thinning towards the middle; its opacity breathes (ui/hud.js) */
 #overlay-darkness { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, rgba(0,0,0,.72) 0, rgba(0,0,0,.93) 40%, #000 80%); }
 /* Name Tags and Bundles */
@@ -415,7 +424,8 @@ body.touch-on #bottom { bottom: calc(6px + env(safe-area-inset-bottom)); }
 body.touch-on .hotbar { pointer-events: auto; touch-action: none; }
 body.touch-on #skyinfo { top: calc(6px + env(safe-area-inset-top)); right: calc(6px + env(safe-area-inset-right)); transform: scale(.72); transform-origin: top right; }
 body.touch-on #coords, body.touch-on #debug { left: calc(6px + env(safe-area-inset-left)); top: calc(6px + env(safe-area-inset-top)); }
-body.touch-on #raidbar { top: calc(54px + env(safe-area-inset-top)); }
+body.touch-on #raidbar, body.touch-on #bossbar { top: calc(54px + env(safe-area-inset-top)); }
+body.touch-on #raidbar:not(.hidden) ~ #bossbar { top: calc(102px + env(safe-area-inset-top)); }
 body.touch-on #item-name { bottom: calc(var(--slot) * 2 + 40px); }
 body.touch-on #chat { bottom: calc(var(--slot) * 2 + 40px); left: calc(8px + env(safe-area-inset-left)); }
 body.touch-on #chat .chat-input { font-size: 16px; padding: 10px; } /* 16px stops iOS from zooming into the field */
@@ -586,7 +596,7 @@ html.large-text #tablist { font-size: 19px; }
 html.large-text #tablist .tl-team, html.large-text #tablist .tl-mode, html.large-text #tablist .tl-ping { font-size: 16px; }
 html.large-text .marker { font-size: 17px; } html.large-text .marker .d { font-size: 15px; }
 html.large-text #chat { font-size: 18px; }
-html.large-text #raidbar .rb-name { font-size: 18px; }
+html.large-text #raidbar .rb-name, html.large-text #bossbar .bb-name { font-size: 18px; }
 html.large-text .milestone { font-size: 18px; }
 html.large-text #season-label { font-size: 15px; }
 html.large-text #time-label { font-size: 14px !important; }
@@ -639,7 +649,7 @@ html.high-contrast .help-body code { background: #222; border: 1px solid #fff; }
    so a heart or a hotbar slot never shows through a label. The touch settings have a lighter backdrop so the preview buttons show. */
 .pause-screen { background: rgba(6, 6, 14, .86); }
 .pause-screen.touch-settings { background: rgba(6, 6, 14, .4); }
-body:has(#screens > .pause-screen) :is(#steps, .milestone, #skyinfo, #raidbar) { visibility: hidden; }
+body:has(#screens > .pause-screen) :is(#steps, .milestone, #skyinfo, #raidbar, #bossbar) { visibility: hidden; }
 body:has(#screens > .pause-screen) #bottom { visibility: hidden; }
 #tc-ui.preview { z-index: 19; } /* the touch buttons shown for the touch settings sit under the menu's own buttons, never over them */
 /* The status bars and the hotbar fit a 360 px phone: the hearts and the hunger icons share the row width */

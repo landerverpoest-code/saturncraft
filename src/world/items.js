@@ -507,6 +507,19 @@ for (const [tier, name, defense, toughness, tiring, h, H, s] of [
 }
 item('thistle_harness', 'Thistle Harness', { stack: 1, harness: 'thistlehorn', iconStyle: ['saddle', { h: '#a8743c', H: '#c8965a', s: '#e8c860' }] });
 
+// Boss and endgame round (mobs/slagColossus.js, world/enchantments.js), appended so no item id shifts:
+// the Slagheart Sigil wakes the Slag Colossus in a Cinderforge courtyard (right-click inside one), and the
+// Colossus Core it leaves behind is the last step of tempering gear at an anvil (Forgebite / Forgeward / Forgegrip).
+const ICON_SIGIL = [
+  '................', '.......ff.......', '......ffff......', '....hhhffhhh....', '...hHHhffhHHh...', '..hHs.hhhh.sHh..', '..hH..hffh..Hh..', '..hH.hffffh.Hh..',
+  '..hH.hffffh.Hh..', '..hH..hffh..Hh..', '..hHs.hhhh.sHh..', '...hHHhhhhHHh...', '....hhhhhhhh....', '.....hh..hh.....', '................', '................',
+];
+item('slag_sigil', 'Slagheart Sigil', { stack: 1, sigil: 'slag_colossus', iconStyle: [ICON_SIGIL, { h: '#5a4a50', H: '#8a7a86', s: '#2e2428', f: '#ff9a2a' }] });
+const ICON_CORE = [
+  '................', '................', '.....hhhhhh.....', '....hHHHHwwh....', '...hHHwwwwwwh...', '..hHHwwffffwwh..', '..hHwwffffffwh..', '..hHwwffFFffwh..',
+  '..hhwwffFFffwh..', '..hhHwwffffwhh..', '...hhHwwwwwhh...', '....hhHHHHhh....', '.....hhhhhh.....', '................', '................', '................',
+];
+item('colossus_core', 'Colossus Core', { iconStyle: [ICON_CORE, { h: '#4a3a40', H: '#7a6670', w: '#c8641c', f: '#ffb43a', F: '#fff0b0' }] });
 // Shore round (mobs/shoreMobs.js), appended so no item id shifts: Brinecrab meat (cooked on a campfire or in a furnace) and a Wickling's Tallow,
 // the waxy stub of its candle-head (a slow fuel, and a candle with a string).
 item('raw_crab', 'Raw Crab', { food: { hunger: 2, saturation: 1.2 }, iconStyle: ['meat', { h: '#e0704a', w: '#f6e6dc' }] });

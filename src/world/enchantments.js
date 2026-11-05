@@ -39,6 +39,13 @@ export const ENCHANTS = {
   tidal_surge: { name: 'Tidal Surge', max: 3, weight: 2,  table: ['spear'], min: lin(17, 7), cap: 50, excludes: ['homing_tide', 'stormcall'] }, // riptide
   harpoon:     { name: 'Harpoon',     max: 5, weight: 2,  table: ['spear'], min: lin(1, 8), span: 20 },              // impaling
   stormcall:   { name: 'Stormcall',   max: 1, weight: 1,  table: ['spear'], min: () => 25, cap: 50 },                 // channeling
+  // Endgame enchantments. `treasure`: never rolled by the enchanting table (so never on a plain book); `temper`: put on
+  // at an anvil by tempering (see TEMPER_STEPS), one level at a time, never merged from other gear.
+  forgebite:   { name: 'Forgebite',   max: 3, weight: 1,  table: [], anvil: ['sword', 'axe', 'spear'], min: lin(30, 5), cap: 50, treasure: true, temper: true },  // +1 melee damage a level
+  forgeward:   { name: 'Forgeward',   max: 3, weight: 1,  table: [], anvil: ['armor'], min: lin(30, 5), cap: 50, treasure: true, temper: true },                 // +1 protection a level against fire, lava and blasts
+  forgegrip:   { name: 'Forgegrip',   max: 3, weight: 1,  table: [], anvil: ['tool'], min: lin(30, 5), cap: 50, treasure: true, temper: true },                  // +1.5 mining speed a level
+  // Sunmend (reference: mending): gear it is on is repaired by the experience you pick up, two points of wear for each point
+  sunmend:     { name: 'Sunmend',     max: 1, weight: 1,  table: [], anvil: ['sword', 'tool', 'armor', 'bow', 'spear', 'shears', 'gear'], min: () => 30, cap: 50, treasure: true, excludes: ['endless'] },
 };
 export const ENCH_KEYS = Object.keys(ENCHANTS);
 for (const k of ENCH_KEYS) {
@@ -250,7 +257,7 @@ export function offerCost(rng, slot, shelves) {
 export function availableEnchants(id, level) {
   const out = [];
   for (const k of ENCH_KEYS) {
-    if (!canApply(k, id)) continue;
+    if (!canApply(k, id) || ENCHANTS[k].treasure) continue; // (treasure enchantments come from boss loot and tempering, not the table)
     const e = ENCHANTS[k];
     for (let l = e.max; l >= 1; l--) {
       if (level >= e.min(l) && level <= e.maxCost(l)) { out.push([k, l]); break; }
@@ -346,6 +353,8 @@ export function anvilCombine(left, right) {
   const dl = ITEMS[left.id];
   if (!dl) return null;
   const rwCost = (left.rw | 0) + (right.rw | 0);
+  const tempered = temperCombine(left, right);
+  if (tempered) return tempered;
   const out = { id: left.id, count: 1, damage: left.damage | 0, ench: { ...(left.ench || {}) } };
   let cost = 0, use = 1;
   const mat = repairMaterial(left.id);
@@ -372,6 +381,7 @@ export function anvilCombine(left, right) {
       const rl = right.ench ? right.ench[k] | 0 : 0;
       if (!rl) continue;
       const e = ENCHANTS[k];
+      if (e.temper && !book) continue; // a tempered piece cannot lend its temper to a twin: only the anvil and its materials raise it
       const ok = canApply(k, left.id, true) && Object.keys(out.ench).every((o) => o === k || compatible(o, k));
       if (!ok) { cost += 1; bad = true; continue; }
       const ll = out.ench[k] | 0;
@@ -387,6 +397,40 @@ export function anvilCombine(left, right) {
   const rw = Math.max(left.rw | 0, right.rw | 0) * 2 + 1;
   out.rw = rw;
   return { result: out, cost: cost + rwCost, use };
+}
+
+// ---- tempering: an endgame sink for the Cinderdeep's resources ---------------------------
+/**
+ * Tempering raises Forgebite (swords, axes, spears), Forgeward (armour) or Forgegrip (pickaxes, shovels, hoes) by one
+ * level at an anvil. Each level asks for its own material: `per` of them in the right slot, and the level before it.
+ * Slagsteel Ingots come from smelting Slag Chunks, Dirge Crystals from the Dirgevale and the Colossus Core only from
+ * the Slag Colossus, so the last step is a boss kill. The anvil's prior-work penalty applies as it does everywhere.
+ */
+export const TEMPER_STEPS = [
+  { level: 1, mat: 'SLAGSTEEL_INGOT', per: 3, xp: 5 },
+  { level: 2, mat: 'DIRGE_CRYSTAL', per: 2, xp: 8 },
+  { level: 3, mat: 'COLOSSUS_CORE', per: 1, xp: 12 },
+];
+/** The tempering enchantment an item can take, or null (bows, shields, shears, books and the like cannot). */
+export function temperKey(id) {
+  const d = ITEMS[id];
+  if (!d || id === I.BOOK || id === I.ENCHANTED_BOOK) return null;
+  if (d.armor && !d.armor.pumpkin && d.durability) return 'forgeward';
+  if (d.tool) return d.tool.type === 'sword' || d.tool.type === 'axe' ? 'forgebite' : 'forgegrip';
+  if (d.spear) return 'forgebite';
+  return null;
+}
+/** The tempering step this material (item id) performs, or null. */
+export const temperStepOf = (matId) => TEMPER_STEPS.find((s) => I[s.mat] === matId) || null;
+/** Anvil result when `right` is a tempering material for `left`: { result, cost, use } or null. */
+export function temperCombine(left, right) {
+  const step = temperStepOf(right.id), key = temperKey(left.id);
+  if (!step || !key || right.count < step.per) return null;
+  if (enchLevel(left, key) !== step.level - 1) return null; // each material raises the level before it, never skips one
+  const ench = { ...(left.ench || {}), [key]: step.level };
+  if (!Object.keys(ench).every((o) => o === key || compatible(o, key))) return null;
+  const rw = (left.rw | 0) * 2 + 1;
+  return { result: { ...left, count: 1, ench, rw }, cost: step.xp + (left.rw | 0), use: step.per, temper: { key, level: step.level } };
 }
 
 // ---- effects ----------------------------------------------------------------
@@ -409,7 +453,27 @@ export function meleeBonus(st, target) {
   if (keen) d += 0.5 * keen + 0.5;
   const hal = enchLevel(st, 'hallowed');
   if (hal && target && target.def && (target.def.undead || target.def.burnsInSun)) d += 2.5 * hal;
+  d += enchLevel(st, 'forgebite'); // tempered edge: a whole point of damage a level
   return d;
+}
+
+/** Forgegrip's extra mining speed (1.5 a level), added when the tool is the right one for the block. */
+export const forgegripBonus = (level) => (level > 0 ? 1.5 * level : 0);
+
+/** Sources Forgeward turns aside: the Cinderdeep's heat and blasts. */
+export const HEAT_SOURCES = new Set(['fire', 'lava', 'fireball', 'explosion']);
+
+/**
+ * Sunmend: XP picked up mends worn and held gear that carries it. Picks one damaged Sunmend stack at random and repairs
+ * 2 points of wear per point of XP (at most what it is missing); the XP spent is not added to the player. Returns the XP left over.
+ */
+export function mendFromXp(stacks, value, rng = Math.random) {
+  const cands = stacks.filter((st) => st && enchLevel(st, 'sunmend') > 0 && (st.damage | 0) > 0);
+  if (!cands.length || value <= 0) return value;
+  const st = cands[Math.floor(rng() * cands.length)];
+  const fix = Math.min(value * 2, st.damage | 0);
+  st.damage = (st.damage | 0) - fix;
+  return value - Math.ceil(fix / 2);
 }
 
 /** How many of `amount` durability points a stack actually loses (Steadfast resists). */
@@ -452,6 +516,7 @@ export function protectionFactor(armor, source) {
     if (!st) continue;
     epf += enchLevel(st, 'bulwark');
     if (source === 'fall') epf += 3 * enchLevel(st, 'featherstep');
+    if (HEAT_SOURCES.has(source)) epf += enchLevel(st, 'forgeward');
   }
   return Math.min(20, epf);
 }

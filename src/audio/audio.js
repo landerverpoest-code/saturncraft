@@ -336,6 +336,10 @@ export class Audio {
       case 'spore_puff': this.noise(t, 0.22, 1700, 1.2, 0.1 * gain, out); this.tone(t, 0.18, 380, 640, 0.05 * gain, out, 'sine'); this.tone(t + 0.1, 0.2, 520, 820, 0.035 * gain, out, 'sine'); break;
       case 'ash_hiss': this.noise(t, 1.4, 3800, 0.7, 0.07 * gain, out); this.noise(t + 0.2, 1.1, 1500, 0.6, 0.05 * gain, out, 'lowpass'); break;
       case 'dirge_wail': this.tone(t, 1.8, 330, 250, 0.1 * gain, out, 'triangle'); this.tone(t + 0.05, 1.7, 495, 372, 0.05 * gain, out, 'sine'); this.tone(t + 0.4, 1.3, 392, 294, 0.045 * gain, out, 'sine'); this.noise(t, 1.6, 900, 1.5, 0.04 * gain, out); break;
+      // the Slag Colossus: a furnace-deep roar, a floor-shaking slam, a pillar of slag bursting
+      case 'colossus_roar': this.tone(t, 1.5, 96, 52, 0.22 * gain, out, 'sawtooth'); this.tone(t + 0.05, 1.3, 144, 70, 0.1 * gain, out, 'square'); this.noise(t, 1.4, 420, 0.8, 0.2 * gain, out, 'lowpass'); this.noise(t + 0.1, 0.9, 2200, 1.2, 0.05 * gain, out); break;
+      case 'colossus_slam': this.tone(t, 0.7, 70, 24, 0.55 * gain, out, 'sine'); this.noise(t, 1.1, 260, 0.6, 0.45 * gain, out, 'lowpass'); this.noise(t + 0.03, 0.35, 1600, 0.9, 0.2 * gain, out); this.tone(t + 0.02, 0.3, 190, 50, 0.2 * gain, out, 'sawtooth'); break;
+      case 'colossus_erupt': this.noise(t, 0.6, 900, 0.7, 0.25 * gain, out, 'lowpass'); this.tone(t, 0.5, 160, 70, 0.2 * gain, out, 'triangle'); this.noise(t + 0.05, 0.25, 3200, 2, 0.1 * gain, out); break;
       default: this.tone(t, 0.1, 440, 440, 0.1 * gain, out);
     }
   }

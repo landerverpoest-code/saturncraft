@@ -182,7 +182,7 @@ export function crystalBox(id, meta) {
 }
 /** Buds need a solid block behind them. */
 export function crystalSupported(world, x, y, z, id, meta) {
-  const [dx, dy, dz] = DIRS6[meta & 7];
+  const [dx, dy, dz] = DIRS6[meta & 7] || DIRS6[0]; // (meta 6 and 7 come only from outside data: they hang from the floor)
   const b = world.getBlock(x - dx, y - dy, z - dz);
   return !!(SOLID[b] && OPAQUE[b]);
 }

@@ -50,6 +50,7 @@ import { wandClick } from '../ui/buildCommands.js';
 import { interactHoverling } from '../mobs/hoverling.js';
 import { catchTarnling, releaseTarnling } from '../mobs/fauna.js';
 import { galeLeap } from '../mobs/gustling.js';
+import { summonColossus } from '../mobs/slagColossus.js';
 import { isBook } from '../world/books.js';
 import { carveFacing, CARVE_SEEDS } from '../mobs/pumpkins.js';
 import { CAKE_SLICES, CAKE_FOOD } from '../world/signalBlocks.js';
@@ -306,6 +307,14 @@ export class Interaction {
       this.swing = SWING_TICKS;
       return;
     }
+    // a Slagheart Sigil wakes the Slag Colossus when used inside a Cinderforge courtyard (mobs/slagColossus.js); used up when it does
+    if (d && d.sigil && input.rightPressed && !(this.target && USABLE_BLOCKS.has(this.target.id) && !p.sneaking)) {
+      const r = summonColossus(g, p.x, p.y, p.z);
+      g.hud.toast(r.msg, 3000);
+      if (r.ok && !p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
+      this.swing = SWING_TICKS;
+      return;
+    }
     // a Writable Book opens to write in, a Written Book to read (aimed at a lectern, it goes on the desk instead)
     if (d && (d.writable || d.written) && input.rightPressed && !(this.target && USABLE_BLOCKS.has(this.target.id) && !p.sneaking)) {
       if (g.ui.openBook) g.ui.openBook(p.inventory.selected);
@@ -419,7 +428,7 @@ export class Interaction {
       if (t.id === B.CHIME_BLOCK) g.playChime(t.x, t.y, t.z); // punching a Chime Block plays its note
     }
     const tool = toolOf(p.inventory.selectedStack);
-    const per = breakProgressPerTick(t.id, tool, { onGround: p.body.onGround || p.body.inWater, inWater: p.body.eyeInWater, swiftdig: enchLevel(p.inventory.selectedStack, 'swiftdig'), haste: p.effectLevel ? p.effectLevel('haste') : 0, fatigue: p.effectLevel ? p.effectLevel('mining_fatigue') : 0 });
+    const per = breakProgressPerTick(t.id, tool, { onGround: p.body.onGround || p.body.inWater, inWater: p.body.eyeInWater, swiftdig: enchLevel(p.inventory.selectedStack, 'swiftdig'), forgegrip: enchLevel(p.inventory.selectedStack, 'forgegrip'), haste: p.effectLevel ? p.effectLevel('haste') : 0, fatigue: p.effectLevel ? p.effectLevel('mining_fatigue') : 0 });
     this.breaking.progress += per;
     // holding the button chains full swings into a continuous chopping motion
     if (this.swing <= 0) this.swing = SWING_TICKS;

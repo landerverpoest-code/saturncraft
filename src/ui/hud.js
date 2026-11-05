@@ -62,6 +62,7 @@ export class HUD {
       <div id="steps" class="hidden" role="region" aria-label="First Steps"><div class="st-head"><b>First Steps</b><button type="button" class="st-skip">Skip</button></div><ol class="st-list"></ol><div class="st-tip"></div><div class="st-foot"></div></div>
       <div id="captions" role="log" aria-live="polite" aria-label="Sound captions"></div>
       <div id="raidbar" class="hidden" role="progressbar" aria-label="Raid"><div class="rb-name"></div><div class="rb-track"><div class="rb-fill"></div></div></div>
+      <div id="bossbar" class="hidden" role="progressbar" aria-label="Boss health" aria-valuemin="0" aria-valuemax="100"><div class="bb-name"></div><div class="bb-track"><div class="bb-fill"></div><i class="bb-pip" style="left:66%"></i><i class="bb-pip" style="left:33%"></i></div></div>
       <div id="item-name"></div>
       <div id="bottom">
         <div id="bars3" style="width:calc(var(--slot) * 9 + 8px);display:none"><div class="bar" id="absorb"></div></div>
@@ -247,6 +248,23 @@ export class HUD {
     el.setAttribute('aria-valuenow', String(Math.round(info.progress * 100)));
     el.setAttribute('aria-valuetext', `${info.label}${info.state === 'won' ? ', won' : ''}`);
     el.classList.toggle('won', info.state === 'won');
+  }
+
+  /** The boss bar (ui/bossBar.js): { name, frac, phase, phases, shielded } or null to hide it. */
+  bossBar(info) {
+    const el = this.bossEl || (this.bossEl = this.root.querySelector('#bossbar'));
+    if (!el) return;
+    el.classList.toggle('hidden', !info);
+    if (!info) return;
+    const label = `${info.name}, phase ${info.phase} of ${info.phases.length + 1}`;
+    const name = el.firstChild, fill = el.lastChild.firstChild;
+    if (name.textContent !== label) name.textContent = label;
+    fill.style.width = `${Math.round(info.frac * 1000) / 10}%`;
+    const pips = el.lastChild.querySelectorAll('.bb-pip');
+    info.phases.forEach((t, i) => { if (pips[i]) pips[i].style.left = `${Math.round(t * 100)}%`; });
+    el.setAttribute('aria-valuenow', String(Math.round(info.frac * 100)));
+    el.setAttribute('aria-valuetext', `${label}, ${Math.round(info.frac * 100)} percent${info.shielded ? ', shielded or stunned' : ''}`);
+    el.classList.toggle('shielded', info.shielded);
   }
 
   toast(msg, ms = 2500) {
