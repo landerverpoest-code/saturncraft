@@ -45,6 +45,8 @@ import { Chat } from './ui/chat.js';
 import { Music } from './audio/music.js';
 import { AmbientSystem } from './audio/ambientSystem.js';
 import { Milestones } from './player/milestones.js';
+import { Onboarding } from './player/onboarding.js';
+import { loadPlayerName } from './net/protocol.js';
 import { GuideTracker } from './player/fieldGuideTracker.js';
 import { Raids } from './mobs/raids.js';
 import { effectiveSkyLight, skyState } from './sky/suns.js';
@@ -107,7 +109,7 @@ const EVENT_FOG = new THREE.Color(); // scratch colour for the dust storm / grou
 export const DIFFICULTIES = ['peaceful', 'easy', 'normal', 'hard'];
 const FIREFLY_BIOMES = new Set(['swamp', 'forest', 'flower_forest', 'blossom_grove', 'mangrove_swamp', 'dark_forest', 'jungle', 'birch_forest']);
 
-export const DEFAULT_SETTINGS = { renderDistance: 8, fov: 75, sensitivity: 100, volume: 0.5, music: 0.5, shadows: true, shaders: true, shadowMapSize: 1024, pixelRatioCap: 1.25, daylightCycle: true, seasons: true, worldEvents: true, hostileMobs: true, fireworksHurtPlayers: false, difficulty: 'normal', showCoords: false, keys: {}, ...ACCESS_DEFAULTS, ...TOUCH_DEFAULTS };
+export const DEFAULT_SETTINGS = { renderDistance: 8, fov: 75, sensitivity: 100, volume: 0.5, music: 0.5, shadows: true, shaders: true, shadowMapSize: 1024, pixelRatioCap: 1.25, daylightCycle: true, seasons: true, worldEvents: true, hostileMobs: true, fireworksHurtPlayers: false, difficulty: 'normal', showCoords: false, hints: true, firstSteps: true, keys: {}, ...ACCESS_DEFAULTS, ...TOUCH_DEFAULTS };
 
 export class Game {
   constructor(canvas, seed, settings, hooks = {}, saveData = null) {
@@ -206,7 +208,8 @@ export class Game {
     this.milestones = new Milestones(this);
     this.guide = new GuideTracker(this); // Field Guide discoveries (player/fieldGuideTracker.js)
     this.raids = new Raids(this); // Marauder patrols and village raids
-    this.player.inventory.listeners.push(() => { this.milestones.checkInventory(); this.guide.checkInventory(); });
+    this.player.inventory.listeners.push(() => { this.milestones.checkInventory(); this.guide.checkInventory(); if (this.onboarding) this.onboarding.inventory(); });
+    this.player.inventory.breakListeners.push(() => { if (this.onboarding) this.onboarding.trigger('toolbreak'); });
     this.interaction = new Interaction(this);
     this.input = new Input(this.canvas);
     this.input.sensitivity = 0.0022 * s.sensitivity / 100;
@@ -220,6 +223,7 @@ export class Game {
     this.ambience = new AmbientSystem(this); // soundscapes, cave reverb and rain-on-roof voices (audio/ambientSystem.js)
     this.hud = new HUD(this);
     this.ui = new UI(this);
+    this.onboarding = new Onboarding(this, { name: loadPlayerName() }); // first-time hints and the First Steps checklist (player/onboarding.js)
     this.held = new HeldItem(this);
     this.overlay = new BlockOverlay(this.scene);
     this.enchantBooks = new EnchantBooks(this.scene); // floating books over enchanting tables
@@ -257,6 +261,7 @@ export class Game {
     this.chunks.onChunkLoaded = (cx, cz) => this.spawner.onChunkLoaded(cx, cz);
     this.chunks.onChunkUnloaded = (cx, cz) => this.spawner.onChunkUnloaded(cx, cz);
     this.player.listeners.hurt.push(() => this.audio.play('hurt'));
+    this.player.listeners.hurt.push((amount, source) => { if (typeof source === 'string' && source.startsWith('mob:')) this.onboarding.trigger('hurt'); }); // first-time hints (player/onboarding.js)
     // a blocked hit wears the shield and pushes melee attackers back
     this.player.listeners.blocked = [(amount, attacker) => {
       const p = this.player;
@@ -348,6 +353,7 @@ export class Game {
     this.worldSpawn = (this.saveData && this.saveData.worldSpawn) || this.worldSpawn || { ...this.player.spawn };
 
     await this.applyTouch(); // a phone or tablet gets the on-screen controls (ui/touch.js)
+    this.onboarding.syncFromMilestones(); // draws the First Steps card
     this.running = true;
     this.lastTime = performance.now();
     this.acc = 0;
@@ -393,6 +399,8 @@ export class Game {
     if (k === 'sensitivity') this.input.sensitivity = 0.0022 * v / 100;
     if (k === 'keys') this.input.setBindings(resolveBindings(v));
     if (k === 'colorBlind') this.hud.setColorBlind(v);
+    if (k === 'hints' && !v && this.onboarding) this.onboarding.dismiss();
+    if (k === 'firstSteps' && this.onboarding) this.onboarding.renderSteps();
     if (k === 'volume') this.audio.setVolume(v);
     if (k === 'music') this.music.setVolume(v);
     if (k === 'shadows') this.sky.setShadowsEnabled(v && (this.quality || 0) < 2);
@@ -1303,6 +1311,7 @@ export class Game {
     if (this.net) this.net.tick();
     if (this.ticks % 1200 === 0) this.autosave(); // autosave every minute
     if (this.ticks % 100 === 0) this.milestones.tick();
+    if (this.ticks % 20 === 0) this.onboarding.tick(); // hints and First Steps: one cheap look a second
     if (this.ticks % 20 === 0) this.tickBeacons(this.ticks % BEACON_PERIOD === 0);
     if (this.ticks % 20 === 0) {
       // music mood: underground, night (all suns down) or day
@@ -1351,6 +1360,14 @@ export class Game {
       if (this.ui.open === 'pause' && this.ui.inGuide) { this.ui.open = null; this.ui.clear(); this.onUIClosed(); }
       else if (!this.ui.blocking && this.running) { this.input.unlock(); this.ui.showGuide('creatures', true); }
     }
+    if (inp.wasPressed('help')) {
+      if (this.ui.open === 'pause' && this.ui.inHelp) {
+        // (a rebound letter would be typed into the search box: only function keys and the touch button close it then)
+        const typing = document.activeElement && document.activeElement.tagName === 'INPUT';
+        if (!typing || inp.keys.help.some((c) => /^F\d+$/.test(c) && inp.pressed.has(c)) || inp.vpressed.has('help')) { this.ui.open = null; this.ui.clear(); this.onUIClosed(); }
+      } else if (!this.ui.blocking && this.running) { this.input.unlock(); this.ui.showHelp(true); }
+    }
+    if (inp.wasPressed('dismissHint')) this.onboarding.dismiss();
     if (this.net && this.running && !this.ui.blocking) {
       // multiplayer: ping a spot for the team (B), the emote wheel (V); a spectator's Shift lets go of the friend they follow
       if (inp.wasPressed('ping')) this.net.pingAtCrosshair();

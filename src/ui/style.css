@@ -473,3 +473,56 @@ body.tc-left #tc-ui > .tc-btn { right: auto; left: calc(var(--bx) * var(--u) + e
 .wm-backups { display: flex; flex-direction: column; gap: 6px; }
 .wm-backup { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; background: rgba(255,255,255,.06); padding: 6px 8px; border-radius: 4px; }
 .wm-backup .btn { min-width: 0; padding: 4px 10px; font-size: 13px; }
+
+/* ---- onboarding: one-time hint cards and the First Steps checklist (src/player/onboarding.js) ---- */
+#hint-card { position: fixed; left: 50%; bottom: 150px; transform: translateX(-50%); width: min(460px, calc(100vw - 32px)); z-index: 25; padding: 10px 14px; background: rgba(18, 16, 30, .94); border: 2px solid var(--accent-2); border-radius: 8px; color: #fff; font-size: 15px; line-height: 1.35; cursor: pointer; text-shadow: 1px 1px 0 #000; animation: hcin .35s ease-out; }
+#hint-card .hc-title { font-weight: bold; color: var(--accent-2); margin-bottom: 2px; }
+#hint-card .hc-foot { margin-top: 6px; font-size: 12px; color: #b8b4cc; }
+@keyframes hcin { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@media (prefers-reduced-motion: reduce) { #hint-card { animation: none; } }
+body.touch-on #hint-card { bottom: calc(var(--slot) * 2 + 76px); font-size: 14px; }
+#steps { position: absolute; left: 8px; top: 40px; width: 224px; padding: 8px 10px; background: rgba(8, 10, 20, .6); border-left: 3px solid var(--accent); border-radius: 6px; font-size: 13px; line-height: 1.35; text-shadow: 1px 1px 0 #000; z-index: 4; }
+#steps.complete { border-left-color: #7ad870; }
+#steps .st-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+#steps .st-skip { pointer-events: auto; cursor: pointer; font-size: 11px; padding: 1px 8px; color: #fff; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.4); border-radius: 4px; }
+#steps .st-skip:hover, #steps .st-skip:focus-visible { background: rgba(240, 176, 74, .6); outline: none; }
+#steps .st-list { list-style: none; margin: 4px 0 0; padding: 0; }
+#steps .st-list li { opacity: .75; }
+#steps .st-list li.done { opacity: .55; text-decoration: line-through; color: #9ee494; }
+#steps .st-list li.current { opacity: 1; color: var(--accent); font-weight: bold; }
+#steps .st-tip { margin-top: 4px; font-size: 12px; color: #d8d4e8; }
+#steps .st-foot { margin-top: 4px; font-size: 11px; color: #9a96b0; }
+body.touch-on #steps { top: calc(48px + env(safe-area-inset-top)); left: calc(6px + env(safe-area-inset-left)); width: min(190px, 34vw); font-size: 12px; }
+body.touch-on #steps .st-foot { display: none; }
+body.touch-on #steps .st-skip { padding: 6px 12px; font-size: 12px; }
+
+/* ---- the Help screen ---- */
+.help-screen { gap: 8px; }
+.help-search { width: min(720px, 94vw); padding: 9px 12px; font-size: 16px; color: #fff; background: rgba(0,0,0,.45); border: 2px solid #1d1b24; border-radius: 6px; pointer-events: auto; }
+.help-search:focus-visible { outline: 2px solid var(--accent); border-color: var(--accent); }
+.help-layout { display: flex; gap: 12px; width: min(720px, 94vw); height: min(56vh, 480px); }
+.help-list { flex: none; width: 210px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding-right: 4px; }
+.help-list .world-head { margin: 6px 0 0; font-size: 12px; opacity: .7; }
+.btn.help-topic { min-width: 0; width: 100%; padding: 7px 8px; font-size: 14px; text-align: left; }
+.btn.help-topic.on { border-color: var(--accent); background: linear-gradient(#8a6a2a, #5e4a20); }
+.btn.help-topic:focus-visible, .help-screen .btn:focus-visible, .help-body:focus-visible { outline: 2px solid #f0b04a; outline-offset: 2px; }
+.help-body { flex: 1; min-width: 0; overflow-y: auto; text-align: left; padding: 4px 10px 10px; background: rgba(255,255,255,.05); border-radius: 6px; font-size: 15px; line-height: 1.45; }
+.help-body h3 { margin: 4px 0 6px; font-size: 22px; }
+.help-body h4 { margin: 12px 0 4px; font-size: 15px; color: var(--accent); }
+.help-body p { margin: 6px 0; }
+.help-body ul { margin: 6px 0; padding-left: 20px; }
+.help-body li { margin: 3px 0; }
+.help-body code { font: 13px monospace; background: rgba(0,0,0,.35); padding: 1px 5px; border-radius: 3px; overflow-wrap: anywhere; }
+.help-keys { display: grid; grid-template-columns: 1fr auto; gap: 3px 14px; margin: 6px 0; }
+.help-keys span:nth-child(even) { color: var(--accent-2); text-align: right; }
+.help-cmds { list-style: none; padding-left: 0; }
+.help-cmds li { margin: 5px 0; }
+.help-empty { padding: 10px; opacity: .75; }
+.help-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.help-actions .btn { min-width: 0; font-size: 14px; padding: 7px 12px; }
+@media (max-width: 640px) {
+  .help-layout { flex-direction: column; height: min(62vh, 520px); }
+  .help-list { width: 100%; flex-direction: row; flex-wrap: wrap; max-height: 112px; flex: none; }
+  .btn.help-topic { width: auto; }
+  .help-list .world-head { display: none; }
+}

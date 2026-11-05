@@ -25,6 +25,7 @@ import { creatureIcon, structureIcon } from './guideArt.js';
 import { MOBS } from '../mobs/mobTypes.js';
 import { ACTIONS, GROUPS, SLOT_KINDS, SLOT_NAMES, resolveBindings, toOverrides, setBinding, codeLabel } from './bindings.js';
 import { COLOR_BLIND_LABELS, nextColorBlind } from './accessibility.js';
+import { buildTopics, searchTopics } from './helpTopics.js';
 import { TOUCH_MODE_LABELS, SIZE_RANGE, OPACITY_RANGE, nextTouchMode, normalizeTouch, detectTouch, readTouchEnv } from './touchMath.js';
 import { loadPlayerName } from '../net/protocol.js';
 import { EMOTES, EMOTE_LABELS } from '../net/social.js';
@@ -77,7 +78,7 @@ export class UI {
 
   get blocking() { return this.open !== null; }
 
-  clear() { if (this.game.input) this.game.input.capture = null; /* a controls screen waiting for a key */ if (this.lazy) { this.lazy.dispose(); this.lazy = null; } this.layer.innerHTML = ''; this.padBack = null; this.padScroll = null; this.padTab = null; this.inGuide = false; this.touchPreview = false; this.tooltipEl.classList.add('hidden'); }
+  clear() { if (this.game.input) this.game.input.capture = null; /* a controls screen waiting for a key */ if (this.lazy) { this.lazy.dispose(); this.lazy = null; } this.layer.innerHTML = ''; this.padBack = null; this.padScroll = null; this.padTab = null; this.inGuide = false; this.inHelp = false; this.touchPreview = false; this.tooltipEl.classList.add('hidden'); }
 
   /** Gamepad on a sub-screen of the pause menu: B or Back returns to it, the left stick or D-pad scrolls. */
   padNav(pressed, ly) {
@@ -553,6 +554,7 @@ export class UI {
     this.game.input.unlock();
     const halves = doubleChestHalves(this.game.world, x, y, z);
     const here = this.game.world.getBlock(x, y, z), hopper = here === B.HOPPER, disp = here === B.DISPENSER || here === B.DROPPER;
+    if (!hopper && !disp && this.game.onboarding) this.game.onboarding.trigger('chest'); // first-time hint (player/onboarding.js)
     const c = halves ? doubleChestView(...halves.map((h) => this.game.getChest(h.x, h.y, h.z))) : hopper ? this.game.getHopper(x, y, z) : disp ? this.game.getDispenser(x, y, z) : this.game.getChest(x, y, z);
     const n = c.slots.length;
     const inv = this.game.player.inventory;
@@ -1068,6 +1070,7 @@ export class UI {
    */
   openTrade(mob) {
     this.game.input.unlock();
+    if (this.game.onboarding) this.game.onboarding.trigger('trade'); // first-time hint (player/onboarding.js)
     const g = this.game, inv = g.player.inventory, trader = !!mob.def.trader;
     const title = trader ? mob.def.name : `${mob.profession[0].toUpperCase() + mob.profession.slice(1)} Settler`;
     // Village Champions pay less (a guest pays from its own inventory, so its own effect sets the price)
@@ -1196,6 +1199,8 @@ export class UI {
       <h2>Paused</h2>
       <button class="btn" data-a="resume">Back to Game</button>
       <button class="btn" data-a="save">Save Game</button>
+      <div class="btn-row"><button class="btn" data-a="help">Help (${codeLabel(resolveBindings(g.settings.keys).help[0])})</button>
+      <button class="btn" id="hints">Hints: ${g.settings.hints !== false ? 'On' : 'Off'}</button></div>
       <div class="field"><label>Render distance: <b id="rdv">${g.settings.renderDistance}</b> chunks</label><input type="range" min="2" max="16" value="${g.settings.renderDistance}" id="rd"></div>
       <div class="field"><label>Field of view: <b id="fovv">${g.settings.fov}</b></label><input type="range" min="50" max="110" value="${g.settings.fov}" id="fov"></div>
       <div class="field"><label>Look sensitivity (mouse and touch): <b id="msv">${g.settings.sensitivity}</b></label><input type="range" min="10" max="200" value="${g.settings.sensitivity}" id="ms"></div>
@@ -1233,6 +1238,7 @@ export class UI {
     };
     toggle('dlc', 'daylightCycle', 'Day/night cycle');
     toggle('sea', 'seasons', 'Seasons');
+    toggle('hints', 'hints', 'Hints');
     toggle('fx', 'shaders', 'Shaders');
     s.querySelector('#fast').onclick = () => {
       // everything that costs the most frames off at once: shaders, sun shadows, high pixel density, far chunks
@@ -1259,6 +1265,7 @@ export class UI {
     s.querySelector('[data-a=ms]').onclick = () => this.showMilestones();
     s.querySelector('[data-a=stats]').onclick = () => this.showStats();
     s.querySelector('[data-a=guide]').onclick = () => this.showGuide();
+    s.querySelector('[data-a=help]').onclick = () => this.showHelp();
     s.querySelector('[data-a=controls]').onclick = () => this.showControls();
     s.querySelector('[data-a=access]').onclick = () => this.showAccessibility();
     s.querySelector('[data-a=touch]').onclick = () => this.showTouchSettings();
@@ -1667,6 +1674,111 @@ export class UI {
     this.padBack = () => this.showPause();
     this.padScroll = (dy) => { list.scrollTop += dy; };
     this.layer.appendChild(s);
+  }
+
+  /**
+   * Help (F1, or pause menu > Help): how-to topics you can search (ui/helpTopics.js). Typing filters the
+   * list, Down moves from the search box into it, Enter opens a topic. Gamepad: the bumpers change topic, the
+   * D-pad scrolls and B goes back; touch: it is all plain buttons.
+   */
+  showHelp(fromKey = false, topicId = 'start') {
+    this.clear();
+    this.open = 'pause';
+    this.inHelp = true;
+    const g = this.game, onb = g.onboarding;
+    const topics = buildTopics({ table: resolveBindings(g.settings.keys), touch: !!g.touch, pad: !!(g.input.pad && g.input.pad.connected) });
+    const s = el(`<div class="screen pause-screen help-screen"><h2>Help</h2>
+      <input type="search" class="help-search" placeholder="Search: crafting, sprint, /time, bed…" aria-label="Search help topics" autocomplete="off" spellcheck="false">
+      <div class="help-layout"><div class="help-list" role="listbox" aria-label="Topics"></div>
+      <div class="help-body" tabindex="0" role="region" aria-label="Topic"></div></div>
+      <button class="btn" data-a="back">Back</button></div>`);
+    const search = s.querySelector('.help-search'), list = s.querySelector('.help-list'), body = s.querySelector('.help-body');
+    let shown = [], current = topics.some((t) => t.id === topicId) ? topicId : topics[0].id;
+    const leave = () => { if (fromKey) { this.open = null; this.clear(); g.onUIClosed(); } else this.showPause(); };
+    const hr = (tag, text) => { const e = document.createElement(tag); e.textContent = text; return e; };
+    const renderBody = () => {
+      const t = topics.find((x) => x.id === current);
+      body.replaceChildren();
+      body.setAttribute('aria-label', t ? t.title : 'Topic');
+      if (!t) { body.appendChild(hr('p', 'No topic selected.')); return; }
+      body.appendChild(hr('h3', t.title));
+      for (const b of t.blocks) {
+        if (b.p) body.appendChild(hr('p', b.p));
+        else if (b.h) body.appendChild(hr('h4', b.h));
+        else if (b.list || b.cmds) {
+          const ul = document.createElement('ul');
+          if (b.cmds) ul.className = 'help-cmds';
+          for (const line of b.list || b.cmds) {
+            const li = document.createElement('li');
+            if (b.cmds) li.appendChild(hr('code', line)); else li.textContent = line;
+            ul.appendChild(li);
+          }
+          body.appendChild(ul);
+        } else if (b.keys) {
+          const grid = document.createElement('div');
+          grid.className = 'help-keys';
+          for (const [a, k] of b.keys) { grid.appendChild(hr('span', a)); grid.appendChild(hr('span', k)); }
+          body.appendChild(grid);
+        }
+      }
+      if (t.id === 'hints' && onb) body.appendChild(this.helpHintButtons(onb));
+      body.scrollTop = 0;
+    };
+    const renderList = () => {
+      shown = searchTopics(topics, search.value);
+      if (shown.length && !shown.some((t) => t.id === current)) { current = shown[0].id; renderBody(); }
+      list.replaceChildren();
+      if (!shown.length) { const m = hr('div', 'No topics match. Try another word.'); m.className = 'help-empty'; list.appendChild(m); return; }
+      let group = null;
+      for (const t of shown) {
+        if (!search.value.trim() && t.group !== group) { group = t.group; const h = hr('div', group); h.className = 'world-head'; list.appendChild(h); }
+        const b = hr('button', t.title);
+        b.className = 'btn help-topic' + (t.id === current ? ' on' : ''); b.type = 'button'; b.dataset.topic = t.id;
+        b.setAttribute('role', 'option'); b.setAttribute('aria-selected', String(t.id === current));
+        b.onclick = () => select(t.id, true);
+        list.appendChild(b);
+      }
+    };
+    const select = (id, focusIt) => {
+      current = id; renderBody();
+      for (const b of list.querySelectorAll('.help-topic')) { const on = b.dataset.topic === id; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); if (on && focusIt) b.focus(); }
+    };
+    const step = (d) => { if (shown.length) select(shown[(Math.max(0, shown.findIndex((t) => t.id === current)) + d + shown.length) % shown.length].id, false); };
+    search.addEventListener('input', renderList);
+    search.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown') { e.preventDefault(); const f = list.querySelector('.help-topic'); if (f) f.focus(); }
+      else if (e.key === 'Enter' && shown.length) { e.preventDefault(); select(shown[0].id, false); body.focus(); }
+    });
+    list.addEventListener('keydown', (e) => {
+      const btns = [...list.querySelectorAll('.help-topic')], i = btns.indexOf(document.activeElement);
+      if (e.key === 'ArrowDown' && i >= 0) { e.preventDefault(); (btns[i + 1] || btns[i]).focus(); }
+      else if (e.key === 'ArrowUp' && i >= 0) { e.preventDefault(); if (i > 0) btns[i - 1].focus(); else search.focus(); }
+    });
+    s.addEventListener('keydown', (e) => { if (e.key === 'Backspace' && e.target !== search) { e.preventDefault(); leave(); } });
+    s.querySelector('[data-a=back]').onclick = leave;
+    this.padBack = leave;
+    this.padScroll = (dy) => { body.scrollTop += dy; };
+    this.padTab = (d) => step(d);
+    this.layer.appendChild(s);
+    renderBody();
+    renderList();
+    this.inHelp = true;
+    setTimeout(() => { if (this.open === 'pause' && this.inHelp && search.isConnected) search.focus(); }, 0);
+  }
+
+  /** The switches at the foot of the "Hints and First Steps" topic. */
+  helpHintButtons(onb) {
+    const g = this.game, box = el('<div class="help-actions"></div>');
+    const mk = (text, fn) => { const b = el('<button class="btn" type="button"></button>'); b.textContent = text; b.onclick = fn; box.appendChild(b); return b; };
+    const hintsLabel = () => `Hints: ${g.settings.hints !== false ? 'On' : 'Off'}`;
+    const stepsLabel = () => `First Steps: ${g.settings.firstSteps !== false && !onb.finished ? 'Shown' : 'Hidden'}`;
+    const hb = mk(hintsLabel(), () => { g.setSetting('hints', g.settings.hints === false); hb.textContent = hintsLabel(); });
+    mk('Show every hint again', () => { onb.resetHints(); g.hud.toast('Hints will show again'); });
+    const sb = mk(stepsLabel(), () => {
+      if (g.settings.firstSteps !== false && !onb.finished) onb.skipSteps(); else onb.showSteps();
+      sb.textContent = stepsLabel();
+    });
+    return box;
   }
 
   /**
