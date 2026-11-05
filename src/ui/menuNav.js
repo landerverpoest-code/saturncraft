@@ -111,7 +111,7 @@ export class MenuNav {
   /** Focus the first control of a freshly opened screen unless something inside already has focus. */
   autoFocus() {
     if (this.layer.contains(document.activeElement) && document.activeElement !== this.layer) return false;
-    const list = visibleFocusables(this.layer).filter((e) => !(e.tagName === 'INPUT' && e.type === 'text'));
+    const list = visibleFocusables(this.layer).filter((e) => !(e.tagName === 'INPUT' && (e.type === 'text' || e.type === 'search')));
     if (!list.length) return false;
     list[0].focus({ preventScroll: false });
     return true;
@@ -148,7 +148,7 @@ export class MenuNav {
   press(many = false) {
     const el = this.current();
     if (!el) return false;
-    if (el.tagName === 'INPUT' && (el.type === 'range' || el.type === 'text')) return false;
+    if (el.tagName === 'INPUT' && (el.type === 'range' || el.type === 'text' || el.type === 'search')) return false;
     el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, shiftKey: many }));
     return true;
   }
@@ -159,7 +159,7 @@ export class MenuNav {
    */
   frame(pressed, pad, noMove = false) {
     const a = document.activeElement;
-    const typing = a && this.layer.contains(a) && (a.tagName === 'TEXTAREA' || (a.tagName === 'INPUT' && a.type === 'text'));
+    const typing = a && this.layer.contains(a) && (a.tagName === 'TEXTAREA' || (a.tagName === 'INPUT' && (a.type === 'text' || a.type === 'search')));
     const it = menuIntent(pressed, pad, this.stick);
     this.stick = it.stick;
     if (it.back) return 'back';

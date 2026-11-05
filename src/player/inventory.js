@@ -13,6 +13,7 @@ export class Inventory {
     this.creative = false;                 // creative: using items never consumes or wears them
     this.selected = 0;
     this.listeners = [];
+    this.breakListeners = []; // called when the tool in hand wears out
   }
   changed() { for (const f of this.listeners) f(); }
 
@@ -65,7 +66,7 @@ export class Inventory {
     amount = durabilityLoss(s, amount, rng); // Steadfast may spare it
     if (!amount) return false;
     s.damage = (s.damage || 0) + amount;
-    if (s.damage >= d.durability) { this.slots[this.selected] = null; this.changed(); return true; }
+    if (s.damage >= d.durability) { this.slots[this.selected] = null; this.changed(); for (const f of this.breakListeners) f(d); return true; }
     this.changed();
     return false;
   }
