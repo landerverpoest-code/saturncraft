@@ -1,5 +1,6 @@
-// World persistence in IndexedDB: modified chunks (run-length encoded),
-// player state, world time, furnaces and persistent passive mobs.
+// World persistence: modified chunks (run-length encoded), player state, world time, furnaces and persistent passive
+// mobs. Where and how records are stored (IndexedDB, the world list, backups, repair, export / import) lives in
+// worldManager.js and storage.js; the shape of a record, its version and migrations in saveFormat.js.
 import { cleanPotFaces } from './archaeology.js';
 import { cleanLectern } from './books.js';
 import { encodeMap, decodeMap } from './maps.js';
@@ -10,11 +11,10 @@ import { saveState as saveCaravanState, loadState as loadCaravanState } from '..
 import { saveStats, loadStats } from '../player/stats.js';
 import { cleanReputation } from '../mobs/reputation.js';
 import { SocialState } from '../net/social.js';
+import { CURRENT_VERSION, cleanThumbnail } from './saveFormat.js';
+import { writeWorld } from './worldManager.js';
 
-const DB_NAME = 'saturncraft';
-const STORE = 'worlds';
-export const MAX_WORLDS = 3;
-const slotKey = (slot) => `slot${slot}`;
+export { MAX_WORLDS, listWorlds, loadGame, loadWorld, deleteSave, renameWorld, duplicateWorld, listBackups, restoreBackup, repairWorld, exportWorld, importWorld, writeWorld } from './worldManager.js';
 
 /** Run-length encoding as [value, count] pairs (16-bit values, so block ids above 255 fit). */
 export function rleEncode(arr) {
@@ -36,27 +36,6 @@ export function rleDecode(enc, length, Type = Uint8Array) {
   let o = 0;
   for (let i = 0; i < enc.length; i += 2) { out.fill(enc[i], o, o + enc[i + 1]); o += enc[i + 1]; }
   return out;
-}
-
-function openDB() {
-  return new Promise((resolve, reject) => {
-    if (typeof indexedDB === 'undefined') { reject(new Error('IndexedDB unavailable')); return; }
-    const req = indexedDB.open(DB_NAME, 1);
-    req.onupgradeneeded = () => req.result.createObjectStore(STORE);
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-function txn(db, mode, fn) {
-  return new Promise((resolve, reject) => {
-    const t = db.transaction(STORE, mode);
-    const s = t.objectStore(STORE);
-    let result;
-    Promise.resolve(fn(s)).then((r) => { result = r; });
-    t.oncomplete = () => resolve(result);
-    t.onerror = () => reject(t.error);
-  });
 }
 
 export const packStats = { packed: 0, reused: 0 };
@@ -105,12 +84,14 @@ export async function saveGame(game) {
     .filter((e) => e.kind === 'mob' && e.persistent && e.deathTime === 0 && !e.removed)
     .map((e) => e.saveData());
   const data = {
-    version: 1,
+    version: CURRENT_VERSION,
     name: game.worldName || `World ${game.saveSlot || 1}`,
     seed: game.seed,
     time: game.time,
     gameRules: { doDaylightCycle: game.settings.daylightCycle !== false, doSeasons: game.settings.seasons !== false, doHostileSpawning: game.settings.hostileMobs !== false, fireworksHurtPlayers: game.settings.fireworksHurtPlayers === true, doWorldEvents: game.settings.worldEvents !== false, difficulty: game.difficulty },
     savedAt: Date.now(),
+    // what the world list shows and the options chosen when the world was made (world/saveFormat.js)
+    meta: { createdAt: game.createdAt || Date.now(), worldType: game.worldType || 'normal', allowCheats: game.allowCheats !== false, seedText: game.seedText || null, thumbnail: cleanThumbnail(game.thumbnail) },
     player: playerSaveData(p),
     furnaces: [...game.furnaces.values()],
     chests: [...game.chests.values()],
@@ -141,64 +122,8 @@ export async function saveGame(game) {
     netPlayers: game.netPlayers || {}, // multiplayer guests' state by name
     social: game.social ? game.social.save() : undefined, // multiplayer teams, the op list, bans and who is who (net/social.js)
   };
-  const db = await openDB();
-  await txn(db, 'readwrite', (s) => s.put(data, slotKey(game.saveSlot || 1)));
-  db.close();
+  await writeWorld(game.saveSlot || 1, data); // one transaction: the world, its list summary and (every so often) a backup
   return data;
-}
-
-function getKey(s, key) {
-  return new Promise((res) => { const r = s.get(key); r.onsuccess = () => res(r.result || null); r.onerror = () => res(null); });
-}
-
-/** The world in a slot, or null. */
-export async function loadGame(slot = 1) {
-  try {
-    const db = await openDB();
-    const data = await txn(db, 'readonly', (s) => getKey(s, slotKey(slot)));
-    db.close();
-    return data;
-  } catch { return null; }
-}
-
-/**
- * Summaries of every slot (null where empty): { slot, name, seed, savedAt }.
- * A save from before world slots ('current') moves into the first free slot.
- */
-export async function listWorlds() {
-  const out = Array(MAX_WORLDS).fill(null);
-  try {
-    const db = await openDB();
-    await txn(db, 'readwrite', async (s) => {
-      const all = [];
-      for (let i = 1; i <= MAX_WORLDS; i++) all.push(await getKey(s, slotKey(i)));
-      const legacy = await getKey(s, 'current');
-      if (legacy) {
-        const free = all.indexOf(null);
-        if (free >= 0) { all[free] = legacy; s.put(legacy, slotKey(free + 1)); s.delete('current'); }
-      }
-      all.forEach((d, i) => { if (d) out[i] = { slot: i + 1, name: d.name || `World ${i + 1}`, seed: d.seed, savedAt: d.savedAt }; });
-    });
-    db.close();
-  } catch { /* storage unavailable: no worlds */ }
-  return out;
-}
-
-export async function deleteSave(slot) {
-  try {
-    const db = await openDB();
-    await txn(db, 'readwrite', (s) => s.delete(slotKey(slot)));
-    db.close();
-  } catch { /* nothing to delete */ }
-}
-
-/** Give a saved world a new name. */
-export async function renameWorld(slot, name) {
-  try {
-    const db = await openDB();
-    await txn(db, 'readwrite', async (s) => { const d = await getKey(s, slotKey(slot)); if (d) s.put({ ...d, name }, slotKey(slot)); });
-    db.close();
-  } catch { /* storage unavailable */ }
 }
 
 /** Apply loaded data to a freshly constructed (not yet started) game. */
@@ -206,6 +131,13 @@ export function applySave(game, data) {
   for (const [k, p] of Object.entries(data.chunks)) game.world.saved.set(+k, unpackChunk(p));
   if (game.dims) game.dims.loadData(data, unpackChunk);
   game.time = data.time;
+  if (data.meta) {
+    game.createdAt = data.meta.createdAt || 0;
+    game.worldType = data.meta.worldType || 'normal';
+    game.allowCheats = data.meta.allowCheats !== false;
+    game.seedText = data.meta.seedText || null;
+    game.thumbnail = cleanThumbnail(data.meta.thumbnail);
+  }
   // the world remembers its own rules (older saves keep the player's settings)
   if (data.gameRules) {
     if (typeof data.gameRules.doDaylightCycle === 'boolean') game.settings.daylightCycle = data.gameRules.doDaylightCycle;

@@ -95,10 +95,14 @@ export const HELP = [
   '  /spectate [player|next|off] (dead or creative players follow a friend);  host and ops: /kick <player> [reason],  /ban <player> [reason],  /pardon <player>,  /banlist;  host: /op, /deop, /oplist',
 ];
 
+/** Commands that change the world or the player; a world made with cheats off (world creation options) refuses them. */
+export const CHEAT_COMMANDS = new Set(['gamemode', 'gm', 'time', 'season', 'event', 'events', 'difficulty', 'gamerule', 'weather', 'tp', 'teleport', 'give', 'enchant', 'summon', 'xp', 'experience', 'kill', 'effect', 'raid', 'caravan', 'heal', 'clear', 'spawnpoint', 'dimension', 'dim']);
+
 export function runCommand(game, text) {
   const p = game.player;
   const args = text.trim().replace(/^\//, '').split(/\s+/);
   const cmd = (args.shift() || '').toLowerCase();
+  if (game.allowCheats === false && CHEAT_COMMANDS.has(cmd)) return 'Cheats are turned off in this world';
   switch (cmd) {
     case 'help': case '?': return HELP;
     case 'gamemode': case 'gm': {

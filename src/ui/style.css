@@ -152,7 +152,7 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 .milestone-row img { width: 32px; height: 32px; image-rendering: pixelated; }
 .milestone-row .d { font-size: 12px; opacity: .8; }
 
-.world-list { display: flex; flex-direction: column; gap: 6px; width: 300px; max-width: calc(100vw - 32px); margin-bottom: 8px; }
+.world-list { display: flex; flex-direction: column; gap: 6px; width: 380px; max-width: calc(100vw - 32px); margin-bottom: 8px; }
 .world-head { font-size: 13px; opacity: .8; }
 .world-row { display: flex; gap: 6px; }
 .world-row .btn { min-width: 0; }
@@ -438,3 +438,38 @@ body.tc-left #tc-ui > .tc-btn { right: auto; left: calc(var(--bx) * var(--u) + e
 .tc-stick.sprint::before { border-color: var(--accent); background: rgba(240, 176, 74, .18); }
 .tc-knob { position: absolute; left: 0; top: 0; width: calc(var(--u) * .95); height: calc(var(--u) * .95); border-radius: 50%; background: rgba(255, 255, 255, .55); border: 2px solid rgba(255, 255, 255, .9); transform: translate(-50%, -50%); }
 #tc-ui.preview { z-index: 25; } #tc-ui.preview .tc-btn { pointer-events: none; }
+
+/* World manager (title screen): world cards, options panel, dialogs, storage notes */
+.world-card { display: flex; flex-direction: column; gap: 4px; background: rgba(0,0,0,.28); border-radius: 8px; padding: 4px; }
+.world-card .world-play { flex-direction: row; align-items: center; gap: 10px; width: 100%; min-width: 0; }
+.world-thumb { flex: 0 0 96px; width: 96px; height: 54px; object-fit: cover; border-radius: 4px; background: #14121c; image-rendering: auto; }
+.world-thumb.none { display: flex; align-items: center; justify-content: center; font-size: 22px; opacity: .5; }
+.world-text { display: flex; flex-direction: column; min-width: 0; flex: 1; gap: 1px; }
+.world-text b { font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.world-text span { font-size: 11px; opacity: .8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.world-text .world-tags { text-transform: capitalize; opacity: .6; }
+.world-actions { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+.world-actions .world-act { min-width: 0; padding: 4px 2px; font-size: 11px; }
+.wm-note { max-width: 380px; padding: 6px 10px; font-size: 13px; background: rgba(240, 176, 74, .16); border: 1px solid #f0b04a; border-radius: 6px; color: #ffe2a6; }
+.wm-note.hidden { display: none; }
+.wm-bad { color: #ffb0a0 !important; }
+.wm-note.wm-bad { border-color: #d86a5a; background: rgba(216, 106, 90, .16); }
+#wm-msg { margin: 0; min-height: 1em; font-size: 13px; max-width: 380px; text-align: center; }
+.wm-tools { width: 380px; max-width: calc(100vw - 32px); }
+.wm-options { width: 300px; font-size: 14px; color: #ccc; }
+.wm-options summary { cursor: pointer; padding: 4px 0; }
+.wm-grid { display: grid; grid-template-columns: 1fr; gap: 6px; padding: 6px 0; }
+.wm-grid label { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.wm-grid select, .wm-grid input[type=number] { background: #111; color: #fff; border: 2px solid #444; border-radius: 4px; padding: 4px; font-size: 14px; max-width: 150px; }
+.wm-grid input[type=number] { width: 70px; }
+.wm-dialog { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; background: rgba(4, 4, 10, .78); padding: 16px; }
+.wm-box { width: 420px; max-width: 100%; max-height: 90vh; overflow-y: auto; background: #1c1a26; border: 2px solid #4d4a58; border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 8px; color: #ddd; }
+.wm-box h3 { margin: 0; color: #ffe2a6; }
+.wm-box p { margin: 0; font-size: 14px; white-space: pre-wrap; }
+.wm-box input[type=text] { padding: 8px; font-size: 16px; background: #111; color: #fff; border: 2px solid #444; border-radius: 4px; }
+.wm-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+.wm-buttons .btn { flex: 1; min-width: 120px; font-size: 14px; padding: 8px 10px; }
+.wm-danger:hover { background: linear-gradient(#9a4a4a, #6d3030); }
+.wm-backups { display: flex; flex-direction: column; gap: 6px; }
+.wm-backup { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; background: rgba(255,255,255,.06); padding: 6px 8px; border-radius: 4px; }
+.wm-backup .btn { min-width: 0; padding: 4px 10px; font-size: 13px; }

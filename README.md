@@ -36,6 +36,8 @@ Requires a WebGL2 browser (any current Chrome, Edge, Firefox or Safari).
 Click the canvas to capture the mouse. The world is saved to IndexedDB every
 minute and on *Save & Quit*; *Continue World* on the title screen resumes it.
 
+**World management** (title screen): the world list shows each world's screenshot (taken on every save), name, seed, play time, last played and size, with rename, copy, export, backups and delete (with confirmation). *Export* downloads one compressed `.saturnworld` file; *Import world* validates it (checksum, format version, size and chunk limits, nothing in it is ever executed) and adds it under a unique name. The last 3 snapshots of each world are kept automatically (about one per 15 minutes) and can be restored from the list; a world that fails its integrity check offers *Repair* (damaged chunks are dropped and regenerate from the seed, the original is kept as a backup) or a backup restore. A banner warns when browser storage is nearly full, and a failed autosave says so in game. *More world options* when creating a world: seed text, game mode, difficulty, cheats on/off, seasons (starting season, days per season), day/night cycle, hostile mobs, world events. (A flat world type is not offered: the terrain generator has no flat mode.) Saves carry a schema version and are migrated on load; `tests/fixtures/saves` holds one fixture per format.
+
 Handy URL parameters for development: `?autostart=1&seed=123&rd=8`
 (`&continue=1` to resume the save). `window.__game` exposes the running game
 in the console.
@@ -171,7 +173,7 @@ src/
     mining.js              break times and block drops
     enchantments.js        enchantments: table offers, anvil combining, effects
     textures.js            procedural pixel art for every block face
-    save.js                IndexedDB persistence (RLE-compressed chunks)
+    save.js                saving a game (RLE-compressed chunks, per-chunk pack cache); saveFormat.js schema, migration, validation, export file; storage.js IndexedDB / memory store; worldManager.js list, backups, repair, import / export; newWorld.js creation options
     monuments.js sponge.js Tide Citadels (ocean monuments) and Soakmoss (sponge); monumentTextures.js
     maps.js landmarks.js   held maps, landmark marks, surveyed Explorer Chart maps (landmarkKinds.js)
   physics/                 constants.js (vanilla values), body.js (AABB, step-up, fluids)
