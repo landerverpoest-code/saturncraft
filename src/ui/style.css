@@ -287,6 +287,12 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 #dashbar > div { height: 100%; width: 100%; background: linear-gradient(#e8d28a, #b08a3a); }
 #dashbar.charging > div { background: linear-gradient(#ffe070, #e09a20); }
 #dashbar.cooling > div { background: linear-gradient(#9a9a9a, #5a5a5a); }
+/* A ridden mount's stamina (above the experience bar): green, amber once it tires, red when it is worn out */
+#staminabar { width: calc(var(--slot) * 9 + 8px); height: 4px; background: rgba(0,0,0,.55); border: 1px solid #000; box-sizing: border-box; }
+#staminabar.hidden { display: none; }
+#staminabar > div { height: 100%; width: 100%; background: linear-gradient(#9ae87a, #4a9a3a); }
+#staminabar.tired > div { background: linear-gradient(#f0d070, #c08a20); }
+#staminabar.worn > div { background: linear-gradient(#f07a6a, #b02a20); }
 /* Knocked-down shield gauge (fills while the shield recovers from an axe blow) */
 #shieldbar { width: calc(var(--slot) * 9 + 8px); height: 4px; background: rgba(0,0,0,.55); border: 1px solid #000; box-sizing: border-box; }
 #shieldbar.hidden { display: none; }
@@ -690,3 +696,9 @@ html.large-text .pause-screen > .btn { min-width: min(300px, calc((100vw - 24px)
 html.large-text .pause-screen > .field, html.large-text .pause-screen > .btn-row { width: min(300px, calc((100vw - 24px) / var(--tz, 1))); }
 /* High contrast: the Field Guide pictures sit on white tiles, so an unseen creature's silhouette is not black on black */
 html.high-contrast .guide-card img { background: #fff; border: 1px solid #fff; }
+
+/* The hover tip under the crosshair for farmland, crops and Cooking Pots (ui/hud.js setAimTip) */
+#aimtip { position: absolute; left: 50%; top: calc(50% + 34px); transform: translateX(-50%); max-width: min(92vw, 520px); padding: 4px 10px; font-size: 13px; line-height: 1.35; text-align: center; text-shadow: 1px 1px 0 #000; background: rgba(0, 0, 0, .55); border-radius: 4px; pointer-events: none; }
+#aimtip.hidden { display: none; }
+html.large-text #aimtip { font-size: 17px; }
+html.high-contrast #aimtip { background: #000; border: 1px solid #fff; }

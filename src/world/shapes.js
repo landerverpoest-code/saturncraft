@@ -287,8 +287,14 @@ const HOPPER_BOXES = [
 const COMPOSTER_BOXES = [[0, 0, 0, 1, 2 / 16, 1], [0, 0, 0, 1, 1, 2 / 16], [0, 0, 14 / 16, 1, 1, 1], [0, 0, 2 / 16, 2 / 16, 1, 14 / 16], [14 / 16, 0, 2 / 16, 1, 1, 14 / 16]];
 /** The compost inside a composter at `level` (null when empty). */
 export const compostBox = (level) => (level > 0 ? [2 / 16, 2 / 16, 2 / 16, 14 / 16, Math.min(15, 1 + level * 2) / 16, 14 / 16] : null);
+// Cooking Pot: a round-bellied iron pot, a floor and four walls a little in from the block's edge, rim at 14/16
+const COOKING_POT_BOXES = [[1 / 16, 0, 1 / 16, 15 / 16, 3 / 16, 15 / 16], [1 / 16, 0, 1 / 16, 15 / 16, 14 / 16, 3 / 16], [1 / 16, 0, 13 / 16, 15 / 16, 14 / 16, 15 / 16],
+  [1 / 16, 0, 3 / 16, 3 / 16, 14 / 16, 13 / 16], [13 / 16, 0, 3 / 16, 15 / 16, 14 / 16, 13 / 16]];
+/** What fills a Cooking Pot (null when empty): stock while it waits, stew while it cooks and when ready. */
+export const potContentBox = (id, meta) => (id === B.COOKING_POT_BREW || meta ? [3 / 16, 3 / 16, 3 / 16, 13 / 16, 10 / 16, 13 / 16] : null);
 export function blockBoxes(id, meta) {
   if (id === B.COMPOSTER) return COMPOSTER_BOXES;
+  if (id === B.COOKING_POT || id === B.COOKING_POT_BREW) return COOKING_POT_BOXES;
   if (id === B.ANVIL) return meta & 1 ? ANVIL_Z : ANVIL_X;
   if (id === B.CAMPFIRE) return CAMPFIRE_BOXES;
   if (id === B.OAK_SIGN) return (meta & 1) ? SIGN_X : SIGN_Z;
@@ -330,7 +336,7 @@ SHAPED_COLLISION[B.SNOW_LAYER] = 1;
 SHAPED_COLLISION[B.SEEPSTONE_SPIKE] = 1;
 SHAPED_COLLISION[B.MUD] = 1; // you sink into mud a little
 const MUD_BOX = [[0, 0, 0, 1, 14 / 16, 1]];
-for (const id of [B.COBBLESTONE_WALL, B.MOSSY_COBBLESTONE_WALL, B.OAK_TRAPDOOR, B.ENCHANTING_TABLE, B.ANVIL, B.CAMPFIRE, B.LANTERN, B.BREWING_STAND, B.TURTLE_EGG, B.HOPPER, B.COMPOSTER, B.SCAFFOLDING, B.FLOWER_POT, B.DECORATED_POT, B.CHAIN, B.GRINDSTONE, B.STONECUTTER, B.HUSH_SENSOR, B.CALIBRATED_HUSH_SENSOR, B.HUSH_SHRIEKER, B.LECTERN, B.CAKE]) SHAPED_COLLISION[id] = 1;
+for (const id of [B.COBBLESTONE_WALL, B.MOSSY_COBBLESTONE_WALL, B.OAK_TRAPDOOR, B.ENCHANTING_TABLE, B.ANVIL, B.CAMPFIRE, B.LANTERN, B.BREWING_STAND, B.TURTLE_EGG, B.HOPPER, B.COMPOSTER, B.SCAFFOLDING, B.FLOWER_POT, B.DECORATED_POT, B.CHAIN, B.GRINDSTONE, B.STONECUTTER, B.HUSH_SENSOR, B.CALIBRATED_HUSH_SENSOR, B.HUSH_SHRIEKER, B.LECTERN, B.CAKE, B.COOKING_POT, B.COOKING_POT_BREW]) SHAPED_COLLISION[id] = 1;
 /** Snow layer box (n = meta + 1 layers); collision is one layer lower, so a single layer has none. */
 export const snowBox = (meta, collide = false) => [0, 0, 0, 1, ((meta & 7) + (collide ? 0 : 1)) * 2 / 16, 1];
 for (const id of [B.OAK_FENCE, B.SPRUCE_FENCE, B.BIRCH_FENCE, B.OAK_FENCE_GATE]) SHAPED_COLLISION[id] = 1;

@@ -18,6 +18,7 @@ import { RANDOM_TICKS } from './randomTicks.js';
 import { Circuits, CIRCUIT_BLOCK, CIRCUIT_REACT, CIRCUIT_SETTLE, supported as circuitSupported } from './circuits.js';
 import { updateSpike, crystalSupported } from './caves.js';
 import { scaffoldTick } from './scaffolding.js';
+import { potTick } from './cookingPot.js';
 import { SIDE_DIRS, selectionBox, collisionBoxes, SHAPED_COLLISION, DOOR_UPPER, BED_HEAD } from './shapes.js';
 
 export function chunkKey(cx, cz) { return (cx + 32768) * 65536 + (cz + 32768); }
@@ -372,6 +373,7 @@ export class World {
         }
       } else if (CIRCUIT_BLOCK[id]) this.circuits.tick(t.x, t.y, t.z, id);
       else if (d.scaffold) scaffoldTick(this, t.x, t.y, t.z);
+      else if (id === B.COOKING_POT_BREW) potTick(this, t.x, t.y, t.z); // a simmering pot moves a stage on
       else if (id === B.COMPOSTER && (this.getMeta(t.x, t.y, t.z) & 15) === 7) this.setBlock(t.x, t.y, t.z, B.COMPOSTER, 8); // the compost settles
     }
     this.circuits.drain();

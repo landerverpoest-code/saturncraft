@@ -125,6 +125,15 @@ function baseDrops(blockId, b, rng, meta, tool) {
       if (rng() < 0.02) out.push({ id: I.POISONOUS_POTATO, count: 1 });
       return out;
     }
+    case 'frostroots': {
+      // like carrots: mature 1 + 1 + binomial(3, 4/7) roots, otherwise the root back
+      if ((meta & 7) < 7) return [{ id: I.FROSTROOT, count: 1 }];
+      let n = 2;
+      for (let k = 0; k < 3; k++) if (rng() < 4 / 7) n++;
+      return [{ id: I.FROSTROOT, count: n }];
+    }
+    case 'sungourd_stem': return [{ id: I.SUNGOURD_SEEDS, count: 1 + ((meta & 7) === 7 && rng() < 0.5 ? 1 : 0) }];
+    case 'sungourd': return [{ id: I.GOURD_WEDGE, count: 3 + Math.floor(rng() * 4) }];
     case 'cinderroot': return [{ id: I.CINDERROOT, count: (meta & 7) >= 3 ? randInt(rng, 2, 4) : 1 }];
     case 'beetroots': {
       if ((meta & 7) < 7) return [{ id: I.BEETROOT_SEEDS, count: 1 }];

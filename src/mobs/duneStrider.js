@@ -11,6 +11,7 @@ import { MODELS, FACES } from './models.js';
 import { I } from '../world/items.js';
 import { B, SOLID } from '../world/blocks.js';
 import { BIOMES } from '../world/biomes.js';
+import { mountReady, rideMove, fatigueState, feedMount } from './mounts.js';
 
 export const STRIDER_STEP = 1.5;            // blocks it walks straight up
 export const DASH_COOLDOWN = 55;            // ticks (2.75 s) after a dash
@@ -131,10 +132,9 @@ function striderRidden(m, g) {
   b.stepHeight = STRIDER_STEP;
   m.sitting = false;
   if (!m.dash) m.dash = newDash();
-  if (!m.saddled || !input) { m.move = null; if (m.dash.cooldown > 0) m.dash.cooldown--; return; }
+  if (!mountReady(m) || !input) { m.move = null; if (m.dash.cooldown > 0) m.dash.cooldown--; return; }
   m.yaw = m.rider.yaw;
-  const sp = m.speed() * (input.sprint ? 1.35 : 1);
-  m.move = { forward: input.forward > 0 ? sp : input.forward < 0 ? -sp * 0.3 : 0, strafe: (input.strafe || 0) * sp * 0.4, jump: false, mod: 1 };
+  m.move = rideMove(m, input); // full input and a top speed that tires with the ride (mobs/mounts.js)
   const dash = dashStep(m.dash, !!input.jump, b.onGround);
   if (dash) {
     b.vx += -Math.sin(m.yaw) * dash.forward; b.vz += -Math.cos(m.yaw) * dash.forward;
@@ -160,6 +160,7 @@ export function interactStrider(g, mob, p, st, use) {
   const d = st && st.id != null ? st.id : null;
   if (d === I.SADDLE && !mob.saddled && mob.age >= 0) { mob.saddled = true; mob.sitting = false; use(); g.audio.play('equip', [mob.x, mob.y + 1.5, mob.z]); return true; }
   if (d === B.CACTUS) {
+    if (fatigueState(mob.fatigue || 0) !== 'fresh') { feedMount(g, mob, mob.health < mob.maxHealth ? 2 : 0); use(); return true; } // a tired Strider eats itself back to strength
     if (mob.health < mob.maxHealth) { mob.health = Math.min(mob.maxHealth, mob.health + 2); use(); g.audio.play('eat', [mob.x, mob.y + 2, mob.z]); mob.hearts(g, 2, true); return true; }
     if (mob.feed(g)) { use(); g.audio.play('eat', [mob.x, mob.y + 2, mob.z]); return true; }
     return false;
@@ -229,7 +230,7 @@ export const DUNE_STRIDER = {
   name: 'Dune Strider', role: 'camel', category: CATEGORY.CREATURE, strider: true, rideable: true, sound: 'strider',
   health: 32, speed: 0.18, width: 1.7, height: 2.4, panicSpeed: 1.6,
   drops: [{ id: I.LEATHER, min: 0, max: 2 }], food: [B.CACTUS],
-  ownAI: striderAI, riddenAI: striderRidden, onDeath: striderDeath, customRender: striderRender,
+  mount: {}, ownAI: striderAI, riddenAI: striderRidden, onDeath: striderDeath, customRender: striderRender,
   seatOffset, onSpawn: (m) => { m.body.stepHeight = STRIDER_STEP; m.saddled = false; m.passengerId = null; m.dash = newDash(); },
   saveExtra: (m) => ({ saddled: !!m.saddled }),
   loadExtra: (m, s) => { m.saddled = !!s.saddled; },

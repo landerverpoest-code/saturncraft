@@ -14,6 +14,7 @@ import { BIOMES } from '../world/biomes.js';
 import { LANDMARK_KINDS } from '../world/landmarkKinds.js';
 import { ITEMS, I, CHARTS } from '../world/items.js';
 import { BLOCKS } from '../world/blocks.js';
+import { DISHES } from '../world/cooking.js';
 import { TABS, countFound, recordOf, LEVEL } from './fieldGuide.js';
 
 export const TAB_LABELS = { creatures: 'Creatures', biomes: 'Biomes', structures: 'Structures', items: 'Items of note' };
@@ -165,7 +166,7 @@ function structureEntries() {
 }
 
 /** Finds worth a mention besides what mobs drop and the charts (by `I` key; ones that do not exist are skipped). */
-const EXTRA_NOTABLE = ['DIAMOND', 'BERYL', 'VOID_PEARL', 'CHARM_OF_UNDYING', 'TIDESPEAR', 'ENCHANTED_BOOK', 'SADDLE'];
+const EXTRA_NOTABLE = ['DIAMOND', 'BERYL', 'VOID_PEARL', 'CHARM_OF_UNDYING', 'TIDESPEAR', 'ENCHANTED_BOOK', 'SADDLE', 'FROSTROOT', 'DEWBERRIES', 'SUNGOURD_SEEDS', 'GOURD_WEDGE'];
 
 function itemEntries() {
   const sources = new Map();
@@ -173,6 +174,7 @@ function itemEntries() {
   for (const def of Object.values(MOBS)) for (const id of dropIds(def)) add(id, def.name);
   for (const id of Object.values(CHARTS)) add(id, 'Cartographers and wreck chests');
   for (const k of EXTRA_NOTABLE) if (I[k] !== undefined) add(I[k], null);
+  for (const d of DISHES) add(d.id, 'Cooking Pot'); // every dish the Cooking Pot can make (world/cookingPot.js), so a new recipe joins the guide by itself
   return [...sources.entries()].sort((a, b) => a[0] - b[0]).map(([id, from]) => ({ key: String(id), id, name: itemName(id), from }));
 }
 

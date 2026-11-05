@@ -15,7 +15,12 @@ const BUY = 'buy', SELL = 'sell';
 const OFFERS = {
   farmer: [[BUY, I.WHEAT, 20, I.BERYL, 1], [BUY, I.CARROT, 22, I.BERYL, 1], [BUY, I.POTATO, 26, I.BERYL, 1], [BUY, I.BEETROOT, 15, I.BERYL, 1], [BUY, B.PUMPKIN, 6, I.BERYL, 1, 3], [BUY, I.MELON_SLICE, 24, I.BERYL, 1, 4],
     [SELL, I.BERYL, 1, I.BREAD, 6], [SELL, I.BERYL, 1, I.APPLE, 4], [SELL, I.BERYL, 1, I.CARROT, 5, 2], [SELL, I.BERYL, 1, I.BAKED_POTATO, 4], [SELL, I.BERYL, 1, I.BEETROOT_SEEDS, 6],
-    [SELL, I.BERYL, 1, I.COOKIE, 6, 2], [SELL, I.BERYL, 1, I.PUMPKIN_PIE, 3, 3], [SELL, I.BERYL, 1, B.HAY_BALE, 2, 3], [SELL, I.BERYL, 3, I.GILDED_CARROT, 2, 4], [SELL, I.BERYL, 6, I.GILDED_MELON_SLICE, 1, 5]],
+    [SELL, I.BERYL, 1, I.COOKIE, 6, 2], [SELL, I.BERYL, 1, I.PUMPKIN_PIE, 3, 3], [SELL, I.BERYL, 1, B.HAY_BALE, 2, 3], [SELL, I.BERYL, 3, I.GILDED_CARROT, 2, 4], [SELL, I.BERYL, 6, I.GILDED_MELON_SLICE, 1, 5],
+    // the newer crops and what the pot makes of them: Frostroot, Dewberries and Sungourd seeds are sold for a beryl in handfuls (never as many as
+    // they are bought in: 4 per beryl against 24, 5 against 18, 3 seeds a beryl; the arbitrage test in tests/balance.test.js keeps that so)
+    [BUY, I.FROSTROOT, 24, I.BERYL, 1, 2], [BUY, I.DEWBERRIES, 18, I.BERYL, 1, 2], [BUY, B.SUNGOURD, 6, I.BERYL, 1, 4],
+    [SELL, I.BERYL, 1, I.FROSTROOT, 4, 2], [SELL, I.BERYL, 1, I.DEWBERRIES, 5, 2], [SELL, I.BERYL, 1, I.SUNGOURD_SEEDS, 3, 2],
+    [SELL, I.BERYL, 1, I.BERRY_TART, 2, 3], [SELL, I.BERYL, 3, I.HEARTY_HOTPOT, 1, 4]],
   librarian: [[BUY, I.PAPER, 24, I.BERYL, 1], [BUY, I.BOOK, 4, I.BERYL, 1], [BUY, I.INK_SAC, 12, I.BERYL, 1, 2], [BUY, I.WRITABLE_BOOK, 2, I.BERYL, 1, 4],
     [SELL, I.BERYL, 9, B.BOOKSHELF, 1], [SELL, I.BERYL, 1, B.GLASS, 4], [SELL, I.BERYL, 1, B.LADDER, 4],
     [SELL, I.BERYL, 3, I.COMPASS, 1, 2], [SELL, I.BERYL, 2, B.LANTERN, 1, 2], [SELL, I.BERYL, 4, I.CLOCK, 1, 3], [SELL, I.BERYL, 3, I.NAME_TAG, 1, 3],

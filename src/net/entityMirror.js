@@ -74,7 +74,7 @@ export class EntityMirror {
       case 'item': e = new ItemEntity(s.x, s.y, s.z, s.stack); break;
       case 'xp': e = new XPOrb(s.x, s.y, s.z, s.value); break;
       case 'arrow': e = new Arrow(s.x, s.y, s.z, s.vx, s.vy, s.vz, null, false, s.thrown, s.potion); break;
-      case 'boat': e = s.cart ? new Minecart(s.x, s.y, s.z, s.yaw) : new Boat(s.x, s.y, s.z, s.yaw); break;
+      case 'boat': e = s.cart ? new Minecart(s.x, s.y, s.z, s.yaw, s.variant) : new Boat(s.x, s.y, s.z, s.yaw, s.variant); break;
       case 'falling': e = new FallingBlock(0, 0, 0, s.blockId); break;
       case 'stand': e = new ArmorStand(s.x, s.y, s.z, s.yaw); break;
       case 'cloud': e = new AreaCloud(s.x, s.y, s.z, { potion: s.potion, breath: s.breath, radius: s.radius }); break;
@@ -130,9 +130,12 @@ export class EntityMirror {
       e.vx = s.vx; e.vy = s.vy; e.vz = s.vz; e.stuck = s.stuck; e.pickup = s.pickup;
     } else if (e.kind === 'boat') {
       e.hitTime = s.hitTime;
-      if (e.cart) { e.prevPitch = e.pitch; e.pitch = s.pitch; }
-      const mine = this.game.player.riding === e;
-      e.remoteRider = !mine && s.rider !== -1 ? s.rider : null;
+      if (e.cart) { e.prevPitch = e.pitch; e.pitch = s.pitch; e.fuel = s.lit ? 1 : 0; } // (a lit furnace cart: only that it burns matters here)
+      // who sits where: the driver (seat 0) and the second passenger (seat 1: a player, or a creature led aboard, -2)
+      const p = this.game.player, mine = p.riding === e, seat = p.seat | 0;
+      e.remoteRider = !(mine && seat === 0) && s.rider !== -1 ? s.rider : null;
+      e.remoteRider2 = !(mine && seat === 1) && s.passenger >= 0 ? s.passenger : null;
+      e.mobSeen = s.passenger === -2;
     }
   }
 
@@ -155,7 +158,10 @@ export class EntityMirror {
   tickProxy(e) {
     const g = this.game, s = e.netState, p = g.player;
     this.ticks = g.ticks;
-    if (e.kind === 'boat' && p.riding === e) { this.tickRiddenBoat(e); return; }
+    if (e.kind === 'boat' && p.riding === e) {
+      this.checkBoatSeat(e);
+      if (!(p.seat | 0)) { this.tickRiddenBoat(e); return; } // the driver steers here; a passenger just follows the host's boat
+    }
     if (e.kind === 'mob' && p.riding === e) this.checkSeat(e);
     e.prev = [e.x, e.y, e.z];
     if (e.kind === 'mob') {
@@ -188,6 +194,14 @@ export class EntityMirror {
   /** We sit behind on the host's Dune Strider: get off again if the host gave the seat to someone else (or never gave it). */
   checkSeat(e) {
     const mine = e.netState && e.netState.passenger === this.session.id;
+    e.seatWait = mine ? 0 : (e.seatWait || 0) + 1;
+    if (e.seatWait > 40) { e.seatWait = 0; this.game.dismount(); }
+  }
+
+  /** We sit in this boat: get out again if the host never gave us the seat (someone else was quicker). */
+  checkBoatSeat(e) {
+    const st = e.netState, p = this.game.player, me = this.session.id;
+    const mine = st && ((p.seat | 0) === 0 ? st.rider === me : st.passenger === me);
     e.seatWait = mine ? 0 : (e.seatWait || 0) + 1;
     if (e.seatWait > 40) { e.seatWait = 0; this.game.dismount(); }
   }

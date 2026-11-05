@@ -49,6 +49,7 @@ import { runRandomTicks } from '../world/randomTicks.js';
 import { addXp } from '../player/experience.js';
 import { MAX_USES } from '../mobs/trades.js';
 import { claimSeat } from '../mobs/duneStrider.js';
+import { FURNACE_CART } from '../mobs/mounts.js';
 import { releaseTarnling } from '../mobs/fauna.js';
 import { EFFECTS } from '../player/effects.js';
 import { FATIGUE_AMP, FATIGUE_TICKS, needsFatigue } from '../mobs/oceanMobs.js';
@@ -97,7 +98,7 @@ function joinLink(code) {
   return `${location.origin}${location.pathname}?${keep}`;
 }
 
-const CONTAINER_BLOCKS = new Set([B.CHEST, B.BARREL, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.BREWING_STAND, B.GLOOMSHELL_BOX, ...BOX_COLORS, B.HOPPER, B.DISPENSER, B.DROPPER]);
+const CONTAINER_BLOCKS = new Set([B.CHEST, B.BARREL, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.BREWING_STAND, B.GLOOMSHELL_BOX, ...BOX_COLORS, B.HOPPER, B.DISPENSER, B.DROPPER, B.CAMPFIRE]);
 const contKey = (k, x, y, z) => `${k}:${x},${y},${z}`;
 const finite = (...v) => v.every(Number.isFinite);
 /** Stand-in for a player whose pet is waiting for them while they are offline. */
@@ -406,6 +407,13 @@ export class HostSession extends Session {
         this.broadcast({ t: 'lectern', x: m.x | 0, y: m.y | 0, z: m.z | 0, s: g.lecterns.get(`${m.x | 0},${m.y | 0},${m.z | 0}`) || null }, c);
         break;
       }
+      case 'camp': {
+        // a guest laid food on a campfire or took it off
+        if (!finite(m.x, m.y, m.z) || !this.near(c, m.x, m.y, m.z, 12)) break;
+        g.setCampfire(m.x | 0, m.y | 0, m.z | 0, m.s || null, true);
+        this.broadcast({ t: 'camp', x: m.x | 0, y: m.y | 0, z: m.z | 0, s: g.campfires.get(`${m.x | 0},${m.y | 0},${m.z | 0}`) || null }, c);
+        break;
+      }
       case 'note': {
         // a guest punched or retuned a Chime Block: the host plays it and tells the others (rings from signals travel as block edits)
         if (!finite(m.x, m.y, m.z) || !this.near(c, m.x, m.y, m.z, 12) || m.d !== g.world.dimension) break;
@@ -458,8 +466,15 @@ export class HostSession extends Session {
         // the back seat of a Dune Strider (mobs/duneStrider.js)
         if (b && b.kind === 'mob' && (!m.on || this.near(c, b.x, b.y, b.z, 8))) { claimSeat(b, c.id, !!m.on); break; }
         if (!b || b.kind !== 'boat') break;
-        if (m.on && !b.rider && !b.remoteRider) b.remoteRider = c.id;
-        else if (!m.on && b.remoteRider === c.id) b.remoteRider = null;
+        if (m.on) {
+          // a seat of the boat: the driver's, or the second one behind (the guest may ask for either; the snapshot tells it which it got)
+          if (b.remoteRider === c.id || b.remoteRider2 === c.id || !this.near(c, b.x, b.y, b.z, 8)) break;
+          const seat = b.freeSeat(m.seat === 1 ? 1 : 0);
+          if (seat === 0) b.remoteRider = c.id; else if (seat === 1) b.remoteRider2 = c.id;
+        } else {
+          if (b.remoteRider === c.id) b.remoteRider = null;
+          if (b.remoteRider2 === c.id) b.remoteRider2 = null;
+        }
         break;
       }
       case 'boat': {
@@ -470,6 +485,11 @@ export class HostSession extends Session {
         break;
       }
       case 'bhit': this.remoteBoatHit(c, m); break;
+      case 'fuel': { // a guest stoked a Minecart with Furnace (it used the fuel up on its side)
+        const b = this.entity(m.id);
+        if (b && b.kind === 'boat' && b.furnace && finite(m.y) && this.near(c, b.x, b.y, b.z, 8)) b.addFuel(Math.max(0, Math.min(FURNACE_CART.MAX_FUEL, m.n | 0)), m.y);
+        break;
+      }
       case 'sthit': this.remoteStandHit(c, m); break;
       case 'stuse': this.remoteStandUse(c, m); break;
       case 'fence': this.remoteFence(c, m); break;
@@ -516,7 +536,7 @@ export class HostSession extends Session {
       soc: 1, teams: soc.teamsToWire(), // optional: the social layer (net/social.js); older guests ignore both
       worldSpawn: g.worldSpawn, pos: { x: p.x, y: p.y, z: p.z, yaw: p.yaw },
       player: g.netPlayers[name] || null,
-      signs: [...g.signs], frames: [...g.frames], pots: [...g.pots], lecterns: [...g.lecterns],
+      signs: [...g.signs], frames: [...g.frames], pots: [...g.pots], lecterns: [...g.lecterns], campfires: [...(g.campfires || [])],
       vaults: g.proving ? g.proving.vaults.save() : [], // who opened which Vault (world/provingSystem.js)
       players: [{ id: 0, name: this.name }, ...this.joined().map((o) => ({ id: o.id, name: o.name }))],
       chunks: chunks.length,
@@ -546,7 +566,7 @@ export class HostSession extends Session {
     c.ch.close();
     if (!c.joined) return;
     for (const v of this.viewers.values()) v.ids.delete(c.id);
-    for (const e of this.game.entities.list) { if (e.remoteRider === c.id) e.remoteRider = null; if (e.passengerId === c.id) e.passengerId = null; }
+    for (const e of this.game.entities.list) { if (e.remoteRider === c.id) e.remoteRider = null; if (e.remoteRider2 === c.id) e.remoteRider2 = null; if (e.passengerId === c.id) e.passengerId = null; }
     for (const mob of heldBy(this.game, c.rp.target)) unleash(this.game, mob, true); // the leads they held fall
     // their record keeps the last place they stood (newer than the inventory copy of up to 5 s ago): a rejoin continues there
     const rec = this.game.netPlayers && this.game.netPlayers[c.name];
@@ -661,7 +681,7 @@ export class HostSession extends Session {
       const tip = !m.thrown && m.item && ITEMS[m.item.id] && ITEMS[m.item.id].tipped ? { id: m.item.id, count: 1 } : null;
       ents.spawnArrow(m.x, m.y, m.z, v[0], v[1], v[2], c.rp.target, !!m.crit, m.thrown === 'egg' || m.thrown === 'snowball' || pot || spear ? m.thrown : null, Math.max(0, Math.min(5, m.power | 0)), pot, spear || tip);
     } else if (m.k === 'boat') {
-      ents.spawnBoat(m.x, m.y, m.z, +m.yaw || 0, !!m.cart);
+      ents.spawnBoat(m.x, m.y, m.z, +m.yaw || 0, !!m.cart, m.variant === 'chest' || m.variant === 'furnace' ? m.variant : null);
     } else if (m.k === 'stand') {
       ents.spawnStand(m.x, m.y, m.z, +m.yaw || 0);
     } else if (m.k === 'critter') {
@@ -786,11 +806,7 @@ export class HostSession extends Session {
     if (!b || b.kind !== 'boat' || !s || Math.hypot(b.x - s.x, b.z - s.z) > 6) return;
     b.hits++; b.hitTime = 10;
     g.audio.play('hit_wood', [b.x, b.y, b.z]);
-    if (b.hits >= 3 || s.creative) {
-      b.dead = true;
-      if (b.rider) g.dismount();
-      if (!s.creative) g.entities.spawnItem(b.x, b.y + 0.5, b.z, { id: b.dropId || I.OAK_BOAT, count: 1 });
-    }
+    if (b.hits >= 3 || s.creative) g.entities.breakBoat(b, !s.creative); // lets everybody off, spills the cargo
   }
 
   /** A guest punched an armour stand. */
@@ -853,13 +869,21 @@ export class HostSession extends Session {
       const h = id === B.CHEST ? doubleChestHalves(g.world, x, y, z) : null;
       return h && h[0].x === x && h[0].z === z ? doubleChestView(g.getChest(h[0].x, y, h[0].z), g.getChest(h[1].x, y, h[1].z)) : null;
     }
+    if (kind === 'cargo') { const e = this.entity(x); return e && e.cargo ? e.cargo : null; } // the chest of a Chest Boat or Minecart with Chest (x is the entity's id)
     if (kind === 'furnace') return isFurnace(id) ? g.getFurnace(x, y, z) : null;
     if (kind === 'brewing') return id === B.BREWING_STAND ? g.getBrewingStand(x, y, z) : null;
     return null;
   }
 
+  /** Where a container is, for the reach check: a block's middle, or the boat or cart that holds the cargo (`x` is its id). */
+  contPos(m) {
+    if (m.k !== 'cargo') return [m.x + 0.5, m.y + 0.5, m.z + 0.5];
+    const e = this.entity(m.x);
+    return e ? [e.x, e.y + 0.5, e.z] : [NaN, NaN, NaN];
+  }
+
   openFor(c, m) {
-    if (!this.near(c, m.x + 0.5, m.y + 0.5, m.z + 0.5, 10)) return;
+    if (!this.near(c, ...this.contPos(m), 10)) return;
     const obj = this.container(m.k, m.x, m.y, m.z);
     if (!obj) { c.ch.send({ t: 'cclose', k: m.k, x: m.x, y: m.y, z: m.z }); return; }
     const key = contKey(m.k, m.x, m.y, m.z);
@@ -873,7 +897,7 @@ export class HostSession extends Session {
     const obj = this.container(m.k, m.x, m.y, m.z);
     const reply = (ok) => c.ch.send({ t: ok ? 'cack' : 'cnak', seq: m.seq, ep: m.ep, k: m.k, x: m.x, y: m.y, z: m.z, s: obj ? containerState(m.k, obj) : null });
     if ((m.ep | 0) < c.minEp) return; // the guest already rolled this back
-    if (!obj || !this.near(c, m.x + 0.5, m.y + 0.5, m.z + 0.5, 10) || !applySlotChanges(m.k, obj, m.ch)) { c.minEp = (m.ep | 0) + 1; reply(false); return; }
+    if (!obj || !this.near(c, ...this.contPos(m), 10) || !applySlotChanges(m.k, obj, m.ch)) { c.minEp = (m.ep | 0) + 1; reply(false); return; }
     reply(true);
   }
 
@@ -1071,6 +1095,7 @@ export class HostSession extends Session {
   sendFrame(x, y, z, st) { this.broadcast({ t: 'frame', x, y, z, st }); }
   sendPot(x, y, z, f) { this.broadcast({ t: 'pot', x, y, z, f }); }
   sendLectern(x, y, z, s) { this.broadcast({ t: 'lectern', x, y, z, s }); }
+  sendCampfire(x, y, z, s) { this.broadcast({ t: 'camp', x, y, z, s }); }
   sendNote(x, y, z) { this.broadcast({ t: 'note', x, y, z, d: this.game.world.dimension }); }
 
   tick() {
@@ -1226,6 +1251,7 @@ export class ClientSession extends Session {
     for (const [k, l] of w.signs || []) game.signs.set(k, l);
     for (const [k, st] of w.frames || []) game.frames.set(k, st);
     for (const [k, f] of w.pots || []) { const [x, y, z] = String(k).split(',').map(Number); if (finite(x, y, z)) game.setPot(x, y, z, f, true); }
+    for (const [k, c] of w.campfires || []) { const [x, y, z] = String(k).split(',').map(Number); if (finite(x, y, z)) game.setCampfire(x, y, z, c, true); }
     for (const [k, l] of w.lecterns || []) { const [x, y, z] = String(k).split(',').map(Number); if (finite(x, y, z)) game.setLectern(x, y, z, l, true); }
     if (game.proving) game.proving.vaults.load(w.vaults);
     if (typeof w.dl === 'boolean') game.settings.daylightCycle = w.dl;
@@ -1286,6 +1312,7 @@ export class ClientSession extends Session {
       case 'frame': g.setFrameItem(m.x | 0, m.y | 0, m.z | 0, m.st || null, true); break;
       case 'pot': g.setPot(m.x | 0, m.y | 0, m.z | 0, m.f || null, true); break;
       case 'lectern': g.setLectern(m.x | 0, m.y | 0, m.z | 0, m.s || null, true); break;
+      case 'camp': g.setCampfire(m.x | 0, m.y | 0, m.z | 0, m.s || null, true); break;
       case 'note': if (finite(m.x, m.y, m.z) && m.d === g.world.dimension) g.playChime(m.x | 0, m.y | 0, m.z | 0, { fromNet: true }); break;
       case 'vaultset': if (g.proving && typeof m.k === 'string' && /^-?\d+,-?\d+,-?\d+$/.test(m.k)) g.proving.vaults.set(m.k, m.n); break;
       case 'vaultno': if (g.hud) g.hud.toast(String(m.m || '').slice(0, 80)); break;
@@ -1360,7 +1387,7 @@ export class ClientSession extends Session {
       case 'rep': if (typeof m.k === 'string' && Number.isFinite(m.v)) setRep(g.player, m.k, m.v); break;
       case 'cont': this.onContainerState(m, false); break;
       case 'cack': case 'cnak': this.onContainerReply(m); break;
-      case 'cclose': if (this.cont && this.cont.kind === m.k && this.cont.x === m.x && this.cont.y === m.y && this.cont.z === m.z && g.ui.open === (m.k === 'chest2' ? 'chest' : m.k)) g.ui.close(); break;
+      case 'cclose': if (this.cont && this.cont.kind === m.k && this.cont.x === m.x && this.cont.y === m.y && this.cont.z === m.z && g.ui.open === (m.k === 'chest2' || m.k === 'cargo' ? 'chest' : m.k)) g.ui.close(); break;
       case 'bolt': this._applyingOther = true; this.edits.applying = true; try { g.strikeLightning(m.x, m.y, m.z); } finally { this._applyingOther = false; this.edits.applying = false; } break;
       case 'wake': if (p.sleeping) { g.wakeUp(false); g.milestones.event('sleep'); } break;
       case 'dim': this.followDimension(m); break;
@@ -1384,7 +1411,7 @@ export class ClientSession extends Session {
   requestSpawn(kind, d) {
     if (kind === 'falling') return; // the host's own world simulation makes those
     const r2 = (v) => Math.round(v * 100) / 100;
-    this.send({ t: 'spawn', k: kind, x: r2(d.x), y: r2(d.y), z: r2(d.z), st: d.st ? copyStack(d.st) : undefined, v: d.v ? d.v.map(r2) : undefined, n: d.n, pd: d.pd, crit: d.crit, yaw: d.yaw, power: d.power, col: d.col });
+    this.send({ t: 'spawn', k: kind, x: r2(d.x), y: r2(d.y), z: r2(d.z), st: d.st ? copyStack(d.st) : undefined, v: d.v ? d.v.map(r2) : undefined, n: d.n, pd: d.pd, crit: d.crit, yaw: d.yaw, power: d.power, col: d.col, cart: d.cart || undefined, variant: d.variant || undefined });
   }
 
   /** Right-click on a mob or player. */
@@ -1433,7 +1460,9 @@ export class ClientSession extends Session {
     else if (rb.state === 'lost') g.hud.toast('The village has fallen - raid lost', 4000);
     else if (!prev || prev.id !== rb.id) g.hud.toast('A raid is coming! Defend the village');
   }
-  ride(boat, on) { this.send({ t: 'ride', id: boat.netId, on: on ? 1 : 0 }); }
+  ride(boat, on, seat = 0) { this.send({ t: 'ride', id: boat.netId, on: on ? 1 : 0, seat }); }
+  /** A guest stoked a shared Minecart with Furnace with `ticks` of fuel, pushing off the way `yaw` looks. */
+  fuelCart(boat, ticks, yaw) { this.send({ t: 'fuel', id: boat.netId, n: ticks | 0, y: Math.round(yaw * 100) / 100 }); }
 
   /** Another player hit by us (PvP). */
   targetHurt(rp, amount, source, attacker) {
@@ -1575,6 +1604,7 @@ export class ClientSession extends Session {
   sendFrame(x, y, z, st) { this.send({ t: 'frame', x, y, z, st }); }
   sendPot(x, y, z, f) { this.send({ t: 'pot', x, y, z, f }); }
   sendLectern(x, y, z, s) { this.send({ t: 'lectern', x, y, z, s }); }
+  sendCampfire(x, y, z, s) { this.send({ t: 'camp', x, y, z, s }); }
   sendNote(x, y, z) { this.send({ t: 'note', x, y, z, d: this.game.world.dimension }); }
   /** Use the Vault at x,y,z with the held stack `st` (the host checks its ledger). */
   useVault(x, y, z, st) { this.send({ t: 'vault', x, y, z, st: st ? { id: st.id, count: 1 } : null }); }

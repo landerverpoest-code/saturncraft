@@ -3,6 +3,7 @@
 // worldManager.js and storage.js; the shape of a record, its version and migrations in saveFormat.js.
 import { cleanPotFaces } from './archaeology.js';
 import { cleanLectern } from './books.js';
+import { cleanCamp } from './campfireCooking.js';
 import { encodeMap, decodeMap } from './maps.js';
 import { chunkKey } from './world.js';
 import { cleanEffects } from '../player/effects.js';
@@ -14,6 +15,7 @@ import { cleanBlueprints, MAX_VOLUME_CAP } from './buildTools.js';
 import { SocialState } from '../net/social.js';
 import { CURRENT_VERSION, cleanThumbnail } from './saveFormat.js';
 import { writeWorld } from './worldManager.js';
+import { cargoFromSave, FURNACE_CART } from '../mobs/mounts.js';
 
 export { MAX_WORLDS, listWorlds, loadGame, loadWorld, deleteSave, renameWorld, duplicateWorld, listBackups, restoreBackup, repairWorld, exportWorld, importWorld, writeWorld } from './worldManager.js';
 
@@ -101,6 +103,7 @@ export async function saveGame(game) {
     frames: [...game.frames],
     pots: [...(game.pots || new Map())], // Decorated Pots' sherds (world/archaeology.js)
     lecterns: [...(game.lecterns || new Map())], // the books on Lecterns and their open pages (world/books.js)
+    campfires: [...(game.campfires || new Map())], // the foods cooking on Campfires (world/campfireCooking.js)
     proving: game.proving ? game.proving.save() : null, // Proving Spawner rests and who opened which Vault (world/provingSystem.js)
     maps: [...game.maps.values()].map(encodeMap),
     brewingStands: [...(game.brewingStands || new Map()).values()],
@@ -114,7 +117,7 @@ export async function saveGame(game) {
     onboarding: game.onboarding ? game.onboarding.save() : undefined, // hints shown and First Steps ticked (player/onboarding.js)
     stats: saveStats(p.stats), // blocks, distances, kills, deaths, trades and play time (player/stats.js)
     raids: game.raids ? game.raids.save() : null, // patrol timer and the raid under way (mobs/raids.js)
-    boats: game.entities.list.filter((e) => e.kind === 'boat' && !e.dead).map((e) => ({ x: e.x, y: e.y, z: e.z, yaw: e.yaw, cart: !!e.cart })),
+    boats: game.entities.list.filter((e) => e.kind === 'boat' && !e.dead).map((e) => ({ x: e.x, y: e.y, z: e.z, yaw: e.yaw, cart: !!e.cart, variant: e.variant || undefined, cargo: e.cargo ? e.cargo.slots : undefined, fuel: e.fuel > 0 ? Math.round(e.fuel) : undefined, heading: e.fuel > 0 ? e.heading : undefined })), // (Chest Boats and carts keep their cargo, a furnace cart its fire)
     armorStands: liveStands(game),
     generated: [...game.spawner.generated],
     peddler: game.spawner.peddlerState ? saveCaravanState(game.spawner.peddlerState) : undefined, // chance of the next Roving Peddler
@@ -165,7 +168,12 @@ export function applySave(game, data) {
   if (game.onboarding) game.onboarding.load(data.onboarding);
   game.player.stats = loadStats(data.stats);
   if (game.raids) game.raids.load(data.raids);
-  for (const b of data.boats || []) game.entities.spawnBoat(b.x, b.y, b.z, b.yaw, !!b.cart);
+  for (const b of data.boats || []) {
+    const e = game.entities.spawnBoat(b.x, b.y, b.z, b.yaw, !!b.cart, b.variant === 'chest' || b.variant === 'furnace' ? b.variant : null);
+    if (!e) continue;
+    if (e.cargo) e.cargo = cargoFromSave({ slots: b.cargo });
+    if (e.furnace && Number.isFinite(b.fuel) && b.fuel > 0) { e.fuel = Math.min(b.fuel, FURNACE_CART.MAX_FUEL); if (Array.isArray(b.heading) && b.heading.every(Number.isFinite)) e.heading = [b.heading[0], b.heading[1]]; }
+  }
   loadStands(game, data.armorStands);
   for (const f of data.furnaces) game.furnaces.set(`${f.x},${f.y},${f.z}`, f);
   for (const c of data.chests || []) game.chests.set(`${c.x},${c.y},${c.z}`, c);
@@ -173,6 +181,7 @@ export function applySave(game, data) {
   for (const [k, st] of data.frames || []) game.frames.set(k, st);
   for (const [k, f] of data.pots || []) { const c = cleanPotFaces(f); if (c && game.pots) game.pots.set(k, c); }
   for (const [k, l] of data.lecterns || []) { const c = cleanLectern(l); if (c && game.lecterns) game.lecterns.set(String(k), c); }
+  for (const [k, c] of data.campfires || []) { const s = cleanCamp(c); if (s && game.campfires) game.campfires.set(String(k), s); }
   if (game.proving) game.proving.load(data.proving);
   for (const d of data.maps || []) { const m = decodeMap(d); if (m) game.maps.set(m.id, m); }
   for (const s of data.brewingStands || []) if (s && Array.isArray(s.slots)) game.brewingStands.set(`${s.x},${s.y},${s.z}`, s);

@@ -17,6 +17,15 @@ import { SEASON_KEYS, SEASON_NAMES, SEASON_DATA, DEFAULT_DAYS } from '../world/s
 import { EVENT_KINDS, EVENT_ORDER } from '../world/events.js';
 import { STANDINGS, REP, REFUSE_BELOW, MAX_CUT, MAX_SURCHARGE } from '../mobs/reputation.js';
 import { MAX_USES, LEVEL_NAMES, LEVEL_AT } from '../mobs/trades.js';
+import { BLOCKS } from '../world/blocks.js';
+import { ITEMS } from '../world/items.js';
+import { EFFECTS } from '../player/effects.js';
+import { CROP_TRAITS, bestSeasons, GREENHOUSE_LIGHT, GREENHOUSE_REACH, YIELD_FACTOR } from '../world/farming.js';
+import { KIND_NAMES, KINDS } from '../world/cookingPot.js';
+import { DISHES, KIND_ITEMS } from '../world/cooking.js';
+import { CAMP_SLOTS, CAMP_COOK_TICKS, campCooked } from '../world/campfireCooking.js';
+import { SMELTING } from '../player/crafting.js';
+import { VARIETY_STEP, VARIETY_MAX, VARIETY_WINDOW } from '../player/variety.js';
 
 export const GROUP_ORDER = ['Basics', 'Controls', 'Systems', 'Reference'];
 
@@ -96,6 +105,40 @@ export function buildTopics({ table, touch = false, pad = false } = {}) {
     { p: `The year has four seasons of ${DEFAULT_DAYS} days each by default: ${SEASON_KEYS.map((k) => SEASON_NAMES[k]).join(', ')}. The sky, the leaves and the weather follow them.` },
     { list: SEASON_KEYS.map((k) => `${SEASON_NAMES[k]}: crops grow at ${pct(SEASON_DATA[k].growth)} speed, animals breed with a ${pct(SEASON_DATA[k].breedCooldown)} wait${SEASON_DATA[k].frost > 0.5 ? ', and frost spreads' : ''}.`) },
     { p: 'Turn seasons off in the pause menu, or change their length with /season. The current season shows under the sky dial.' },
+  ]);
+
+  add('farming', 'Farming, soil and greenhouses', 'Systems', [
+    { p: 'Till grass or dirt with a hoe, keep water within four blocks and plant seeds or roots on the farmland. Bone Meal ripens crops quickly; the Composter turns scraps into Bone Meal.' },
+    { h: 'Wild crops' },
+    { list: [
+      'Frostroots grow wild in small plots on snowy plains and in taiga; village farms in cold lands sometimes grow them too.',
+      'Dewberry Brambles stand on forest edges, in flower forests and in meadows, often ripe.',
+      'Sungourds lie in patches on savanna, in jungles and on warm plains; warm villages sometimes plant the stem. Break a Sungourd for Gourd Wedges, craft a wedge into seeds.',
+    ] },
+    { h: 'Seasons and crops' },
+    { list: [
+      'Most crops grow at the season\'s speed (see Seasons): slow in winter, quick in spring.',
+      ...Object.keys(CROP_TRAITS).map((id) => `${BLOCKS[id].name} grows best in ${bestSeasons(+id)}.`),
+    ] },
+    { h: 'Greenhouses' },
+    { p: `A crop with glass, stained glass or a glass pane as the first block above it (within ${GREENHOUSE_REACH} blocks) and a light level of ${GREENHOUSE_LIGHT} or more never grows slower than usual: the winter stays outside. Light the roof's inside with torches if the nights are dark.` },
+    { h: 'Soil fertility' },
+    { p: `Taking the same crop again and again from the same farmland lowers the yield: ${pct(YIELD_FACTOR[1])} the second time, ${pct(YIELD_FACTOR[2])} after that (seeds are never reduced). Rotate between crops, let the farmland lie bare for a while, or use Bone Meal on bare farmland to restore it. Look at farmland or a crop and the tip under the crosshair tells you its state; worn-out soil also looks pale and cracked.` },
+    { h: 'A varied diet' },
+    { p: `Eating something different from your last ${VARIETY_WINDOW - 1} meals gives a little extra saturation: +${VARIETY_STEP} for each different food eaten since you last had it, at most +${VARIETY_MAX}. The same food twice in a row gives nothing.` },
+  ]);
+
+  add('cooking', 'Cooking Pot', 'Systems', [
+    { p: `The Cooking Pot (iron and a bowl, see the recipe book) cooks stews, soups and pies. Stand it on a campfire, fire, lava or a lit furnace, smoker or blast furnace. Put ingredients in one at a time (one of each kind: ${KINDS.map((k) => KIND_NAMES[k].toLowerCase()).join(', ')}), then stir with an empty hand or a stick. When the mix is a dish it simmers for about 20 seconds; take a serving with a Bowl (soups) or an empty hand (pies). Sneak with an empty hand to tip the ingredients out.` },
+    { h: 'Campfire cooking' },
+    { p: `A campfire cooks raw food by itself: right-click it with raw meat, fish, a potato or a Frostroot to lay it on the fire (up to ${CAMP_SLOTS} at a time). Each piece takes ${Math.round(CAMP_COOK_TICKS / 20)} seconds and pops out cooked when it is done; right-click with an empty hand to take everything back off, and breaking the campfire drops what is on it. Cooks: ${Object.keys(SMELTING).map(Number).filter((id) => campCooked(id) !== undefined).map((id) => (ITEMS[id] || BLOCKS[id]).name).join(', ')}.` },
+    { h: 'Ingredient kinds' },
+    { list: KINDS.map((k) => `${KIND_NAMES[k]}: ${KIND_ITEMS[k].filter((id) => id !== undefined).map((id) => (ITEMS[id] || BLOCKS[id]).name).join(', ')}`) },
+    { h: 'Dishes' },
+    { list: DISHES.map((d) => {
+      const fx = (ITEMS[d.id].food.effects || []).map(([t, ticks]) => `${EFFECTS[t].name} ${Math.round(ticks / 20)}s`).join(', ');
+      return `${d.name}: ${d.kinds.map((k) => KIND_NAMES[k]).join(' + ')} (${d.servings} servings, ${ITEMS[d.id].food.hunger} food${fx ? ', ' + fx : ''})`;
+    }) },
   ]);
 
   add('events', 'World events', 'Systems', [

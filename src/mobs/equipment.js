@@ -136,7 +136,16 @@ export function gearXp(eq, rng = Math.random) {
 export const rollCanPickUp = (clamped, rng = Math.random) => rng() < 0.55 * clamped;
 
 /** Defence points and toughness of the worn pieces. */
-export function equipArmor(eq) { return eq ? armorTotals(eq.armor) : { points: 0, toughness: 0 }; }
+export function equipArmor(eq) {
+  if (!eq) return { points: 0, toughness: 0 };
+  const t = armorTotals(eq.armor);
+  // a mount's Horse Armour (mobs/mounts.js) is worn in an armour slot but is no player armour: it counts here only
+  for (const st of eq.armor) {
+    const h = st && ITEMS[st.id] && ITEMS[st.id].horseArmor;
+    if (h) { t.points += h.defense; t.toughness += h.toughness; }
+  }
+  return t;
+}
 
 /**
  * Damage a mob takes after its natural armour (def.armor, applied as before to every source)

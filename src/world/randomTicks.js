@@ -11,6 +11,8 @@ import { CIRCUIT_SETTLE } from './circuits.js';
 import { tickHushFlower } from './dimensions/hushvine.js';
 import { caveRandomTick, CAVE_TICKING } from './caves.js';
 import { climate, seasonalChance } from './seasons.js';
+import { cropGrowthMultiplier, brambleChance, BRAMBLE_LIGHT, REST_CHANCE, MOISTURE_MASK, restedMeta, hasMemory } from './farming.js';
+import { BREW_STAGE_TICKS } from './cookingPot.js';
 
 export const RANDOM_TICK_SPEED = 3;
 
@@ -37,7 +39,7 @@ export function growthSpeed(world, x, y, z, crop = B.WHEAT) {
   let f = 1;
   for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) {
     let g = 0;
-    if (world.getBlock(x + dx, y - 1, z + dz) === B.FARMLAND) g = world.getMeta(x + dx, y - 1, z + dz) > 0 ? 3 : 1;
+    if (world.getBlock(x + dx, y - 1, z + dz) === B.FARMLAND) g = (world.getMeta(x + dx, y - 1, z + dz) & MOISTURE_MASK) > 0 ? 3 : 1;
     if (dx || dz) g /= 4;
     f += g;
   }
@@ -51,10 +53,12 @@ export function growthSpeed(world, x, y, z, crop = B.WHEAT) {
 /** Chance per random tick that a crop with growth speed f advances a stage. */
 export function cropGrowthChance(f) { return 1 / (Math.floor(25 / f) + 1); }
 
-/** The same, scaled by the season (crops sleep in winter and race in spring, overworld only; world/seasons.js). */
-export function seasonalCropChance(world, f) {
+/** The same, scaled by the season (crops sleep in winter and race in spring, overworld only; world/seasons.js). Given the crop and its place it also reads the crop's seasonal preference and any greenhouse roof. */
+export function seasonalCropChance(world, f, id, x, y, z) {
   const p = cropGrowthChance(f);
-  return !world.dimension || world.dimension === 'overworld' ? seasonalChance(p) : p;
+  if (world.dimension && world.dimension !== 'overworld') return p;
+  // crops with a seasonal preference, and crops under a lit glass roof, have their own factor (world/farming.js)
+  return id === undefined ? seasonalChance(p) : Math.min(1, p * cropGrowthMultiplier(world, x, y, z, id));
 }
 
 /**
@@ -81,10 +85,12 @@ export function randomTickBlock(world, x, y, z, id, rng = Math.random) {
       if (!OPAQUE[above] && above !== B.WATER && rawLight(world, tx, ty + 1, tz) >= 4) world.setBlock(tx, ty, tz, B.GRASS);
     }
   } else if (id === B.FARMLAND) {
-    const m = world.getMeta(x, y, z);
-    if (farmlandHydrated(world, x, y, z)) { if (m !== 7) world.setBlock(x, y, z, B.FARMLAND, 7); }
-    else if (m > 0) world.setBlock(x, y, z, B.FARMLAND, m - 1);
-    else if (!CROPS.has(world.getBlock(x, y + 1, z))) world.setBlock(x, y, z, B.DIRT);
+    // meta: moisture in bits 0-2, the soil's memory of the last crop above that (world/farming.js)
+    const m = world.getMeta(x, y, z), wet = m & MOISTURE_MASK, cropAbove = CROPS.has(world.getBlock(x, y + 1, z));
+    if (!cropAbove && hasMemory(m) && rng() < REST_CHANCE) { world.setBlock(x, y, z, B.FARMLAND, restedMeta(m) | (farmlandHydrated(world, x, y, z) ? MOISTURE_MASK : wet)); return; } // resting soil recovers
+    if (farmlandHydrated(world, x, y, z)) { if (wet !== 7) world.setBlock(x, y, z, B.FARMLAND, (m & ~MOISTURE_MASK) | 7); }
+    else if (wet > 0) world.setBlock(x, y, z, B.FARMLAND, m - 1);
+    else if (!cropAbove) world.setBlock(x, y, z, B.DIRT);
   } else if (id === B.SUGAR_CANE) {
     // the top of a stack under 3 blocks grows a new block every 16 random ticks
     if (world.getBlock(x, y + 1, z)) return;
@@ -135,6 +141,12 @@ export function randomTickBlock(world, x, y, z, id, rng = Math.random) {
     // berries ripen in the light: 1 in 5 per random tick, ages 0-3
     const age = world.getMeta(x, y, z) & 3;
     if (age < 3 && rng() < 0.2 && rawLight(world, x, y + 1, z) >= 9) world.setBlock(x, y, z, id, age + 1);
+  } else if (id === B.DEWBERRY_BRAMBLE) {
+    // the bramble ripens in dimmer light than the sweet berry bush and likes the cool seasons (world/farming.js)
+    const age = world.getMeta(x, y, z) & 3;
+    if (age < 3 && rawLight(world, x, y + 1, z) >= BRAMBLE_LIGHT && rng() < brambleChance(world, x, y, z)) world.setBlock(x, y, z, id, age + 1);
+  } else if (id === B.COOKING_POT_BREW) {
+    world.scheduleTick(x, y, z, BREW_STAGE_TICKS); // a simmering pot keeps simmering after a reload (scheduled ticks are not saved)
   } else if (id === B.COCOA) {
     const m = world.getMeta(x, y, z);
     if (((m >> 2) & 3) < 2 && rng() < 0.2) world.setBlock(x, y, z, B.COCOA, m + 4);
@@ -159,7 +171,7 @@ export function randomTickBlock(world, x, y, z, id, rng = Math.random) {
     if (rawLight(world, x, y + 1, z) < 9) return;
     if (stage >= 7 && STEM_FRUIT[id]) {
       // a ripe stem sets a melon / pumpkin on a free neighbouring spot of soil
-      if (rng() >= seasonalCropChance(world, growthSpeed(world, x, y, z, id))) return;
+      if (rng() >= seasonalCropChance(world, growthSpeed(world, x, y, z, id), id, x, y, z)) return;
       if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => world.getBlock(x + dx, y, z + dz) === STEM_FRUIT[id])) return;
       const [dx, dz] = [[1, 0], [-1, 0], [0, 1], [0, -1]][Math.floor(rng() * 4)];
       const below = world.getBlock(x + dx, y - 1, z + dz);
@@ -167,7 +179,7 @@ export function randomTickBlock(world, x, y, z, id, rng = Math.random) {
       return;
     }
     if (stage >= 7) return;
-    if (rng() < seasonalCropChance(world, growthSpeed(world, x, y, z, id))) world.setBlock(x, y, z, id, stage + 1);
+    if (rng() < seasonalCropChance(world, growthSpeed(world, x, y, z, id), id, x, y, z)) world.setBlock(x, y, z, id, stage + 1);
   }
 }
 
@@ -194,7 +206,7 @@ function rawBlockLight(world, x, y, z) { return world.getLight(x, y, z) & 15; }
 
 /** Ids that react to random ticks (fast pre-filter). */
 export const RANDOM_TICKS = new Uint8Array(BLOCK_LIMIT);
-for (const id of [B.HUSHVINE_FLOWER, B.CINDERROOT, B.GRASS, B.FARMLAND, B.SUGAR_CANE, B.BAMBOO, B.KELP, B.CAVE_VINES, B.CAVE_VINES_LIT, B.LAVA, B.FIRE, B.SNOW_LAYER, B.ICE, B.COCOA, B.SWEET_BERRY_BUSH, B.TURTLE_EGG, ...CROPS, ...LEAVES, ...Object.keys(SAPLING_TREE).map(Number)]) RANDOM_TICKS[id] = 1;
+for (const id of [B.HUSHVINE_FLOWER, B.CINDERROOT, B.GRASS, B.FARMLAND, B.SUGAR_CANE, B.BAMBOO, B.KELP, B.CAVE_VINES, B.CAVE_VINES_LIT, B.LAVA, B.FIRE, B.SNOW_LAYER, B.ICE, B.COCOA, B.SWEET_BERRY_BUSH, B.DEWBERRY_BRAMBLE, B.COOKING_POT_BREW, B.TURTLE_EGG, ...CROPS, ...LEAVES, ...Object.keys(SAPLING_TREE).map(Number)]) RANDOM_TICKS[id] = 1;
 for (let id = 0; id < BLOCK_LIMIT; id++) if (CIRCUIT_SETTLE[id]) RANDOM_TICKS[id] = 1;
 const CAVE_TICK = new Uint8Array(BLOCK_LIMIT);
 for (const id of CAVE_TICKING) { CAVE_TICK[id] = 1; RANDOM_TICKS[id] = 1; }

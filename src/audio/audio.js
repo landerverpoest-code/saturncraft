@@ -279,6 +279,11 @@ export class Audio {
       case 'shield_break': this.noise(t, 0.25, 500, 1, 0.6 * gain, out, 'lowpass'); this.tone(t, 0.3, 140, 60, 0.3 * gain, out, 'sawtooth'); this.noise(t + 0.05, 0.1, 2500, 2, 0.3 * gain, out); break; // an axe knocks a shield down
       case 'fuse': this.noise(t, 1.2, 5000, 0.6, 0.25 * gain, out, 'highpass'); break;
       case 'rail': this.noise(t, 0.12, 2200, 3, 0.12 * gain, out); this.tone(t, 0.05, 900, 700, 0.04 * gain, out, 'square'); break;
+      // mounts and vehicles (mobs/mounts.js): a paddle stroke, a tired mount's heavy breathing, leather tack buckled on, a furnace cart's fire taking
+      case 'paddle': this.noise(t, 0.25, 700, 0.8, 0.16 * gain, out, 'lowpass'); this.noise(t + 0.12, 0.2, 1400, 1, 0.07 * gain, out); break;
+      case 'mount_pant': this.noise(t, 0.35, 900, 0.7, 0.14 * gain, out, 'lowpass'); this.noise(t + 0.45, 0.35, 800, 0.7, 0.14 * gain, out, 'lowpass'); this.tone(t, 0.3, 160, 110, 0.06 * gain, out, 'sawtooth'); break;
+      case 'harness': this.noise(t, 0.08, 1800, 3, 0.2 * gain, out); this.noise(t + 0.09, 0.06, 2600, 4, 0.15 * gain, out); this.tone(t + 0.1, 0.12, 1500, 1900, 0.05 * gain, out, 'triangle'); break;
+      case 'cart_fuel': this.noise(t, 0.5, 600, 0.6, 0.2 * gain, out, 'lowpass'); this.tone(t, 0.3, 140, 90, 0.1 * gain, out, 'sawtooth'); this.noise(t + 0.15, 0.04, 3000, 5, 0.1 * gain, out); break;
       case 'croak': this.tone(t, 0.09, 140 + Math.random() * 30, 110, 0.2 * gain, out, 'sawtooth'); this.tone(t + 0.12, 0.12, 160, 100, 0.18 * gain, out, 'sawtooth'); break;
       case 'squish': this.noise(t, 0.12, 500, 2, 0.3 * gain, out, 'lowpass'); this.tone(t, 0.1, 160, 90, 0.12 * gain, out, 'sine'); break;
       case 'clank': this.tone(t, 0.18, 220, 120, 0.25 * gain, out, 'square'); this.noise(t, 0.15, 1800, 2, 0.3 * gain, out); break;

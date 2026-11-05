@@ -198,6 +198,10 @@ MODELS.galloper = {
   parts: [
     ['body', [10, 10, 22], [0, 18, 2], [0, 0, 0], '#8a5a32'],
     ['saddle', [10.6, 3, 8], [0, 18, 2], [0, 5.5, -1], '#5a3418'],
+    // Horse Armour (mobs/mounts.js): plates over the body, neck and head, tinted by tier and shown only when worn (hidden from the Field Guide picture)
+    ['bardingBody', [10.9, 9, 14], [0, 18, 2], [0, -0.3, 4.5], '#a8aeb6', { gear: true }],
+    ['bardingNeck', [5.8, 12.4, 7.8], [0, 22, -8], [0, 4, -1], '#a8aeb6', { gear: true }],
+    ['bardingHead', [6.6, 2.4, 11.6], [0, 29, -10], [0, 3.8, -3], '#a8aeb6', { gear: true }],
     ['neck', [5, 12, 7], [0, 22, -8], [0, 4, -1], '#8a5a32'],
     ['mane', [2, 12, 4], [0, 22, -8], [0, 5, 2.4], '#3a2414'],
     ['head', [6, 6, 11], [0, 29, -10], [0, 1, -3], '#8a5a32', { face: 'galloper' }],

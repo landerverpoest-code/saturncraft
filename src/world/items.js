@@ -451,3 +451,58 @@ const WAND_ICON = [
   '......ss........', '.....ss.........', '....ss..........', '...ss...........', '..ss............', '.ss.............', '................', '................',
 ];
 item('surveyor_wand', 'Surveyor Wand', { stack: 1, wand: true, iconStyle: [WAND_ICON, { s: '#8a6a3c', h: '#3fd0e0', H: '#c8f8ff' }] });
+
+// Cooking and farming depth (world/cookingPot.js, world/farming.js), appended so no item id shifts: three new crops (a winter-hardy
+// root, a berry bramble that regrows, a gourd with a stem) and the dishes of the Cooking Pot. Dishes are only made in the pot;
+// each has a short buff and the usual food limits (saturation at most 2.4 x hunger). The soups and stews leave their bowl.
+item('frostroot', 'Frostroot', { food: { hunger: 2, saturation: 2.4 }, places: B.FROSTROOTS, iconStyle: ['beetroot', { h: '#b9a4e4', H: '#dcd0f4', s: '#5fa89a' }] });
+item('roasted_frostroot', 'Roasted Frostroot', { food: { hunger: 5, saturation: 6 }, iconStyle: ['potato', { h: '#8a6aa8', H: '#b89ad0', s: '#4a3a62' }] });
+item('dewberries', 'Dewberries', { food: { hunger: 2, saturation: 1.2 }, places: B.DEWBERRY_BRAMBLE, iconStyle: ['seeds', { h: '#3a3fa8', H: '#6a70e0' }] });
+item('sungourd_seeds', 'Sungourd Seeds', { places: B.SUNGOURD_STEM, iconStyle: ['seeds', { h: '#e0b04a', H: '#f0d080' }] });
+item('gourd_wedge', 'Gourd Wedge', { food: { hunger: 3, saturation: 2.4 }, iconStyle: ['meat', { h: '#e0a42a', w: '#6a8a3a' }] });
+const dish = (key, name, hunger, sat, effects, bowl, tint) => item(key, name, {
+  stack: bowl ? 1 : 64, food: { hunger, saturation: sat, effects, ...(bowl ? { leaves: 'bowl' } : {}) },
+  iconStyle: bowl ? ['bowl', { h: '#8a6034', H: '#a87a48', w: tint }] : ['bread', { h: tint, H: '#f0c070', w: '#8a5426' }],
+});
+dish('hunters_stew', "Hunter's Stew", 8, 9.6, [['regeneration', 100, 0]], true, '#9a4a2a');
+dish('fishers_chowder', "Fisher's Chowder", 7, 8.4, [['fire_resistance', 1200, 0]], true, '#d8c8a0');
+dish('foragers_stew', "Forager's Stew", 6, 7.2, [['night_vision', 1200, 0]], true, '#7a5a8a');
+dish('hearty_hotpot', 'Hearty Hotpot', 9, 10.8, [['regeneration', 160, 0]], true, '#a0603a');
+dish('seafarers_pot', "Seafarer's Pot", 8, 9.6, [['fire_resistance', 900, 0], ['night_vision', 900, 0]], true, '#4a8a9a');
+dish('gourd_soup', 'Gourd Soup', 7, 8.4, [['absorption', 1200, 0]], true, '#e0a42a');
+dish('berry_tart', 'Berry Tart', 6, 4.8, [['night_vision', 900, 0]], false, '#4a4ab0');
+dish('gourd_pie', 'Gourd Pie', 8, 6.4, [['regeneration', 80, 0]], false, '#d89a22');
+
+// Mounts and vehicles round (mobs/mounts.js, entities/entities.js), appended so no item id shifts:
+// a Chest Boat (a second storage seat for cargo), a Minecart with Chest (storage, pulled along) and a Minecart with Furnace
+// (burns fuel and pushes carts ahead of it), Horse Armour in three tiers for Gallopers (worn in a mount's armour slot, not by players)
+// and the Thistle Harness, the leather tack that makes a tamed Thistlehorn ridable (with a Saddle).
+const BOAT_ICON_CHEST = [
+  '................', '................', '................', '.....cccc.......', '....cCCCCc....w.', '....cCkkCc...ww.', '....cCCCCc..ww..', '.s..cccccc.ww..s',
+  '.ssssssssssssss.', '.sHHHHHHHHHHHHs.', '..shhhhhhhhhhs..', '..shhhhhhhhhhs..', '...ssssssssss...', '................', '................', '................',
+];
+const CART_ICON_CHEST = [
+  '................', '................', '.....cccccc.....', '....cCCCCCCc....', '....cCCkkCCc....', '....cCCCCCCc....', '.hhhhhhhhhhhhhh.', '.hHHHHHHHHHHHHh.',
+  '.hHhhhhhhhhhhHh.', '..hhhhhhhhhhhh..', '..hhhhhhhhhhhh..', '...ss......ss...', '..ssss....ssss..', '...ss......ss...', '................', '................',
+];
+const CART_ICON_FURNACE = [
+  '................', '................', '.....gggggg.....', '....gGGGGGGg....', '....gGkkkkGg....', '....gGkffkGg....', '.hhhhgggggghhhh.', '.hHHHHHHHHHHHHh.',
+  '.hHhhhhhhhhhhHh.', '..hhhhhhhhhhhh..', '..hhhhhhhhhhhh..', '...ss......ss...', '..ssss....ssss..', '...ss......ss...', '................', '................',
+];
+item('oak_chest_boat', 'Chest Boat', { stack: 1, boat: true, boatVariant: 'chest', iconStyle: [BOAT_ICON_CHEST, { h: '#9c7444', H: '#c09060', s: '#5a3d1e', w: '#7a5a32', c: '#6a4a24', C: '#a87a3c', k: '#2a2a2e' }] });
+item('minecart_chest', 'Minecart with Chest', { stack: 1, minecart: true, cartVariant: 'chest', iconStyle: [CART_ICON_CHEST, { h: '#8a8a90', H: '#b8b8c0', s: '#2a2a2e', c: '#6a4a24', C: '#a87a3c', k: '#2a2a2e' }] });
+item('minecart_furnace', 'Minecart with Furnace', { stack: 1, minecart: true, cartVariant: 'furnace', iconStyle: [CART_ICON_FURNACE, { h: '#8a8a90', H: '#b8b8c0', s: '#2a2a2e', g: '#6e6e72', G: '#8a8a8e', k: '#1c1c1e', f: '#f08a2a' }] });
+const HORSE_ARMOR_ICON = [
+  '................', '................', '....hh..........', '...hHHh.........', '..hHHhhhhhh.....', '..hHhhhhhhhhh...', '..hhhhhhhHHhhh..', '...hhhhhhhhhhhh.',
+  '....hhhhhhhhhh..', '....hs..hs.hs...', '....hs..hs.hs...', '................', '................', '................', '................', '................',
+];
+// Horse Armour: [key, name, defence points, toughness, tiring factor (heavier plate wears a mount out sooner), colours]
+export const HORSE_ARMOR = {};
+for (const [tier, name, defense, toughness, tiring, h, H, s] of [
+  ['iron', 'Iron', 5, 0, 1.15, '#cfcfd4', '#f0f0f4', '#7a7a80'],
+  ['gold', 'Gold', 7, 0, 1.1, '#f1cc3a', '#fff0a0', '#a8841e'],
+  ['diamond', 'Diamond', 11, 2, 1.3, '#5fe6dc', '#c8fff8', '#2a9a94'],
+]) {
+  HORSE_ARMOR[tier] = item(`${tier}_horse_armor`, `${name} Horse Armour`, { stack: 1, horseArmor: { tier, defense, toughness, tiring }, iconStyle: [HORSE_ARMOR_ICON, { h, H, s }] }).id;
+}
+item('thistle_harness', 'Thistle Harness', { stack: 1, harness: 'thistlehorn', iconStyle: ['saddle', { h: '#a8743c', H: '#c8965a', s: '#e8c860' }] });

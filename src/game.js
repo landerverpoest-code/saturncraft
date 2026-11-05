@@ -37,6 +37,7 @@ import { FrameRenderer } from './render/frames.js';
 import { PotRenderer } from './render/pots.js';
 import { BrushSites, isSuspicious, cleanPotFaces } from './world/archaeology.js';
 import { cleanLectern, lecternMeta } from './world/books.js';
+import { cleanCamp, campTick } from './world/campfireCooking.js';
 import { projectileHit } from './world/signalBlocks.js';
 import { chimeSoundAt, pitchOf, noteName, noteColor } from './world/chimes.js';
 import { Lightning } from './sky/lightning.js';
@@ -91,6 +92,7 @@ import { HushSystem } from './world/hushSystem.js';
 import { WorldEvents } from './world/events.js';
 import { darknessFactor } from './world/deepHush.js';
 import { resolveBlock } from './player/shield.js';
+import { safeDismountSpot, boatSeatOffset } from './mobs/mounts.js';
 
 // Spherical (radial distance) fog instead of view-depth fog, so chunk edges never show at screen corners
 THREE.ShaderChunk.fog_vertex = `#ifdef USE_FOG
@@ -136,6 +138,7 @@ export class Game {
     this.frames = new Map();      // "x,y,z" -> the item stack in an item frame
     this.pots = new Map();        // "x,y,z" -> a Decorated Pot's four sides (world/archaeology.js)
     this.lecterns = new Map();    // "x,y,z" -> { book, page } of a Lectern (world/books.js)
+    this.campfires = new Map();   // "x,y,z" -> { slots: [{ id, t } | null x4] } the foods cooking on a campfire (world/campfireCooking.js)
     this.archaeology = new BrushSites(); // digs being brushed (world/archaeology.js)
     this.maps = new Map();        // map id -> filled map (world/maps.js)
     this.brewingStands = new Map(); // "x,y,z" -> Brewing Alembic state (see world/brewing.js)
@@ -625,23 +628,31 @@ export class Game {
     }
   }
 
-  // ---- boats --------------------------------------------------------------------
-  mount(boat) {
+  // ---- boats ----------------------------------------------------------------------------------
+  /** Climb into a boat (the driver's seat, or the second one when it is taken), a cart or a mount. Returns false when there is no seat. */
+  mount(boat, want = -1) {
     const p = this.player;
-    boat.rider = p; p.riding = boat;
-    if (boat.netProxy && this.net) this.net.ride(boat, true); // a shared boat: tell the host we steer it
+    let seat = 0;
+    if (boat.kind === 'boat') { seat = boat.freeSeat(want); if (seat < 0) return false; }
+    p.seat = seat;
+    if (seat === 0) boat.rider = p; else boat.rider2 = p; // (mobs and carts have the one seat)
+    p.riding = boat;
+    if (boat.netProxy && this.net) this.net.ride(boat, true, seat); // a shared boat: tell the host we sit in it
     this.seatPlayer();
+    return true;
   }
 
   dismount() {
     const p = this.player, boat = p.riding;
     if (!boat) return;
-    boat.rider = null; p.riding = null;
+    if (boat.rider === p) boat.rider = null;
+    if (boat.rider2 === p) boat.rider2 = null;
+    p.riding = null; p.seat = 0;
     if (boat.netProxy && this.net) this.net.ride(boat, false);
-    const bx = Math.floor(boat.x), by = Math.floor(boat.y + 0.5), bz = Math.floor(boat.z);
-    const spot = this.standNextTo(bx, by, bz);
-    if (spot) p.setPosition(spot.x, spot.y, spot.z);
-    else p.setPosition(boat.x, boat.y + 0.6, boat.z);
+    // the nearest free ground, never inside a block (mobs/mounts.js)
+    const spot = safeDismountSpot(this.world, boat.x, Math.floor(boat.y + 0.5), boat.z, 2);
+    p.setPosition(spot.x, spot.y, spot.z);
+    p.body.fallDistance = 0;
   }
 
   /** Keep the rider on the seat. */
@@ -650,6 +661,7 @@ export class Game {
     // a Dune Strider seats two: whoever rides the host's copy steers from the front, a guest sits behind
     const off = r.def && r.def.seatOffset ? r.def.seatOffset(r, !!r.netProxy) : null;
     if (off) p.body.setPos(b.x + off[0], b.y + off[1], b.z + off[2]);
+    else if (r.kind === 'boat' && !r.cart) { const [dx, dz] = boatSeatOffset(r.yaw, p.seat | 0); p.body.setPos(b.x + dx, b.y + (r.seatY ?? -0.3), b.z + dz); } // the driver in front, a passenger behind
     else p.body.setPos(b.x, b.y + (r.seatY ?? -0.3), b.z);
     p.body.vx = p.body.vy = p.body.vz = 0;
     p.body.fallDistance = 0;
@@ -861,6 +873,12 @@ export class Game {
       else if (l) { this.setLectern(x, y, z, null); this.entities.spawnItem(x + 0.5, y + 1, z + 0.5, l.book); }
       if (l && this.ui.lectern && this.ui.lectern.k === `${x},${y},${z}`) this.ui.close();
     }
+    if (id === B.CAMPFIRE) {
+      // a broken campfire drops the food on it (on a guest the host drops it when it sees the edit)
+      const c = this.campfires.get(`${x},${y},${z}`);
+      if (c && this.net && this.net.isClient) this.setCampfire(x, y, z, null, true);
+      else if (c) { this.setCampfire(x, y, z, null); for (const e of c.slots) if (e) this.entities.spawnItem(x + 0.5, y + 0.5, z + 0.5, { id: e.id, count: 1, damage: 0 }); }
+    }
     if (id === B.CHEST) {
       // the other half of a double chest becomes a single chest again
       const u = unpairAfterBreak(this.world, x, y, z, meta);
@@ -1003,6 +1021,37 @@ export class Game {
     const k = `${x},${y},${z}`, f = cleanPotFaces(faces);
     if (f) this.pots.set(k, f); else this.pots.delete(k);
     if (!fromNet && this.net && this.net.sendPot) this.net.sendPot(x, y, z, f);
+  }
+
+  /**
+   * Set (or clear, with null) the foods cooking on a Campfire; shared in multiplayer (world/campfireCooking.js).
+   * Progress only ticks on the host / in single player; guests hear about every change of what lies on the fire.
+   */
+  setCampfire(x, y, z, state, fromNet = false) {
+    const k = `${x},${y},${z}`, s = cleanCamp(state);
+    if (s) this.campfires.set(k, s); else this.campfires.delete(k);
+    if (!fromNet && this.net && this.net.sendCampfire) this.net.sendCampfire(x, y, z, s);
+  }
+
+  /** Cook the foods lying on campfires: each pops out above the fire when done. Costs nothing while no campfire holds food. */
+  tickCampfires() {
+    if (!this.campfires.size) return;
+    const w = this.world;
+    for (const [k, c] of this.campfires) {
+      const [x, y, z] = k.split(',').map(Number);
+      if (!w.isLoaded(x, z)) continue;
+      if (w.getBlock(x, y, z) !== B.CAMPFIRE) { // the fire went out some other way: the food falls out
+        for (const e of c.slots) if (e) this.entities.spawnItem(x + 0.5, y + 0.5, z + 0.5, { id: e.id, count: 1, damage: 0 });
+        this.setCampfire(x, y, z, null);
+        continue;
+      }
+      const done = campTick(c);
+      if (this.ticks % 12 === 0 && this.particles.smoke) this.particles.smoke(x + 0.5, y + 0.9, z + 0.5, 1, 0.15); // a thin extra wisp while cooking
+      if (!done.length) continue;
+      for (const id of done) this.entities.spawnItem(x + 0.5, y + 0.8, z + 0.5, { id, count: 1, damage: 0 }, [(Math.random() - 0.5) * 0.1, 0.18, (Math.random() - 0.5) * 0.1]);
+      this.audio.play('pop', [x + 0.5, y + 0.8, z + 0.5]);
+      this.setCampfire(x, y, z, c); // (an emptied campfire is forgotten, the others are sent on)
+    }
   }
 
   /**
@@ -1286,7 +1335,7 @@ export class Game {
     // Hold the player in place until the terrain under them has loaded (spawn, respawn, teleports)
     const p = this.player;
     if (p.sleeping) this.tickSleep();
-    if (p.riding && (mv.sneak || p.riding.dead || p.dead)) this.dismount();
+    if (p.riding && (mv.sneak || p.riding.dead || p.riding.removed || p.riding.deathTime > 0 || p.dead)) this.dismount(); // (a mount that is dying drops its rider)
     this.boatInput = p.riding ? mv : null;
     const still = { forward: 0, strafe: 0, jump: false, sneak: false, sprint: false };
     this.dims.tick(); // portals, arrivals, the Hollow's boss
@@ -1309,7 +1358,7 @@ export class Game {
     if (!this.net || this.net.isHost) this.raids.tick();
     this.tickMaps();
     this.guide.tick();
-    if (!this.net || this.net.isHost) { this.tickFurnaces(); this.tickBrewing(); this.tickHoppers(); } // guests see the host's furnaces and alembics
+    if (!this.net || this.net.isHost) { this.tickFurnaces(); this.tickBrewing(); this.tickHoppers(); this.tickCampfires(); } // guests see the host's furnaces and alembics
     this.effectParticles();
     this.particles.tick();
     if (this.net) this.net.tick();

@@ -10,7 +10,7 @@ import { railHeight, railShapeOf, RAIL_ON } from './rails.js';
 import { ARTS, artOf, partOf } from './paintings.js';
 import { crystalTex, orientPoint } from './caves.js';
 import { circuitParts, partPoint, wireMask, wireColor } from './circuitShapes.js';
-import { doorBox, ladderBox, SIDE_DIRS, DOOR_UPPER, BED_HEAD, BED_BOX, slabBox, stairBoxes, fenceConnects, fenceRenderBoxes, gateRenderBoxes, paneConnects, paneBoxes, snowBox, wallConnects, wallBoxes, trapdoorBox, blockBoxes, compostBox, CANDLE_SPOTS } from './shapes.js';
+import { doorBox, ladderBox, SIDE_DIRS, DOOR_UPPER, BED_HEAD, BED_BOX, slabBox, stairBoxes, fenceConnects, fenceRenderBoxes, gateRenderBoxes, paneConnects, paneBoxes, snowBox, wallConnects, wallBoxes, trapdoorBox, blockBoxes, compostBox, potContentBox, CANDLE_SPOTS } from './shapes.js';
 
 export const PAD = 18;
 export const PAD_VOL = PAD * PAD * PAD;
@@ -62,7 +62,8 @@ const NEST_HONEY = texId('nest_front_honey'), HIVE_HONEY = texId('hive_front_hon
 const CROP_TILES = { [B.WHEAT]: [0, 1, 2, 3, 4, 5, 6, 7].map((i) => texId('wheat_' + i)), [B.CARROTS]: [0, 0, 1, 1, 2, 2, 2, 3].map((i) => texId('carrots_' + i)),
   [B.MELON_STEM]: [0, 1, 2, 3, 4, 5, 6, 7].map((i) => texId('stem_' + i)), [B.PUMPKIN_STEM]: [0, 1, 2, 3, 4, 5, 6, 7].map((i) => texId('stem_' + i)),
   [B.POTATOES]: [0, 0, 1, 1, 2, 2, 2, 3].map((i) => texId('potatoes_' + i)), [B.BEETROOTS]: [0, 0, 1, 1, 2, 2, 2, 3].map((i) => texId('beetroots_' + i)),
-  [B.CINDERROOT]: [0, 1, 2, 3, 3, 3, 3, 3].map((i) => texId('cinderroot_' + i)) };
+  [B.CINDERROOT]: [0, 1, 2, 3, 3, 3, 3, 3].map((i) => texId('cinderroot_' + i)),
+  [B.FROSTROOTS]: [0, 0, 1, 1, 2, 2, 2, 3].map((i) => texId('frostroots_' + i)), [B.SUNGOURD_STEM]: [0, 1, 2, 3, 4, 5, 6, 7].map((i) => texId('stem_' + i)) };
 const FARMLAND_MOIST = texId('farmland_moist');
 const PROPAGULE_HANG_TILE = texId('mangrove_propagule_hanging');
 const WATER_STILL = texId('water');
@@ -116,6 +117,10 @@ const WS_TILES = (() => {
 /** Which set of WS_TILES a block uses for its meta. */
 const wsIndex = (id, m) => ((id === B.HUSH_SENSOR || id === B.CALIBRATED_HUSH_SENSOR) ? ((m & 15) ? 1 : 0) : id === B.LECTERN ? (m >> 2) & 1 : id === B.CAKE ? ((m & 7) ? 1 : 0) : m & 1);
 const BERRY_TILES = [0, 1, 2, 3].map((i) => texId('sweet_berry_bush_' + i));
+const BRAMBLE_TILES = [0, 1, 2, 3].map((i) => texId('dewberry_bramble_' + i));
+// tired farmland (world/farming.js): the soil's memory sits in meta bits 3-7, the moisture in bits 0-2
+const FARMLAND_TIRED = texId('farmland_tired'), FARMLAND_TIRED_MOIST = texId('farmland_tired_moist');
+const POT_STOCK = texId('cooking_pot_stock'), POT_STEW = texId('cooking_pot_stew');
 // Suspicious Sand and Gravel: one tile per brushing stage (meta bits 0-1, world/archaeology.js)
 const SUS_TILES = { [B.SUSPICIOUS_SAND]: [0, 1, 2, 3].map((i) => texId('suspicious_sand_' + i)), [B.SUSPICIOUS_GRAVEL]: [0, 1, 2, 3].map((i) => texId('suspicious_gravel_' + i)) };
 // Proving Spawners show their state on the sides (meta bits 4-5: waiting, active, cooling down; world/provingVaults.js)
@@ -225,7 +230,8 @@ export function meshSection(sec) {
           if (id === B.CHEST && (meta[i] & 4)) tile = CHEST_SEAM_RIGHT[meta[i] & 3] === !!(meta[i] & 128) ? CHEST_FRONT_R : CHEST_FRONT_L;
           else if ((id === B.BEE_NEST || id === B.BEEHIVE) && ((meta[i] >> 2) & 7) >= 5) tile = id === B.BEE_NEST ? NEST_HONEY : HIVE_HONEY; // dripping with honey
         }
-        else if (id === B.FARMLAND && d === 2 && meta[i] > 0) tile = FARMLAND_MOIST;
+        else if (id === B.FARMLAND && d === 2 && (meta[i] & 7) > 0) tile = (meta[i] & 128) ? FARMLAND_TIRED_MOIST : FARMLAND_MOIST;
+        else if (id === B.FARMLAND && d === 2 && (meta[i] & 128)) tile = FARMLAND_TIRED;
         else if (SUS_TILES[id]) tile = SUS_TILES[id][meta[i] & 3];
         else if (id === B.PROVING_SPAWNER && d !== 2 && d !== 3) tile = PROVING_SIDES[((meta[i] >> 4) & 3) % 3];
         else if (id === B.OMINOUS_SPAWNER && d !== 2 && d !== 3) tile = OMINOUS_SIDES[((meta[i] >> 4) & 3) % 3];
@@ -248,7 +254,7 @@ export function meshSection(sec) {
       meshLiquid(buf, blocks, light, meta, i, id, x, y, z);
     } else if (shape === SHAPE.CROSS) {
       const l = light[i];
-      const tile = id === B.SWEET_BERRY_BUSH ? BERRY_TILES[meta[i] & 3] : id === B.MANGROVE_PROPAGULE && (meta[i] & PROPAGULE_HANGING) ? PROPAGULE_HANG_TILE : FACE_TILE[id * 6 + 2];
+      const tile = id === B.SWEET_BERRY_BUSH ? BERRY_TILES[meta[i] & 3] : id === B.DEWBERRY_BRAMBLE ? BRAMBLE_TILES[meta[i] & 3] : id === B.MANGROVE_PROPAGULE && (meta[i] & PROPAGULE_HANGING) ? PROPAGULE_HANG_TILE : FACE_TILE[id * 6 + 2];
       let r = 255, g = 255, b2 = 255;
       if (id === B.TALL_GRASS) { r = colors[ci]; g = colors[ci + 1]; b2 = colors[ci + 2]; }
       const sky = (l >> 4) * 17, blk = (l & 15) * 17;
@@ -386,6 +392,8 @@ export function meshSection(sec) {
       blockBoxes(id, meta[i]).forEach((b, k) => emitBox(buf, x, y, z, b[0], b[1], b[2], b[3], b[4], b[5], ws ? ws[k] : tiles, sk * 17, bk * 17, 'box'));
       const cb = id === B.COMPOSTER && compostBox(meta[i] & 15);
       if (cb) emitBox(buf, x, y, z, cb[0], cb[1], cb[2], cb[3], cb[4], cb[5], (meta[i] & 15) >= 8 ? COMPOST_READY : COMPOST, sk * 17, bk * 17, 'box');
+      const pb = (id === B.COOKING_POT || id === B.COOKING_POT_BREW) && potContentBox(id, meta[i]);
+      if (pb) emitBox(buf, x, y, z, pb[0], pb[1], pb[2], pb[3], pb[4], pb[5], id === B.COOKING_POT ? POT_STOCK : POT_STEW, sk * 17, bk * 17, 'box'); // what is in the pot
       const cdl = CANDLES.get(id);
       if (cdl) for (const [cx, cz, h] of CANDLE_SPOTS[meta[i] & 3]) {
         // a wick on each candle, and a little flame (full bright) on lit ones
