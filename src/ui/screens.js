@@ -839,7 +839,7 @@ export class UI {
         const r = combine();
         const too = r && r.cost >= ANVIL_MAX_COST && !p.creative;
         cost.className = 'anvil-cost' + (!r ? '' : too || (!p.creative && p.xp.level < r.cost) ? ' bad' : ' ok');
-        cost.textContent = !r ? (this.work && this.work[0] && this.work[1] ? 'These cannot be combined' : 'Put an item on the left, and a matching item, its material or an Enchanted Book on the right')
+        cost.textContent = !r ? (this.work && this.work[0] && this.work[1] ? 'These cannot be combined' : 'Put an item on the left, and a matching item, its material, a tempering material (Slagsteel Ingots, Dirge Crystals, a Colossus Core) or an Enchanted Book on the right')
           : too ? 'Too Expensive!' : `Level cost: ${r.cost}`;
         out.classList.toggle('blocked', !!r && (too || (!p.creative && p.xp.level < r.cost)));
       });
@@ -868,7 +868,7 @@ export class UI {
     if (right.count <= 0) this.work[1] = null;
     if (!p.creative) spendLevels(p.xp, r.cost);
     g.audio.play('anvil', [x + 0.5, y + 0.5, z + 0.5]);
-    if (g.milestones) g.milestones.event('anvil');
+    if (g.milestones) { g.milestones.event('anvil'); if (r.temper) g.milestones.event('temper'); }
     // 12 % chance the anvil wears a step (meta bits 1-2); worn out three times, it breaks
     const w = g.world;
     if (!p.creative && w.getBlock(x, y, z) === B.ANVIL && Math.random() < 0.12) {

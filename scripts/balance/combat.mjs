@@ -7,6 +7,8 @@ import { MOBS } from '../../src/mobs/mobTypes.js';
 import '../../src/mobs/dimensionMobs.js';
 import '../../src/mobs/hostileVariants.js';
 import '../../src/mobs/hushkeeper.js';
+import '../../src/mobs/slagColossus.js';
+import { COLOSSUS } from '../../src/mobs/slagColossus.js';
 import { HUSHKEEPER } from '../../src/mobs/hushkeeper.js';
 import { RIMEKEEP_WARDEN } from '../../src/world/rimekeep.js';
 import { mobDamageTaken } from '../../src/mobs/equipment.js';
@@ -53,7 +55,7 @@ export function arrowHitsToKill(hp, material, power = 0, speed = 3) {
   return Math.ceil(hp / taken);
 }
 
-/** The fights the brief names: Rimekeep Warden and the Hushkeeper. */
+/** The fights the brief names: Rimekeep Warden, the Hushkeeper and the Slag Colossus (400 HP with 6 points of natural armour). */
 export function bossTable() {
   const weapons = [['iron sword', I.IRON_SWORD, 0], ['diamond sword', I.DIAMOND_SWORD, 0], ['diamond sword Keen V', I.DIAMOND_SWORD, 5], ['diamond axe', I.DIAMOND_AXE, 0]];
   const rows = [];
@@ -61,8 +63,9 @@ export function bossTable() {
     weapon: label,
     warden: hitsToKill(RIMEKEEP_WARDEN.hp, 'diamond', id, keen),
     hushkeeper: Math.ceil(HUSHKEEPER.HEALTH / (ITEMS[id].tool.damage + (keen ? 0.5 * keen + 0.5 : 0))),
+    colossus: Math.ceil(COLOSSUS.HEALTH / mobDamageTaken(ITEMS[id].tool.damage + (keen ? 0.5 * keen + 0.5 : 0), COLOSSUS.ARMOR, null, 'player')),
   });
-  rows.push({ weapon: 'bow, Strongdraw V', warden: arrowHitsToKill(RIMEKEEP_WARDEN.hp, 'diamond', 5), hushkeeper: Math.ceil(HUSHKEEPER.HEALTH / arrowDamage(3, 5)) });
+  rows.push({ weapon: 'bow, Strongdraw V', warden: arrowHitsToKill(RIMEKEEP_WARDEN.hp, 'diamond', 5), hushkeeper: Math.ceil(HUSHKEEPER.HEALTH / arrowDamage(3, 5)), colossus: Math.ceil(COLOSSUS.HEALTH / mobDamageTaken(arrowDamage(3, 5), COLOSSUS.ARMOR, null, 'player')) });
   return rows;
 }
 

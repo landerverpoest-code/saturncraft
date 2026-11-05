@@ -402,7 +402,7 @@ describe('layout fixes found by looking at the screens', () => {
   });
 
   it('full-page menus hide the First Steps card and the milestone card above them, and are darker', () => {
-    expect(CSS).toMatch(/body:has\(#screens > \.pause-screen\) :is\(#steps, \.milestone, #skyinfo, #raidbar\) \{ visibility: hidden; \}/);
+    expect(CSS).toMatch(/body:has\(#screens > \.pause-screen\) :is\(#steps, \.milestone, #skyinfo, #raidbar, #bossbar\) \{ visibility: hidden; \}/);
     expect(CSS).toMatch(/\.pause-screen \{ background: rgba\(6, 6, 14, \.86\); \}/);
   });
 

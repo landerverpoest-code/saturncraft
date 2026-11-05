@@ -93,6 +93,7 @@ import { WorldEvents } from './world/events.js';
 import { darknessFactor } from './world/deepHush.js';
 import { resolveBlock } from './player/shield.js';
 import { safeDismountSpot, boatSeatOffset } from './mobs/mounts.js';
+import { bossBarInfo } from './ui/bossBar.js';
 
 // Spherical (radial distance) fog instead of view-depth fog, so chunk edges never show at screen corners
 THREE.ShaderChunk.fog_vertex = `#ifdef USE_FOG
@@ -1339,6 +1340,7 @@ export class Game {
     this.boatInput = p.riding ? mv : null;
     const still = { forward: 0, strafe: 0, jump: false, sneak: false, sprint: false };
     this.dims.tick(); // portals, arrivals, the Hollow's boss
+    if (this.ticks % 4 === 0 && this.hud.bossBar) this.hud.bossBar(bossBarInfo(this.entities.list, p.x, p.y, p.z)); // the boss bar of a Slag Colossus
     p.difficulty = this.difficulty;
     if (!this.dims.pending && this.chunks.isAreaReady(p.x, p.z, 0)) this.player.tick(this.world, p.sleeping || p.riding ? still : mv);
     else p.prev = { x: p.x, y: p.y, z: p.z };

@@ -12,7 +12,7 @@ import { MIN_Y } from '../world/constants.js';
 import { addXp, splitOrbs } from '../player/experience.js';
 import { RAIL_EXITS, RAIL_UP, RAIL_ON, railHeight, railShapeOf, isRail } from '../world/rails.js';
 import { railSpeed } from '../world/automation.js';
-import { withExtras, canStack, isGlinting, arrowDamage } from '../world/enchantments.js';
+import { withExtras, canStack, isGlinting, arrowDamage, mendFromXp } from '../world/enchantments.js';
 import { splashPotion } from './splash.js';
 import { ArmorStand, STAND_WIDTH, STAND_HEIGHT } from './armorStand.js';
 import { tickSpear } from './tidespear.js';
@@ -682,7 +682,11 @@ export class EntityManager {
         const b = p.body.box();
         if (e.x > b[0] - 0.5 && e.x < b[3] + 0.5 && e.y > b[1] - 0.5 && e.y < b[4] + 0.5 && e.z > b[2] - 0.5 && e.z < b[5] + 0.5) {
           p.xpDelay = 2;
-          const levelled = addXp(p.xp, e.value);
+          // Sunmend gear on you (worn, or in the held slot) is mended first; what it does not take is yours
+          const inv = p.inventory, worn = inv.armor.concat([inv.selectedStack]);
+          const left = mendFromXp(worn, e.value);
+          if (left < e.value) inv.changed();
+          const levelled = left > 0 ? addXp(p.xp, left) : false;
           g.audio.play(levelled && p.xp.level % 5 === 0 ? 'levelup' : 'orb');
           e.dead = true;
         }

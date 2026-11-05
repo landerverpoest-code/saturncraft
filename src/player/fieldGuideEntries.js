@@ -61,6 +61,7 @@ const HABITAT_NOTES = {
   gloomshell: 'Hollow cities',
   void_crystal: 'Pillars of the Hollow',
   void_wyrm: 'The Hollow',
+  slag_colossus: 'Woken in a Cinderforge courtyard with a Slagheart Sigil',
   sodden_shambler: 'Oceans and rivers',
   rime_rattler: 'Snowy plains',
   dune_shambler: 'Deserts',
@@ -153,7 +154,7 @@ const STRUCTURE_NOTES = {
   skywatch: 'A tower that looks out over the land.',
   rimekeep: 'A frozen fortress in the cold.',
   sporehall: 'A hall grown among giant mushrooms.',
-  cinderforge: 'An abandoned smithy of Scorched Bricks in the Cinderdeep, with a lava pit and a Cinder Brute spawner.',
+  cinderforge: 'An abandoned smithy of Scorched Bricks in the Cinderdeep, with a lava pit and a Cinder Brute spawner. A Slagheart Sigil used in its courtyard wakes the Slag Colossus.',
   wyrmribs: 'The bleached ribcage of a Void Wyrm on an outer island of the Hollow.',
 };
 
@@ -166,7 +167,7 @@ function structureEntries() {
 }
 
 /** Finds worth a mention besides what mobs drop and the charts (by `I` key; ones that do not exist are skipped). */
-const EXTRA_NOTABLE = ['DIAMOND', 'BERYL', 'VOID_PEARL', 'CHARM_OF_UNDYING', 'TIDESPEAR', 'ENCHANTED_BOOK', 'SADDLE', 'FROSTROOT', 'DEWBERRIES', 'SUNGOURD_SEEDS', 'GOURD_WEDGE'];
+const EXTRA_NOTABLE = ['DIAMOND', 'BERYL', 'VOID_PEARL', 'CHARM_OF_UNDYING', 'TIDESPEAR', 'ENCHANTED_BOOK', 'SADDLE', 'FROSTROOT', 'DEWBERRIES', 'SUNGOURD_SEEDS', 'GOURD_WEDGE', 'SLAG_SIGIL', 'COLOSSUS_CORE', 'SLAGSTEEL_INGOT', 'DIRGE_CRYSTAL'];
 
 function itemEntries() {
   const sources = new Map();
