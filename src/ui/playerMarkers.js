@@ -55,9 +55,11 @@ export class PlayerMarkers {
         const dist = Math.round(Math.hypot(rp.root.position.x - p.x, rp.root.position.z - p.z));
         m.style.transform = `translate(${x.toFixed(0)}px, ${y.toFixed(0)}px)`;
         m.classList.toggle('pinned', !inside);
-        m.innerHTML = `${arrow}<b></b><span class="d">${dist} m</span>`;
+        m.innerHTML = `${arrow}<b></b><span class="team"></span><span class="d">${dist} m</span>`;
         const b = m.querySelector('b');
         b.textContent = rp.name;
+        const team = net.social && net.social.teamOf(rp.name); // the team's name too, so the colour is not the only cue
+        m.querySelector('.team').textContent = team ? `[${team.name}]` : '';
         b.style.color = (net.social && net.social.colorOf(rp.name)) || ''; // team colour
       }
       // ping beacons (net/social.js): a diamond over the spot, or at the screen edge with an arrow

@@ -2,7 +2,7 @@
 // palettes. Everything here is pure (no DOM), so game.js, hud.js and the tests share it.
 import { chimeCaption } from '../world/chimes.js';
 
-export const ACCESS_DEFAULTS = { captions: false, reduceMotion: false, reduceFlashing: false, colorBlind: 'off' };
+export const ACCESS_DEFAULTS = { captions: false, reduceMotion: false, reduceFlashing: false, colorBlind: 'off', highContrast: false, largeText: false };
 export const COLOR_BLIND_MODES = ['off', 'redgreen', 'blueyellow'];
 export const COLOR_BLIND_LABELS = { off: 'Off', redgreen: 'Red-green friendly', blueyellow: 'Blue-yellow friendly' };
 
@@ -15,12 +15,55 @@ export function nextColorBlind(mode) { return COLOR_BLIND_MODES[(Math.max(0, COL
 /**
  * How much of each camera / screen effect to apply for the settings:
  * bob (walking head bob), tilt (the roll when hurt), sprintFov (the widening while sprinting),
- * apparitionShake (the Deepeye's trembling face), flash (lightning brightness cap, 1 = full).
+ * apparitionShake (the Deepeye's trembling face), flash (lightning brightness cap, 1 = full);
+ * and for the newer sky and particle effects:
+ * twinkle (stars and firework sparks that blink: off with either setting), skyDrift (how fast the
+ * Veilfire curtains move), streaks (falling stars and meteorite trails), sparks (how many sparks a
+ * firework burst or meteorite impact throws, so fewer bright points appear in one frame), sand (the
+ * streaming grains of a dust storm).
  */
 export function motionScales(settings) {
   const calm = !!(settings && settings.reduceMotion);
   const dim = !!(settings && settings.reduceFlashing);
-  return { bob: calm ? 0 : 1, tilt: calm ? 0 : 1, sprintFov: calm ? 0 : 1, apparitionShake: calm ? 0 : 1, flash: dim ? 0.2 : 1 };
+  return {
+    bob: calm ? 0 : 1, tilt: calm ? 0 : 1, sprintFov: calm ? 0 : 1, apparitionShake: calm ? 0 : 1, flash: dim ? 0.2 : 1,
+    twinkle: calm || dim ? 0 : 1, skyDrift: calm ? 0.1 : 1, streaks: calm ? 0 : dim ? 0.4 : 1, sparks: dim ? 0.4 : 1, sand: calm ? 0.25 : 1,
+  };
+}
+
+/** What a game without the setting gets (tests and fakes that carry no `fx`). */
+export const FULL_FX = motionScales(null);
+/** The effect scales of a game object: `game.fx` (kept up to date by Game.setSetting) or full effects. */
+export function fxOf(game) { return (game && game.fx) || FULL_FX; }
+
+/** `n` particles scaled by one of the motionScales (at least one while the scale is above zero). */
+export function scaledCount(n, scale) { return scale <= 0 ? 0 : Math.max(1, Math.round(n * scale)); }
+
+/**
+ * The classes the page root carries for the settings (ui/style.css keys off these): `reduce-motion` stops
+ * the CSS animations, `reduce-flash` calms the pulsing overlays, `high-contrast` and `large-text` restyle
+ * the screens, `cb-redgreen` / `cb-blueyellow` mark the colour-blind mode. `osReduce`: the system asks for less motion.
+ */
+export const ACCESS_CLASSES = ['reduce-motion', 'reduce-flash', 'high-contrast', 'large-text', 'cb-redgreen', 'cb-blueyellow'];
+export function accessClasses(settings, osReduce = false) {
+  const s = settings || {};
+  const out = [];
+  if (s.reduceMotion || osReduce) out.push('reduce-motion');
+  if (s.reduceFlashing) out.push('reduce-flash');
+  if (s.highContrast) out.push('high-contrast');
+  if (s.largeText) out.push('large-text');
+  if (s.colorBlind && s.colorBlind !== 'off') out.push('cb-' + s.colorBlind);
+  return out;
+}
+
+/**
+ * A trade price against the usual one, with a cue that does not rely on colour: a mark, a short word, and the
+ * sentence for the tooltip and screen readers. `cls` is the CSS class that also colours it.
+ */
+export function priceCue(now, base) {
+  if (now < base) return { cls: 'discounted', mark: '▼', word: 'cheaper', text: `Cheaper than the usual ${base}` };
+  if (now > base) return { cls: 'pricey', mark: '▲', word: 'dearer', text: `Dearer than the usual ${base}` };
+  return { cls: '', mark: '', word: '', text: 'Usual price' };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -46,6 +89,7 @@ export const CAPTION_TEXT = {
   bird_trill: 'Birdsong', cricket: 'Crickets chirp', owl: 'Owl hoots', drip: 'Water drips', lava_pop: 'Lava bubbles', rift_moan: 'Deep rift moans',
   spear_throw: 'Spear thrown', spear_stick: 'Spear sticks', spear_return: 'Spear flies home', spear_surge: 'Surge rushes', stormcall: 'Stormcall crackles',
   breeze: 'Breeze sighs', meteor_boom: 'Meteorite booms', ember_snap: 'Embers snap', void_whisper: 'Void whispers',
+  parry: 'Shield parries', shield_break: 'Shield knocked down',
 };
 
 /** Sounds that are only interface feedback when they have no place in the world. */

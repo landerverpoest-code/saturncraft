@@ -36,6 +36,8 @@ uniform float uAurora;      // Veilfire brightness 0..1 (nightSky.js auroraTarge
 uniform vec3 uMeteorHead;   // a falling star: head and tail directions, glow 0..1
 uniform vec3 uMeteorTail;
 uniform float uMeteorGlow;
+uniform float uAuroraTime;  // Veilfire clock (slows with reduced motion, see ui/accessibility.js motionScales)
+uniform float uTwinkle;     // 1 = stars blink, 0 = steady (reduced motion / flashing)
 
 float hash12(vec2 p) {
   vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -63,11 +65,11 @@ float fbm(vec2 p) {
 vec3 veilfire(vec3 dir) {
   float az = atan(dir.x, -dir.z);
   float h = dir.y;
-  float wave = sin(az * 3.0 + uTime * 0.07 + 1.7 * sin(az * 5.0 - uTime * 0.05)) * 0.12 + sin(az * 7.0 - uTime * 0.11) * 0.04;
+  float wave = sin(az * 3.0 + uAuroraTime * 0.07 + 1.7 * sin(az * 5.0 - uAuroraTime * 0.05)) * 0.12 + sin(az * 7.0 - uAuroraTime * 0.11) * 0.04;
   float arc = h - 0.34 - wave;
   float band = exp(-pow(arc * (arc > 0.0 ? 4.2 : 9.0), 2.0)); // sharp lower hem, long soft upper fade
-  float rays = vnoise(vec2(az * 26.0 + uTime * 0.12, 0.0)) * 0.65 + vnoise(vec2(az * 61.0 - uTime * 0.2, h * 3.0)) * 0.35;
-  float flow = vnoise(vec2(az * 3.5 - uTime * 0.045, h * 5.0 + uTime * 0.07));
+  float rays = vnoise(vec2(az * 26.0 + uAuroraTime * 0.12, 0.0)) * 0.65 + vnoise(vec2(az * 61.0 - uAuroraTime * 0.2, h * 3.0)) * 0.35;
+  float flow = vnoise(vec2(az * 3.5 - uAuroraTime * 0.045, h * 5.0 + uAuroraTime * 0.07));
   float north = 0.35 + 0.65 * pow(0.5 + 0.5 * cos(az), 1.4);
   float a = band * (0.25 + 0.75 * rays) * smoothstep(0.2, 0.65, flow + 0.2) * north;
   vec3 c = mix(vec3(0.12, 1.0, 0.5), vec3(0.62, 0.26, 0.95), smoothstep(0.0, 0.35, arc));
@@ -121,7 +123,7 @@ void main() {
     if (s > 0.9965) {
       vec3 sp = cell + 0.5 + 0.35 * (vec3(hash13(cell + 1.7), hash13(cell + 3.1), hash13(cell + 5.3)) - 0.5);
       float d = length(sd - sp);
-      float tw = 0.75 + 0.25 * sin(uTime * (1.5 + s * 40.0) + s * 100.0);
+      float tw = 0.75 + 0.25 * uTwinkle * sin(uTime * (1.5 + s * 40.0) + s * 100.0);
       vec3 sc = mix(vec3(0.75, 0.82, 1.0), vec3(1.0, 0.85, 0.7), hash13(cell + 9.0));
       col += sc * smoothstep(0.55, 0.0, d) * starVis * tw * 1.2;
     }

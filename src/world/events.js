@@ -27,6 +27,7 @@ import { villagesNear, houseDoor } from './villages.js';
 import { SIDE_DIRS } from './shapes.js';
 import { villageKey, getRep, refusesTrade, REP } from '../mobs/reputation.js';
 import { repEvent } from '../mobs/villageRep.js';
+import { fxOf, scaledCount } from '../ui/accessibility.js';
 
 export const DAY = 24000;
 export const REFRESH = 20;           // ticks between looks at the clock
@@ -383,7 +384,7 @@ export class WorldEvents {
   dustParticles() {
     const g = this.game, p = g.player, pt = g.particles;
     if (!pt || p.dead || g.world.dimension !== 'overworld') return;
-    const n = Math.ceil(this.lv.dust * 6);
+    const n = scaledCount(Math.ceil(this.lv.dust * 6), fxOf(g).sand); // reduced motion: fewer streaming grains
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2, r = 2 + Math.random() * 9;
       pt.emit(p.x + Math.cos(a) * r + 6, p.y + 0.3 + Math.random() * 3, p.z + Math.sin(a) * r, -0.5 - Math.random() * 0.3, (Math.random() - 0.5) * 0.04, 0.08 * (Math.random() - 0.5),
@@ -447,7 +448,7 @@ export class WorldEvents {
     for (let i = this.pending.length - 1; i >= 0; i--) {
       const m = this.pending[i], left = m.at - g.ticks;
       if (left <= 0) { this.pending.splice(i, 1); this.land(m); continue; }
-      if (pt && Math.hypot(m.x - p.x, m.z - p.z) < 200) {
+      if (pt && fxOf(g).streaks > 0 && Math.hypot(m.x - p.x, m.z - p.z) < 200) { // (reduced motion: no fiery trail across the sky)
         const k = 1 - left / m.total, x = m.sx + (m.x - m.sx) * k, z = m.sz + (m.z - m.sz) * k, y = p.y + 130 * (1 - k) ** 1.5;
         for (let j = 0; j < 4; j++) pt.emit(x + (Math.random() - 0.5), y + (Math.random() - 0.5), z + (Math.random() - 0.5), 0, 0.02, 0, 1, 0.7 + Math.random() * 0.25, 0.25, 18, -0.002);
       }
@@ -468,7 +469,7 @@ export class WorldEvents {
     if (g.particles && d < 120) {
       const yy = made ? made.y : y;
       g.particles.smoke(m.x, yy + 1, m.z, 50, 3);
-      for (let i = 0; i < 24; i++) g.particles.emit(m.x + (Math.random() - 0.5) * 2, yy + 1, m.z + (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 0.4, 0.2 + Math.random() * 0.3, (Math.random() - 0.5) * 0.4, 1, 0.6 + Math.random() * 0.3, 0.2, 30, 0.03);
+      for (let i = 0, n = scaledCount(24, fxOf(g).sparks); i < n; i++) g.particles.emit(m.x + (Math.random() - 0.5) * 2, yy + 1, m.z + (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 0.4, 0.2 + Math.random() * 0.3, (Math.random() - 0.5) * 0.4, 1, 0.6 + Math.random() * 0.3, 0.2, 30, 0.03);
     }
     if (d < 160 && g.milestones) g.milestones.event('meteor');
     if (d < 40 && g.hud) g.hud.toast('A meteorite has fallen nearby', 3500);

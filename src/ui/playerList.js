@@ -2,11 +2,19 @@
 // Rows come from net/social.js playerRows (the host's roster); this only draws them.
 import { gamemodeLabel, pingClass } from '../net/social.js';
 
+/** The sentence a screen reader gets for a row: name, role, team, game mode and ping (the colours are a bonus, never the only cue). */
+export function playerRowLabel(r) {
+  const role = r.host ? 'host' : r.op ? 'operator' : '';
+  return [r.name + (r.you ? ' (you)' : ''), role, r.team ? `team ${r.team}` : 'no team', gamemodeLabel(r.gamemode), r.ping >= 0 ? `${r.ping} milliseconds` : r.host ? 'host' : 'ping unknown'].filter(Boolean).join(', ');
+}
+
 export class PlayerList {
   constructor(root) {
     this.el = document.createElement('div');
     this.el.id = 'tablist';
     this.el.className = 'hidden';
+    this.el.setAttribute('role', 'list');
+    this.el.setAttribute('aria-label', 'Players online');
     root.appendChild(this.el);
     this.key = '';
     this.frame = 0;
@@ -34,9 +42,12 @@ export class PlayerList {
     for (const r of rows) {
       const row = document.createElement('div');
       row.className = 'tl-row' + (r.you ? ' you' : '');
+      row.setAttribute('role', 'listitem');
+      row.setAttribute('aria-label', playerRowLabel(r));
+      if (r.you) row.setAttribute('aria-current', 'true');
       const name = document.createElement('span');
       name.className = 'tl-name';
-      name.textContent = r.name + (r.host ? ' (host)' : r.op ? ' (op)' : '');
+      name.textContent = r.name + (r.you ? ' (you)' : '') + (r.host ? ' (host)' : r.op ? ' (op)' : '');
       if (r.color) name.style.color = r.color;
       const team = document.createElement('span');
       team.className = 'tl-team';

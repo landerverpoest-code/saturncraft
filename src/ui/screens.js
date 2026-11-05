@@ -24,7 +24,8 @@ import { entriesOf, guideProgress, guideRows, TAB_LABELS, itemName } from '../pl
 import { creatureIcon, structureIcon } from './guideArt.js';
 import { MOBS } from '../mobs/mobTypes.js';
 import { ACTIONS, GROUPS, SLOT_KINDS, SLOT_NAMES, resolveBindings, toOverrides, setBinding, codeLabel } from './bindings.js';
-import { COLOR_BLIND_LABELS, nextColorBlind } from './accessibility.js';
+import { COLOR_BLIND_LABELS, nextColorBlind, priceCue } from './accessibility.js';
+import { MenuNav, labelScreens, AUTOFOCUS_SCREENS } from './menuNav.js';
 import { TOUCH_MODE_LABELS, SIZE_RANGE, OPACITY_RANGE, nextTouchMode, normalizeTouch, detectTouch, readTouchEnv } from './touchMath.js';
 import { loadPlayerName } from '../net/protocol.js';
 import { EMOTES, EMOTE_LABELS } from '../net/social.js';
@@ -69,6 +70,18 @@ export class UI {
     this.tooltipEl = el('<div class="tooltip hidden"></div>');
     document.body.appendChild(this.cursorEl);
     document.body.appendChild(this.tooltipEl);
+    // Enter, Space and the gamepad's A press a button with a click that has no mouse position (detail 0); many screens act on
+    // mousedown, so that click is preceded by the mousedown a mouse would have sent
+    this.layer.addEventListener('click', (e) => {
+      if (e.detail !== 0 || !e.target.closest) return;
+      const b = e.target.closest('button');
+      if (b && !b.disabled) b.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, shiftKey: e.shiftKey, button: 0 }));
+    }, true);
+    this.nav = new MenuNav(this.layer); // gamepad focus movement and the first control's focus (ui/menuNav.js)
+    if (typeof MutationObserver !== 'undefined') {
+      // every screen gets its dialog role and labels, and the ones that read as menus open with focus on their first control
+      new MutationObserver(() => { labelScreens(this.layer); if (AUTOFOCUS_SCREENS.has(this.open)) this.nav.autoFocus(); }).observe(this.layer, { childList: true });
+    }
     window.addEventListener('mousemove', (e) => {
       this.cursorEl.style.left = e.clientX + 'px'; this.cursorEl.style.top = e.clientY + 'px';
       this.tooltipEl.style.left = e.clientX + 14 + 'px'; this.tooltipEl.style.top = e.clientY - 26 + 'px';
@@ -85,6 +98,28 @@ export class UI {
     if (this.padTab && (pressed.has('PadLB') || pressed.has('PadRB'))) { this.padTab(pressed.has('PadRB') ? 1 : -1); return; }
     const step = ((pressed.has('PadDown') ? 1 : 0) - (pressed.has('PadUp') ? 1 : 0)) * 60 + (ly || 0) * 14;
     if (this.padScroll && step) this.padScroll(step);
+  }
+
+  /**
+   * Gamepad on any open screen (called each frame from Game.loop): D-pad or left stick moves focus, A presses the focused
+   * control, X presses it as a Shift-click (trade as often as affordable), B or Back goes back. Screens with a scrolling list
+   * (Statistics, Milestones, Field Guide) keep their own scrolling and tab keys (padNav).
+   */
+  padMenu(pressed, pad) {
+    if (!this.layer.firstChild || this.open === 'chat') return;
+    const scrolling = !!this.padScroll;
+    if (scrolling) this.padNav(pressed, pad.ly);
+    if (!this.layer.firstChild) return;
+    const r = this.nav.frame(pressed, pad, scrolling);
+    if (r === 'back' && !scrolling) this.goBack();
+  }
+
+  /** What B does: the sub-screen's own way back, else resume from the pause menu, else close the screen. */
+  goBack() {
+    if (this.padBack) { const f = this.padBack; f(); return; }
+    if (this.open === 'pause') { this.open = null; this.clear(); this.game.onUIClosed(); return; }
+    if (this.open === 'death' || this.open === 'chat') return;
+    this.close();
   }
 
   close() {
@@ -996,7 +1031,7 @@ export class UI {
     this.clear();
     this.open = 'emotes';
     this.game.input.unlock();
-    const s = el('<div class="screen emote-screen"><h2>Emote</h2><div class="emote-wheel"></div><p class="sub">Click one or press 1-3 - they show on your body for the others</p></div>');
+    const s = el('<div class="screen emote-screen"><h2>Emote</h2><div class="emote-wheel" role="group" aria-label="Emotes"></div><p class="sub">Click one or press 1-3, or use the D-pad and A - they show on your body for the others</p></div>');
     const wheel = s.querySelector('.emote-wheel');
     EMOTES.forEach((k, i) => {
       const b = el(`<button class="btn emote-btn" style="--a:${Math.round(-90 + i * 360 / EMOTES.length)}deg"><b>${i + 1}</b> ${EMOTE_LABELS[k]}</button>`);
@@ -1078,7 +1113,7 @@ export class UI {
     this.showContainer('trade', title, (panel) => {
       let bar = null, repLine = null, gift = null;
       if (!trader) {
-        const head = el('<div class="trade-head"><div class="trade-level"><span class="trade-level-name"></span><div class="trade-bar"><div class="trade-bar-fill"></div></div><span class="trade-level-count"></span></div><div class="trade-rep"></div></div>');
+        const head = el('<div class="trade-head"><div class="trade-level"><span class="trade-level-name"></span><div class="trade-bar" role="progressbar" aria-label="Progress to the next settler level" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="trade-bar-fill"></div></div><span class="trade-level-count"></span></div><div class="trade-rep" role="status"></div></div>');
         bar = head.querySelector('.trade-level');
         repLine = head.querySelector('.trade-rep');
         gift = el('<button class="btn trade-gift"></button>');
@@ -1087,15 +1122,14 @@ export class UI {
       }
       const list = el('<div class="trade-list"></div>');
       mob.trades.forEach((o) => {
-        const row = el(`<div class="trade-row">
-          <div class="slot price"></div>
-          <div class="arrow">➜</div>
+        const row = el(`<div class="trade-row" role="group">
+          <div class="slot price"></div><span class="price-cue" aria-hidden="true"></span>
+          <div class="arrow" aria-hidden="true">➜</div>
           <div class="slot">${this.slotHTML({ id: o.get, count: o.getCount })}</div>
           <span class="trade-name"></span><button class="btn trade-btn">Trade</button></div>`);
         row.querySelector('.trade-name').textContent = ITEMS[o.get].name;
-        const btn = row.querySelector('button'), priceSlot = row.querySelector('.price');
-        btn.addEventListener('mousedown', (e) => {
-          e.preventDefault();
+        const btn = row.querySelector('button'), priceSlot = row.querySelector('.price'), cueEl = row.querySelector('.price-cue');
+        btn.addEventListener('click', (e) => { // (a click, not a mousedown: Enter, Space and the gamepad's A press it too; Shift trades as often as affordable)
           const times = e.shiftKey ? 64 : 1;
           if (mob.netProxy) { const n = affordableTimes(o, inv, cut, times, market()); if (n > 0) g.net.requestTrade(mob, mob.trades.indexOf(o), n); return; } // the host keeps count (and is asked only for trades we can pay for)
           let done = 0;
@@ -1122,9 +1156,13 @@ export class UI {
         this.refreshers.push(() => {
           const base = o.giveCount, now = price(o);
           priceSlot.innerHTML = this.slotHTML({ id: o.give, count: now });
-          priceSlot.classList.toggle('discounted', now < base);
-          priceSlot.classList.toggle('pricey', now > base);
-          priceSlot.title = now === base ? 'Usual price' : now < base ? `Cheaper than the usual ${base}` : `Dearer than the usual ${base}`;
+          const cue = priceCue(now, base); // colour is not the only signal: a mark and a word sit beside the price, and the row is named for screen readers
+          priceSlot.classList.toggle('discounted', cue.cls === 'discounted');
+          priceSlot.classList.toggle('pricey', cue.cls === 'pricey');
+          priceSlot.title = cue.text;
+          cueEl.textContent = cue.mark ? `${cue.mark} ${cue.word}` : '';
+          cueEl.className = 'price-cue' + (cue.cls ? ' ' + cue.cls : '');
+          row.setAttribute('aria-label', `${ITEMS[o.get].name} x${o.getCount} for ${ITEMS[o.give].name} x${now}. ${cue.text}${o.uses >= MAX_USES ? '. Sold out' : ''}`);
           const refused = refusesTrade(market().rep);
           const ok = canTrade(o, inv, cut, market());
           btn.disabled = !ok;
@@ -1138,6 +1176,7 @@ export class UI {
           const lp = levelProgress(mob.tradeCount | 0), lv = Math.max(lp.level, mob.level | 0);
           bar.querySelector('.trade-level-name').textContent = `${LEVEL_NAMES[lv - 1]} (level ${lv})`;
           bar.querySelector('.trade-bar-fill').style.width = `${Math.round(lp.frac * 100)}%`;
+          bar.querySelector('.trade-bar').setAttribute('aria-valuenow', String(Math.round(lp.frac * 100)));
           bar.querySelector('.trade-level-count').textContent = lp.max ? 'Master' : `${lp.done} / ${lp.need} trades to ${LEVEL_NAMES[lp.level]}`;
           const mk = market(), rep = mk.rep, st = standing(rep);
           repLine.textContent = key ? `Standing: ${st.name} (${rep > 0 ? '+' : ''}${Math.round(rep)}) - ${repHint(rep)}${mk.festival ? `; Lantern Festival: a further ${Math.round(mk.festival * 100)} % off` : ''}` : 'No village to speak for this settler';
@@ -1146,8 +1185,7 @@ export class UI {
           gift.disabled = !key || !worth || g.time - mob.lastGift < GIFT_COOLDOWN;
           gift.textContent = worth ? (g.time - mob.lastGift < GIFT_COOLDOWN ? 'Already given a gift' : `Gift: ${ITEMS[sel.id].name}`) : 'Gift (hold goods it wants)';
         });
-        gift.addEventListener('mousedown', (e) => {
-          e.preventDefault();
+        gift.addEventListener('click', () => {
           if (gift.disabled) return;
           if (mob.netProxy) { g.net.requestGift(mob); return; } // the host decides
           const sel = inv.selectedStack, worth = sel ? giftValue(mob.profession, sel.id) : 0;
@@ -1288,6 +1326,7 @@ export class UI {
     const left = s.querySelector('[data-a=left]');
     left.onclick = () => { const on = !g.settings.touchLeft; g.setSetting('touchLeft', on); left.textContent = `Left-handed layout: ${on ? 'On' : 'Off'}`; };
     s.querySelector('[data-a=back]').onclick = () => this.showPause();
+    this.padBack = () => this.showPause();
     this.layer.appendChild(s);
   }
 
@@ -1325,8 +1364,10 @@ export class UI {
       render();
     };
     const render = () => {
+      const keep = [...list.querySelectorAll('.control-key')].indexOf(document.activeElement); // (the list is rebuilt: keep the keyboard's place)
       list.textContent = '';
       noteEl.textContent = note;
+      noteEl.setAttribute('role', 'status');
       s.querySelector('.controls-pad').textContent = inp.pad.connected
         ? 'Gamepad connected: left stick moves, right stick looks. Inventories still need the mouse.'
         : 'Plug in a gamepad and press any button to play with it.';
@@ -1349,9 +1390,11 @@ export class UI {
           list.appendChild(row);
         }
       }
+      if (keep >= 0) { const again = list.querySelectorAll('.control-key')[keep]; if (again) again.focus(); }
     };
     s.querySelector('[data-a=reset]').onclick = () => { stop(); commit(resolveBindings(null)); note = 'Controls reset to the defaults'; render(); };
     s.querySelector('[data-a=back]').onclick = () => { stop(); this.showPause(); };
+    this.padBack = () => { stop(); this.showPause(); };
     this.layer.appendChild(s);
     render();
   }
@@ -1366,23 +1409,30 @@ export class UI {
       <button class="btn" data-k="captions">Sound captions: ${onOff('captions')}</button>
       <p class="sub">Shows what you hear, and from which side, at the bottom right.</p>
       <button class="btn" data-k="reduceMotion">Reduce motion: ${onOff('reduceMotion')}</button>
-      <p class="sub">No head bob, hurt tilt, sprint zoom or trembling apparitions.</p>
+      <p class="sub">No head bob, hurt tilt, sprint zoom or trembling apparitions; Veilfire drifts slowly, falling stars and meteorite trails are left out and fewer grains blow in a dust storm.</p>
       <button class="btn" data-k="reduceFlashing">Reduce flashing: ${onOff('reduceFlashing')}</button>
-      <p class="sub">Lightning only brightens the sky a little and hearts stop flashing.</p>
+      <p class="sub">Lightning only brightens the sky a little, hearts stop flashing, stars stay steady and fireworks and meteorite impacts throw fewer sparks with no white twinkles.</p>
       <button class="btn" data-a="cb">Colour-blind HUD: ${COLOR_BLIND_LABELS[g.settings.colorBlind] || 'Off'}</button>
       <p class="sub">Moves the status-bar colours apart and marks poison and hunger with a cross.</p>
+      <button class="btn" data-k="highContrast">High contrast: ${onOff('highContrast')}</button>
+      <p class="sub">Black and white menus with thick outlines, and brighter text on the screen.</p>
+      <button class="btn" data-k="largeText">Large text: ${onOff('largeText')}</button>
+      <p class="sub">Makes menu and screen text about a third bigger; menus scroll when they no longer fit.</p>
       <button class="btn" data-a="back">Back</button></div>`);
     s.querySelectorAll('[data-k]').forEach((b) => {
       const k = b.dataset.k, name = b.textContent.split(':')[0];
+      b.setAttribute('aria-pressed', String(!!g.settings[k]));
       b.onclick = () => {
         g.setSetting(k, !g.settings[k]);
         b.textContent = `${name}: ${onOff(k)}`;
+        b.setAttribute('aria-pressed', String(!!g.settings[k]));
         if (k === 'captions' && g.settings.captions) g.captions.add('click', [g.player.x + 3, g.player.y, g.player.z], 1, [g.player.x, g.player.y, g.player.z, 0], performance.now());
       };
     });
     const cb = s.querySelector('[data-a=cb]');
     cb.onclick = () => { g.setSetting('colorBlind', nextColorBlind(g.settings.colorBlind)); cb.textContent = `Colour-blind HUD: ${COLOR_BLIND_LABELS[g.settings.colorBlind]}`; };
     s.querySelector('[data-a=back]').onclick = () => this.showPause();
+    this.padBack = () => this.showPause();
     this.layer.appendChild(s);
   }
 

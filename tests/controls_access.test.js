@@ -371,14 +371,14 @@ describe('sound captions', () => {
 
 describe('reduced motion and flashing', () => {
   it('leaves everything on by default and calms what was asked for', () => {
-    expect(motionScales({})).toEqual({ bob: 1, tilt: 1, sprintFov: 1, apparitionShake: 1, flash: 1 });
-    expect(motionScales({ reduceMotion: true })).toEqual({ bob: 0, tilt: 0, sprintFov: 0, apparitionShake: 0, flash: 1 });
+    expect(motionScales({})).toMatchObject({ bob: 1, tilt: 1, sprintFov: 1, apparitionShake: 1, flash: 1 });
+    expect(motionScales({ reduceMotion: true })).toMatchObject({ bob: 0, tilt: 0, sprintFov: 0, apparitionShake: 0, flash: 1 });
     expect(motionScales({ reduceFlashing: true }).flash).toBeLessThan(0.5);
     expect(motionScales({ reduceFlashing: true }).bob).toBe(1);
     expect(motionScales(undefined).bob).toBe(1);
   });
   it('has defaults that are all off', () => {
-    expect(ACCESS_DEFAULTS).toEqual({ captions: false, reduceMotion: false, reduceFlashing: false, colorBlind: 'off' });
+    expect(ACCESS_DEFAULTS).toEqual({ captions: false, reduceMotion: false, reduceFlashing: false, colorBlind: 'off', highContrast: false, largeText: false });
   });
 });
 

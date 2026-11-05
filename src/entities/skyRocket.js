@@ -17,6 +17,7 @@ import { ITEMS } from '../world/items.js';
 import { rocketLifetime } from '../player/glider.js';
 import { rocketStrike } from '../world/signalBlocks.js';
 import { COLORS } from '../world/colors.js';
+import { fxOf } from '../ui/accessibility.js';
 import { rocketOfStack, burstVelocities, burstDamage, fadeAmount, mixRgb } from '../world/fireworks.js';
 
 /** Mobs within this many blocks of a Star Rocket's burst take 5 + 2 per star (STAR_DAMAGE for a one-star rocket). */
@@ -113,6 +114,7 @@ export class SkyRocket {
   burst(game, rng = Math.random) {
     this.exploded = true;
     const stars = this.stars.length ? this.stars : [{ c: null, s: 0, t: 0, w: 0 }];
+    const thin = Math.max(1, Math.round(1 / Math.max(0.1, fxOf(game).sparks))); // reduced flashing: fewer bright sparks in the same frame
     for (const star of stars) {
       const cols = star.c ? star.c.map(starColor) : [this.color];
       const fades = star.f && star.f.length ? star.f.map(starColor).filter(Boolean) : null;
@@ -121,7 +123,7 @@ export class SkyRocket {
       vels.forEach(([vx, vy, vz], k) => {
         const [cr, cg, cb] = cols[Math.floor(rng() * cols.length)], w = 0.7 + rng() * 0.3;
         const fade = fades ? fades[Math.floor(rng() * fades.length)].map((v) => v * w) : null;
-        game.particles.emit(this.x, this.y, this.z, vx, vy, vz, cr * w, cg * w, cb * w, 30 + rng() * 15, 0.004, fade);
+        if (k % thin === 0) game.particles.emit(this.x, this.y, this.z, vx, vy, vz, cr * w, cg * w, cb * w, 30 + rng() * 15, 0.004, fade);
         if (headStride && k % headStride === 0) {
           this.heads.push({ x: this.x, y: this.y, z: this.z, vx, vy, vz, rgb: [cr, cg, cb], fade, trail: star.t, twinkleAt: star.w ? 14 + Math.floor(rng() * 14) : -1 });
         }
@@ -147,7 +149,7 @@ export class SkyRocket {
         game.particles.emit(h.x, h.y, h.z, 0, 0, 0, rgb[0] * 0.8, rgb[1] * 0.8, rgb[2] * 0.8, 7, 0);
       }
       if (h.twinkleAt === this.fxAge) {
-        for (let k = 0; k < 4; k++) game.particles.emit(h.x, h.y, h.z, (Math.random() - 0.5) * 0.08, (Math.random() - 0.5) * 0.08, (Math.random() - 0.5) * 0.08, 1, 1, 0.9, 6 + Math.random() * 4, 0);
+        if (fxOf(game).twinkle) for (let k = 0; k < 4; k++) game.particles.emit(h.x, h.y, h.z, (Math.random() - 0.5) * 0.08, (Math.random() - 0.5) * 0.08, (Math.random() - 0.5) * 0.08, 1, 1, 0.9, 6 + Math.random() * 4, 0);
         if (!this.twinkled) { this.twinkled = true; game.audio.play('rocket_twinkle', [h.x, h.y, h.z]); }
       }
       if (this.fxAge >= Math.max(h.trail ? TRAIL_TICKS : 0, h.twinkleAt + 1)) this.heads.splice(i, 1);

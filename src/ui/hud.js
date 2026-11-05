@@ -56,9 +56,9 @@ export class HUD {
       <div id="debug" class="hidden"></div>
       <div id="coords" class="hidden"></div>
       <div id="markers-root"></div>
-      <div id="toast"></div>
-      <div id="captions" aria-live="polite"></div>
-      <div id="raidbar" class="hidden"><div class="rb-name"></div><div class="rb-track"><div class="rb-fill"></div></div></div>
+      <div id="toast" role="status" aria-live="polite"></div>
+      <div id="captions" role="log" aria-live="polite" aria-label="Sound captions"></div>
+      <div id="raidbar" class="hidden" role="progressbar" aria-label="Raid"><div class="rb-name"></div><div class="rb-track"><div class="rb-fill"></div></div></div>
       <div id="item-name"></div>
       <div id="bottom">
         <div id="bars3" style="width:calc(var(--slot) * 9 + 8px);display:none"><div class="bar" id="absorb"></div></div>
@@ -201,6 +201,8 @@ export class HUD {
     const name = el.firstChild, fill = el.lastChild.firstChild;
     if (name.textContent !== info.label) name.textContent = info.label;
     fill.style.width = `${Math.round(info.progress * 1000) / 10}%`;
+    el.setAttribute('aria-valuenow', String(Math.round(info.progress * 100)));
+    el.setAttribute('aria-valuetext', `${info.label}${info.state === 'won' ? ', won' : ''}`);
     el.classList.toggle('won', info.state === 'won');
   }
 

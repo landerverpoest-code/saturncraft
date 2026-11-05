@@ -54,6 +54,8 @@ export class Sky {
       uMeteorHead: { value: new THREE.Vector3() },
       uMeteorTail: { value: new THREE.Vector3() },
       uMeteorGlow: { value: 0 },
+      uAuroraTime: { value: 0 },
+      uTwinkle: { value: 1 },
     };
     const mat = new THREE.ShaderMaterial({
       uniforms: this.uniforms, vertexShader: skyVertex, fragmentShader: skyFragment,
@@ -95,6 +97,8 @@ export class Sky {
     this.aurora = 0;        // smoothed Veilfire brightness
     this.meteors = new Meteors();
     this.lastSeconds = 0;
+    this.auroraClock = 0;   // Veilfire time: runs slower with reduced motion
+    this.fx = { skyDrift: 1, twinkle: 1, streaks: 1 }; // set by the game from motionScales (ui/accessibility.js)
   }
 
   setShadowsEnabled(on) {
@@ -149,7 +153,11 @@ export class Sky {
     u.uAurora.value = this.aurora < 0.004 ? 0 : this.aurora;
     const m = this.meteors.update(dtS, dark, nightCharacter(dayNo).starfall, 1 - rain);
     if (m) { u.uMeteorHead.value.set(m.head[0], m.head[1], m.head[2]); u.uMeteorTail.value.set(m.tail[0], m.tail[1], m.tail[2]); }
-    u.uMeteorGlow.value = m ? m.glow : 0;
+    // reduced motion / flashing (ui/accessibility.js): slower curtains, steady stars, fewer or no falling stars
+    this.auroraClock += dtS * this.fx.skyDrift;
+    u.uAuroraTime.value = this.auroraClock;
+    u.uTwinkle.value = this.fx.twinkle;
+    u.uMeteorGlow.value = m ? m.glow * this.fx.streaks : 0;
     u.uZenith.value.copy(this.zenith);
     u.uHorizon.value.copy(this.horizon);
 

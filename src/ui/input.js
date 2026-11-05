@@ -6,6 +6,17 @@ import { readPad, firstPad, buttonEdges, lookPixels } from './gamepad.js';
 
 /** Keys that would scroll or open browser UI if left alone while playing. */
 const NO_DEFAULT = /^(F\d{1,2}|Tab|Space|Slash|Backquote|ContextMenu)$/;
+/** The ones a screen needs for itself: Tab moves focus between its controls, Space presses the focused one. */
+const MENU_KEYS = /^(Tab|Space)$/;
+
+/**
+ * Should the key's browser default be suppressed? While a screen is open Tab and Space are left alone so a keyboard
+ * user can move through the controls and press them (and type spaces into fields); everything else is as when playing.
+ */
+export function suppressDefault(code, ctrlKey, menuOpen) {
+  if (menuOpen && MENU_KEYS.test(code)) return false;
+  return NO_DEFAULT.test(code) || (ctrlKey && code === 'KeyW');
+}
 
 export class Input {
   constructor(canvas) {
@@ -32,11 +43,12 @@ export class Input {
     this.vpressed = new Set();  // actions pressed since last consume
     this.touch = { lx: 0, ly: 0, sprint: false };
     this.noLock = false;        // touch controls on: never request pointer lock
+    this.menuOpen = null;       // () => true while a screen is open (set by the game): Tab and Space then keep their browser meaning
 
     window.addEventListener('keydown', (e) => {
       if (this.capture) { e.preventDefault(); if (!e.repeat) this.capture(e.code); return; }
       if (e.repeat) { if (this.locked) e.preventDefault(); return; }
-      if (NO_DEFAULT.test(e.code) || (e.ctrlKey && e.code === 'KeyW')) e.preventDefault();
+      if (suppressDefault(e.code, e.ctrlKey, this.menuOpen ? this.menuOpen() : false)) e.preventDefault();
       this.noteDown(e.code);
       if (this.onKey) this.onKey(e);
     });

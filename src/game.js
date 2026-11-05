@@ -63,7 +63,7 @@ import { HUD } from './ui/hud.js';
 import { UI } from './ui/screens.js';
 import { Input } from './ui/input.js';
 import { resolveBindings } from './ui/bindings.js';
-import { ACCESS_DEFAULTS, CaptionLog, motionScales } from './ui/accessibility.js';
+import { ACCESS_DEFAULTS, ACCESS_CLASSES, CaptionLog, motionScales, accessClasses } from './ui/accessibility.js';
 import { TOUCH_DEFAULTS, normalizeTouch, wantTouch, readTouchEnv } from './ui/touchMath.js';
 import { Audio } from './audio/audio.js';
 import { explode } from './entities/explosion.js';
@@ -105,6 +105,8 @@ const EVENT_FOG = new THREE.Color(); // scratch colour for the dust storm / grou
 export const DIFFICULTIES = ['peaceful', 'easy', 'normal', 'hard'];
 const FIREFLY_BIOMES = new Set(['swamp', 'forest', 'flower_forest', 'blossom_grove', 'mangrove_swamp', 'dark_forest', 'jungle', 'birch_forest']);
 
+const ACCESS_KEYS = new Set(['reduceMotion', 'reduceFlashing', 'highContrast', 'largeText', 'colorBlind']);
+
 export const DEFAULT_SETTINGS = { renderDistance: 8, fov: 75, sensitivity: 100, volume: 0.5, music: 0.5, shadows: true, shaders: true, shadowMapSize: 1024, pixelRatioCap: 1.25, daylightCycle: true, seasons: true, worldEvents: true, hostileMobs: true, fireworksHurtPlayers: false, difficulty: 'normal', showCoords: false, keys: {}, ...ACCESS_DEFAULTS, ...TOUCH_DEFAULTS };
 
 export class Game {
@@ -114,6 +116,8 @@ export class Game {
     this.seed = seed;
     this.settings = { ...DEFAULT_SETTINGS, ...settings };
     Object.assign(this.settings, normalizeTouch(this.settings)); // (saved touch settings may be anything)
+    this.fx = motionScales(this.settings); // how much of each motion / flash effect to show (ui/accessibility.js)
+    this.applyAccessClasses();
     this.hooks = hooks;
     this.ticks = 0;
     this.time = 0;            // world time in ticks (drives the suns)
@@ -203,6 +207,7 @@ export class Game {
     this.interaction = new Interaction(this);
     this.input = new Input(this.canvas);
     this.input.sensitivity = 0.0022 * s.sensitivity / 100;
+    this.input.menuOpen = () => !!(this.ui && this.ui.blocking);
     this.input.setBindings(resolveBindings(s.keys)); // rebound controls (pause menu > Controls)
     this.audio = new Audio();
     this.audio.setVolume(s.volume);
@@ -377,8 +382,16 @@ export class Game {
     return !!this.touch;
   }
 
+  /** The page root carries a class per accessibility setting (ui/style.css): reduced motion, high contrast, large text. */
+  applyAccessClasses() {
+    const root = document.documentElement;
+    const on = new Set(accessClasses(this.settings, false));
+    for (const c of ACCESS_CLASSES) root.classList.toggle(c, on.has(c));
+  }
+
   setSetting(k, v) {
     this.settings[k] = v;
+    if (ACCESS_KEYS.has(k)) { this.fx = motionScales(this.settings); this.applyAccessClasses(); }
     if (k === 'touchMode') this.applyTouch();
     else if (k.startsWith('touch') && this.touch) this.touch.applySettings();
     if (k === 'renderDistance') this.chunks.setRenderDistance(v);
@@ -1294,7 +1307,7 @@ export class Game {
       if (inp.wasPressed('emote')) this.ui.close();
       else EMOTES.forEach((k, i) => { if (inp.codePressed('Digit' + (i + 1))) this.ui.pickEmote(k); });
     }
-    if (this.ui.open === 'pause' && this.ui.padBack) this.ui.padNav(inp.pressed, inp.pad.ly); // gamepad on the Statistics and Milestones screens
+    if (this.ui.blocking && !inp.capture) this.ui.padMenu(inp.pressed, inp.pad); // gamepad on every screen: focus, A, X, B (Statistics, Milestones and the Field Guide scroll with it too)
     if (inp.wasPressed('pause') && this.ui.blocking) {
       if (this.ui.open === 'pause') { this.ui.open = null; this.ui.clear(); this.onUIClosed(); }
       else this.ui.close();
@@ -1411,6 +1424,7 @@ export class Game {
     this.sky.biomeTemp = (BIOMES[this.world.biomeAt(Math.floor(x), Math.floor(z))] || BIOMES[3]).temp; // colder skies see more Veilfire
     this.sky.thunder = this.weather.storm;
     this.sky.flash = this.lightning.flash * fxScale.flash;
+    this.sky.fx = fxScale;
     const st = this.dims.updateSky(smoothTime, sec, this.camera, new THREE.Vector3(x, y, z));
     const wlevel = this.world.dimension === 'overworld' ? this.weather.level : 0; // no weather in the Cinderdeep or the Hollow
     this.weatherFx.update(this.world, this.camera, p.yaw, wlevel, sec, Math.min(1, st.combined) * 0.85 + 0.15);

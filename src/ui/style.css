@@ -152,7 +152,7 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 .milestone-row img { width: 32px; height: 32px; image-rendering: pixelated; }
 .milestone-row .d { font-size: 12px; opacity: .8; }
 
-.world-list { display: flex; flex-direction: column; gap: 6px; width: 300px; max-width: calc(100vw - 32px); margin-bottom: 8px; }
+.world-list { display: flex; flex-direction: column; gap: 6px; width: 300px; max-width: calc((100vw - 32px) / var(--tz, 1)); margin-bottom: 8px; }
 .world-head { font-size: 13px; opacity: .8; }
 .world-row { display: flex; gap: 6px; }
 .world-row .btn { min-width: 0; }
@@ -313,7 +313,7 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 
 /* Controls screen (ui/bindings.js) and sound captions (ui/accessibility.js) */
 .controls-screen { justify-content: flex-start; }
-.controls-list { display: flex; flex-direction: column; gap: 4px; width: min(640px, calc(100vw - 24px)); }
+.controls-list { display: flex; flex-direction: column; gap: 4px; width: min(640px, calc((100vw - 24px) / var(--tz, 1))); }
 .controls-list .world-head { margin-top: 10px; }
 .control-row { display: grid; grid-template-columns: minmax(0, 1fr) repeat(3, minmax(0, 120px)); gap: 6px; align-items: center; background: rgba(255,255,255,.06); border-radius: 4px; padding: 3px 6px; }
 .control-name { font-size: 14px; }
@@ -327,7 +327,7 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 @media (max-width: 560px) { .control-row { grid-template-columns: 1fr repeat(3, 64px); } .control-name { font-size: 12px; } }
 
 /* Statistics screen (ui/screens.js showStats) */
-.stats-body { width: min(520px, 92vw); max-height: 60vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; outline-offset: 3px; }
+.stats-body { width: min(520px, calc(92vw / var(--tz, 1))); max-height: 60vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; outline-offset: 3px; }
 .stats-body:focus-visible, .stats-screen .btn:focus-visible { outline: 2px solid #f0b04a; }
 .stats-table { width: 100%; border-collapse: collapse; background: rgba(255,255,255,.06); border-radius: 4px; }
 .stats-table caption { text-align: left; padding: 4px 6px; }
@@ -360,7 +360,7 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 .guide-tabs { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 8px; }
 .btn.guide-tab { min-width: 0; width: auto; padding: 6px 12px; font-size: 14px; }
 .btn.guide-tab.on { border-color: var(--accent); background: linear-gradient(#8a6a2a, #5e4a20); }
-.guide-tabs, .guide-body { width: min(680px, 94vw); }
+.guide-tabs, .guide-body { width: min(680px, calc(94vw / var(--tz, 1))); }
 .guide-body { max-height: 56vh; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 8px; outline-offset: 3px; text-align: left; }
 .guide-body:focus-visible, .guide-screen .btn:focus-visible { outline: 2px solid #f0b04a; }
 .guide-card { display: flex; gap: 10px; align-items: flex-start; padding: 8px; background: rgba(255,255,255,.06); border-radius: 4px; }
@@ -373,7 +373,7 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 
 /* multiplayer social layer (net/social.js): ping beacons, the Tab list, the emote wheel, the room list */
 .marker.ping i { font-style: normal; font-size: 18px; text-shadow: 0 0 6px currentColor, 1px 1px 0 #000; }
-#tablist { position: absolute; top: 48px; left: 50%; transform: translateX(-50%); min-width: 380px; max-width: 94vw; background: rgba(8, 8, 18, .72); border: 2px solid #3c3c52; border-radius: 6px; padding: 8px 10px; font: 14px/1.5 sans-serif; color: #eee; text-shadow: 1px 1px 0 #000; pointer-events: none; z-index: 12; }
+#tablist { position: absolute; top: 48px; left: 50%; transform: translateX(-50%); min-width: min(380px, 94vw); max-width: 94vw; background: rgba(8, 8, 18, .72); border: 2px solid #3c3c52; border-radius: 6px; padding: 8px 10px; font: 14px/1.5 sans-serif; color: #eee; text-shadow: 1px 1px 0 #000; pointer-events: none; z-index: 12; }
 #tablist.hidden { display: none; }
 #tablist .tl-head { text-align: center; color: #ffe2a6; font-weight: bold; margin-bottom: 4px; border-bottom: 1px solid #3c3c52; padding-bottom: 4px; }
 #tablist .tl-row { display: grid; grid-template-columns: 1fr auto auto 64px; gap: 12px; padding: 1px 4px; }
@@ -438,3 +438,91 @@ body.tc-left #tc-ui > .tc-btn { right: auto; left: calc(var(--bx) * var(--u) + e
 .tc-stick.sprint::before { border-color: var(--accent); background: rgba(240, 176, 74, .18); }
 .tc-knob { position: absolute; left: 0; top: 0; width: calc(var(--u) * .95); height: calc(var(--u) * .95); border-radius: 50%; background: rgba(255, 255, 255, .55); border: 2px solid rgba(255, 255, 255, .9); transform: translate(-50%, -50%); }
 #tc-ui.preview { z-index: 25; } #tc-ui.preview .tc-btn { pointer-events: none; }
+
+/* ---- accessibility, round 2 (ui/accessibility.js accessClasses puts these classes on <html>; ui/menuNav.js) ---- */
+/* Focus is always visible: a bright ring with a dark halo reads on light panels and dark screens alike. The gamepad's
+   focus (.pad-focus) looks the same as the keyboard's. */
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible, .pad-focus {
+  outline: 3px solid #ffd34a; outline-offset: 2px; box-shadow: 0 0 0 2px #000;
+}
+.btn:focus-visible, .btn.pad-focus { border-color: #fff; background: linear-gradient(#8a86a0, #5e5a70); }
+input[type=range]:focus-visible { outline-offset: 4px; }
+
+/* Screens never clip: when the text is large or the page is zoomed to 200 %, they scroll instead */
+.screen { overflow: auto; justify-content: safe center; }
+
+/* Trade: a discount or a surcharge is a mark and a word beside the price as well as a colour, and a surcharge is dashed */
+.price-cue { font-size: 12px; font-weight: bold; white-space: nowrap; min-width: 5.2em; color: #333; }
+.price-cue.discounted { color: #14661f; }
+.price-cue.pricey { color: #8e1e1e; }
+.trade-row .slot.pricey { outline-style: dashed; }
+.trade-row { flex-wrap: wrap; }
+.trade-rep { min-width: 12em; }
+
+/* Colour-blind modes: blue and orange take the place of green and red */
+html.cb-redgreen .trade-row .slot.discounted { outline-color: #0072b2; }
+html.cb-redgreen .trade-row .slot.pricey { outline-color: #d55e00; }
+html.cb-redgreen .price-cue.discounted { color: #00508a; }
+html.cb-redgreen .price-cue.pricey { color: #8a3a00; }
+html.cb-redgreen .trade-rep[data-standing="0"], html.cb-redgreen .trade-rep[data-standing="1"] { color: #8a3a00; }
+html.cb-redgreen .trade-rep[data-standing="3"], html.cb-redgreen .trade-rep[data-standing="4"], html.cb-redgreen .trade-rep[data-standing="5"] { color: #00508a; }
+html.cb-redgreen .trade-bar-fill { background: linear-gradient(#5aa7e8, #0072b2); }
+html.cb-redgreen #tablist .tl-ping.good { color: #56b4e9; } html.cb-redgreen #tablist .tl-ping.bad { color: #e69f00; }
+html.cb-redgreen .slot.recipe.craftable { background: rgba(0, 114, 178, .35); } html.cb-redgreen .slot.recipe.missing { background: rgba(213, 94, 0, .25); }
+.marker .team { font-weight: normal; font-size: 11px; opacity: .9; }
+
+/* Reduced motion: nothing slides, pulses, spins or shimmers (also when the system asks for it) */
+html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after { animation: none !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
+/* Reduced flashing: the fire overlay holds steady instead of flickering */
+html.reduce-flash #overlay-fire { animation: none; opacity: .85; }
+html.reduce-flash #splash { animation: none; }
+
+/* Large text: screens and HUD text grow by a third. --tz is the zoom the widths above divide by (they are in viewport units). */
+html.large-text { --tz: 1.3; }
+html.large-text .screen > * { zoom: 1.3; }
+html.large-text #captions .caption { font-size: 20px; }
+html.large-text #toast { font-size: 24px; }
+html.large-text #item-name { font-size: 21px; }
+html.large-text #skyinfo { font-size: 17px; }
+html.large-text #coords, html.large-text #debug { font-size: 17px; }
+html.large-text #tablist { font-size: 19px; }
+html.large-text #tablist .tl-team, html.large-text #tablist .tl-mode, html.large-text #tablist .tl-ping { font-size: 16px; }
+html.large-text .marker { font-size: 17px; } html.large-text .marker .d { font-size: 15px; }
+html.large-text #chat { font-size: 18px; }
+html.large-text #raidbar .rb-name { font-size: 18px; }
+html.large-text .milestone { font-size: 18px; }
+html.large-text #season-label { font-size: 15px; }
+html.large-text #time-label { font-size: 14px !important; }
+
+/* High contrast: black and white menus with thick outlines; dim, translucent and grey-on-grey text is replaced */
+html.high-contrast { --ui-panel: #fff; --ui-text: #fff; --accent: #ffe000; --ui-bg: #000; }
+html.high-contrast .screen { background: rgba(0, 0, 0, .9); }
+html.high-contrast #title-screen { background: #000; }
+html.high-contrast .screen h1, html.high-contrast .screen h2 { color: #fff; text-shadow: none; }
+html.high-contrast .screen p.sub, html.high-contrast .world-head, html.high-contrast .field, html.high-contrast .sub { color: #fff; opacity: 1; }
+html.high-contrast .btn { background: #000; color: #fff; border: 3px solid #fff; text-shadow: none; }
+html.high-contrast .btn:hover { background: #fff; color: #000; border-color: #ffe000; }
+html.high-contrast .btn:disabled { opacity: 1; color: #c8c8c8; border-style: dashed; border-color: #c8c8c8; }
+html.high-contrast .btn.guide-tab.on { background: #ffe000; color: #000; }
+html.high-contrast .panel { background: #fff; color: #000; border: 3px solid #000; box-shadow: 0 0 0 3px #fff; }
+html.high-contrast .panel .slot { background: #e6e6e6; border: 2px solid #000; }
+html.high-contrast .panel .slot:hover { background: #ffe000; }
+html.high-contrast .trade-row { background: #eee; border: 2px solid #000; }
+html.high-contrast .trade-row .trade-name, html.high-contrast .trade-level, html.high-contrast .trade-level-count, html.high-contrast .trade-rep,
+html.high-contrast .recipes-hint, html.high-contrast .price-cue, html.high-contrast .panel h3 { color: #000; }
+html.high-contrast .trade-bar { background: #fff; border: 2px solid #000; }
+html.high-contrast .trade-bar-fill { background: #000; }
+html.high-contrast .trade-row .slot.discounted, html.high-contrast .trade-row .slot.pricey { outline-width: 4px; }
+html.high-contrast .tooltip { background: #000; border: 2px solid #fff; color: #fff; }
+html.high-contrast .guide-card, html.high-contrast .stats-table, html.high-contrast .milestone-row, html.high-contrast .control-row { background: #000; border: 2px solid #fff; }
+html.high-contrast .guide-info .d, html.high-contrast .guide-card.unknown b, html.high-contrast .milestone-row .d, html.high-contrast .stats-table td { color: #fff; }
+html.high-contrast .milestone-row { opacity: 1; filter: none; border-style: dashed; } html.high-contrast .milestone-row.done { border-style: solid; }
+html.high-contrast #captions .caption, html.high-contrast #toast, html.high-contrast #tablist, html.high-contrast .marker, html.high-contrast #skyinfo,
+html.high-contrast #chat .chat-line, html.high-contrast #coords, html.high-contrast .milestone, html.high-contrast #item-name { background: #000; color: #fff; text-shadow: none; }
+html.high-contrast #captions .caption, html.high-contrast #tablist, html.high-contrast .milestone, html.high-contrast #skyinfo { border: 2px solid #fff; }
+html.high-contrast #tablist .tl-team, html.high-contrast #tablist .tl-mode, html.high-contrast #tablist .tl-head { color: #fff; }
+html.high-contrast #season-label { color: #fff !important; }
+html.high-contrast .emote-btn b { color: #ffe000; }

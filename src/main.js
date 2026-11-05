@@ -7,12 +7,18 @@ import { startTitleScene, SPLASHES } from './ui/titleScene.js';
 import { loadPlayerName, savePlayerName, normalizeRoomCode } from './net/protocol.js';
 import { takeResume, storeResume, shouldRetryJoin, RECONNECT_MAX, reconnectDelay } from './net/social.js';
 import { wantTouch, readTouchEnv } from './ui/touchMath.js';
+import { accessClasses, ACCESS_CLASSES } from './ui/accessibility.js';
 
 const stopTitleScene = startTitleScene(document.getElementById('title-bg'));
 document.getElementById('splash').textContent = SPLASHES[Math.floor(Math.random() * SPLASHES.length)];
 
 function loadSettings() {
-  try { return { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem('saturncraft.settings') || '{}') }; } catch { return { ...DEFAULT_SETTINGS }; }
+  try {
+    const stored = JSON.parse(localStorage.getItem('saturncraft.settings') || '{}');
+    // a first run on a system that asks for less motion starts with Reduce motion on
+    if (!('reduceMotion' in stored) && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) stored.reduceMotion = true;
+    return { ...DEFAULT_SETTINGS, ...stored };
+  } catch { return { ...DEFAULT_SETTINGS }; }
 }
 function saveSettings(s) { try { localStorage.setItem('saturncraft.settings', JSON.stringify(s)); } catch { /* storage unavailable */ } }
 
@@ -23,6 +29,7 @@ if (wantTouch(loadSettings(), location.search, readTouchEnv())) {
 }
 const loading = document.getElementById('loading');
 const settings = loadSettings();
+{ const on = new Set(accessClasses(settings)); for (const c of ACCESS_CLASSES) document.documentElement.classList.toggle(c, on.has(c)); } // the title screen honours the accessibility classes too
 const rd = document.getElementById('t-rd');
 const sh = document.getElementById('t-sh');
 rd.value = settings.renderDistance; document.getElementById('t-rdv').textContent = settings.renderDistance;
