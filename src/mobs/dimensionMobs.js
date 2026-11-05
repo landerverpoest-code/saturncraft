@@ -15,8 +15,8 @@ import { weightedPick, scaledCap, SPAWN_MIN_DIST, DESPAWN_FAR } from './spawnRul
 import { wyrmAI, wyrmRender, wyrmDeath, wyrmHurt } from './voidWyrm.js';
 
 const TAU = Math.PI * 2;
-const wrap = (a) => { while (a > Math.PI) a -= TAU; while (a < -Math.PI) a += TAU; return a; };
-const faceTowards = (m, x, z, k = 0.3) => { m.yaw += wrap(Math.atan2(-(x - m.x), -(z - m.z)) - m.yaw) * k; };
+export const wrap = (a) => { while (a > Math.PI) a -= TAU; while (a < -Math.PI) a += TAU; return a; };
+export const faceTowards = (m, x, z, k = 0.3) => { m.yaw += wrap(Math.atan2(-(x - m.x), -(z - m.z)) - m.yaw) * k; };
 
 /** Shoot a fireball from (x, y, z) towards the player's body. */
 function fireAt(g, m, x, y, z, speed, opts, spread = 0) {
@@ -27,14 +27,14 @@ function fireAt(g, m, x, y, z, speed, opts, spread = 0) {
 }
 
 /** Drift a flying mob towards a point with the given acceleration (velocity is damped by flyMove). */
-function flyTowards(m, x, y, z, accel) {
+export function flyTowards(m, x, y, z, accel) {
   const b = m.body, dx = x - m.x, dy = y - m.y, dz = z - m.z, l = Math.hypot(dx, dy, dz);
   if (l < 0.5) return true;
   b.vx += dx / l * accel; b.vy += dy / l * accel; b.vz += dz / l * accel;
   return false;
 }
 
-function groundBelow(g, x, y, z, max = 24) {
+export function groundBelow(g, x, y, z, max = 24) {
   for (let k = 0; k < max; k++) if (SOLID[g.world.getBlock(Math.floor(x), Math.floor(y) - k, Math.floor(z))]) return Math.floor(y) - k + 1;
   return null;
 }
@@ -160,6 +160,27 @@ export const DIM_SPAWN_TABLES = {
     { type: 'cinder_brute', weight: 40, min: 1, max: 3 },
   ],
   hollow: [{ type: 'voidwalker', weight: 100, min: 1, max: 4 }],
+  // the Cinderdeep's sub-biomes (world/dimensions/cinderBiomes.js; Capwalkers and Dirge Wailers are in mobs/cinderMobs.js)
+  cinderThicket: [
+    { type: 'capwalker', weight: 100, min: 1, max: 3 },
+    { type: 'cinder_brute', weight: 12, min: 1, max: 2 },
+    { type: 'ember_lord', weight: 4, min: 1, max: 1 },
+  ],
+  cinderDelta: [
+    { type: 'cinder_brute', weight: 100, min: 2, max: 4 },
+    { type: 'ember_lord', weight: 16, min: 1, max: 2 },
+    { type: 'ashwraith', weight: 30, min: 1, max: 1 },
+  ],
+  cinderVale: [
+    { type: 'dirge_wailer', weight: 100, min: 1, max: 2 },
+    { type: 'cinder_brute', weight: 25, min: 1, max: 3 },
+    { type: 'ashwraith', weight: 10, min: 1, max: 1 },
+  ],
+  // inside a Cinderforge (world/dimensions/cinderForge.js)
+  cinderForge: [
+    { type: 'cinder_brute', weight: 100, min: 2, max: 3 },
+    { type: 'ember_lord', weight: 25, min: 1, max: 2 },
+  ],
 };
 const DIM_Y = { cinderdeep: [32, 120], hollow: [20, 120] };
 const NO_FLOOR = new Set([B.BEDROCK, B.OBSIDIAN, B.GLOWSHARD]);
@@ -172,7 +193,8 @@ export function attemptDimensionSpawn(spawner, cx, cz, category) {
   let x = cx * 16 + Math.floor(Math.random() * 16), z = cz * 16 + Math.floor(Math.random() * 16);
   const y = y0 + Math.floor(Math.random() * (y1 - y0));
   if (SOLID[w.getBlock(x, y, z)] || isFluid(w.getBlock(x, y, z))) return 0;
-  const bastion = dim === 'cinderdeep' && w.dimGenerator && w.dimGenerator.inBastion && w.dimGenerator.inBastion(x, y, z);
+  // the Cinderdeep's spawn zone: a bastion, a Cinderforge or one of the sub-biomes (zoneAt in world/dimensions/cinderdeep.js)
+  const zone = dim === 'cinderdeep' && w.dimGenerator && w.dimGenerator.zoneAt ? w.dimGenerator.zoneAt(x, y, z) : null;
   // Hollow Cities: Gloomshells (mobs/gloomshell.js) on the city's floors, a few per city
   const city = dim === 'hollow' && DIM_SPAWN_TABLES.hollowCity && w.dimGenerator.cityAt && w.dimGenerator.cityAt(x, y, z);
   if (city) {
@@ -180,10 +202,11 @@ export function attemptDimensionSpawn(spawner, cx, cz, category) {
     for (const e of g.entities.list) if (e.type === 'gloomshell' && !e.dead && Math.abs(e.x - city.x) < 40 && Math.abs(e.z - city.z) < 40) near++;
     if (near >= 6) return 0;
   }
-  const table = bastion ? DIM_SPAWN_TABLES.bastion : city ? DIM_SPAWN_TABLES.hollowCity : DIM_SPAWN_TABLES[dim];
+  const table = (zone && DIM_SPAWN_TABLES[zone]) || (city ? DIM_SPAWN_TABLES.hollowCity : DIM_SPAWN_TABLES[dim]);
   const entry = weightedPick(table);
   if (!entry) return 0;
   const def = MOBS[entry.type];
+  if (!def) return 0;
   const size = entry.min + Math.floor(Math.random() * (entry.max - entry.min + 1));
   let n = 0;
   for (let k = 0; k < 4 && n < size; k++) {

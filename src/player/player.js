@@ -270,6 +270,7 @@ export class Player {
       jumpFactor: 1 + jumpBonus(fx) / PHYS.JUMP_VELOCITY,
       slowFall: !!fx.slow_falling,
       levitation: effectLevel(fx, 'levitation'),
+      treadDeep: !!(this.inventory.armor[3] && ITEMS[this.inventory.armor[3].id] && ITEMS[this.inventory.armor[3].id].armor && ITEMS[this.inventory.armor[3].id].armor.dirgestep), // Dirgestep Boots shrug off slow ground
     });
     if (fx.slow_falling) b.fallDistance = 0;
     if (this.jumpCooldown > 0) this.jumpCooldown--;

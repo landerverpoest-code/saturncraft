@@ -321,6 +321,10 @@ export class Audio {
         this.noise(t + 0.15, 0.9, 1800, 0.8, 0.25 * gain, out); this.tone(t + 0.05, 0.5, 220, 60, 0.3 * gain, out, 'sawtooth'); break;
       case 'ember_snap': this.noise(t, 0.03, 2800, 5, 0.12 * gain, out); this.tone(t, 0.05, 1300, 700, 0.04 * gain, out, 'square'); break;
       case 'void_whisper': this.tone(t, 2.0, 1150, 1090, 0.03 * gain, out, 'sine'); this.tone(t + 0.1, 1.8, 1740, 1660, 0.02 * gain, out, 'sine'); this.noise(t, 1.8, 3200, 4, 0.04 * gain, out); break;
+      // the Cinderdeep sub-biomes: a puff of spores, ash hissing down, a wail on the wind
+      case 'spore_puff': this.noise(t, 0.22, 1700, 1.2, 0.1 * gain, out); this.tone(t, 0.18, 380, 640, 0.05 * gain, out, 'sine'); this.tone(t + 0.1, 0.2, 520, 820, 0.035 * gain, out, 'sine'); break;
+      case 'ash_hiss': this.noise(t, 1.4, 3800, 0.7, 0.07 * gain, out); this.noise(t + 0.2, 1.1, 1500, 0.6, 0.05 * gain, out, 'lowpass'); break;
+      case 'dirge_wail': this.tone(t, 1.8, 330, 250, 0.1 * gain, out, 'triangle'); this.tone(t + 0.05, 1.7, 495, 372, 0.05 * gain, out, 'sine'); this.tone(t + 0.4, 1.3, 392, 294, 0.045 * gain, out, 'sine'); this.noise(t, 1.6, 900, 1.5, 0.04 * gain, out); break;
       default: this.tone(t, 0.1, 440, 440, 0.1 * gain, out);
     }
   }

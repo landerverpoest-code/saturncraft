@@ -259,7 +259,10 @@ export class Body {
     if (this.onGround) {
       // slow ground (Mournsand): horizontal velocity multiplier
       const sf = BLOCKS[world.getBlock(Math.floor(this.x), Math.floor(this.y - 0.5000001), Math.floor(this.z))];
-      if (sf && sf.speedFactor !== 1) { this.vx *= sf.speedFactor; this.vz *= sf.speedFactor; }
+      if (sf && sf.speedFactor !== 1) {
+        const f = input.treadDeep ? Math.max(sf.speedFactor, 0.9) : sf.speedFactor; // Dirgestep Boots: slow ground costs a tenth at most
+        this.vx *= f; this.vz *= f;
+      }
     }
     if (ladder && (this.horizontalCollision || input.jump)) this.vy = 0.2; // climb
     // Slow Falling: a tenth of the gravity while descending

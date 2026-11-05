@@ -15,6 +15,7 @@ import { LEAVES } from '../world/trees.js';
 import { MIN_Y } from '../world/constants.js';
 import { chunkKey } from '../world/world.js';
 import { attemptDimensionSpawn } from './dimensionMobs.js';
+import './cinderMobs.js'; // registers the Capwalker and the Dirge Wailer (Cinderdeep sub-biomes)
 import { BIOMES } from '../world/biomes.js';
 import { outpostsNear } from '../world/temples.js';
 import { hutsNear, hutAt } from '../world/swampHuts.js';

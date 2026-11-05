@@ -9,6 +9,7 @@ import { BIOMES } from '../world/biomes.js';
 import { pickSoundscape, emptyFacts, bedFor, AmbientDirector, musicProfileFor } from './ambience.js';
 import { climate } from '../world/seasons.js';
 import { measureRoom, reverbFor, roofMaterial } from './acoustics.js';
+import { SUB_BIOMES } from '../world/dimensions/cinderBiomes.js';
 
 /** Sound material of a solid block, or null for anything sound passes through (air, plants, liquids). */
 export function soundMaterial(id) {
@@ -51,7 +52,12 @@ export class AmbientSystem {
       f.lavaNear = py < 0 ? this.countLava(w, px, py, pz) : 0;
       f.night = g.sky.state.aboveCount === 0;
       f.raining = g.weather.level > 0.2;
-    } else { f.under = false; f.depthBelowSurface = 0; f.lavaNear = 0; f.night = false; f.raining = false; }
+    } else {
+      f.under = false; f.depthBelowSurface = 0; f.lavaNear = 0; f.night = false; f.raining = false;
+      // the Cinderdeep's sub-biome under the player (Glowcap Thicket, Slagfall Delta, Dirgevale)
+      const gen = w.dimension === 'cinderdeep' ? w.dimGenerator : null;
+      f.cinderBiome = gen && gen.subBiomeAt ? SUB_BIOMES[gen.subBiomeAt(px, pz)].key : null;
+    }
     return f;
   }
 

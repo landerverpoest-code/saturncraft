@@ -50,8 +50,8 @@ for (const k of ENCH_KEYS) {
 }
 
 // Enchantability per material (higher = better bonus rolls). 0 = cannot be enchanted at a table.
-export const TOOL_ENCHANTABILITY = { wood: 15, stone: 5, iron: 14, gold: 22, diamond: 10 };
-export const ARMOR_ENCHANTABILITY = { leather: 15, gold: 25, iron: 9, diamond: 10 };
+export const TOOL_ENCHANTABILITY = { wood: 15, stone: 5, iron: 14, gold: 22, diamond: 10, slagsteel: 12 };
+export const ARMOR_ENCHANTABILITY = { leather: 15, gold: 25, iron: 9, diamond: 10, dirge: 14 };
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 export const roman = (n) => ROMAN[n] || String(n);

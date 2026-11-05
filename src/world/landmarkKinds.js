@@ -14,6 +14,9 @@ export const LANDMARK_KINDS = [
   { key: 'skywatch', name: 'Skywatch Tower', color: '#e0e0f0', shape: 'tower' },
   { key: 'rimekeep', name: 'Rimekeep', color: '#8fd4f4', shape: 'star' },
   { key: 'sporehall', name: 'Sporehall', color: '#9ccc40', shape: 'dome' },
+  // other dimensions: found (and drawn on the Field Guide page) in the dimension named by `dim`, never in the overworld
+  { key: 'cinderforge', name: 'Cinderforge', color: '#ff8a30', shape: 'tower', dim: 'cinderdeep' },
+  { key: 'wyrmribs', name: 'Wyrm Ribs', color: '#d8d2e8', shape: 'dome', dim: 'hollow' },
 ];
 export const LANDMARK_BY_KEY = Object.fromEntries(LANDMARK_KINDS.map((k) => [k.key, k]));
 export const isLandmarkKind = (k) => typeof k === 'string' && Object.hasOwn(LANDMARK_BY_KEY, k);

@@ -90,6 +90,7 @@ export const CAPTION_TEXT = {
   spear_throw: 'Spear thrown', spear_stick: 'Spear sticks', spear_return: 'Spear flies home', spear_surge: 'Surge rushes', stormcall: 'Stormcall crackles',
   breeze: 'Breeze sighs', meteor_boom: 'Meteorite booms', ember_snap: 'Embers snap', void_whisper: 'Void whispers',
   parry: 'Shield parries', shield_break: 'Shield knocked down',
+  spore_puff: 'Spores puff', ash_hiss: 'Ash hisses', dirge_wail: 'Dirge wails',
 };
 
 /** Sounds that are only interface feedback when they have no place in the world. */

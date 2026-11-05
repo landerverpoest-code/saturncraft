@@ -3,6 +3,9 @@ import { B } from '../blocks.js';
 import { I } from '../items.js';
 import { RECIPES, SMELTING } from '../../player/crafting.js';
 import { MILESTONES } from '../../player/milestones.js';
+import { SUB } from './cinderBiomes.js';
+import { forgesNear } from './cinderForge.js';
+import { wyrmRibsNear } from './wyrmRibs.js';
 
 const shapeless = (ings, result, count = 1) => RECIPES.push({ type: 'shapeless', ings, result, count });
 const shaped = (pattern, key, result, count = 1) => RECIPES.push({ type: 'shaped', pattern, key, result, count });
@@ -25,6 +28,16 @@ if (!RECIPES.some((r) => r.result === B.GLOOMSHELL_BOX)) {
   shapeless([I.PAPER, I.GUNPOWDER], I.SKY_ROCKET, 3);
   shaped(['S', 'C', 'S'], { S: I.GLOOMSHELL_HUSK, C: B.CHEST }, B.GLOOMSHELL_BOX, 1);
 }
+// the Cinderdeep's sub-biomes: Slagsteel from Slag Chunks, a Slagsteel Pickaxe, Dirgestep Boots and the Spore Lantern;
+// Wyrmbone from the bones of the Hollow's Wyrm Ribs
+if (!RECIPES.some((r) => r.result === I.SLAGSTEEL_PICKAXE)) {
+  shaped(['XXX', ' S ', ' S '], { X: I.SLAGSTEEL_INGOT, S: I.STICK }, I.SLAGSTEEL_PICKAXE);
+  shaped(['X X', 'X X'], { X: I.DIRGE_CRYSTAL }, I.DIRGESTEP_BOOTS);
+  shaped(['SSS', 'SES', 'SSS'], { S: I.GLOWCAP_SPORES, E: I.EMBER_ROD }, B.SPORE_LANTERN, 2);
+  shaped(['XX', 'XX'], { X: I.BONE }, B.WYRMBONE, 2);
+}
+SMELTING[I.SLAG_CHUNK] = I.SLAGSTEEL_INGOT;
+SMELTING[B.SLAG_ORE] = I.SLAGSTEEL_INGOT;
 SMELTING[I.HUSHFRUIT] = I.POPPED_HUSHFRUIT;
 SMELTING[B.EMBERQUARTZ_ORE] = I.EMBER_QUARTZ;
 SMELTING[B.CINDERSTONE] = B.SCORCHED_BRICKS;
@@ -41,4 +54,10 @@ for (const m of [
   { id: 'hollow_city', title: 'The City at the Edge', desc: 'Find a Hollow City', icon: B.HOLLOWBRICK, event: 'hollow_city' },
   { id: 'levitate', title: 'Lighter than Air', desc: 'Be lifted by a Drift Spark', icon: I.GLOOMSHELL_HUSK, event: 'levitate' },
   { id: 'voidwing', title: 'Wings of the Void', desc: 'Find a Voidwing', icon: I.VOIDWING, inv: (g) => has(g, I.VOIDWING) || (g.player.inventory.armor[1] && g.player.inventory.armor[1].id === I.VOIDWING) },
+  // the Cinderdeep's sub-biomes and the Hollow's Wyrm Ribs
+  { id: 'glowcap', title: 'Light in the Dark', desc: 'Walk into a Glowcap Thicket', icon: B.GLOWCAP_CAP, tick: (g) => g.world.dimension === 'cinderdeep' && !!g.world.dimGenerator.subBiomeAt && g.world.dimGenerator.subBiomeAt(Math.floor(g.player.x), Math.floor(g.player.z)) === SUB.THICKET },
+  { id: 'slagsteel', title: 'Slag and Steel', desc: 'Smelt a Slagsteel Ingot', icon: I.SLAGSTEEL_INGOT, inv: (g) => has(g, I.SLAGSTEEL_INGOT) },
+  { id: 'dirgestep', title: 'Light on Mournsand', desc: 'Make Dirgestep Boots', icon: I.DIRGESTEP_BOOTS, inv: (g) => has(g, I.DIRGESTEP_BOOTS) || (g.player.inventory.armor[3] && g.player.inventory.armor[3].id === I.DIRGESTEP_BOOTS) },
+  { id: 'cinderforge', title: 'Cold Anvils', desc: 'Find a Cinderforge', icon: B.SCORCHED_BRICKS, tick: (g) => g.world.dimension === 'cinderdeep' && forgesNear(g.world.dimGenerator, g.player.x - 14, g.player.z - 14, g.player.x + 14, g.player.z + 14).some((f) => Math.abs(f.y - g.player.y) < 20) },
+  { id: 'wyrm_ribs', title: 'What the Wyrm Left', desc: 'Find the Wyrm Ribs on an outer island', icon: B.WYRMBONE, tick: (g) => g.world.dimension === 'hollow' && wyrmRibsNear(g.world.dimGenerator, g.player.x - 14, g.player.z - 14, g.player.x + 14, g.player.z + 14).length > 0 },
 ]) if (!MILESTONES.some((x) => x.id === m.id)) MILESTONES.push(m);
