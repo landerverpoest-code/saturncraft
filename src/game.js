@@ -70,6 +70,8 @@ import { TOUCH_DEFAULTS, normalizeTouch, wantTouch, readTouchEnv } from './ui/to
 import { Audio } from './audio/audio.js';
 import { explode } from './entities/explosion.js';
 import { saveGame, applySave, applyPlayerSave } from './world/save.js';
+import { storageStatus } from './world/storage.js';
+import { isQuotaError } from './world/saveFormat.js';
 import { DimensionManager } from './world/dimensions/manager.js';
 import { DIMENSIONS } from './world/dimensions/dims.js';
 import { EnchantBooks } from './render/enchantBooks.js';
@@ -140,6 +142,11 @@ export class Game {
     this.proving = new ProvingSystem(this); // Proving Spawners and Vaults (world/provingSystem.js)
     this.fps = 0; this.frameCount = 0; this.fpsTime = 0;
     this.net = null;              // multiplayer session (src/net/session.js), null in single-player
+    this.allowCheats = true;      // commands such as /give and /gamemode (a world can be made without them; saved in meta)
+    this.worldType = 'normal';    // the generator the world was made with
+    this.createdAt = 0;
+    this.seedText = null;         // what was typed in the seed box, shown in the world list
+    this.thumbnail = null;        // data URL of the last screenshot taken for the world list
   }
 
   async start(onProgress) {
@@ -469,10 +476,70 @@ export class Game {
 
   async save() {
     if (this.net && this.net.isClient) return false; // a friend's world is saved by its host
-    try { await saveGame(this); return true; } catch (e) { console.warn('save failed', e); return false; }
+    try {
+      await this.captureThumbnail(); // a small screenshot for the world list (taken from the next drawn frame)
+      await saveGame(this);
+      this.saveProblem = null;
+      return true;
+    } catch (e) {
+      console.warn('save failed', e);
+      this.saveProblem = isQuotaError(e) ? 'quota' : 'error';
+      return false;
+    }
+  }
+
+  /** The autosave: like save(), but tells the player when it fails or when the browser storage is nearly full. */
+  async autosave() {
+    const ok = await this.save();
+    if (!this.hud) return ok;
+    if (!ok) {
+      const now = Date.now();
+      if (now - (this._saveWarnAt || 0) > 60000) {
+        this._saveWarnAt = now;
+        this.hud.toast(this.saveProblem === 'quota' ? 'Save failed: browser storage is full. Free space or export this world from the title screen.' : 'Autosave failed. Your progress since the last save is not stored.', 6000);
+      }
+      return ok;
+    }
+    this._autosaves = (this._autosaves || 0) + 1;
+    if (this._autosaves % 5 === 1) { // the quota is checked now and then, not on every save
+      const q = await storageStatus().catch(() => null);
+      if (q && q.level && q.level !== 'ok' && q.level !== this._quotaWarned) {
+        this._quotaWarned = q.level;
+        this.hud.toast(`Browser storage is ${Math.round(q.ratio * 100)}% full${q.level === 'critical' ? ': saving may fail soon. Delete or export a world.' : '. Consider exporting or deleting old worlds.'}`, 6000);
+      }
+    }
+    return ok;
+  }
+
+  /**
+   * Take the world-list screenshot from the next frame that is drawn (a WebGL canvas can only be copied right after
+   * drawing). Resolves with the data URL, or the previous one when no frame comes within `timeout` ms.
+   */
+  captureThumbnail(timeout = 400) {
+    if (!this.running || !this.canvas || typeof document === 'undefined') return Promise.resolve(this.thumbnail);
+    return new Promise((resolve) => {
+      const waiters = this._thumbWaiters || (this._thumbWaiters = []);
+      const done = () => { clearTimeout(timer); resolve(this.thumbnail); };
+      const timer = setTimeout(() => { const i = waiters.indexOf(done); if (i >= 0) waiters.splice(i, 1); resolve(this.thumbnail); }, timeout);
+      waiters.push(done);
+    });
+  }
+
+  _grabThumbnail() {
+    const waiters = this._thumbWaiters.splice(0);
+    try {
+      const W = 192, H = 108, src = this.canvas;
+      const c = this._thumbCanvas || (this._thumbCanvas = Object.assign(document.createElement('canvas'), { width: W, height: H }));
+      const ratio = src.width / src.height, want = W / H;
+      const sw = ratio > want ? Math.round(src.height * want) : src.width, sh = ratio > want ? src.height : Math.round(src.width / want);
+      c.getContext('2d').drawImage(src, (src.width - sw) >> 1, (src.height - sh) >> 1, sw, sh, 0, 0, W, H);
+      this.thumbnail = c.toDataURL('image/jpeg', 0.6);
+    } catch { /* keep the previous thumbnail */ }
+    for (const f of waiters) f();
   }
 
   async quitToTitle() {
+    await this.captureThumbnail(); // (needs the frame loop, so before it stops)
     this.running = false;
     await this.save();
     if (this.net) this.net.close();
@@ -1255,7 +1322,7 @@ export class Game {
     this.effectParticles();
     this.particles.tick();
     if (this.net) this.net.tick();
-    if (this.ticks % 1200 === 0) this.save(); // autosave every minute
+    if (this.ticks % 1200 === 0) this.autosave(); // autosave every minute
     if (this.ticks % 100 === 0) this.milestones.tick();
     if (this.ticks % 20 === 0) this.onboarding.tick(); // hints and First Steps: one cheap look a second
     if (this.ticks % 20 === 0) this.tickBeacons(this.ticks % BEACON_PERIOD === 0);
@@ -1551,6 +1618,7 @@ export class Game {
       this.postfx.grade(warm * (1 - cd), night * (1 - this.nightVision), Math.min(1, (p.hurtTime > 0 ? p.hurtTime / 10 : 0) * 0.6 + (hp < 0.3 && !p.creative && !p.dead ? (0.3 - hp) * 1.2 * (0.6 + 0.4 * Math.sin(sec * 5)) : 0)));
     }
     if (fx) this.postfx.end(this.camera, sec, this.shaftSun(st, cd), b.eyeInWater);
+    if (this._thumbWaiters && this._thumbWaiters.length) this._grabThumbnail(); // (right after drawing, see captureThumbnail)
     this.hud.setScope(zoom);
     this.hud.update();
     this.ui.tickOpen();

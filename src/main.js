@@ -1,8 +1,9 @@
 // Entry point: title screen, settings persistence and game start.
 import './ui/style.css';
 import { Game, DEFAULT_SETTINGS } from './game.js';
-import { stringToSeed } from './world/noise.js';
-import { loadGame, deleteSave, listWorlds, renameWorld, MAX_WORLDS } from './world/save.js';
+import { loadGame, listWorlds } from './world/save.js';
+import { seedFromText, settingsForOptions, applyNewWorldOptions } from './world/newWorld.js';
+import { initWorldList, readCreateOptions } from './ui/worldList.js';
 import { startTitleScene, SPLASHES } from './ui/titleScene.js';
 import { loadPlayerName, savePlayerName, normalizeRoomCode } from './net/protocol.js';
 import { takeResume, storeResume, shouldRetryJoin, RECONNECT_MAX, reconnectDelay } from './net/social.js';
@@ -51,62 +52,23 @@ function titleURL() {
   return location.pathname + (s ? '?' + s : '');
 }
 
-// ---- saved worlds (up to MAX_WORLDS slots) ----
-let worlds = Array(MAX_WORLDS).fill(null);
-const worldsEl = document.getElementById('worlds');
+// ---- saved worlds: the list, backups, import / export and the creation options live in ui/worldList.js ----
+const worldList = initWorldList({ start: (d, slot) => start(d, null, slot) });
 const playBtn = document.getElementById('play');
-function renderWorlds() {
-  worldsEl.innerHTML = '';
-  const used = worlds.filter(Boolean).length;
-  const head = document.createElement('div');
-  head.className = 'world-head';
-  head.textContent = `Your worlds (${used}/${MAX_WORLDS})`;
-  if (used) worldsEl.appendChild(head);
-  for (const w of worlds) {
-    if (!w) continue;
-    const row = document.createElement('div');
-    row.className = 'world-row';
-    const play = document.createElement('button');
-    play.className = 'btn world-play';
-    play.innerHTML = '<b></b><span></span>';
-    play.querySelector('b').textContent = w.name;
-    play.querySelector('span').textContent = `seed ${w.seed} · ${new Date(w.savedAt).toLocaleString()}`;
-    play.onclick = async () => { const d = await loadGame(w.slot); if (d) start(d, null, w.slot); };
-    const ren = document.createElement('button');
-    ren.className = 'btn world-icon'; ren.title = 'Rename'; ren.textContent = '✎';
-    ren.onclick = async () => {
-      const n = prompt('New name for this world:', w.name);
-      if (n === null || !n.trim()) return;
-      await renameWorld(w.slot, n.trim().slice(0, 24));
-      worlds = await listWorlds(); renderWorlds();
-    };
-    const del = document.createElement('button');
-    del.className = 'btn world-icon world-del'; del.title = 'Delete'; del.textContent = '✕';
-    del.onclick = async () => {
-      if (!confirm(`Delete "${w.name}" for good?`)) return;
-      await deleteSave(w.slot);
-      worlds = await listWorlds(); renderWorlds();
-    };
-    row.append(play, ren, del);
-    worldsEl.appendChild(row);
-  }
-  const full = used >= MAX_WORLDS;
-  playBtn.disabled = full;
-  playBtn.textContent = full ? `Max ${MAX_WORLDS} worlds · delete one first` : 'Create New World';
-}
-listWorlds().then((w) => { worlds = w; renderWorlds(); });
 
-async function start(saveData = null, net = null, slot = null) {
-  const seedText = document.getElementById('seed').value.trim();
-  const seed = net ? net.welcome.seed : saveData ? saveData.seed : seedText ? stringToSeed(seedText) : (Math.random() * 2 ** 31) | 0;
+/** Open a saved world (`saveData`), a friend's (`net`) or a new one made with `newOpts` (the creation options). */
+async function start(saveData = null, net = null, slot = null, newOpts = null) {
+  const creating = !saveData && !net;
+  const opts = creating ? (newOpts || readCreateOptions()) : null;
+  const seed = net ? net.welcome.seed : saveData ? saveData.seed : seedFromText(opts.seedText);
   let worldName = saveData ? saveData.name : null;
-  if (!saveData && !net) {
+  if (creating) {
     // a new world takes the first free slot
-    worlds = await listWorlds();
+    const worlds = await listWorlds();
     const free = worlds.indexOf(null);
-    if (free < 0) { renderWorlds(); return; }
+    if (free < 0) { worldList.refresh(); return; }
     slot = free + 1;
-    worldName = document.getElementById('wname').value.trim().slice(0, 24) || `World ${slot}`;
+    worldName = opts.name || `World ${slot}`;
   }
   settings.renderDistance = +rd.value;
   settings.shadows = sh.checked;
@@ -116,7 +78,7 @@ async function start(saveData = null, net = null, slot = null) {
   stopTitleScene();
   loading.classList.remove('hidden');
   const canvas = document.getElementById('game');
-  game = new Game(canvas, seed, settings, {
+  game = new Game(canvas, seed, creating ? settingsForOptions(settings, opts) : settings, {
     saveSettings,
     quit: () => { if (net) location.href = titleURL(); else location.reload(); },
     // the link to the host dropped: come back with the same place and belongings (net/social.js)
@@ -127,6 +89,10 @@ async function start(saveData = null, net = null, slot = null) {
   game.net = net; // joining a friend's world (null otherwise)
   window.__game = game;
   await game.start((f) => { loading.querySelector('.bar > div').style.width = `${Math.round(f * 100)}%`; });
+  if (creating) {
+    applyNewWorldOptions(game, opts);
+    game.save(); // the new world is in the list from the start, with its options
+  }
   loading.classList.add('hidden');
   if (game.touch) game.hud.toast(net ? `Joined ${net.welcome.hostName}'s world` : 'Left thumb moves · drag to look · hold to mine · Menu > Help');
   else game.hud.toast(net ? `Joined ${net.welcome.hostName}'s world · click to play` : `Click to play · E for inventory · ${codeLabel(resolveBindings(settings.keys).help[0])} for help`);
