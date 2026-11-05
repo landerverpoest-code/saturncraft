@@ -15,7 +15,7 @@ import { spongeUpdate } from './sponge.js';
 import { paintingIntact } from './paintings.js';
 import { LISTENS } from './vibrations.js';
 import { RANDOM_TICKS } from './randomTicks.js';
-import { Circuits, CIRCUIT_BLOCK, CIRCUIT_REACT, CIRCUIT_SETTLE, supported as circuitSupported } from './circuits.js';
+import { Circuits, CIRCUIT_BLOCK, CIRCUIT_REACT, CIRCUIT_SETTLE, SCHEDULED_PER_TICK, supported as circuitSupported } from './circuits.js';
 import { updateSpike, crystalSupported } from './caves.js';
 import { scaffoldTick } from './scaffolding.js';
 import { potTick } from './cookingPot.js';
@@ -359,7 +359,7 @@ export class World {
     // cap work per tick
     for (let n = 0; n < due.length; n++) {
       const t = due[n];
-      if (n > 4000) { this.scheduleTick(t.x, t.y, t.z, 1); continue; }
+      if (n > SCHEDULED_PER_TICK) { this.scheduleTick(t.x, t.y, t.z, 1); this.circuits.stats.deferred++; continue; } // loop guard: the rest runs next tick
       if (!this.isLoaded(t.x, t.z)) continue;
       const id = this.getBlock(t.x, t.y, t.z);
       const d = BLOCKS[id];

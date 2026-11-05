@@ -364,6 +364,10 @@ shaped(['CCC', 'C C', 'CRC'], { C: B.COBBLESTONE, R: I.CINNABAR }, B.DROPPER, 1)
 shaped([' T ', 'TQT', 'SSS'], { T: B.CINNABAR_TORCH, Q: I.EMBER_QUARTZ, S: B.STONE }, B.COMPARATOR, 1);
 shaped(['CCC', 'RRQ', 'CCC'], { C: 'stone_mat', R: I.CINNABAR, Q: I.EMBER_QUARTZ }, B.OBSERVER, 1);
 shaped(['GGG', 'QQQ', 'SSS'], { G: B.GLASS, Q: I.EMBER_QUARTZ, S: 'wood_slab' }, B.DAYLIGHT_SENSOR, 1);
+// Snare Posts and Cord (a tripline, world/snare.js) and the Pulse Gate (limiter and metronome, world/pulseGate.js)
+shaped(['I', 'S', 'P'], { I: I.IRON_INGOT, S: I.STICK, P: 'planks' }, B.SNARE_POST, 2);
+shapeless([I.STRING], B.SNARE_CORD, 2);
+shaped(['TQT', 'GCG', 'SSS'], { T: B.CINNABAR_TORCH, Q: I.EMBER_QUARTZ, G: I.GOLD_INGOT, C: I.CINNABAR, S: B.STONE }, B.PULSE_GATE, 1);
 // a Hush Sensor and three Hush Shards tune it: the Calibrated Hush Sensor (world/vibrations.js)
 shaped([' S ', 'SHS'], { S: I.HUSH_SHARD, H: B.HUSH_SENSOR }, B.CALIBRATED_HUSH_SENSOR, 1);
 // Firework Stars and Star Rockets (world/items.js, entities/skyRocket.js)

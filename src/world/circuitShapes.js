@@ -25,6 +25,11 @@ export const OPENABLE_POWERED = 16;                   // doors, trapdoors, gates
 export const COMPARATOR_SUBTRACT = 4;                 // comparators: subtract mode (front torch lit); bits 4-7 = output level
 export const OBSERVER_POWERED = 8;                    // observers: sending their pulse
 export const SENSOR_INVERTED = 16;                    // daylight sensors: inverted; bits 0-3 = output level
+export const SNARE_ATTACHED = 4, SNARE_TRIPPED = 8;   // snare posts: a complete line is tied / something touched it (bits 0-1 = the side it looks along)
+export const SNARE_AXIS_X = 1;                        // snare cord: runs east-west (drawing only)
+export const PG_SETTING_SHIFT = 2, PG_SETTING_MASK = 7 << 2; // pulse gates: bits 2-4 = the setting (see world/pulseGate.js)
+export const PG_ON = 32, PG_LATCH = 64, PG_REST = 128;       // sending / the input was seen high / resting after a pulse
+export const pulseGateSetting = (meta) => (meta >> PG_SETTING_SHIFT) & 7;
 /** Output level of a comparator / daylight sensor stored in its meta. */
 export const comparatorLevel = (meta) => (meta >> 4) & 15;
 /** Direction an observer's back (its output) points to: the opposite of its face. */
@@ -57,7 +62,8 @@ export const isConductor = (id) => !!(SOLID[id] && OPAQUE[id]);
 function wireAttracts(id, meta, side) {
   if (id === B.LEVER || id === B.STONE_BUTTON || isPlate(id) || id === B.DETECTOR_RAIL || isTorchC(id) || id === B.CINNABAR_BLOCK) return true;
   if (id === B.REPEATER) return ((meta & 3) & 1) === (side & 1); // only along its axis
-  if (id === B.COMPARATOR || id === B.DAYLIGHT_SENSOR || id === B.TARGET) return true;
+  if (id === B.COMPARATOR || id === B.DAYLIGHT_SENSOR || id === B.TARGET || id === B.SNARE_POST) return true;
+  if (id === B.PULSE_GATE) return ((meta & 3) & 1) === (side & 1); // only along its axis, like a repeater
   if (id === B.OBSERVER) return (meta & 7) === SIDE_TO_FACING[side]; // only at its back
   return false;
 }
@@ -141,6 +147,32 @@ export function circuitParts(id, meta) {
       P(7, 6, 2, 9, 11, 4, sub ? 'cinnabar_torch' : 'cinnabar_torch_off', { yaw, uv: 'torch', off: [0, sub ? -4 / 16 : -5 / 16, 0], lit: sub }),
     ];
   }
+  if (id === B.SNARE_POST) {
+    // standing on its wall plate, looking along the line (up = away from the wall); yaw = the side, so the cord stub sits low
+    const s = meta & 3, yaw = s, facing = SIDE_TO_FACING[s], tied = meta & SNARE_ATTACHED, tripped = meta & SNARE_TRIPPED;
+    const out = [
+      P(4, 0, 0, 12, 2, 16, 'snare_post', { yaw, facing }),
+      P(7, 2, 5, 9, 9, 11, 'snare_post', { yaw, facing, tilt: tripped ? 0.9 : 0 }),
+    ];
+    if (tied) out.push(P(7.25, 2, 0.5, 8.75, 16, 2, 'snare_cord', { yaw, facing }));
+    return out;
+  }
+  if (id === B.SNARE_CORD) {
+    return [meta & SNARE_AXIS_X ? P(0, 0.5, 7.25, 16, 2, 8.75, 'snare_cord') : P(7.25, 0.5, 0, 8.75, 2, 16, 'snare_cord')];
+  }
+  if (id === B.PULSE_GATE) {
+    // a repeater-like plate (output towards -z before the yaw): a torch at the front lit while it sends, and brass pegs at the back
+    // that count up the setting (1-4 within its kind: Limiter plate or Metronome plate)
+    const yaw = meta & 3, on = !!(meta & PG_ON), set = pulseGateSetting(meta), clock = set >= 4, pegs = (set & 3) + 1;
+    const torch = on ? 'cinnabar_torch' : 'cinnabar_torch_off';
+    const top = (clock ? 'pulse_gate_clock' : 'pulse_gate') + (on ? '_on' : '');
+    const out = [
+      P(0, 0, 0, 16, 2, 16, ['smooth_stone', 'smooth_stone', top, 'smooth_stone', 'smooth_stone', 'smooth_stone'], { yaw }),
+      P(7, 6, 2, 9, 11, 4, torch, { yaw, uv: 'torch', off: [0, -4 / 16, 0], lit: on }),
+    ];
+    for (let k = 0; k < pegs; k++) out.push(P(3 + k * 3, 2, 12, 5 + k * 3, 5, 14, 'pulse_gate_peg', { yaw }));
+    return out;
+  }
   if (id === B.OBSERVER) {
     // a full block whose "up" face (the face) looks along FACING6; the back shows a dot that lights while it pulses
     const facing = meta & 7;
@@ -210,6 +242,7 @@ export function partsBounds(parts) {
 /** Selection box of a circuit block (null = full cube). */
 export function circuitSelection(id, meta) {
   if (id === B.CINNABAR_WIRE) return [0, 0, 0, 1, 1 / 16, 1];
+  if (id === B.SNARE_CORD) return meta & SNARE_AXIS_X ? [0, 0, 6 / 16, 1, 3 / 16, 10 / 16] : [6 / 16, 0, 0, 10 / 16, 3 / 16, 1];
   if ((isPiston(id) && !(meta & PISTON_EXTENDED)) || id === B.OBSERVER) return null;
   const b = partsBounds(circuitParts(id, meta));
   return [Math.max(0, b[0]), Math.max(0, b[1]), Math.max(0, b[2]), b[3], b[4], b[5]];
@@ -231,6 +264,7 @@ export const CIRCUIT_BLOCK = new Uint8Array(BLOCK_LIMIT);
 for (const id of [B.CINNABAR_WIRE, B.LEVER, B.STONE_BUTTON, B.WOODEN_PRESSURE_PLATE, B.STONE_PRESSURE_PLATE, B.LIGHT_WEIGHTED_PLATE, B.HEAVY_WEIGHTED_PLATE,
   B.POWERED_RAIL, B.DETECTOR_RAIL, B.ACTIVATOR_RAIL, B.CINNABAR_TORCH, B.CINNABAR_TORCH_OFF,
   B.CINNABAR_LAMP, B.CINNABAR_LAMP_ON, B.REPEATER, B.PISTON, B.STICKY_PISTON, B.PISTON_HEAD, B.CHIME_BLOCK, B.CINNABAR_BLOCK, B.DISPENSER, B.DROPPER,
-  B.COMPARATOR, B.OBSERVER, B.DAYLIGHT_SENSOR, B.HUSH_SENSOR, B.CALIBRATED_HUSH_SENSOR, B.TARGET, B.LECTERN]) CIRCUIT_BLOCK[id] = 1;
+  B.COMPARATOR, B.OBSERVER, B.DAYLIGHT_SENSOR, B.HUSH_SENSOR, B.CALIBRATED_HUSH_SENSOR, B.TARGET, B.LECTERN,
+  B.SNARE_POST, B.SNARE_CORD, B.PULSE_GATE]) CIRCUIT_BLOCK[id] = 1;
 CIRCUIT_BLOCK[B.COPPER_BULB] = 1; CIRCUIT_BLOCK[B.COPPER_BULB_LIT] = 1; // (world/provingVaults.js)
 export { BLOCKS };

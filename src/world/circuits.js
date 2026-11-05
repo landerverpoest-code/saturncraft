@@ -27,7 +27,10 @@ import {
   FACING6, CIRCUIT_BLOCK, isWire, isTorchC, isPiston, isConductor, wireMask, wirePowerSides, attachDir, torchAttachDir,
   ON, TURNED, REPEATER_POWERED, PISTON_EXTENDED, HEAD_STICKY, CHIME_POWERED, OPENABLE_POWERED, SIDE_TO_FACING, facingOf, DISPENSER_TRIGGERED,
   COMPARATOR_SUBTRACT, OBSERVER_POWERED, SENSOR_INVERTED, comparatorLevel, observerBack, isPlate, isWeightedPlate, plateLevel,
+  SNARE_ATTACHED, SNARE_TRIPPED, SNARE_AXIS_X, PG_ON, PG_LATCH, PG_REST, PG_SETTING_MASK,
 } from './circuitShapes.js';
+import { snareLine, snarePostsThrough, SNARE_HOLD } from './snare.js';
+import { gateSetting } from './pulseGate.js';
 import {
   RAIL_ON, DETECT_TICKS, weightedLevel, railShouldBeOn, pushStructure, moveOrder, immovable, pushBreaks,
 } from './automation.js';
@@ -48,6 +51,12 @@ export const COMPARATOR_DELAY = 2;
 export const OBSERVER_DELAY = 2;   // ticks before the pulse, and its length
 export const SENSOR_INTERVAL = 20; // daylight sensors look at the sky once a second
 export const UPDATES_PER_TICK = 20000;
+// Loop guards (see drain / observe and World.tick): a contraption can never take more than this much work out of one tick.
+export const LOOP_LIMIT = 24;          // updates of one position within one drain; more are pushed to the next tick
+export const LOOP_FUSE = 40;           // consecutive ticks the guard may keep holding positions back before it drops them
+export const LOOP_WATCH = 64;          // a drain starts counting visits per position after this many updates
+export const OBSERVE_PER_TICK = 2000;  // observers that may start to pulse in one tick; the rest start a tick later
+export const SCHEDULED_PER_TICK = 4000; // scheduled block ticks (circuits, fluids, fire...) World.tick runs in one tick
 const MAX_NETWORK = 4096;
 const BURNOUT_TOGGLES = 8, BURNOUT_WINDOW = 60, BURNOUT_TICKS = 160;
 
@@ -62,7 +71,8 @@ export const CIRCUIT_REACT = new Uint8Array(BLOCK_LIMIT);
 for (const id of [B.CINNABAR_WIRE, B.CINNABAR_TORCH, B.CINNABAR_TORCH_OFF, B.CINNABAR_LAMP, B.CINNABAR_LAMP_ON, B.REPEATER,
   B.PISTON, B.STICKY_PISTON, B.STONE_BUTTON, B.WOODEN_PRESSURE_PLATE, B.CHIME_BLOCK, B.DOOR, B.OAK_TRAPDOOR, B.OAK_FENCE_GATE, B.TNT, B.DISPENSER, B.DROPPER,
   B.COMPARATOR, B.OBSERVER, B.DAYLIGHT_SENSOR, B.HUSH_SENSOR, B.CALIBRATED_HUSH_SENSOR, B.TARGET, B.LECTERN,
-  B.STONE_PRESSURE_PLATE, B.LIGHT_WEIGHTED_PLATE, B.HEAVY_WEIGHTED_PLATE, B.POWERED_RAIL, B.DETECTOR_RAIL, B.ACTIVATOR_RAIL]) CIRCUIT_REACT[id] = 1;
+  B.STONE_PRESSURE_PLATE, B.LIGHT_WEIGHTED_PLATE, B.HEAVY_WEIGHTED_PLATE, B.POWERED_RAIL, B.DETECTOR_RAIL, B.ACTIVATOR_RAIL,
+  B.SNARE_POST, B.SNARE_CORD, B.PULSE_GATE]) CIRCUIT_REACT[id] = 1;
 for (const b of BLOCKS) if (b && (b.shape === SHAPE.DOOR || b.shape === SHAPE.TRAPDOOR || b.shape === SHAPE.GATE)) CIRCUIT_REACT[b.id] = 1;
 CIRCUIT_REACT[B.COPPER_BULB] = 1; CIRCUIT_REACT[B.COPPER_BULB_LIT] = 1; // Copper Bulbs toggle on a rising edge
 /** Blocks re-evaluated when their chunk loads or on random ticks (state may be stale after a reload). */
@@ -70,7 +80,8 @@ export const CIRCUIT_SETTLE = new Uint8Array(BLOCK_LIMIT);
 for (const id of [B.CINNABAR_WIRE, B.CINNABAR_TORCH, B.CINNABAR_TORCH_OFF, B.CINNABAR_LAMP, B.CINNABAR_LAMP_ON, B.REPEATER,
   B.PISTON, B.STICKY_PISTON, B.STONE_BUTTON, B.WOODEN_PRESSURE_PLATE, B.DISPENSER, B.DROPPER,
   B.COMPARATOR, B.OBSERVER, B.DAYLIGHT_SENSOR, B.HUSH_SENSOR, B.CALIBRATED_HUSH_SENSOR, B.TARGET, B.LECTERN,
-  B.STONE_PRESSURE_PLATE, B.LIGHT_WEIGHTED_PLATE, B.HEAVY_WEIGHTED_PLATE, B.POWERED_RAIL, B.DETECTOR_RAIL, B.ACTIVATOR_RAIL]) CIRCUIT_SETTLE[id] = 1;
+  B.STONE_PRESSURE_PLATE, B.LIGHT_WEIGHTED_PLATE, B.HEAVY_WEIGHTED_PLATE, B.POWERED_RAIL, B.DETECTOR_RAIL, B.ACTIVATOR_RAIL,
+  B.SNARE_POST, B.PULSE_GATE]) CIRCUIT_SETTLE[id] = 1;
 export { CIRCUIT_BLOCK };
 
 // ---- power queries (pure functions of a world with getBlock / getMeta) -----------------
@@ -100,6 +111,8 @@ export function strongOut(w, x, y, z, d, forWire = false) {
     case B.REPEATER: { const m = w.getMeta(x, y, z); return m & REPEATER_POWERED && same(H4[m & 3], d) ? 15 : 0; }
     case B.COMPARATOR: { const m = w.getMeta(x, y, z); return same(H4[m & 3], d) ? comparatorLevel(m) : 0; }
     case B.OBSERVER: { const m = w.getMeta(x, y, z); return m & OBSERVER_POWERED && same(observerBack(m), d) ? 15 : 0; }
+    case B.PULSE_GATE: { const m = w.getMeta(x, y, z); return m & PG_ON && same(H4[m & 3], d) ? 15 : 0; }
+    case B.SNARE_POST: { const m = w.getMeta(x, y, z); return m & SNARE_TRIPPED && same(H4[(m + 2) & 3], d) ? 15 : 0; } // a tripped post powers the block it hangs on
     case B.CINNABAR_WIRE: return forWire ? 0 : wireOut(w, x, y, z, d);
     default: return 0;
   }
@@ -122,6 +135,8 @@ export function weakOut(w, x, y, z, d, forWire = false) {
     case B.COMPARATOR: { const m = w.getMeta(x, y, z); return same(H4[m & 3], d) ? comparatorLevel(m) : 0; }
     case B.OBSERVER: { const m = w.getMeta(x, y, z); return m & OBSERVER_POWERED && same(observerBack(m), d) ? 15 : 0; }
     case B.DAYLIGHT_SENSOR: return w.getMeta(x, y, z) & 15;
+    case B.PULSE_GATE: { const m = w.getMeta(x, y, z); return m & PG_ON && same(H4[m & 3], d) ? 15 : 0; }
+    case B.SNARE_POST: return w.getMeta(x, y, z) & SNARE_TRIPPED ? 15 : 0;
     case B.CINNABAR_WIRE: return forWire ? 0 : wireOut(w, x, y, z, d);
     default: return 0;
   }
@@ -163,7 +178,7 @@ export function repeaterInput(w, x, y, z, meta) {
 }
 
 /** Parts that feed a comparator from the side: wire, repeaters, comparators, cinnabar blocks. */
-const SIDE_FEEDS = (id) => id === B.CINNABAR_WIRE || id === B.REPEATER || id === B.COMPARATOR || id === B.CINNABAR_BLOCK;
+const SIDE_FEEDS = (id) => id === B.CINNABAR_WIRE || id === B.REPEATER || id === B.COMPARATOR || id === B.CINNABAR_BLOCK || id === B.PULSE_GATE;
 
 /**
  * Inputs of a comparator: { rear, side }. The rear reads power behind it or,
@@ -299,11 +314,13 @@ export class Circuits {
     this.comparators = new Set(); // comparators and daylight sensors seen, polled for container and sky changes
     this.sensors = new Set();
     this.targetUntil = new Map(); // target block key -> tick its signal ends (a new hit restarts it)
-    this.stats = { updates: 0, networks: 0 };
+    this.stats = { updates: 0, networks: 0, looped: 0, deferred: 0, dropped: 0 }; // looped = updates pushed to the next tick by the loop guard, dropped = given up on (LOOP_FUSE), deferred = observers started late
     this.solved = new Set();    // wires whose network was solved in this drain (and nothing changed since)
+    this.loopTicks = 0;         // loop guard: consecutive ticks in which the guard held positions back
+    this.observeAt = -1; this.observed = 0; // loop guard: observers started in the current tick
   }
 
-  reset() { this.queue.clear(); this.burn.clear(); this.targetUntil.clear(); this.solved.clear(); this.comparators.clear(); this.sensors.clear(); }
+  reset() { this.queue.clear(); this.loopTicks = 0; this.burn.clear(); this.targetUntil.clear(); this.solved.clear(); this.comparators.clear(); this.sensors.clear(); }
 
   /**
    * World.setBlock hook for every edit: observers whose face looks at x,y,z
@@ -316,7 +333,12 @@ export class Circuits {
       const [dx, dy, dz] = FACING6[f], ox = x - dx, oy = y - dy, oz = z - dz;
       if (w.getBlock(ox, oy, oz) !== B.OBSERVER) continue;
       const m = w.getMeta(ox, oy, oz);
-      if ((m & 7) === f && !(m & OBSERVER_POWERED)) w.scheduleTick(ox, oy, oz, OBSERVER_DELAY);
+      if ((m & 7) !== f || m & OBSERVER_POWERED) continue;
+      // loop guard: only OBSERVE_PER_TICK observers start per tick, the rest a tick (or more) later
+      if (this.observeAt !== w.tickCount) { this.observeAt = w.tickCount; this.observed = 0; }
+      const late = Math.floor(this.observed++ / OBSERVE_PER_TICK);
+      if (late) this.stats.deferred++;
+      w.scheduleTick(ox, oy, oz, OBSERVER_DELAY + late);
     }
   }
 
@@ -382,6 +404,10 @@ export class Circuits {
       || (isBulb(old) && isBulb(id));
     if (!quiet && this.solved.size) this.solved.clear();
     this.enqueueAround(x, y, z, quiet);
+    // a snare post or cord changed: the posts of every line through it look again (the far post of a line is not next to it)
+    if (old === B.SNARE_POST || old === B.SNARE_CORD || id === B.SNARE_POST || id === B.SNARE_CORD) {
+      if (old !== id) for (const [px, py, pz] of snarePostsThrough(w, x, y, z)) this.queue.add(key(px, py, pz));
+    }
     // a lever / button / plate that turns on schedules its own release
     if (id === B.STONE_BUTTON && w.getMeta(x, y, z) & ON) w.scheduleTick(x, y, z, BUTTON_TICKS);
     if (isPlate(id) && plateLevel(id, w.getMeta(x, y, z))) w.scheduleTick(x, y, z, PLATE_TICKS);
@@ -406,22 +432,46 @@ export class Circuits {
 
   act(fn) { this.acting++; try { return fn(); } finally { this.acting--; } }
 
-  /** Run queued updates (at most `cap`; the rest waits for the next tick). */
+  /**
+   * Run queued updates (at most `cap`; the rest waits for the next tick). Loop guard: once a drain has run LOOP_WATCH
+   * updates it counts visits per position, and a position that comes up more than LOOP_LIMIT times in this one tick is
+   * not updated again until the next tick. When that goes on for LOOP_FUSE ticks in a row the held positions are dropped
+   * (they update again when something next to them changes), so a runaway loop costs a bounded amount per tick and dies out.
+   */
   drain(cap = UPDATES_PER_TICK) {
     if (!this.enabled || this.draining) return 0;
     this.draining = true;
-    let n = 0;
+    let n = 0, visits = null, held = null;
     try {
       while (this.queue.size && n < cap) {
         const k = this.queue.values().next().value;
         this.queue.delete(k);
+        if (n >= LOOP_WATCH) {
+          if (!visits) visits = new Map();
+          const v = (visits.get(k) || 0) + 1;
+          visits.set(k, v);
+          if (v > LOOP_LIMIT) { (held || (held = new Set())).add(k); this.stats.looped++; continue; }
+        }
         const [x, y, z] = k.split(',').map(Number);
         this.update(x, y, z);
         n++;
       }
     } finally { this.draining = false; this.solved.clear(); }
     this.stats.updates += n;
+    this.guard(held);
     return n;
+  }
+
+  /** Positions the loop guard held back this tick: try them again next tick, or give up on them when this goes on and on. */
+  guard(held) {
+    if (!held) { this.loopTicks = 0; return; }
+    const w = this.world, first = held.values().next().value;
+    if (++this.loopTicks > LOOP_FUSE) {
+      // a loop that has run LOOP_FUSE ticks in a row without calming down: drop what it held (those blocks update again when a neighbour changes)
+      this.stats.dropped += held.size;
+      this.loopTicks = 0;
+    } else for (const k of held) this.queue.add(k);
+    if (w.emit && this.loopTicks % 20 === 1) { const [x, y, z] = first.split(',').map(Number); w.emit('circuitFx', x, y, z, 'overload'); }
   }
 
   /** Something near x,y,z changed: re-evaluate the block there. */
@@ -488,6 +538,8 @@ export class Circuits {
         break;
       }
       case B.OBSERVER: if (m & OBSERVER_POWERED) w.scheduleTick(x, y, z, OBSERVER_DELAY); break; // (a pulse left over from before a reload ends)
+      case B.PULSE_GATE: this.updatePulseGate(x, y, z, m); break;
+      case B.SNARE_POST: this.updateSnare(x, y, z, m); break;
       case B.DAYLIGHT_SENSOR: {
         this.sensors.add(key(x, y, z));
         const l = this.sensorLevel(x, y, z, m);
@@ -601,12 +653,89 @@ export class Circuits {
         if (out !== comparatorLevel(m)) this.act(() => w.setBlock(x, y, z, id, (m & 15) | (out << 4), false));
         break;
       }
+      case B.PULSE_GATE: this.tickPulseGate(x, y, z, m); break;
+      case B.SNARE_POST: this.tickSnare(x, y, z, m); break;
       case B.OBSERVER:
         // the pulse: on for two ticks, then off again
         if (!(m & OBSERVER_POWERED)) { this.act(() => w.setBlock(x, y, z, id, m | OBSERVER_POWERED, false)); w.scheduleTick(x, y, z, OBSERVER_DELAY); }
         else this.act(() => w.setBlock(x, y, z, id, m & ~OBSERVER_POWERED, false));
         break;
     }
+  }
+
+  // ---- pulse gates (world/pulseGate.js) ----
+  /** The input of a pulse gate changed (or it settled after a reload): start, stop or keep its pulse going. */
+  updatePulseGate(x, y, z, m) {
+    const w = this.world, set = gateSetting(m), p = repeaterInput(w, x, y, z, m) > 0;
+    const put = (nm) => this.act(() => w.setBlock(x, y, z, B.PULSE_GATE, nm, false));
+    if (set.kind === 'limiter') {
+      if (p && !(m & PG_LATCH)) {
+        // a rising edge: one pulse, unless it is still pulsing or resting from the last one (then the edge is ignored)
+        if (m & (PG_ON | PG_REST)) put(m | PG_LATCH);
+        else { put(m | PG_LATCH | PG_ON); w.scheduleTick(x, y, z, set.ticks); }
+      } else if (!p && m & PG_LATCH) put(m & ~PG_LATCH);
+      else if (m & (PG_ON | PG_REST)) w.scheduleTick(x, y, z, set.ticks); // (settling after a reload)
+    } else if (p && !(m & PG_LATCH)) { put(m | PG_LATCH | PG_ON); w.scheduleTick(x, y, z, set.ticks); }
+    else if (!p && m & (PG_LATCH | PG_ON)) put(m & ~(PG_LATCH | PG_ON));
+    else if (m & PG_LATCH) w.scheduleTick(x, y, z, set.ticks);
+  }
+
+  /** The beat of a pulse gate: a limiter's pulse ends and it rests; a metronome flips. */
+  tickPulseGate(x, y, z, m) {
+    const w = this.world, set = gateSetting(m);
+    const put = (nm) => this.act(() => w.setBlock(x, y, z, B.PULSE_GATE, nm, false));
+    if (set.kind === 'limiter') {
+      if (m & PG_ON) { put((m & ~PG_ON) | PG_REST); w.scheduleTick(x, y, z, set.ticks); }
+      else if (m & PG_REST) put(m & ~PG_REST);
+    } else if (m & PG_LATCH) { put(m ^ PG_ON); w.scheduleTick(x, y, z, set.ticks); }
+    else if (m & PG_ON) put(m & ~PG_ON);
+  }
+
+  // ---- snare lines (world/snare.js) ----
+  /** A snare post looks at its line: tied while a post looks back, quiet when the line is cut. */
+  updateSnare(x, y, z, m) {
+    const w = this.world, line = snareLine(w, x, y, z, m & 3);
+    let nm = m;
+    if (line.ok) nm |= SNARE_ATTACHED; else nm &= ~(SNARE_ATTACHED | SNARE_TRIPPED);
+    if (nm !== m) this.act(() => w.setBlock(x, y, z, B.SNARE_POST, nm, false));
+    if (nm & SNARE_TRIPPED) w.scheduleTick(x, y, z, SNARE_HOLD); // (also after a reload)
+  }
+
+  /** Something touches the snare cord at x,y,z (host / single player): every post tied to a line through it trips. */
+  trip(x, y, z) {
+    const w = this.world;
+    if (!this.enabled || w.getBlock(x, y, z) !== B.SNARE_CORD) return false;
+    let any = false;
+    const set = (px, py, pz) => {
+      const m = w.getMeta(px, py, pz);
+      if (w.getBlock(px, py, pz) !== B.SNARE_POST || m & SNARE_TRIPPED) return;
+      this.act(() => w.setBlock(px, py, pz, B.SNARE_POST, m | SNARE_ATTACHED | SNARE_TRIPPED, false));
+      w.scheduleTick(px, py, pz, SNARE_HOLD);
+      any = true;
+    };
+    for (const [px, py, pz, s] of snarePostsThrough(w, x, y, z)) {
+      const line = snareLine(w, px, py, pz, s);
+      if (!line.ok) continue;
+      set(px, py, pz); set(line.other[0], line.other[1], line.other[2]);
+    }
+    return any;
+  }
+
+  /** Is something touching any cord of this line (or the cell under one: a tall creature's feet)? */
+  snareTouched(cords) {
+    const f = this.entitiesCount;
+    if (!f) return false;
+    for (const [cx, cy, cz] of cords) if (f(cx, cy, cz, false) > 0 || f(cx, cy - 1, cz, false) > 0) return true;
+    return false;
+  }
+
+  /** The hold of a tripped post ran out: stays tripped while the line is still touched, goes quiet otherwise. */
+  tickSnare(x, y, z, m) {
+    const w = this.world;
+    if (!(m & SNARE_TRIPPED)) return;
+    const line = snareLine(w, x, y, z, m & 3);
+    if (line.ok && this.snareTouched(line.cords)) { w.scheduleTick(x, y, z, SNARE_HOLD); return; }
+    this.act(() => w.setBlock(x, y, z, B.SNARE_POST, line.ok ? m & ~SNARE_TRIPPED : m & ~(SNARE_TRIPPED | SNARE_ATTACHED), false));
   }
 
   tickTorch(x, y, z, id, m) {
@@ -726,7 +855,13 @@ export function placeMeta(id, face, look) {
     if (face[1] !== 1) return -1;
     return id === B.REPEATER ? sideLook : 0;
   }
-  if (id === B.COMPARATOR) return face[1] === 1 ? sideLook : -1;
+  if (id === B.COMPARATOR || id === B.PULSE_GATE) return face[1] === 1 ? sideLook : -1;
+  if (id === B.SNARE_POST) {
+    // on the side of a block, looking away from it (the line runs along that way)
+    if (face[1] !== 0) return -1;
+    return SIDE_DIRS.findIndex(([a, , c]) => a === face[0] && c === face[2]);
+  }
+  if (id === B.SNARE_CORD) return Math.abs(lx) > Math.abs(lz) ? SNARE_AXIS_X : 0;
   if (id === B.OBSERVER) {
     // the face looks away from the player (where they look, up or down too); the output points back at them
     if (Math.abs(ly) > 0.75) return ly < 0 ? 0 : 1;
@@ -746,6 +881,7 @@ export function supported(w, x, y, z, id, meta) {
   const solidAt = (a, b, c) => { const n = w.getBlock(a, b, c); return isConductor(n); };
   if (id === B.LEVER || id === B.STONE_BUTTON) { const [dx, dy, dz] = attachDir(meta); return solidAt(x + dx, y + dy, z + dz); }
   if (isTorchC(id)) { const [dx, dy, dz] = torchAttachDir(meta); return solidAt(x + dx, y + dy, z + dz); }
+  if (id === B.SNARE_POST) { const [dx, , dz] = H4[(meta + 2) & 3]; return solidAt(x + dx, y, z + dz); }
   return solidAt(x, y - 1, z);
 }
 
@@ -761,6 +897,7 @@ export function useMeta(id, meta) {
   if (id === B.CHIME_BLOCK) return (meta & CHIME_POWERED) | (((meta & 31) + 1) % 25);
   if (id === B.COMPARATOR) return meta ^ COMPARATOR_SUBTRACT;
   if (id === B.DAYLIGHT_SENSOR) return meta ^ SENSOR_INVERTED;
+  if (id === B.PULSE_GATE) return (meta & ~(PG_SETTING_MASK | PG_ON | PG_LATCH | PG_REST)) | ((((meta >> 2) & 7) + 1) & 7) << 2; // next setting, and it starts over
   return -1;
 }
 
@@ -769,6 +906,7 @@ export function changeSound(w, x, y, z, old, id) {
   if (old === id) {
     const m = w.getMeta(x, y, z);
     if (id === B.LEVER || id === B.STONE_BUTTON || isPlate(id)) return 'click';
+    if (id === B.SNARE_POST && m & SNARE_TRIPPED) return 'click';
     if (OPENABLE_SHAPE(id)) {
       if (isDoorId(id) && m & DOOR_UPPER) return null;
       const open = isDoorId(id) ? DOOR_OPEN : BLOCKS[id].shape === SHAPE.TRAPDOOR ? TRAPDOOR_OPEN : GATE_OPEN;
