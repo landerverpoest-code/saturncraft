@@ -10,7 +10,7 @@ export const FOCUSABLE = 'button:not(:disabled), input:not(:disabled), select:no
 /**
  * The index of the rectangle to move focus to from rectangle `from` in direction 'up' | 'down' | 'left' |
  * 'right', or -1 when nothing lies that way. Candidates must be mostly in that direction; the nearest wins
- * (distance along the direction plus twice the sideways offset, so a control straight ahead beats a closer one off to the side).
+ * (distance along the direction plus twice the sideways gap, so a control straight ahead beats a closer one off to the side).
  * rects: [{ x, y, w, h }].
  */
 export function pickNext(rects, from, dir) {
@@ -19,13 +19,19 @@ export function pickNext(rects, from, dir) {
   const cx = r.x + r.w / 2, cy = r.y + r.h / 2;
   const vertical = dir === 'up' || dir === 'down';
   const sign = dir === 'down' || dir === 'right' ? 1 : -1;
+  // sideways distance is the gap between the two controls' extents (0 when they overlap, as a full-width button does with
+  // the half-width ones above it), so a control in line is never skipped for one further along
+  const span = vertical ? r.w : r.h; // (only the middle half of each extent counts, so controls that merely touch corner to corner are not 'in line')
+  const lo = (vertical ? r.x : r.y) + span / 4, hi = lo + span / 2;
   let best = -1, bestScore = Infinity;
   rects.forEach((o, i) => {
     if (i === from) return;
     const dx = o.x + o.w / 2 - cx, dy = o.y + o.h / 2 - cy;
-    const along = (vertical ? dy : dx) * sign, across = Math.abs(vertical ? dx : dy);
-    if (along <= 1 || along < across * 0.35) return; // behind, level with, or mostly sideways
-    const score = along + across * 2;
+    const along = (vertical ? dy : dx) * sign, centre = Math.abs(vertical ? dx : dy);
+    const ospan = vertical ? o.w : o.h, olo = (vertical ? o.x : o.y) + ospan / 4, ohi = olo + ospan / 2;
+    const gap = Math.max(0, olo - hi, lo - ohi);
+    if (along <= 1 || along < centre * 0.35) return; // behind, level with, or mostly sideways
+    const score = along + gap * 2 + centre * 0.05;
     if (score < bestScore) { bestScore = score; best = i; }
   });
   return best;

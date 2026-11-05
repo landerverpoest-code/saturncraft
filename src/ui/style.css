@@ -579,3 +579,14 @@ html.high-contrast #captions .caption, html.high-contrast #tablist, html.high-co
 html.high-contrast #tablist .tl-team, html.high-contrast #tablist .tl-mode, html.high-contrast #tablist .tl-head { color: #fff; }
 html.high-contrast #season-label { color: #fff !important; }
 html.high-contrast .emote-btn b { color: #ffe000; }
+/* the Help screen, hint cards and First Steps list in the same modes */
+html.large-text #hint-card { font-size: 19px; width: min(560px, 94vw); }
+html.large-text #steps { font-size: 17px; width: 290px; } html.large-text #steps .st-tip, html.large-text #steps .st-foot { font-size: 15px; } html.large-text #steps .st-skip { font-size: 15px; padding: 4px 12px; }
+html.high-contrast #hint-card, html.high-contrast #steps { background: #000; color: #fff; border: 2px solid #fff; }
+html.high-contrast #hint-card .hc-title, html.high-contrast #hint-card .hc-foot, html.high-contrast #steps .st-tip, html.high-contrast #steps .st-foot { color: #fff; }
+html.high-contrast #steps .st-list li, html.high-contrast #steps .st-list li.done { opacity: 1; color: #fff; }
+html.high-contrast #steps .st-list li.current { color: #ffe000; }
+html.high-contrast .help-body, html.high-contrast .help-search { background: #000; color: #fff; border: 2px solid #fff; }
+html.high-contrast .help-body h4, html.high-contrast .help-keys span:nth-child(even), html.high-contrast .help-list .world-head { color: #ffe000; opacity: 1; }
+html.high-contrast .btn.help-topic.on { background: #ffe000; color: #000; }
+html.high-contrast .help-body code { background: #222; border: 1px solid #fff; }
