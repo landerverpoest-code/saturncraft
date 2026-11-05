@@ -18,6 +18,7 @@ import { isMeadow, stampCascades } from './highlands.js';
 import { FIELD_BIOMES, FIELD_THRESHOLD, FIELD_FLOWER_P, FIELD_GRASS_P, THICKET_BIOMES, THICKET_THRESHOLD, THICKET_CORE, THICKET_SHROOM_P, THICKET_CORE_SHROOM_P, THICKET_TREE_FACTOR, fieldNoise, thicketNoise, fieldFlower, treeKindFor } from './ecology.js';
 import { stampRuins } from './ruinedPortals.js';
 import { stampSmallFeatures } from './smallFeatures.js';
+import { stampWildCrops } from './wildCrops.js';
 import { stampBuriedRuins } from './buriedRuins.js';
 import { stampSunkenRuins } from './sunkenRuins.js';
 import { stampSunTombs } from './sunTombs.js';
@@ -488,6 +489,7 @@ export class TerrainGenerator {
 
     // 8. Decoration
     this.decorate(blocks, meta, biomes, heightmap, cx, cz, cols);
+    stampWildCrops(this, blocks, meta, cx, cz, heightmap, biomes); // Frostroots, Dewberry Brambles, Sungourds (world/wildCrops.js): own hash salts, nothing before changes
 
     // 9. Villages
     stampVillages(this, blocks, meta, cx, cz);

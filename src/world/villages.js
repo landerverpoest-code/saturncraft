@@ -34,10 +34,10 @@ export function houseProfession(planned, seed) {
 }
 
 const STYLES = {
-  plains: { corner: B.OAK_LOG, wall: B.OAK_PLANKS, floor: B.COBBLESTONE, roof: B.OAK_STAIRS, roofSlab: B.OAK_SLAB, fence: B.OAK_FENCE },
-  desert: { corner: B.SANDSTONE, wall: B.SANDSTONE, floor: B.SANDSTONE, roof: B.SANDSTONE_STAIRS, roofSlab: B.SANDSTONE_SLAB, fence: B.OAK_FENCE },
-  taiga: { corner: B.SPRUCE_LOG, wall: B.SPRUCE_PLANKS, floor: B.COBBLESTONE, roof: B.SPRUCE_STAIRS, roofSlab: B.SPRUCE_SLAB, fence: B.SPRUCE_FENCE, door: B.SPRUCE_DOOR },
-  savanna: { corner: B.ACACIA_LOG, wall: B.ACACIA_PLANKS, floor: B.COBBLESTONE, roof: B.ACACIA_STAIRS, roofSlab: B.ACACIA_SLAB, fence: B.ACACIA_FENCE, door: B.ACACIA_DOOR },
+  plains: { corner: B.OAK_LOG, wall: B.OAK_PLANKS, floor: B.COBBLESTONE, roof: B.OAK_STAIRS, roofSlab: B.OAK_SLAB, fence: B.OAK_FENCE, variety: B.SUNGOURD_STEM },
+  desert: { corner: B.SANDSTONE, wall: B.SANDSTONE, floor: B.SANDSTONE, roof: B.SANDSTONE_STAIRS, roofSlab: B.SANDSTONE_SLAB, fence: B.OAK_FENCE, variety: B.SUNGOURD_STEM },
+  taiga: { corner: B.SPRUCE_LOG, wall: B.SPRUCE_PLANKS, floor: B.COBBLESTONE, roof: B.SPRUCE_STAIRS, roofSlab: B.SPRUCE_SLAB, fence: B.SPRUCE_FENCE, door: B.SPRUCE_DOOR, variety: B.FROSTROOTS },
+  savanna: { corner: B.ACACIA_LOG, wall: B.ACACIA_PLANKS, floor: B.COBBLESTONE, roof: B.ACACIA_STAIRS, roofSlab: B.ACACIA_SLAB, fence: B.ACACIA_FENCE, door: B.ACACIA_DOOR, variety: B.SUNGOURD_STEM },
 };
 
 const cache = new Map();
@@ -227,7 +227,8 @@ const BUILDERS = {
     const y = p.y - 1;
     const alongX = p.x1 - p.x0 > p.z1 - p.z0;
     const cr = rng();
-    const crop = cr < 0.45 ? B.WHEAT : cr < 0.65 ? B.CARROTS : cr < 0.85 ? B.POTATOES : B.BEETROOTS;
+    // the last tenth of the rolls is the village's own crop variety: Frostroots in the cold, Sungourd stems in the warm (appended; the draws are unchanged)
+    const crop = cr < 0.45 ? B.WHEAT : cr < 0.65 ? B.CARROTS : cr < 0.85 ? B.POTATOES : cr >= 0.9 && st.variety ? st.variety : B.BEETROOTS;
     for (let x = p.x0; x <= p.x1; x++) for (let z = p.z0; z <= p.z1; z++) {
       const border = x === p.x0 || x === p.x1 || z === p.z0 || z === p.z1;
       const mid = alongX ? z === Math.floor((p.z0 + p.z1) / 2) : x === Math.floor((p.x0 + p.x1) / 2);

@@ -4,6 +4,7 @@ import { B, BLOCKS, CROPS } from './blocks.js';
 import { climate } from './seasons.js';
 import { growthFactorFor, inGreenhouse, bestSeasons, CROP_TRAITS, lastCropOf, tirednessFor, moistureOf, YIELD_FACTOR, SOIL_CODE } from './farming.js';
 import { DISHES } from './cooking.js';
+import { campCount, CAMP_SLOTS, CAMP_COOK_TICKS } from './campfireCooking.js';
 import { isPot, kindsIn, KIND_NAMES, recipeFor, isReady, dishOf, servingsOf, stageOf, BREW_STAGES, hasHeat } from './cookingPot.js';
 
 const pct = (v) => `${Math.round(v * 100)}%`;
@@ -18,9 +19,15 @@ export function soilLine(meta) {
 }
 
 /** The tip for the block a player looks at (a raycast hit { x, y, z, id }), or null. */
-export function aimTip(world, t) {
+export function aimTip(world, t, campfires) {
   if (!t) return null;
   const { x, y, z, id } = t;
+  if (id === B.CAMPFIRE) {
+    const c = campfires && campfires.get(`${x},${y},${z}`), n = campCount(c);
+    if (!n) return `Campfire: right-click with raw meat, fish or a potato to cook it (up to ${CAMP_SLOTS})`;
+    const left = Math.ceil(Math.min(...c.slots.filter(Boolean).map((e) => CAMP_COOK_TICKS - e.t)) / 20);
+    return `Campfire: ${n}/${CAMP_SLOTS} cooking, the first is done in ${left} s (empty hand takes it all back)`;
+  }
   if (id === B.FARMLAND) {
     const m = world.getMeta(x, y, z);
     return `Farmland (${moistureOf(m) > 0 ? 'moist' : 'dry'}). ${soilLine(m)}`;

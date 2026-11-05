@@ -37,6 +37,7 @@ import { FrameRenderer } from './render/frames.js';
 import { PotRenderer } from './render/pots.js';
 import { BrushSites, isSuspicious, cleanPotFaces } from './world/archaeology.js';
 import { cleanLectern, lecternMeta } from './world/books.js';
+import { cleanCamp, campTick } from './world/campfireCooking.js';
 import { projectileHit } from './world/signalBlocks.js';
 import { chimeSoundAt, pitchOf, noteName, noteColor } from './world/chimes.js';
 import { Lightning } from './sky/lightning.js';
@@ -137,6 +138,7 @@ export class Game {
     this.frames = new Map();      // "x,y,z" -> the item stack in an item frame
     this.pots = new Map();        // "x,y,z" -> a Decorated Pot's four sides (world/archaeology.js)
     this.lecterns = new Map();    // "x,y,z" -> { book, page } of a Lectern (world/books.js)
+    this.campfires = new Map();   // "x,y,z" -> { slots: [{ id, t } | null x4] } the foods cooking on a campfire (world/campfireCooking.js)
     this.archaeology = new BrushSites(); // digs being brushed (world/archaeology.js)
     this.maps = new Map();        // map id -> filled map (world/maps.js)
     this.brewingStands = new Map(); // "x,y,z" -> Brewing Alembic state (see world/brewing.js)
@@ -871,6 +873,12 @@ export class Game {
       else if (l) { this.setLectern(x, y, z, null); this.entities.spawnItem(x + 0.5, y + 1, z + 0.5, l.book); }
       if (l && this.ui.lectern && this.ui.lectern.k === `${x},${y},${z}`) this.ui.close();
     }
+    if (id === B.CAMPFIRE) {
+      // a broken campfire drops the food on it (on a guest the host drops it when it sees the edit)
+      const c = this.campfires.get(`${x},${y},${z}`);
+      if (c && this.net && this.net.isClient) this.setCampfire(x, y, z, null, true);
+      else if (c) { this.setCampfire(x, y, z, null); for (const e of c.slots) if (e) this.entities.spawnItem(x + 0.5, y + 0.5, z + 0.5, { id: e.id, count: 1, damage: 0 }); }
+    }
     if (id === B.CHEST) {
       // the other half of a double chest becomes a single chest again
       const u = unpairAfterBreak(this.world, x, y, z, meta);
@@ -1013,6 +1021,37 @@ export class Game {
     const k = `${x},${y},${z}`, f = cleanPotFaces(faces);
     if (f) this.pots.set(k, f); else this.pots.delete(k);
     if (!fromNet && this.net && this.net.sendPot) this.net.sendPot(x, y, z, f);
+  }
+
+  /**
+   * Set (or clear, with null) the foods cooking on a Campfire; shared in multiplayer (world/campfireCooking.js).
+   * Progress only ticks on the host / in single player; guests hear about every change of what lies on the fire.
+   */
+  setCampfire(x, y, z, state, fromNet = false) {
+    const k = `${x},${y},${z}`, s = cleanCamp(state);
+    if (s) this.campfires.set(k, s); else this.campfires.delete(k);
+    if (!fromNet && this.net && this.net.sendCampfire) this.net.sendCampfire(x, y, z, s);
+  }
+
+  /** Cook the foods lying on campfires: each pops out above the fire when done. Costs nothing while no campfire holds food. */
+  tickCampfires() {
+    if (!this.campfires.size) return;
+    const w = this.world;
+    for (const [k, c] of this.campfires) {
+      const [x, y, z] = k.split(',').map(Number);
+      if (!w.isLoaded(x, z)) continue;
+      if (w.getBlock(x, y, z) !== B.CAMPFIRE) { // the fire went out some other way: the food falls out
+        for (const e of c.slots) if (e) this.entities.spawnItem(x + 0.5, y + 0.5, z + 0.5, { id: e.id, count: 1, damage: 0 });
+        this.setCampfire(x, y, z, null);
+        continue;
+      }
+      const done = campTick(c);
+      if (this.ticks % 12 === 0 && this.particles.smoke) this.particles.smoke(x + 0.5, y + 0.9, z + 0.5, 1, 0.15); // a thin extra wisp while cooking
+      if (!done.length) continue;
+      for (const id of done) this.entities.spawnItem(x + 0.5, y + 0.8, z + 0.5, { id, count: 1, damage: 0 }, [(Math.random() - 0.5) * 0.1, 0.18, (Math.random() - 0.5) * 0.1]);
+      this.audio.play('pop', [x + 0.5, y + 0.8, z + 0.5]);
+      this.setCampfire(x, y, z, c); // (an emptied campfire is forgotten, the others are sent on)
+    }
   }
 
   /**
@@ -1319,7 +1358,7 @@ export class Game {
     if (!this.net || this.net.isHost) this.raids.tick();
     this.tickMaps();
     this.guide.tick();
-    if (!this.net || this.net.isHost) { this.tickFurnaces(); this.tickBrewing(); this.tickHoppers(); } // guests see the host's furnaces and alembics
+    if (!this.net || this.net.isHost) { this.tickFurnaces(); this.tickBrewing(); this.tickHoppers(); this.tickCampfires(); } // guests see the host's furnaces and alembics
     this.effectParticles();
     this.particles.tick();
     if (this.net) this.net.tick();
