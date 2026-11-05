@@ -8,7 +8,8 @@
 //   { p: 'paragraph' }  { h: 'heading' }  { list: ['item', ...] }  { keys: [[name, keys], ...] }  { cmds: ['/cmd ...  (note)', ...] }
 // `text` is everything searchable, lower case, built here so the search does no work per keystroke.
 import { ACTIONS, GROUPS, codeLabel } from './bindings.js';
-import { HELP } from './commands.js';
+import { HELP, BUILD_HELP } from './commands.js';
+import { DEFAULT_MAX_VOLUME, HISTORY_MAX_OPS, BLUEPRINT_MAX_COUNT, BLUEPRINT_MAX_DIM } from '../world/buildTools.js';
 import { STEPS } from '../player/onboarding.js';
 import { MAX_FOOD, MAX_HEALTH, SPRINT_MIN_FOOD } from '../player/survival.js';
 import { RECIPES, SMELT_TIME } from '../player/crafting.js';
@@ -105,6 +106,18 @@ export function buildTopics({ table, touch = false, pad = false } = {}) {
   add('cinnabar', 'Cinnabar and machines', 'Systems', [
     { p: 'Cinnabar Dust is mined from cinnabar ore. Lay it as wire to carry a signal from a power source (a lever, a button, a pressure plate, a cinnabar torch) to something that reacts, such as a lamp, a piston or a rail.' },
     { list: ['Repeaters boost and delay a signal.', 'Pistons push blocks when powered; sticky ones pull them back.'] },
+  ]);
+
+  add('building', 'Building tools', 'Systems', [
+    { p: 'Creative players, ops and the host can shape the world quickly. Mark two corners with the Surveyor Wand (get it with /wand: left click is corner 1, right click corner 2, and a wireframe box shows the selection) or with /pos1 and /pos2, then fill, replace, clone, copy and paste.' },
+    { list: [
+      `One command may touch up to ${DEFAULT_MAX_VOLUME.toLocaleString('en-US')} blocks (change it with /gamerule maxBuildVolume). Big edits are done a little each moment, with a progress message, so the game keeps running; /build cancel stops one.`,
+      `/undo and /redo walk back through your last ${HISTORY_MAX_OPS} edits, chests and signs included. Everything is saved with the world and shared with friends in a shared world.`,
+      '/copy remembers a selection around where you stand; /rotate and /flip turn it before you /paste. Chest contents are left behind unless you add -c.',
+      `/blueprint save keeps a selection under a name (up to ${BLUEPRINT_MAX_COUNT} per player, ${BLUEPRINT_MAX_DIM} blocks on a side); /blueprint export makes a file or a text you can share and /blueprint import checks it before keeping it.`,
+      'Blocks are named like oak_planks; a pattern such as 60%stone,40%dirt mixes them, and a mask such as stone,dirt or !air picks what to replace.',
+    ] },
+    { cmds: BUILD_HELP },
   ]);
 
   add('guide', 'Field Guide and Milestones', 'Systems', [

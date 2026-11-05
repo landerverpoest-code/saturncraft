@@ -25,6 +25,7 @@ import { ChunkRenderer } from './render/chunkRenderer.js';
 import { terrainUniforms, createTextureArray } from './render/terrainMaterial.js';
 import { Particles } from './render/particles.js';
 import { HeldItem, BlockOverlay } from './render/overlays.js';
+import { SelectionBox } from './render/selectionBox.js';
 import { PlayerModel } from './render/playerModel.js';
 import { Sky } from './sky/sky.js';
 import { Clouds, CLOUD_CELL } from './sky/clouds.js';
@@ -232,6 +233,7 @@ export class Game {
     this.onboarding = new Onboarding(this, { name: loadPlayerName() }); // first-time hints and the First Steps checklist (player/onboarding.js)
     this.held = new HeldItem(this);
     this.overlay = new BlockOverlay(this.scene);
+    this.selectionBox = new SelectionBox(this.scene); // the creative building selection (ui/buildCommands.js)
     this.enchantBooks = new EnchantBooks(this.scene); // floating books over enchanting tables
     this.hush = new HushSystem(this); // the Deep Hush: sensors, shriekers, catalysts and the Hushkeeper (world/hushSystem.js)
     this.worldEvents = new WorldEvents(this); // meteorites, dust storms, ground fog, the Lantern Festival, Hush Nights (world/events.js)
@@ -1314,6 +1316,7 @@ export class Game {
     this.entities.tick();
     if (p.riding) this.seatPlayer();
     this.spawner.tick();
+    if (this.buildQueue) this.buildQueue.tick(); // big building edits, a slice per tick (the host's and, in a shared world, its guests')
     if (!this.net || this.net.isHost) this.spawnerBlocks.tick();
     if (!this.net || this.net.isHost) this.proving.tick(); // Proving Spawner waves (world/provingSystem.js)
     if (!this.net || this.net.isHost) this.raids.tick();
@@ -1608,6 +1611,7 @@ export class Game {
     this.playerModel.update(this, this.perspective !== 0 && this.cameraDist > 0.8, alpha, sec); // no model when the camera is squeezed into the head
     if (this.net) this.net.render(sec);
     this.overlay.update(this.interaction, p.dead);
+    this.selectionBox.update(this);
     const fx = this.postfx.enabled;
     if (fx) this.postfx.begin(); else this.renderer.clear();
     this.beaconBeams.update(sec);

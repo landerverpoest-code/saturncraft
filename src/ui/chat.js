@@ -3,6 +3,7 @@
 // out after ten seconds and reappear while the chat is open.
 import { runCommand } from './commands.js';
 import { WORLD_COMMANDS, commandName } from '../net/protocol.js';
+import { BUILD_COMMANDS, prepareGuestCommand } from './buildCommands.js';
 
 export class Chat {
   constructor(game) {
@@ -53,7 +54,11 @@ export class Chat {
       if (text.startsWith('/') || this.game.player) {
         const net = this.game.net;
         // a guest's world-changing commands (/time, /weather, /summon...) are run by the host for everyone
-        if (text.startsWith('/') && net && net.isClient && WORLD_COMMANDS.has(commandName(text))) { net.sendCommand(text); this.game.ui.close(); return; }
+        if (text.startsWith('/') && net && net.isClient && WORLD_COMMANDS.has(commandName(text))) {
+          const name = commandName(text);
+          net.sendCommand(BUILD_COMMANDS.has(name) ? prepareGuestCommand(this.game, text) : text); // (a guest's corners are marked at home too, so the outline shows)
+          this.game.ui.close(); return;
+        }
         const out = text.startsWith('/') ? runCommand(this.game, text) : null;
         if (!text.startsWith('/')) {
           this.add(`<${net ? net.name : 'Player'}> ${text}`, net && net.social ? net.social.colorOf(net.name) : null);

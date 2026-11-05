@@ -38,6 +38,7 @@ import { canName, nameMob } from '../mobs/names.js';
 import { bundleTakeLast } from '../world/bundles.js';
 import { isSuspicious, archaeologyLoot, potDrops } from '../world/archaeology.js';
 import { interactStrider, guestWantsSeat } from '../mobs/duneStrider.js';
+import { wandClick } from '../ui/buildCommands.js';
 import { interactHoverling } from '../mobs/hoverling.js';
 import { galeLeap } from '../mobs/gustling.js';
 import { isBook } from '../world/books.js';
@@ -120,6 +121,17 @@ export class Interaction {
     if (this.useDelay > 0) this.useDelay--;
     if (this.swing > 0) this.swing--;
     if (this.surgeTicks > 0) this.tickSurge();
+
+    // Surveyor Wand (ui/buildCommands.js): left click marks corner 1, right click corner 2; it never mines or places
+    const held = p.inventory.selectedStack, heldDef = held && ITEMS[held.id];
+    if (heldDef && heldDef.wand) {
+      this.breaking = null;
+      if ((input.leftPressed || input.rightPressed) && this.target && !this.mobTarget) {
+        wandClick(g, input.leftPressed ? 1 : 2, this.target); // (answers with a toast)
+        this.swing = SWING_TICKS;
+      }
+      return;
+    }
 
     // Attack / mine
     // armour stands: left-click hits (two quick hits knock it down), right-click dresses or undresses it

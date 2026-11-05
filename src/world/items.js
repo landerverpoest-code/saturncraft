@@ -437,3 +437,11 @@ item('dirgestep_boots', 'Dirgestep Boots', {
   stack: 1, durability: 13 * 26, repairWith: 'DIRGE_CRYSTAL',
   armor: { slot: 3, piece: 'boots', material: 'dirge', defense: 3, toughness: 0, dirgestep: true },
 });
+
+// Surveyor Wand (creative building tools, ui/buildCommands.js): left click marks corner 1 of a selection, right click corner 2.
+// Not craftable: /wand or the creative inventory. The icon brings its own template (a staff with a glowing tip).
+const WAND_ICON = [
+  '................', '............hh..', '...........hHHh.', '...........hHhh.', '..........sshh..', '.........ss.....', '........ss......', '.......ss.......',
+  '......ss........', '.....ss.........', '....ss..........', '...ss...........', '..ss............', '.ss.............', '................', '................',
+];
+item('surveyor_wand', 'Surveyor Wand', { stack: 1, wand: true, iconStyle: [WAND_ICON, { s: '#8a6a3c', h: '#3fd0e0', H: '#c8f8ff' }] });
