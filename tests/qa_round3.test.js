@@ -15,6 +15,8 @@ import { SocialState } from '../src/net/social.js';
 import { setRep } from '../src/mobs/reputation.js';
 import { discover } from '../src/player/fieldGuide.js';
 import { Clipboard, encodeBlueprint } from '../src/world/buildTools.js';
+import { dishOf, RECIPES } from '../src/world/cookingPot.js';
+import { DISHES } from '../src/world/cooking.js';
 import { mockGame } from './fixtures/mockGame.js';
 
 describe('block data from outside (a blueprint, /fill hopper:7) cannot crash the tick', () => {
@@ -37,6 +39,15 @@ describe('block data from outside (a blueprint, /fill hopper:7) cannot crash the
   it('a crystal bud with an unknown facing hangs from the floor instead of throwing', () => {
     const world = { getBlock: () => B.STONE };
     for (const m of [0, 5, 6, 7, 15, 255]) expect(() => crystalSupported(world, 0, 0, 0, B.SMALL_VIOLITE_BUD, m)).not.toThrow();
+  });
+});
+
+describe('a Cooking Pot with a meta from outside data', () => {
+  // meta bits 0-3 index RECIPES; a blueprint or /fill cooking_pot_brew:15 named a dish that does not exist and the aim tip and the use handler threw.
+  it('always names a real dish', () => {
+    for (let m = 0; m < 256; m++) expect(DISHES[dishOf(m)]).toBeDefined();
+    expect(dishOf(RECIPES.length - 1)).toBe(RECIPES.length - 1);
+    expect(dishOf(15)).toBe(RECIPES.length > 15 ? 15 : 0);
   });
 });
 
