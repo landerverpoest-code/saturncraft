@@ -625,3 +625,68 @@ html.high-contrast .help-body, html.high-contrast .help-search { background: #00
 html.high-contrast .help-body h4, html.high-contrast .help-keys span:nth-child(even), html.high-contrast .help-list .world-head { color: #ffe000; opacity: 1; }
 html.high-contrast .btn.help-topic.on { background: #ffe000; color: #000; }
 html.high-contrast .help-body code { background: #222; border: 1px solid #fff; }
+
+/* ---- visual QA pass: what only shows on a real screen (every viewport from a 390 px phone to a desktop) ---- */
+/* Explanatory lines under a button wrap in a readable column instead of running edge to edge */
+.screen p.sub { max-width: min(460px, calc((100vw - 32px) / var(--tz, 1))); text-align: center; }
+/* Full-page menus hide what the HUD draws above its own backdrop (First Steps, milestone card, clock, status bars) and are darker,
+   so a heart or a hotbar slot never shows through a label. The touch settings have a lighter backdrop so the preview buttons show. */
+.pause-screen { background: rgba(6, 6, 14, .86); }
+.pause-screen.touch-settings { background: rgba(6, 6, 14, .4); }
+body:has(#screens > .pause-screen) :is(#steps, .milestone, #skyinfo, #raidbar) { visibility: hidden; }
+body:has(#screens > .pause-screen) #bottom { visibility: hidden; }
+#tc-ui.preview { z-index: 19; } /* the touch buttons shown for the touch settings sit under the menu's own buttons, never over them */
+/* The status bars and the hotbar fit a 360 px phone: the hearts and the hunger icons share the row width */
+:root { --icon: min(18px, calc((100vw - 28px) / 20)); }
+.icon { width: var(--icon); height: var(--icon); }
+#bars { width: max(calc(var(--slot) * 9 + 8px), calc(20 * (var(--icon) + 1px))); }
+/* Inventory and workbench: the armour column no longer touches the grid, and the recipe book goes under the panel on a narrow screen */
+.inv-top-row { display: flex; gap: 28px; align-items: center; justify-content: center; margin-bottom: 10px; }
+.cont-row { display: flex; gap: 10px; align-items: stretch; }
+@media (max-width: 760px) and (orientation: portrait) {
+  .cont-row { flex-direction: column; align-items: center; max-width: 100%; }
+  .cont-row > .recipe-book, .cont-row > .effect-panel { order: 2; width: min(100%, 420px); max-height: 34vh; }
+  .cont-row > .panel:not(.recipe-book):not(.effect-panel) { max-width: 100%; }
+  .inv-top-row { gap: 14px; }
+}
+/* A hint card never covers what is being traded or crafted: beside the panel on a wide screen, hidden (it comes back
+   when the screen closes) where there is no room */
+body:has(#screens > .screen:not(.pause-screen)) #hint-card { top: 8px; bottom: auto; left: auto; right: 8px; transform: none; width: min(230px, calc(100vw - 16px)); font-size: 13px; }
+@media (max-width: 1100px), (max-height: 640px) { body:has(#screens > .screen) #hint-card { display: none; } }
+html.large-text body:has(#screens > .screen) #hint-card { display: none; }
+body:has(#screens > .pause-screen) #hint-card { display: none; }
+/* Touch: the hint card moves clear of the Use / Mine / Jump buttons, and the First Steps card gets smaller on a short screen */
+@media (orientation: portrait) { body.touch-on #hint-card { bottom: auto; top: 36%; } }
+@media (max-height: 460px) {
+  body.touch-on #steps { width: min(168px, 30vw); font-size: 11px; padding: 5px 8px; line-height: 1.25; }
+  body.touch-on #steps .st-tip { font-size: 11px; }
+}
+/* The title screen: the splash text sits under the subtitle on a narrow screen instead of over it */
+@media (max-width: 860px) {
+  .title-wrap { display: flex; flex-direction: column; align-items: center; }
+  #splash { position: static; transform: rotate(-3deg); animation: none; font-size: 15px; margin-top: 2px; }
+}
+.wm-tools .btn { font-size: 15px; padding: 8px 10px; }
+/* More world options: a checkbox sits next to its words, not at the other edge of the panel */
+.wm-grid label:has(> input[type=checkbox]) { justify-content: flex-start; }
+@media (pointer: coarse) { .world-actions .world-act { min-height: 38px; font-size: 12px; } }
+
+/* Slot cursor (gamepad and keyboard): the slot under it is ringed in gold and tinted, whatever the panel colour */
+.slot[tabindex]:focus-visible, .slot.pad-focus { outline: 3px solid #ffd34a; outline-offset: -3px; box-shadow: 0 0 0 2px #000, inset 0 0 0 100px rgba(255, 211, 74, .22); z-index: 2; }
+html.high-contrast .slot[tabindex]:focus-visible, html.high-contrast .slot.pad-focus { outline-color: #000; box-shadow: 0 0 0 3px #ffe000, inset 0 0 0 100px rgba(255, 224, 0, .45); }
+/* Large text on a touch phone: the panels are zoomed 1.3x, so the slots they are built from shrink by the same factor to keep nine across */
+html.large-text body.touch-on .screen { --slot: max(22px, min(calc(8.8vw / var(--tz, 1)), calc((100vh - 110px) / 9.5 / var(--tz, 1)), 50px)); }
+/* Trading on a narrow screen (a phone, or large text): the level line wraps and the price cue gives up its reserved width until it has something to say */
+@media (max-width: 480px) {
+  .trade-level { flex-wrap: wrap; }
+  .trade-bar { flex: 1 1 100%; order: 3; }
+  .trade-level-count { white-space: normal; }
+  .price-cue:empty { display: none; }
+  .trade-row { gap: 6px; padding: 4px 6px; }
+  .trade-row .trade-btn { padding: 4px 8px; }
+}
+/* Large text: the 300 px buttons and fields leave a margin at each side of a phone instead of touching its edges */
+html.large-text .pause-screen > .btn { min-width: min(300px, calc((100vw - 24px) / var(--tz, 1))); }
+html.large-text .pause-screen > .field, html.large-text .pause-screen > .btn-row { width: min(300px, calc((100vw - 24px) / var(--tz, 1))); }
+/* High contrast: the Field Guide pictures sit on white tiles, so an unseen creature's silhouette is not black on black */
+html.high-contrast .guide-card img { background: #fff; border: 1px solid #fff; }

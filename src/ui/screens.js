@@ -79,6 +79,9 @@ export class UI {
       if (b && !b.disabled) b.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, shiftKey: e.shiftKey, button: 0 }));
     }, true);
     this.nav = new MenuNav(this.layer); // gamepad focus movement and the first control's focus (ui/menuNav.js)
+    // the slot cursor: the tooltip of the slot under it shows beside it, and a stack held with A rides next to it
+    this.layer.addEventListener('focusin', (e) => this.slotCursorMoved(e.target, true));
+    this.layer.addEventListener('focusout', (e) => this.slotCursorMoved(e.target, false));
     if (typeof MutationObserver !== 'undefined') {
       // every screen gets its dialog role and labels, and the ones that read as menus open with focus on their first control
       new MutationObserver(() => { labelScreens(this.layer); if (AUTOFOCUS_SCREENS.has(this.open)) this.nav.autoFocus(); }).observe(this.layer, { childList: true });
@@ -90,6 +93,24 @@ export class UI {
   }
 
   get blocking() { return this.open !== null; }
+
+  /** The slot cursor (a slot has focus) arrived on / left `el`: show or hide its tooltip, and park the held stack beside it. */
+  slotCursorMoved(el, on) {
+    if (!el || !el.classList || !el.classList.contains('slot')) return;
+    if (!on) { el.dispatchEvent(new MouseEvent('mouseleave')); return; }
+    const r = el.getBoundingClientRect();
+    this.cursorEl.style.left = r.left + r.width * 0.72 + 'px'; this.cursorEl.style.top = r.top + r.height * 0.72 + 'px';
+    el.dispatchEvent(new MouseEvent('mouseenter')); // (the same tooltip the mouse would show)
+    if (this.tooltipEl.classList.contains('hidden')) return;
+    const t = this.tooltipEl, tw = t.offsetWidth, th = t.offsetHeight;
+    let x = r.right + 6, y = r.top;
+    if (x + tw > innerWidth - 4) x = Math.max(4, r.left - tw - 6);
+    if (y + th > innerHeight - 4) y = Math.max(4, innerHeight - th - 4);
+    t.style.left = x + 'px'; t.style.top = y + 'px';
+  }
+
+  /** Is the slot cursor on a slot of the open screen? (Y then quick-moves instead of closing the inventory.) */
+  slotCursorActive() { return this.nav.onSlot(); }
 
   clear() { if (this.game.input) this.game.input.capture = null; /* a controls screen waiting for a key */ if (this.lazy) { this.lazy.dispose(); this.lazy = null; } this.layer.innerHTML = ''; this.padBack = null; this.padScroll = null; this.padTab = null; this.inGuide = false; this.inHelp = false; this.touchPreview = false; this.tooltipEl.classList.add('hidden'); }
 
@@ -168,7 +189,12 @@ export class UI {
   makeSlot(get, set, opts = {}) {
     const s = document.createElement('div');
     s.className = 'slot';
-    const refresh = () => { s.innerHTML = this.slotHTML(get()); };
+    s.tabIndex = -1; s.setAttribute('role', 'button'); // the slot cursor (ui/menuNav.js): D-pad / arrows move focus over the slots
+    const refresh = () => {
+      const st = get();
+      s.innerHTML = this.slotHTML(st);
+      s.setAttribute('aria-label', st && ITEMS[st.id] ? `${ITEMS[st.id].name}${st.count > 1 ? ' x' + st.count : ''}` : 'Empty slot');
+    };
     if (!opts.lazy) refresh();
     const ref = { get, set, opts };
     (this.slotRefs = this.slotRefs || []).push(ref);
@@ -306,7 +332,11 @@ export class UI {
       if (left) inv.slots[i] = { ...st, count: left };
     };
     for (let i = 9; i < 36; i++) main.appendChild(this.makeSlot(() => inv.slots[i], (v) => { inv.slots[i] = v; }, { quickMove: quick(i) }));
-    for (let i = 0; i < 9; i++) hot.appendChild(this.makeSlot(() => inv.slots[i], (v) => { inv.slots[i] = v; }, { quickMove: quick(i) }));
+    for (let i = 0; i < 9; i++) {
+      const hs = this.makeSlot(() => inv.slots[i], (v) => { inv.slots[i] = v; }, { quickMove: quick(i) });
+      if (i === inv.selected && this.open === 'inventory') hs.dataset.padStart = '1'; // the bag's slot cursor starts on the held slot (other screens: on their first control)
+      hot.appendChild(hs);
+    }
     const wrap = document.createElement('div');
     wrap.appendChild(main); wrap.appendChild(hot);
     return wrap;
@@ -366,6 +396,7 @@ export class UI {
         const ok = !!chooseIngredients(layout, available());
         if (only && !ok) continue;
         const s = el(`<div class="slot recipe ${ok ? 'craftable' : 'missing'}">${this.slotHTML({ id: r.result, count: r.count })}</div>`);
+        s.tabIndex = -1; s.setAttribute('role', 'button'); s.setAttribute('aria-label', 'Recipe: ' + ITEMS[r.result].name + (ok ? '' : ' (missing ingredients)'));
         s.addEventListener('mouseenter', () => { this.tooltipEl.textContent = ITEMS[r.result].name + (ok ? '' : ' (missing ingredients)'); this.tooltipEl.classList.remove('hidden'); });
         s.addEventListener('mouseleave', () => this.tooltipEl.classList.add('hidden'));
         s.addEventListener('mousedown', (e) => { e.preventDefault(); this.fillRecipe(layout, e.shiftKey ? 64 : 1); this.refreshAll(); });
@@ -407,7 +438,7 @@ export class UI {
     this.side = null; this.sideRight = null;
     inner(panel);
     if (this.side || this.sideRight) {
-      const row = el('<div style="display:flex;gap:10px;align-items:stretch"></div>');
+      const row = el('<div class="cont-row"></div>'); // (a phone in portrait stacks the recipe book under the panel: see style.css)
       if (this.side) row.append(this.side);
       row.append(panel);
       if (this.sideRight) row.append(this.sideRight);
@@ -444,7 +475,7 @@ export class UI {
 
   openInventory() {
     this.showContainer('inventory', 'Inventory', (panel) => {
-      const top = el('<div style="display:flex;gap:28px;align-items:center;justify-content:center"></div>');
+      const top = el('<div class="inv-top-row"></div>');
       top.appendChild(this.armorColumn());
       top.appendChild(this.craftingSection(2));
       panel.appendChild(top);
@@ -1006,6 +1037,7 @@ export class UI {
         list.innerHTML = '';
         o.forEach((r, i) => {
           const b = el(`<div class="slot cutter-opt${i === sel ? ' on' : ''}">${this.slotHTML({ id: r.id, count: r.count })}</div>`);
+          b.tabIndex = -1; b.setAttribute('role', 'button'); b.setAttribute('aria-label', ITEMS[r.id].name + (r.count > 1 ? ' x' + r.count : ''));
           b.addEventListener('mouseenter', () => this.showTooltip(ITEMS[r.id].name + (r.count > 1 ? ' ×' + r.count : '')));
           b.addEventListener('mouseleave', () => this.tooltipEl.classList.add('hidden'));
           b.addEventListener('mousedown', (e) => { e.preventDefault(); sel = i; g.audio.play('click'); this.refreshAll(); });
@@ -1317,7 +1349,7 @@ export class UI {
     const g = this.game, t = normalizeTouch(g.settings);
     const detected = detectTouch(readTouchEnv());
     this.touchPreview = true; // the on-screen buttons stay visible behind this screen so size and opacity can be judged
-    const s = el(`<div class="screen pause-screen"><h2>Touch controls</h2>
+    const s = el(`<div class="screen pause-screen touch-settings"><h2>Touch controls</h2>
       <button class="btn" data-a="mode">Touch controls: ${TOUCH_MODE_LABELS[t.touchMode]}</button>
       <p class="sub">Auto turns them on for phones and tablets${detected ? ' (this device looks like one)' : ' (this device does not look like one)'}.</p>
       <div class="field"><label>Button size: <b id="tsv">${t.touchSize}</b>%</label><input type="range" min="${SIZE_RANGE[0]}" max="${SIZE_RANGE[1]}" step="5" value="${t.touchSize}" id="ts"></div>
@@ -1712,7 +1744,7 @@ export class UI {
     this.clear();
     this.open = 'pause';
     const g = this.game, done = g.milestones.done;
-    const s = el(`<div class="screen"><h2>Milestones (${done.size}/${MILESTONES.length})</h2><div class="milestone-list"></div><button class="btn">Back</button></div>`);
+    const s = el(`<div class="screen pause-screen"><h2>Milestones (${done.size}/${MILESTONES.length})</h2><div class="milestone-list"></div><button class="btn">Back</button></div>`);
     const list = s.querySelector('.milestone-list');
     for (const m of MILESTONES) {
       const row = el(`<div class="milestone-row ${done.has(m.id) ? 'done' : ''}"><img src="${iconURL(m.icon)}"><div><b></b><div class="d"></div></div></div>`);

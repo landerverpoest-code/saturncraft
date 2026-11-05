@@ -5,7 +5,79 @@
 // The geometry (pickNext, stickDirection) is pure so the tests can run it without a DOM.
 
 /** Elements a menu can focus, in the order the browser would Tab through them. */
-export const FOCUSABLE = 'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])';
+export const FOCUSABLE = 'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"]), .slot[tabindex="-1"]';
+
+// ---- slot grids (inventory, chests, crafting, furnace, brewing, ...) -------------------------------------------------
+// Every slot is focusable (tabindex -1, so the Tab key keeps its own order) and the D-pad moves a cursor over them with the same
+// nearest-in-that-direction rule as the buttons. On a slot the pad buttons mean what a mouse button does there:
+//   A takes the stack / puts it down (left click)      X splits it, or puts down one (right click)
+//   Y quick-moves it (Shift-click)                      B closes the screen (the held stack goes back to the bag)
+// The keyboard has the same: arrows move, Enter or Space is A, Shift+Enter is Y, X or the menu key is X.
+
+/** What each slot action sends to a slot as a mousedown: { button, shift }. */
+export const SLOT_ACTIONS = {
+  take: { button: 0, shift: false },
+  split: { button: 2, shift: false },
+  quick: { button: 0, shift: true },
+};
+/** Pad buttons that mean a slot action while the cursor is on a slot. */
+export const SLOT_PAD_BUTTONS = ['PadA', 'PadX', 'PadY'];
+
+/** Which slot action a set of pressed pad codes asks for ('take' | 'split' | 'quick'), or null. A wins over X over Y when several arrive together. */
+export function slotActionFor(pressed) {
+  if (pressed.has('PadA')) return 'take';
+  if (pressed.has('PadX')) return 'split';
+  if (pressed.has('PadY')) return 'quick';
+  return null;
+}
+
+/** Which slot action a key on a focused slot asks for: Enter / Space take (with Shift: quick-move), X or the menu key split. */
+export function slotActionForKey(code, shift = false) {
+  if (code === 'Enter' || code === 'Space' || code === 'NumpadEnter') return shift ? 'quick' : 'take';
+  if (code === 'KeyX' || code === 'ContextMenu') return 'split';
+  return null;
+}
+
+/** The direction an arrow key moves a cursor ('up' | 'down' | 'left' | 'right'), or null. */
+export function arrowDirection(code) {
+  return code === 'ArrowUp' ? 'up' : code === 'ArrowDown' ? 'down' : code === 'ArrowLeft' ? 'left' : code === 'ArrowRight' ? 'right' : null;
+}
+
+/**
+ * Did the inventory key come only from a pad button the slot cursor needs (A, X or Y by default Y)? Then the screen is
+ * not closed by it: with a cursor on a slot, Y quick-moves and B closes. `keyCodes`: the codes bound to the inventory action;
+ * `pressed`: codes pressed this frame; `touched`: the touch button was pressed.
+ */
+export function inventoryKeyIsSlotAction(keyCodes, pressed, touched = false) {
+  if (touched) return false;
+  const hits = keyCodes.filter((c) => pressed.has(c));
+  return hits.length > 0 && hits.every((c) => SLOT_PAD_BUTTONS.includes(c));
+}
+
+/**
+ * The element a freshly opened slot screen starts its cursor on: one flagged `data-pad-start` (the inventory flags the selected
+ * hotbar slot), else the first focusable in the order the screen lists them. `items`: [{ start: bool, input: bool }].
+ */
+export function startIndex(items) {
+  let first = -1;
+  for (let i = 0; i < items.length; i++) {
+    if (items[i].input) continue;
+    if (items[i].start) return i;
+    if (first < 0) first = i;
+  }
+  return first;
+}
+
+/** Index of the slot in a row-major grid (`cols` wide) one step in `dir` from `i`, or -1 at the edge (no wrapping). The pure form of the D-pad over one grid. */
+export function gridStep(i, cols, total, dir) {
+  const r = Math.floor(i / cols), c = i % cols;
+  let n = i;
+  if (dir === 'left') n = c > 0 ? i - 1 : -1;
+  else if (dir === 'right') n = c < cols - 1 ? i + 1 : -1;
+  else if (dir === 'up') n = r > 0 ? i - cols : -1;
+  else if (dir === 'down') n = i + cols < total ? i + cols : -1;
+  return n >= 0 && n < total ? n : -1;
+}
 
 /**
  * The index of the rectangle to move focus to from rectangle `from` in direction 'up' | 'down' | 'left' |
@@ -58,7 +130,7 @@ export function menuIntent(pressed, pad, prevStick) {
   else if (pressed.has('PadLeft')) move = 'left';
   else if (pressed.has('PadRight')) move = 'right';
   else if (stick && stick !== prevStick) move = stick;
-  return { move, stick, press: pressed.has('PadA'), pressMany: pressed.has('PadX'), back: pressed.has('PadB') || pressed.has('PadBack') };
+  return { move, stick, press: pressed.has('PadA'), pressMany: pressed.has('PadX'), quick: pressed.has('PadY'), slot: slotActionFor(pressed), back: pressed.has('PadB') || pressed.has('PadBack') };
 }
 
 /** Controls that are currently shown (a hidden or collapsed one cannot take focus). */
@@ -78,7 +150,7 @@ export function stepRange(input, dir) {
 }
 
 /** Screens that open with focus on their first control, so keyboard and gamepad users start somewhere. */
-export const AUTOFOCUS_SCREENS = new Set(['pause', 'trade', 'emotes', 'death', 'sleep']);
+export const AUTOFOCUS_SCREENS = new Set(['pause', 'trade', 'emotes', 'death', 'sleep', 'inventory', 'workbench', 'furnace', 'chest', 'brewing']);
 
 let uid = 0;
 /**
@@ -112,14 +184,24 @@ export class MenuNav {
     this.stick = null;
     this.padFocused = null;
     layer.addEventListener('focusout', (e) => { if (e.target.classList) e.target.classList.remove('pad-focus'); });
+    // the keyboard on a slot: arrows move the cursor, Enter / Space / X act on it (the game's own key handling never sees them)
+    layer.addEventListener('keydown', (e) => {
+      if (!e.target.classList || !e.target.classList.contains('slot') || e.ctrlKey || e.altKey || e.metaKey) return;
+      const dir = arrowDirection(e.code), act = slotActionForKey(e.code, e.shiftKey);
+      if (!dir && !act) return;
+      e.preventDefault(); e.stopPropagation();
+      if (dir) this.move(dir); else this.slotPress(act);
+    });
   }
 
   /** Focus the first control of a freshly opened screen unless something inside already has focus. */
   autoFocus() {
     if (this.layer.contains(document.activeElement) && document.activeElement !== this.layer) return false;
-    const list = visibleFocusables(this.layer).filter((e) => !(e.tagName === 'INPUT' && (e.type === 'text' || e.type === 'search')));
+    // (the recipe book beside a crafting screen is reached with the D-pad, but the cursor starts on the screen's own first control or slot)
+    const list = visibleFocusables(this.layer).filter((e) => !(e.tagName === 'INPUT' && (e.type === 'text' || e.type === 'search')) && !e.closest('.recipe-book'));
     if (!list.length) return false;
-    list[0].focus({ preventScroll: false });
+    const at = startIndex(list.map((e) => ({ start: e.dataset && e.dataset.padStart !== undefined || e.classList.contains('sel') })));
+    list[at < 0 ? 0 : at].focus({ preventScroll: true }); // (a long screen stays scrolled to its top: the first control or slot is not always the one in view)
     return true;
   }
 
@@ -150,10 +232,25 @@ export class MenuNav {
     return true;
   }
 
+  /** Is the cursor on a slot? */
+  onSlot() {
+    const el = this.current();
+    return !!(el && el.classList.contains('slot'));
+  }
+
+  /** Do a slot action ('take' | 'split' | 'quick') on the slot under the cursor: the mouse press that does the same. */
+  slotPress(action) {
+    const el = this.current(), a = SLOT_ACTIONS[action];
+    if (!el || !a || !el.classList.contains('slot')) return false;
+    el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: a.button, shiftKey: a.shift }));
+    return true;
+  }
+
   /** Press the focused control (`many`: as a Shift-click, e.g. trade as often as affordable). */
   press(many = false) {
     const el = this.current();
     if (!el) return false;
+    if (el.classList.contains('slot')) return this.slotPress(many ? 'quick' : 'take');
     if (el.tagName === 'INPUT' && (el.type === 'range' || el.type === 'text' || el.type === 'search')) return false;
     el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, shiftKey: many }));
     return true;
@@ -171,6 +268,7 @@ export class MenuNav {
     if (it.back) return 'back';
     if (typing) return null;
     if (it.move && !noMove) this.move(it.move);
+    if (this.onSlot()) { if (it.slot) this.slotPress(it.slot); return null; }
     if (it.press || it.pressMany) this.press(it.pressMany);
     return null;
   }

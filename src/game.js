@@ -64,6 +64,7 @@ import { MobSpawner } from './mobs/spawner.js';
 import { HUD } from './ui/hud.js';
 import { UI } from './ui/screens.js';
 import { Input } from './ui/input.js';
+import { inventoryKeyIsSlotAction } from './ui/menuNav.js';
 import { resolveBindings } from './ui/bindings.js';
 import { ACCESS_DEFAULTS, ACCESS_CLASSES, CaptionLog, motionScales, accessClasses } from './ui/accessibility.js';
 import { TOUCH_DEFAULTS, normalizeTouch, wantTouch, readTouchEnv } from './ui/touchMath.js';
@@ -1364,8 +1365,10 @@ export class Game {
     if (inp.mouse.middlePressed) this.mouseLatch.middle = true;
 
     if (this.ui.open === 'death' || this.ui.open === 'chat') { inp.consumeMouse(); inp.endFrame(); return; }
+    const menuAtStart = this.ui.blocking; // (a screen closed by B this frame must not also let B drop the held item)
     if (inp.flyToggle) { inp.flyToggle = false; if (p.creative && !this.ui.blocking) { p.flying = !p.flying; p.flyGrace = 10; } }
-    if (inp.wasPressed('inventory')) {
+    // (with the slot cursor on a slot the Y button quick-moves the stack; B closes the screen)
+    if (inp.wasPressed('inventory') && !(this.ui.blocking && this.ui.slotCursorActive() && inventoryKeyIsSlotAction(inp.keys.inventory, inp.pressed, inp.vpressed.has('inventory')))) {
       if (['inventory', 'workbench', 'furnace', 'chest', 'creative', 'trade', 'brewing'].includes(this.ui.open)) this.ui.close();
       else if (!this.ui.blocking) { this.input.unlock(); if (p.creative) this.ui.openCreative(); else this.ui.openInventory(); }
     }
@@ -1400,7 +1403,7 @@ export class Game {
     if (inp.wasPressed('hud')) this.hud.setVisible(!this.hud.visible);
     if (inp.wasPressed('shaders')) { const on = this.settings.shaders === false; this.setSetting('shaders', on); this.hud.toast(`Shaders ${on ? 'on' : 'off'} (F7)`); }
     if (inp.wasPressed('perspective')) { this.perspective = (this.perspective + 1) % 3; document.getElementById('crosshair').style.visibility = this.perspective === 2 ? 'hidden' : ''; }
-    if (!this.ui.blocking) {
+    if (!this.ui.blocking && !menuAtStart) {
       const m = inp.consumeMouse();
       const sens = inp.sensitivity * (p.zooming && this.perspective === 0 ? 0.15 : 1); // steadier aim through a Farglass
       p.yaw -= m.dx * sens;

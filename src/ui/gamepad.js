@@ -74,3 +74,29 @@ export function firstPad(list) {
   for (const p of list) if (p && p.connected !== false && p.buttons && p.buttons.length >= 4) return p;
   return null;
 }
+
+/**
+ * Chords: a code of two pad buttons joined by "+" ("PadBack+PadRB"): hold the first, press the second. Every button on the
+ * pad already means something, so a chord gives an action (pinging a spot for the team) a place without taking one away.
+ */
+export function isChord(code) { return typeof code === 'string' && code.includes('+'); }
+
+/**
+ * Which chords did this poll complete, and which buttons they used up? `down`: codes that went down since the last poll,
+ * `held`: every code now held, `chords`: the chord codes that are bound. A chord fires when its second button goes down
+ * while its first is held (or both go down together); the second button then does not also act on its own (the first was
+ * already down, so its own action has happened). Returns { fired: [chord codes], swallow: Set of codes to ignore }.
+ */
+export function applyChords(down, held, chords) {
+  const fired = [], swallow = new Set();
+  for (const ch of chords) {
+    const [a, b] = ch.split('+');
+    if (!a || !b || a === b) continue;
+    const bNew = down.includes(b), aNew = down.includes(a);
+    if (!bNew || !(held.has(a) || aNew) || !held.has(b)) continue;
+    fired.push(ch);
+    swallow.add(b);
+    if (aNew) swallow.add(a);
+  }
+  return { fired, swallow };
+}

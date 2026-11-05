@@ -2,7 +2,7 @@
 // from the rebindable table in ui/bindings.js; gamepad buttons arrive as pseudo key codes
 // ("PadA", ...) so they flow through the same `is` / `wasPressed` checks.
 import { resolveBindings, keyLists, codeKind } from './bindings.js';
-import { readPad, firstPad, buttonEdges, lookPixels } from './gamepad.js';
+import { readPad, firstPad, buttonEdges, lookPixels, isChord, applyChords } from './gamepad.js';
 
 /** Keys that would scroll or open browser UI if left alone while playing. */
 const NO_DEFAULT = /^(F\d{1,2}|Tab|Space|Slash|Backquote|ContextMenu)$/;
@@ -83,6 +83,15 @@ export class Input {
   /** Use a new {action: [k1, k2, pad]} table (ui/bindings.js resolveBindings). */
   setBindings(table) { this.keys = keyLists(table); }
 
+  /** The chords (two pad buttons joined by "+") that some action is bound to; worked out again only when the bindings change. */
+  chordCodes() {
+    if (this._chordFor !== this.keys) {
+      this._chordFor = this.keys;
+      this._chords = [...new Set(Object.values(this.keys).flat().filter(isChord))];
+    }
+    return this._chords;
+  }
+
   /** Is `code` one of the codes bound to `action`? */
   matches(action, code) { return (this.keys[action] || []).includes(code); }
 
@@ -124,8 +133,14 @@ export class Input {
     const snap = nav && nav.getGamepads ? readPad(firstPad(nav.getGamepads())) : null;
     if (snap) {
       const { down, up } = buttonEdges(this.padPrev, snap.buttons);
-      for (const c of down) { if (this.capture) this.capture(c); else this.noteDown(c); }
-      for (const c of up) this.down.delete(c);
+      const chords = this.capture ? [] : this.chordCodes();
+      const { fired, swallow } = chords.length ? applyChords(down, snap.buttons, chords) : { fired: [], swallow: new Set() };
+      for (const c of down) { if (this.capture) this.capture(c); else if (!swallow.has(c)) this.noteDown(c); }
+      for (const c of fired) this.noteDown(c); // (a chord such as Back + right bumper counts as its own button)
+      for (const c of up) {
+        this.down.delete(c);
+        for (const ch of chords) if (ch.split('+').includes(c)) this.down.delete(ch);
+      }
       this.padPrev = snap.buttons;
       this.pad = { lx: snap.lx, ly: snap.ly, rx: snap.rx, ry: snap.ry, connected: true };
       if (playing && !this.capture && (snap.rx || snap.ry)) {

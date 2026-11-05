@@ -38,7 +38,7 @@ export const ACTIONS = [
   { id: 'help', label: 'Help and how-to topics', group: 'Interface', def: ['F1', null, null] },
   { id: 'dismissHint', label: 'Dismiss the hint on screen', group: 'Interface', def: ['KeyH', null, 'PadBack'] },
   { id: 'players', label: 'Player list (hold)', group: 'Multiplayer', def: ['Tab', null, 'PadRight'] },
-  { id: 'ping', label: 'Ping a spot for your team', group: 'Multiplayer', def: ['KeyB', null, null] },
+  { id: 'ping', label: 'Ping a spot for your team', group: 'Multiplayer', def: ['KeyB', null, 'PadBack+PadRB'] }, // (every pad button is taken, so the pad gets a chord: hold Back, press the right bumper)
   { id: 'emote', label: 'Emote wheel', group: 'Multiplayer', def: ['KeyV', null, 'PadLeft'] },
   ...Array.from({ length: 9 }, (_, i) => ({ id: 'slot' + (i + 1), label: 'Hotbar slot ' + (i + 1), group: 'Hotbar', def: ['Digit' + (i + 1), null, null] })),
 ];
@@ -156,6 +156,7 @@ const PAD_NAMES = {
 export function codeLabel(code) {
   if (!code) return 'Unbound';
   if (PAD_NAMES[code]) return PAD_NAMES[code];
+  if (code.includes('+')) return code.split('+').map(codeLabel).join(' + '); // a pad chord
   if (NAMED[code]) return NAMED[code];
   let m;
   if ((m = /^Key([A-Z])$/.exec(code))) return m[1];
