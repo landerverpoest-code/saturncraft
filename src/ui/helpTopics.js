@@ -144,6 +144,18 @@ export function buildTopics({ table, touch = false, pad = false } = {}) {
     }) },
   ]);
 
+  add('landmarks2', 'Lighthouses, shrines and observatories', 'Systems', [
+    { p: 'Three newer ruins wait to be found (find them with /locate lighthouse, /locate mire or /locate observatory): a red-and-white Hermit\'s Lighthouse on a beach point, a Mire Shrine sunk in a swamp with a flooded crypt under its altar, and a Stargazer\'s Observatory with a mostly fallen glass dome on open hills. Each has chests, and one chest in each keeps a written log or chart you can read.' },
+    { h: 'Building with what you find' },
+    { list: [
+      'Azure Mosaic (with slabs and stairs) and Sunburst Mosaic: smooth stone round azurite or gold nuggets.',
+      'Leaded Glass, Leaded Glass Panes and the Rose Window: see-through glass in lead; the window takes a red, a blue and a yellow dye.',
+      'Lighthouse Lens: a bright block that lets its light through; Chandeliers and Iron Braziers light a room from above or below.',
+      'Rope Ladder: climb it like a ladder, hung on the side of a block. Made from string and a plank.',
+      'Brinecrabs scuttle on beaches and mud (cook Raw Crab on a campfire); Wicklings, candle-headed ghouls whose touch sets you alight, come out at night in swamps and dark forests. Water and rain snuff them.',
+    ] },
+  ]);
+
   add('events', 'World events', 'Systems', [
     { p: 'Now and then the world does something special. Each event lasts a few minutes and can be switched off with /gamerule doWorldEvents false.' },
     { list: EVENT_ORDER.map((k) => `${EVENT_KINDS[k].name}: ${EVENT_KINDS[k].desc}.`) },

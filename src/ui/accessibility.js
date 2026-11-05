@@ -94,7 +94,7 @@ export const CAPTION_TEXT = {
   parry: 'Shield parries', shield_break: 'Shield knocked down',
   spore_puff: 'Spores puff', ash_hiss: 'Ash hisses', dirge_wail: 'Dirge wails',
   paddle: 'Boat paddles', mount_pant: 'Mount pants, tired', harness: 'Harness buckles', cart_fuel: 'Furnace cart roars',
-  thistle: 'Thistlehorn lows', burrow: 'Dustmole scuffles in the sand', yowl: 'Gloamlynx yowls', plip: 'Tarnling plips',
+  thistle: 'Thistlehorn lows', clack: 'Brinecrab clacks its claws', sputter: 'Wickling sputters', burrow: 'Dustmole scuffles in the sand', yowl: 'Gloamlynx yowls', plip: 'Tarnling plips',
 };
 
 /** Sounds that are only interface feedback when they have no place in the world. */

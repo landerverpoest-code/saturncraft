@@ -506,3 +506,9 @@ for (const [tier, name, defense, toughness, tiring, h, H, s] of [
   HORSE_ARMOR[tier] = item(`${tier}_horse_armor`, `${name} Horse Armour`, { stack: 1, horseArmor: { tier, defense, toughness, tiring }, iconStyle: [HORSE_ARMOR_ICON, { h, H, s }] }).id;
 }
 item('thistle_harness', 'Thistle Harness', { stack: 1, harness: 'thistlehorn', iconStyle: ['saddle', { h: '#a8743c', H: '#c8965a', s: '#e8c860' }] });
+
+// Shore round (mobs/shoreMobs.js), appended so no item id shifts: Brinecrab meat (cooked on a campfire or in a furnace) and a Wickling's Tallow,
+// the waxy stub of its candle-head (a slow fuel, and a candle with a string).
+item('raw_crab', 'Raw Crab', { food: { hunger: 2, saturation: 1.2 }, iconStyle: ['meat', { h: '#e0704a', w: '#f6e6dc' }] });
+item('cooked_crab', 'Roast Crab', { food: { hunger: 6, saturation: 9.6 }, iconStyle: ['meat', { h: '#c4501e', w: '#f2d8c0' }] });
+item('tallow', 'Tallow', { fuel: 400, iconStyle: ['seeds', { h: '#e8dcb0', H: '#fff6d8' }] });

@@ -286,7 +286,7 @@ export class World {
     if (id === B.LILY_PAD) return below === B.WATER || below === B.ICE;
     if (id === B.BROWN_MUSHROOM || id === B.RED_MUSHROOM) return !!(SOLID[below] && OPAQUE[below]);
     if (BLOCKS[id].circuitPart) return circuitSupported(this, x, y, z, id, metaIn ?? this.getMeta(x, y, z));
-    if (id === B.TORCH || id === B.LADDER) {
+    if (id === B.TORCH || id === B.LADDER || id === B.ROPE_LADDER) {
       const meta = metaIn ?? this.getMeta(x, y, z);
       const side = id === B.TORCH ? meta - 1 : meta & 3;
       if (id === B.TORCH && !meta) return SOLID[below] && OPAQUE[below];

@@ -10,6 +10,9 @@ import { sunTombsNear } from '../world/sunTombs.js';
 import { skywatchesNear } from '../world/skywatch.js';
 import { rimekeepsNear } from '../world/rimekeep.js';
 import { sporehallsNear } from '../world/sporehall.js';
+import { lighthousesNear } from '../world/lighthouse.js';
+import { mireShrinesNear } from '../world/mireShrine.js';
+import { observatoriesNear } from '../world/observatory.js';
 import { inGreatRift } from '../world/carvers.js';
 import { inMagmaLake } from '../world/magmaLakes.js';
 import { tabComplete } from './fieldGuideEntries.js';
@@ -61,6 +64,9 @@ export const MILESTONES = [
   { id: 'skywatch', title: 'Eyes on the Horizon', desc: 'Find a Skywatch Tower', icon: B.STONE_BRICKS, tick: near(skywatchesNear) },
   { id: 'rimekeep', title: 'Frozen Halls', desc: 'Find a Rimekeep', icon: B.ICE, tick: near(rimekeepsNear) },
   { id: 'sporehall', title: 'Heart of the Spores', desc: 'Find a Sporehall', icon: B.RED_MUSHROOM_BLOCK, tick: near(sporehallsNear) },
+  { id: 'lighthouse', title: 'Keeper of the Light', desc: "Find a Hermit's Lighthouse", icon: B.LIGHTHOUSE_LENS, tick: near(lighthousesNear) },
+  { id: 'mireshrine', title: 'Sunken Devotion', desc: 'Find a Mire Shrine', icon: B.AZURE_MOSAIC, tick: near(mireShrinesNear) },
+  { id: 'observatory', title: 'Reading the Stars', desc: "Find a Stargazer's Observatory", icon: B.ROSE_WINDOW, tick: near(observatoriesNear) },
   { id: 'peddler', title: 'Wares from Afar', desc: 'Trade with a Roving Peddler', icon: I.BERYL, event: 'peddler' },
   { id: 'parry', title: 'Not Today', desc: 'Parry a blow by raising your shield just in time', icon: I.SHIELD, event: 'parry' },
   { id: 'offhand', title: 'Spoils of the Off-Hand', desc: 'Defeat a mob that carried something in its off-hand', icon: I.CHARM_OF_UNDYING, event: 'offhand' },

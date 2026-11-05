@@ -26,6 +26,9 @@ import { sunTombsNear, tombGuardSpots } from '../world/sunTombs.js';
 import { skywatchesNear, skywatchGuards } from '../world/skywatch.js';
 import { rimekeepsNear, rimekeepGuards, RIMEKEEP_WARDEN } from '../world/rimekeep.js';
 import { sporehallsNear, sporehallGuards } from '../world/sporehall.js';
+import { lighthousesNear, lighthouseGuards } from '../world/lighthouse.js';
+import { mireShrinesNear, mireGuards } from '../world/mireShrine.js';
+import { observatoriesNear, observatoryGuards } from '../world/observatory.js';
 import { HUT_MONSTERS, isNewtPoolFloor } from './spawnRules.js';
 import { soddenSpawnChance } from './hostileVariants.js';
 import { babyHealth } from './babies.js';
@@ -190,6 +193,8 @@ export class MobSpawner {
       }
       return isDarkEnoughToSpawn(raw, blk, this.game.sky.state.skyDarken);
     }
+    // Brinecrabs settle on sand, mud and gravel rather than grass (mobs/shoreMobs.js)
+    if (MOBS[type].spawnOn) return MOBS[type].spawnOn.has(below) && isBrightEnoughForAnimal(raw, blk);
     // Gloamlynxes only appear at dusk and in the dark (mobs/fauna.js), and also settle on snowy grass
     if (MOBS[type].spawnWhen === 'dusk') return lynxMaySpawn(this.game.sky.state.combined) && (below === B.GRASS || below === B.SNOWY_GRASS) && isBrightEnoughForAnimal(raw, blk);
     return (below === B.GRASS || below === B.MYCELIUM || below === B.MUD) && isBrightEnoughForAnimal(raw, blk); // (Croakers on mangrove mud)
@@ -389,6 +394,9 @@ export class MobSpawner {
       for (const t of skywatchesNear(gen, X0, Z0, X0 + 15, Z0 + 15)) for (const g of skywatchGuards(t)) guard(g.type, g.x, g.y, g.z);
       for (const t of rimekeepsNear(gen, X0, Z0, X0 + 15, Z0 + 15)) for (const g of rimekeepGuards(t)) guard(g.type, g.x, g.y, g.z, !!g.warden);
       for (const t of sporehallsNear(gen, X0, Z0, X0 + 15, Z0 + 15)) for (const g of sporehallGuards(t)) guard(g.type, g.x, g.y, g.z);
+      for (const t of lighthousesNear(gen, X0, Z0, X0 + 15, Z0 + 15)) for (const g of lighthouseGuards(t)) guard(g.type, g.x, g.y, g.z);
+      for (const t of mireShrinesNear(gen, X0, Z0, X0 + 15, Z0 + 15)) for (const g of mireGuards(t)) guard(g.type, g.x, g.y, g.z);
+      for (const t of observatoriesNear(gen, X0, Z0, X0 + 15, Z0 + 15)) for (const g of observatoryGuards(t)) guard(g.type, g.x, g.y, g.z);
     }
     // three Elder Deepeyes in every Tide Citadel
     if (this.hostileEnabled()) spawnElders(this, cx, cz);
@@ -445,7 +453,7 @@ export class MobSpawner {
         const z = Math.max(cz * 16, Math.min(cz * 16 + 15, bz + Math.floor(Math.random() * 5) - 2));
         const y = w.heightAt(x, z) + 1;
         const ground = w.getBlock(x, y - 1, z);
-        const soil = ground === B.GRASS || ground === B.MYCELIUM || ground === B.SNOWY_GRASS || ground === B.SNOW_LAYER || (ground === B.SAND && (entry.type === 'hopper' || entry.type === 'shellback')) || (entry.type === 'cragbuck' && SOLID[ground]);
+        const soil = ground === B.GRASS || ground === B.MYCELIUM || ground === B.SNOWY_GRASS || ground === B.SNOW_LAYER || (ground === B.SAND && (entry.type === 'hopper' || entry.type === 'shellback')) || (entry.type === 'cragbuck' && SOLID[ground]) || (MOBS[entry.type].spawnOn && MOBS[entry.type].spawnOn.has(ground));
         if (!soil || !this.canFit(entry.type, x, y, z)) continue;
         this.spawnMob(entry.type, x + 0.5, y, z + 0.5);
       }

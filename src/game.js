@@ -56,6 +56,7 @@ import { effectiveSkyLight, skyState } from './sky/suns.js';
 import { SIDE_DIRS, BED_HEAD } from './world/shapes.js';
 import { CATEGORY } from './mobs/mobTypes.js';
 import { SpawnerBlocks, dungeonLoot } from './mobs/spawnerBlocks.js';
+import { addLore } from './world/packLore.js';
 import { ProvingSystem } from './world/provingSystem.js';
 import { newXp, deathXp } from './player/experience.js';
 import { Player } from './player/player.js';
@@ -851,6 +852,7 @@ export class Game {
       const meta = metaHint ?? this.world.getMeta(x, y, z);
       if (meta & 8) {
         c.slots = dungeonLoot(Math.random, (meta >> 4) & 15);
+        addLore(this.world.gen, x, y, z, c.slots); // a log or chart left in some structure chests (world/packLore.js)
         if (this.world.getBlock(x, y, z) === B.CHEST) this.world.setBlockUrgent(x, y, z, B.CHEST, meta & KEEP_BITS, false);
       }
     }
