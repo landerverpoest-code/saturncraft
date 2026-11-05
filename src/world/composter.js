@@ -18,6 +18,11 @@ const CHANCES = [
     B.PUMPKIN, B.MELON, B.LILY_PAD]],
   [0.85, [I.BAKED_POTATO, I.BREAD, I.COOKIE, B.HAY_BALE, B.BROWN_MUSHROOM_BLOCK, B.RED_MUSHROOM_BLOCK]],
   [1, [I.PUMPKIN_PIE]],
+  // cooking and farming depth: the new crops and what is cooked from them (world/farming.js, world/cookingPot.js)
+  [0.3, [I.SUNGOURD_SEEDS]],
+  [0.65, [I.FROSTROOT, I.DEWBERRIES, I.GOURD_WEDGE, B.SUNGOURD]],
+  [0.85, [I.ROASTED_FROSTROOT]],
+  [1, [I.BERRY_TART, I.GOURD_PIE]],
 ];
 export const COMPOST_CHANCE = new Map();
 for (const [c, ids] of CHANCES) for (const id of ids) if (id !== undefined) COMPOST_CHANCE.set(id, c);

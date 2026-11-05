@@ -1091,7 +1091,7 @@ export class UI {
     this.game.input.unlock();
     const g = this.game, inv = g.player.inventory;
     const CREATIVE_FIRST_ROWS = 6; // rows drawn at once on opening; the rest follow as they scroll into view
-    const hidden = new Set([B.AIR, B.CINDERROOT, B.WATER, B.LAVA, B.FURNACE_LIT, B.SMOKER_LIT, B.BLAST_FURNACE_LIT, B.WHEAT, B.CARROTS, B.POTATOES, B.BEETROOTS, B.MELON_STEM, B.PUMPKIN_STEM, B.DOOR, B.BED, B.FIRE, B.PAINTING, B.PAINTING_B, B.OAK_WALL_SIGN, B.COCOA]);
+    const hidden = new Set([B.AIR, B.CINDERROOT, B.WATER, B.LAVA, B.FURNACE_LIT, B.SMOKER_LIT, B.BLAST_FURNACE_LIT, B.WHEAT, B.CARROTS, B.POTATOES, B.BEETROOTS, B.MELON_STEM, B.PUMPKIN_STEM, B.DOOR, B.BED, B.FIRE, B.PAINTING, B.PAINTING_B, B.OAK_WALL_SIGN, B.COCOA, B.FROSTROOTS, B.SUNGOURD_STEM]);
     for (const b of BLOCKS) if (b && b.doorItem) hidden.add(b.id); // doors are placed from their door items
     const all = ITEMS.filter((d) => d && d.id && !hidden.has(d.id) && !(d.block && BLOCKS[d.block] && BLOCKS[d.block].hidden));
     this.showContainer('creative', 'Creative Inventory', (panel) => {

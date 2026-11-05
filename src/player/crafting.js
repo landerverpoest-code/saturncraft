@@ -403,6 +403,10 @@ shaped(['ISI', 'ITI', 'ISI'], { I: I.IRON_INGOT, S: I.STICK, T: B.CINNABAR_TORCH
 shaped(['SSS', 'SSS', 'SSS'], { S: I.SLIMEBALL }, B.SLIME_BLOCK, 1);
 shapeless([B.SLIME_BLOCK], I.SLIMEBALL, 9);
 shaped(['HH', 'HH'], { H: I.HONEYCOMB }, B.HONEY_BLOCK, 1);
+// Cooking and farming depth (world/cookingPot.js): the Cooking Pot (cook in it over a campfire, fire, lava or a lit furnace) and the
+// gourd's seeds; the Sungourd block and its wedges come from the stem (world/farming.js, world/mining.js)
+shaped(['I I', 'IBI', 'III'], { I: I.IRON_INGOT, B: I.BOWL }, B.COOKING_POT, 1);
+shapeless([I.GOURD_WEDGE], I.SUNGOURD_SEEDS, 1);
 
 // Smelting: input -> output; 200 ticks per item (10 s)
 export const SMELT_TIME = 200;
@@ -421,4 +425,5 @@ export const SMELTING = {
   [I.RAW_MUTTON]: I.COOKED_MUTTON, [I.RAW_VENISON]: I.COOKED_VENISON, [B.OAK_LOG]: I.COAL, [B.SPRUCE_LOG]: I.COAL, [B.BIRCH_LOG]: I.COAL,
   [B.JUNGLE_LOG]: I.COAL, [B.ACACIA_LOG]: I.COAL, [B.DARK_OAK_LOG]: I.COAL, [B.BLOSSOM_LOG]: I.COAL, [B.MANGROVE_LOG]: I.COAL, [B.RED_SAND]: B.GLASS,
   [B.WET_SOAKMOSS]: B.SOAKMOSS, [B.KELP]: I.DRIED_KELP, [B.STONE]: B.SMOOTH_STONE, [B.STONE_BRICKS]: B.CRACKED_STONE_BRICKS,
+  [I.FROSTROOT]: I.ROASTED_FROSTROOT,
 };

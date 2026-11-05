@@ -6,6 +6,11 @@ import { pairOnPlace } from '../world/chests.js';
 import { hopperPlaceMeta } from '../world/hoppers.js';
 import { dispenserPlaceMeta } from '../world/dispensers.js';
 import { compost, READY, SETTLE_TICKS } from '../world/composter.js';
+import { harvestOnSoil, boneMealSoil } from '../world/farming.js';
+import { isPot, canAdd, startBrew, takeServing, kindsIn, KIND_NAMES, hasHeat, isReady, dishOf, servingsOf, stageOf, BREW_STAGES } from '../world/cookingPot.js';
+import { bitOfItem, kindStandIn, DISHES } from '../world/cooking.js';
+import { varietyBonus, recordMeal, countsForVariety } from './variety.js';
+import { aimTip } from '../world/aimTips.js';
 import { B, BLOCKS, SOLID, SHAPE, isFluid, CROPS, isFurnace, DOOR_SETS, CANDLES, POTTED, WATERLOGGED_FORM, isPropagule, PROPAGULE_HANGING, isBox, BOX_COLORS } from '../world/blocks.js';
 import { ITEMS, I, toolOf, isBlockItem, WOOL_ITEMS, POTION_ITEM, isArrow, DISCS } from '../world/items.js';
 import { POTIONS } from '../world/potions.js';
@@ -63,7 +68,7 @@ const ORE_XP = {
 };
 const BREAK_DELAY = 5;
 /** Blocks that right-click opens / toggles instead of using the held item. */
-const USABLE_BLOCKS = new Set([B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.CHEST, B.BARREL, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL, B.BREWING_STAND, B.GLOOMSHELL_BOX, B.HOPPER, B.COMPOSTER, B.SWEET_BERRY_BUSH, B.JUKEBOX, B.CAVE_VINES_LIT, B.FLOWER_POT, B.BEACON, B.DISPENSER, B.DROPPER, B.GRINDSTONE, B.STONECUTTER, B.LECTERN, B.CAKE, B.LOOM, ...BOX_COLORS, B.VAULT]);
+const USABLE_BLOCKS = new Set([B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.CHEST, B.BARREL, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL, B.BREWING_STAND, B.GLOOMSHELL_BOX, B.HOPPER, B.COMPOSTER, B.SWEET_BERRY_BUSH, B.DEWBERRY_BRAMBLE, B.COOKING_POT, B.COOKING_POT_BREW, B.JUKEBOX, B.CAVE_VINES_LIT, B.FLOWER_POT, B.BEACON, B.DISPENSER, B.DROPPER, B.GRINDSTONE, B.STONECUTTER, B.LECTERN, B.CAKE, B.LOOM, ...BOX_COLORS, B.VAULT]);
 const CIRCUIT_USE = new Set([B.LEVER, B.STONE_BUTTON, B.REPEATER, B.CHIME_BLOCK, B.COMPARATOR, B.DAYLIGHT_SENSOR]);
 const CIRCUIT_PLACE = new Set([B.LEVER, B.STONE_BUTTON, B.CINNABAR_WIRE, B.REPEATER, B.WOODEN_PRESSURE_PLATE, B.STONE_PRESSURE_PLATE, B.LIGHT_WEIGHTED_PLATE, B.HEAVY_WEIGHTED_PLATE, B.PISTON, B.STICKY_PISTON, B.COMPARATOR, B.OBSERVER, B.DAYLIGHT_SENSOR]);
 const USE_DELAY = 4;
@@ -118,6 +123,7 @@ export class Interaction {
     if (p.dead) return;
     if (p.gamemode === 'spectator') { this.target = null; this.mobTarget = null; this.boatTarget = null; this.standTarget = null; this.eating = 0; return; } // spectators only watch
     this.updateTarget();
+    if (g.hud && g.hud.setAimTip && g.ticks % 4 === 0) g.hud.setAimTip(this.target && !g.ui.open ? aimTip(g.world, this.target) : null); // farmland, crops and pots tell their state when looked at
     if (this.breakDelay > 0) this.breakDelay--;
     if (this.useDelay > 0) this.useDelay--;
     if (this.swing > 0) this.swing--;
@@ -185,7 +191,7 @@ export class Interaction {
     // food that is also a seed (carrots) is planted when aimed at the top of farmland
     const tg = this.target;
     const plants = d && d.places && tg && ((tg.id === B.FARMLAND && tg.face[1] === 1)
-      || (d.places === B.SWEET_BERRY_BUSH && tg.face[1] === 1 && (tg.id === B.GRASS || tg.id === B.DIRT || tg.id === B.SNOWY_GRASS)) // berries are planted on soil
+      || ((d.places === B.SWEET_BERRY_BUSH || d.places === B.DEWBERRY_BRAMBLE) && tg.face[1] === 1 && (tg.id === B.GRASS || tg.id === B.DIRT || tg.id === B.SNOWY_GRASS)) // berries are planted on soil
       || (d.places === B.CAVE_VINES && tg.face[1] === -1)); // glow berries hang under a block
     if (input.right && d && d.food && !plants) {
       if (p.hunger.canEat() || d.food.always) {
@@ -443,7 +449,12 @@ export class Interaction {
     const silk = !!(ench && ench.gentle_hand && silkDropsSelf(id));
     const xp = p.creative || silk ? null : ORE_XP[id];
     if (xp && canHarvest(id, tool)) g.entities.spawnXp(x + 0.5, y + 0.5, z + 0.5, xp[0] + Math.floor(Math.random() * (xp[1] - xp[0] + 1)));
-    if (!p.creative) for (const drop of blockDrops(id, tool, Math.random, meta, ench)) g.entities.spawnItem(x + 0.5, y + 0.3, z + 0.5, drop);
+    if (!p.creative) {
+      let drops = blockDrops(id, tool, Math.random, meta, ench);
+      // ripe crops take from the soil: the same crop again from the same farmland yields a little less (world/farming.js)
+      if (CROPS.has(id)) drops = harvestOnSoil(g.world, x, y, z, id, meta, drops, Math.random, (i) => /_seeds$/.test((ITEMS[i] || {}).key || ''), (a, b, c, i, m) => g.world.setBlockUrgent(a, b, c, i, m));
+      for (const drop of drops) g.entities.spawnItem(x + 0.5, y + 0.3, z + 0.5, drop);
+    }
     if (id === B.DECORATED_POT) {
       // with a tool the pot comes away whole (sherds and all); otherwise it shatters into its sides
       if (!p.creative) for (const drop of potDrops(potFaces, !!tool.type)) g.entities.spawnItem(x + 0.5, y + 0.3, z + 0.5, drop);
@@ -496,6 +507,12 @@ export class Interaction {
     const g = this.game, p = g.player;
     const f = ITEMS[st.id].food;
     p.hunger.eat(f.hunger, f.saturation);
+    // a varied diet: a different food from the last few meals adds a little saturation (player/variety.js)
+    if (countsForVariety(f)) {
+      const bonus = varietyBonus(p.recentMeals, st.id);
+      if (bonus > 0) { p.hunger.saturation = Math.min(p.hunger.saturation + bonus, p.hunger.food); g.hud.toast('A varied meal: +' + bonus.toFixed(1) + ' saturation', 1800); }
+      p.recentMeals = recordMeal(p.recentMeals, st.id);
+    }
     this.shake('eat', p.x - 0.5, p.y + 0.5, p.z - 0.5);
     if (f.effect && Math.random() < f.effect.chance) p.addEffect(f.effect.type, f.effect.ticks);
     for (const [type, ticks, amp] of f.effects || []) p.addEffect(type, ticks, amp); // a Gilded Apple's sure effects
@@ -554,17 +571,69 @@ export class Interaction {
   /** Pick a ripe berry bush (it drops back to age 1), or bone-meal it a stage riper. */
   useBerryBush(t, st, d) {
     const g = this.game, p = g.player, w = g.world, age = w.getMeta(t.x, t.y, t.z) & 3;
+    const bramble = t.id === B.DEWBERRY_BRAMBLE; // the Dewberry Bramble is picked the same way and regrows too
     if (d && d.boneMeal && age < 3) {
-      w.setBlockUrgent(t.x, t.y, t.z, B.SWEET_BERRY_BUSH, age + 1);
+      w.setBlockUrgent(t.x, t.y, t.z, t.id, age + 1);
       if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
       for (let k = 0; k < 8; k++) g.particles.emit(t.x + Math.random(), t.y + Math.random() * 0.6, t.z + Math.random(), 0, 0.02, 0, 0.4, 0.9, 0.3, 20, -0.001);
       return true;
     }
     if (age < 2) return false;
     const n = age === 3 ? 2 + Math.floor(Math.random() * 2) : 1 + Math.floor(Math.random() * 2);
-    g.entities.spawnItem(t.x + 0.5, t.y + 0.6, t.z + 0.5, { id: I.SWEET_BERRIES, count: n });
-    w.setBlockUrgent(t.x, t.y, t.z, B.SWEET_BERRY_BUSH, 1);
+    g.entities.spawnItem(t.x + 0.5, t.y + 0.6, t.z + 0.5, { id: bramble ? I.DEWBERRIES : I.SWEET_BERRIES, count: n });
+    w.setBlockUrgent(t.x, t.y, t.z, t.id, bramble ? 0 : 1);
     g.audio.play('pop', [t.x + 0.5, t.y + 0.5, t.z + 0.5]);
+    return true;
+  }
+
+  /**
+   * Cooking Pot (world/cookingPot.js): put ingredients in (one of each kind: meat, fish, mushrooms, berries, beetroot, roots,
+   * gourd, wheat); an empty hand or a Stick stirs - that starts the pot cooking when the mix is a recipe and something hot
+   * (campfire, fire, lava, a lit furnace) is below; sneaking with an empty hand tips the ingredients out. A ready pot gives a
+   * serving at a time to a Bowl (stews, soups) or an empty hand (pies).
+   */
+  useCookingPot(t, st, d) {
+    const g = this.game, p = g.player, w = g.world, toast = (m) => g.hud.toast(m, 2200);
+    const at = [t.x + 0.5, t.y + 0.7, t.z + 0.5], meta = w.getMeta(t.x, t.y, t.z);
+    const puff = (n = 6) => g.particles.smoke && g.particles.smoke(at[0], at[1] + 0.3, at[2], n, 0.3);
+    if (t.id === B.COOKING_POT_BREW) {
+      if (p.sneaking && !st) return false; // (sneak places blocks as usual)
+      if (!isReady(meta)) { toast(`Simmering... ${Math.min(99, Math.round((stageOf(meta) / BREW_STAGES) * 100))}%${hasHeat(w, t.x, t.y, t.z) ? '' : ' (it needs a fire below)'}`); return true; }
+      const dish = DISHES[dishOf(meta)];
+      if (dish.bowl ? !(st && st.id === I.BOWL) : !!st) { toast(dish.bowl ? `${dish.name}: ${servingsOf(meta)} left. Hold a Bowl to ladle it.` : `${dish.name}: ${servingsOf(meta)} left. Take one with an empty hand.`); return true; }
+      if (takeServing(w, t.x, t.y, t.z) < 0) return true;
+      if (dish.bowl && !p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
+      const out = { id: dish.id, count: 1, damage: 0 };
+      if (p.inventory.add(out)) g.entities.spawnItem(at[0], at[1] + 0.4, at[2], out);
+      p.inventory.changed();
+      g.audio.play('pop', at);
+      return true;
+    }
+    // a filling pot
+    if (p.sneaking && !st) { // tip it out
+      if (!meta) return false;
+      for (const k of kindsIn(meta)) g.entities.spawnItem(at[0], at[1] + 0.4, at[2], { id: kindStandIn(k), count: 1 });
+      w.setBlockUrgent(t.x, t.y, t.z, B.COOKING_POT, 0);
+      g.audio.play('splash', at);
+      return true;
+    }
+    if (p.sneaking) return false;
+    const bit = st ? bitOfItem(st.id) : 0;
+    if (bit) {
+      if (!canAdd(meta, bit)) { toast(meta & bit ? `The pot already has ${KIND_NAMES[kindsIn(bit)[0]].toLowerCase()}.` : 'That does not go with what is in the pot.'); return true; }
+      w.setBlockUrgent(t.x, t.y, t.z, B.COOKING_POT, meta | bit);
+      if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
+      g.audio.play('splash', at, 0.5);
+      puff(3);
+      toast('In the pot: ' + kindsIn(meta | bit).map((k) => KIND_NAMES[k]).join(', '));
+      return true;
+    }
+    if (st && st.id !== I.STICK) return false; // other items and blocks go where they would anyway
+    const r = startBrew(w, t.x, t.y, t.z);
+    if (r === 'started') { g.audio.play('ignite', at, 0.4); puff(8); toast('The pot starts to simmer.'); }
+    else if (r === 'empty') toast('The pot is empty. Put in ingredients, then stir with an empty hand.');
+    else if (r === 'nomatch') toast('In the pot: ' + kindsIn(meta).map((k) => KIND_NAMES[k]).join(', ') + '. That is not a dish yet; add more or tip it out (sneak with an empty hand).');
+    else if (r === 'noheat') toast('The pot needs a fire below it: a campfire, fire, lava or a lit furnace.');
     return true;
   }
 
@@ -958,7 +1027,8 @@ export class Interaction {
       if (t.id === B.CHEST || t.id === B.BARREL || isBox(t.id) || t.id === B.HOPPER || t.id === B.DISPENSER || t.id === B.DROPPER) { g.ui.openChest(t.x, t.y, t.z); g.audio.play('chest_open', [t.x + 0.5, t.y + 0.5, t.z + 0.5]); this.shake('open', t.x, t.y, t.z); return true; }
     }
     if (t && t.id === B.COMPOSTER && !p.sneaking && this.useComposter(t, st)) { this.swing = SWING_TICKS; return true; }
-    if (t && t.id === B.SWEET_BERRY_BUSH && this.useBerryBush(t, st, d)) { this.swing = SWING_TICKS; return true; }
+    if (t && (t.id === B.SWEET_BERRY_BUSH || t.id === B.DEWBERRY_BRAMBLE) && this.useBerryBush(t, st, d)) { this.swing = SWING_TICKS; return true; }
+    if (t && isPot(t.id) && this.useCookingPot(t, st, d)) { this.swing = SWING_TICKS; return true; }
     if (t && t.id === B.CAVE_VINES_LIT) {
       // pick the glow berries
       g.entities.spawnItem(t.x + 0.5, t.y + 0.3, t.z + 0.5, { id: I.GLOW_BERRIES, count: 1 });
@@ -1239,6 +1309,12 @@ export class Interaction {
 
   boneMeal(t) {
     const g = this.game, w = g.world;
+    if (t.id === B.FARMLAND) { // Bone Meal on bare soil that remembers a crop: the soil is fertile again
+      if (!boneMealSoil(w, t.x, t.y, t.z, (a, b, c, i, m) => w.setBlockUrgent(a, b, c, i, m))) return false;
+      for (let k = 0; k < 10; k++) g.particles.emit(t.x + Math.random(), t.y + 1 + Math.random() * 0.3, t.z + Math.random(), 0, 0.02, 0, 0.4, 0.9, 0.3, 20, -0.001);
+      g.hud.toast('The soil is fertile again', 1800);
+      return true;
+    }
     const burst = (x, y, z) => { for (let k = 0; k < 10; k++) g.particles.emit(x + Math.random(), y + Math.random() * 0.6, z + Math.random(), 0, 0.02, 0, 0.4, 0.9, 0.3, 20, -0.001); };
     if (CROPS.has(t.id)) {
       const m = w.getMeta(t.x, t.y, t.z);
@@ -1505,7 +1581,7 @@ export class Interaction {
 
   pickBlock(id) {
     const inv = this.game.player.inventory;
-    const asItem = { [B.CINNABAR_WIRE]: I.CINNABAR, [B.CINNABAR_TORCH_OFF]: B.CINNABAR_TORCH, [B.CINNABAR_LAMP_ON]: B.CINNABAR_LAMP, [B.DOOR]: I.OAK_DOOR, ...Object.fromEntries(DOOR_SETS.slice(1).map(([, door]) => [door, BLOCKS[door].doorItem])), [B.BED]: I.BED, [B.WHEAT]: I.WHEAT_SEEDS, [B.MELON_STEM]: I.MELON_SEEDS, [B.PUMPKIN_STEM]: I.PUMPKIN_SEEDS, [B.CARROTS]: I.CARROT, [B.POTATOES]: I.POTATO, [B.BEETROOTS]: I.BEETROOT_SEEDS, [B.FURNACE_LIT]: B.FURNACE, [B.SMOKER_LIT]: B.SMOKER, [B.BLAST_FURNACE_LIT]: B.BLAST_FURNACE, [B.FARMLAND]: B.DIRT, [B.CINDERROOT]: I.CINDERROOT };
+    const asItem = { [B.CINNABAR_WIRE]: I.CINNABAR, [B.CINNABAR_TORCH_OFF]: B.CINNABAR_TORCH, [B.CINNABAR_LAMP_ON]: B.CINNABAR_LAMP, [B.DOOR]: I.OAK_DOOR, ...Object.fromEntries(DOOR_SETS.slice(1).map(([, door]) => [door, BLOCKS[door].doorItem])), [B.BED]: I.BED, [B.WHEAT]: I.WHEAT_SEEDS, [B.MELON_STEM]: I.MELON_SEEDS, [B.PUMPKIN_STEM]: I.PUMPKIN_SEEDS, [B.CARROTS]: I.CARROT, [B.POTATOES]: I.POTATO, [B.BEETROOTS]: I.BEETROOT_SEEDS, [B.FROSTROOTS]: I.FROSTROOT, [B.SUNGOURD_STEM]: I.SUNGOURD_SEEDS, [B.COOKING_POT_BREW]: B.COOKING_POT, [B.DEWBERRY_BRAMBLE]: I.DEWBERRIES, [B.FURNACE_LIT]: B.FURNACE, [B.SMOKER_LIT]: B.SMOKER, [B.BLAST_FURNACE_LIT]: B.BLAST_FURNACE, [B.FARMLAND]: B.DIRT, [B.CINDERROOT]: I.CINDERROOT };
     const want = asItem[id] ?? id;
     for (let i = 0; i < 9; i++) if (inv.slots[i] && inv.slots[i].id === want) { inv.selected = i; return; }
     if (this.game.player.creative && ITEMS[want]) {

@@ -451,3 +451,24 @@ const WAND_ICON = [
   '......ss........', '.....ss.........', '....ss..........', '...ss...........', '..ss............', '.ss.............', '................', '................',
 ];
 item('surveyor_wand', 'Surveyor Wand', { stack: 1, wand: true, iconStyle: [WAND_ICON, { s: '#8a6a3c', h: '#3fd0e0', H: '#c8f8ff' }] });
+
+// Cooking and farming depth (world/cookingPot.js, world/farming.js), appended so no item id shifts: three new crops (a winter-hardy
+// root, a berry bramble that regrows, a gourd with a stem) and the dishes of the Cooking Pot. Dishes are only made in the pot;
+// each has a short buff and the usual food limits (saturation at most 2.4 x hunger). The soups and stews leave their bowl.
+item('frostroot', 'Frostroot', { food: { hunger: 2, saturation: 2.4 }, places: B.FROSTROOTS, iconStyle: ['beetroot', { h: '#b9a4e4', H: '#dcd0f4', s: '#5fa89a' }] });
+item('roasted_frostroot', 'Roasted Frostroot', { food: { hunger: 5, saturation: 6 }, iconStyle: ['potato', { h: '#8a6aa8', H: '#b89ad0', s: '#4a3a62' }] });
+item('dewberries', 'Dewberries', { food: { hunger: 2, saturation: 1.2 }, places: B.DEWBERRY_BRAMBLE, iconStyle: ['seeds', { h: '#3a3fa8', H: '#6a70e0' }] });
+item('sungourd_seeds', 'Sungourd Seeds', { places: B.SUNGOURD_STEM, iconStyle: ['seeds', { h: '#e0b04a', H: '#f0d080' }] });
+item('gourd_wedge', 'Gourd Wedge', { food: { hunger: 3, saturation: 2.4 }, iconStyle: ['meat', { h: '#e0a42a', w: '#6a8a3a' }] });
+const dish = (key, name, hunger, sat, effects, bowl, tint) => item(key, name, {
+  stack: bowl ? 1 : 64, food: { hunger, saturation: sat, effects, ...(bowl ? { leaves: 'bowl' } : {}) },
+  iconStyle: bowl ? ['bowl', { h: '#8a6034', H: '#a87a48', w: tint }] : ['bread', { h: tint, H: '#f0c070', w: '#8a5426' }],
+});
+dish('hunters_stew', "Hunter's Stew", 8, 9.6, [['regeneration', 100, 0]], true, '#9a4a2a');
+dish('fishers_chowder', "Fisher's Chowder", 7, 8.4, [['fire_resistance', 1200, 0]], true, '#d8c8a0');
+dish('foragers_stew', "Forager's Stew", 6, 7.2, [['night_vision', 1200, 0]], true, '#7a5a8a');
+dish('hearty_hotpot', 'Hearty Hotpot', 9, 10.8, [['regeneration', 160, 0]], true, '#a0603a');
+dish('seafarers_pot', "Seafarer's Pot", 8, 9.6, [['fire_resistance', 900, 0], ['night_vision', 900, 0]], true, '#4a8a9a');
+dish('gourd_soup', 'Gourd Soup', 7, 8.4, [['absorption', 1200, 0]], true, '#e0a42a');
+dish('berry_tart', 'Berry Tart', 6, 4.8, [['night_vision', 900, 0]], false, '#4a4ab0');
+dish('gourd_pie', 'Gourd Pie', 8, 6.4, [['regeneration', 80, 0]], false, '#d89a22');

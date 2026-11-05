@@ -804,6 +804,23 @@ def(B.WRAITHBONE, 'Wraithbone', { hardness: 1.5, resistance: 4, tool: TOOL.PICKA
 def(B.SPORE_LANTERN, 'Spore Lantern', { hardness: 0.3, resistance: 0.3, emit: 15, sound: 'glass' });
 def(B.WYRMBONE, 'Wyrmbone', { hardness: 2, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD, tex: { top: 'wyrmbone_top', bottom: 'wyrmbone_top', side: 'wyrmbone' } });
 
+// Cooking and farming depth (world/cookingPot.js, world/farming.js), appended so no id shifts.
+// Cooking Pot: sits on a heat source (campfire, fire, lava, a lit furnace, smoker or blast furnace); the ingredients put in
+// are kept in the meta as a bit set of kinds (COOKING_POT) and, once cooking, the dish and its progress (COOKING_POT_BREW:
+// bits 0-3 the dish, bits 4-5 the simmer stage or the servings left minus one, bit 7 = ready). The brew block is hidden.
+// Frostroots (a winter-hardy root), the Dewberry Bramble (a berry bush that regrows, soil planted) and the Sungourd (a stem
+// that sets a gourd on a free soil block next to it, like the melon) are the new crops; crops on farmland remember what grew.
+ext('COOKING_POT'); ext('COOKING_POT_BREW');
+def(B.COOKING_POT, 'Cooking Pot', { hardness: 2, resistance: 2, tool: TOOL.PICKAXE, sound: 'metal', opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, tex: { top: 'cooking_pot_top', bottom: 'cooking_pot_bottom', side: 'cooking_pot_side' } });
+def(B.COOKING_POT_BREW, 'Cooking Pot', { ...BLOCKS[B.COOKING_POT], hidden: true, drops: B.COOKING_POT });
+ext('FROSTROOTS'); ext('DEWBERRY_BRAMBLE'); ext('SUNGOURD_STEM'); ext('SUNGOURD');
+def(B.FROSTROOTS, 'Frostroots', { ...plant, shape: SHAPE.CROP, drops: 'frostroots', tex: { all: 'frostroots_3' } });
+def(B.DEWBERRY_BRAMBLE, 'Dewberry Bramble', { ...plant, drops: { item: 'DEWBERRIES', min: 1, max: 1 }, flammable: true, tex: { all: 'dewberry_bramble_3' } });
+def(B.SUNGOURD_STEM, 'Sungourd Stem', { ...plant, shape: SHAPE.CROP, drops: 'sungourd_stem', tex: { all: 'stem_7' } });
+def(B.SUNGOURD, 'Sungourd', { hardness: 1, resistance: 1, tool: TOOL.AXE, sound: 'wood', drops: 'sungourd', tex: { top: 'sungourd_top', bottom: 'sungourd_top', side: 'sungourd_side' } });
+CROPS.add(B.FROSTROOTS); CROPS.add(B.SUNGOURD_STEM);
+STEM_FRUIT[B.SUNGOURD_STEM] = B.SUNGOURD;
+
 export const NUM_BLOCKS = BLOCKS.length;
 
 // Flat lookup tables used by hot loops (mesher, lighting, physics) and workers.
