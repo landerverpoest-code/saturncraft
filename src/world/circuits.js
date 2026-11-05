@@ -24,7 +24,7 @@ import { B, BLOCKS, SOLID, SHAPE, BLOCK_LIMIT, isFurnace } from './blocks.js';
 import { MIN_Y, MAX_Y } from './constants.js';
 import { SIDE_DIRS, DOOR_OPEN, DOOR_UPPER, TRAPDOOR_OPEN, GATE_OPEN } from './shapes.js';
 import {
-  FACING6, CIRCUIT_BLOCK, isWire, isTorchC, isPiston, isConductor, wireMask, wirePowerSides, attachDir, torchAttachDir,
+  FACING6, facingIdx, CIRCUIT_BLOCK, isWire, isTorchC, isPiston, isConductor, wireMask, wirePowerSides, attachDir, torchAttachDir,
   ON, TURNED, REPEATER_POWERED, PISTON_EXTENDED, HEAD_STICKY, CHIME_POWERED, OPENABLE_POWERED, SIDE_TO_FACING, facingOf, DISPENSER_TRIGGERED,
   COMPARATOR_SUBTRACT, OBSERVER_POWERED, SENSOR_INVERTED, comparatorLevel, observerBack, isPlate, isWeightedPlate, plateLevel,
 } from './circuitShapes.js';
@@ -628,7 +628,7 @@ export class Circuits {
 
   /** Push the line in front of the piston one block and put the head out. */
   extend(x, y, z, id, m) {
-    const w = this.world, f = m & 7, [dx, dy, dz] = FACING6[f];
+    const w = this.world, f = facingIdx(m), [dx, dy, dz] = FACING6[f];
     const r = pushStructure(w, x, y, z, f);
     if (!r.ok) return false;
     this.act(() => {
@@ -654,7 +654,7 @@ export class Circuits {
 
   /** Pull the head back in (a sticky piston brings the block in front of it, and what holds on to it, along). */
   retract(x, y, z, id, m) {
-    const w = this.world, f = m & 7, [dx, dy, dz] = FACING6[f];
+    const w = this.world, f = facingIdx(m), [dx, dy, dz] = FACING6[f];
     const hx = x + dx, hy = y + dy, hz = z + dz;
     const pull = id === B.STICKY_PISTON ? pushStructure(w, x, y, z, f, true) : null; // (the head counts as gone)
     this.act(() => {
