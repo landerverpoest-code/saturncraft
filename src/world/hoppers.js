@@ -14,7 +14,8 @@ import { isIngredient, isVial, VIAL_SLOTS, INGREDIENT_SLOT, FUEL_SLOT } from './
 
 export const HOPPER_SLOTS = 5;
 export const HOPPER_COOLDOWN = 8;
-export const spoutDir = (meta) => ((meta & 7) === 0 ? [0, -1, 0] : [SIDE_DIRS[(meta & 7) - 1][0], 0, SIDE_DIRS[(meta & 7) - 1][2]]);
+// (data from outside - a blueprint, /fill hopper:7 - can carry a meta no hopper is placed with: that spout points down)
+export const spoutDir = (meta) => { const m = meta & 7, d = m >= 1 && m <= 4 ? SIDE_DIRS[m - 1] : null; return d ? [d[0], 0, d[2]] : [0, -1, 0]; };
 export const newHopper = (x, y, z) => ({ x, y, z, slots: new Array(HOPPER_SLOTS).fill(null), cooldown: 0 });
 
 /** Meta for a hopper placed against `face` (the clicked face's normal): the spout points into that block. */
