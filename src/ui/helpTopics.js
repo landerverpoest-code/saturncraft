@@ -23,6 +23,8 @@ import { EFFECTS } from '../player/effects.js';
 import { CROP_TRAITS, bestSeasons, GREENHOUSE_LIGHT, GREENHOUSE_REACH, YIELD_FACTOR } from '../world/farming.js';
 import { KIND_NAMES, KINDS } from '../world/cookingPot.js';
 import { DISHES, KIND_ITEMS } from '../world/cooking.js';
+import { CAMP_SLOTS, CAMP_COOK_TICKS, campCooked } from '../world/campfireCooking.js';
+import { SMELTING } from '../player/crafting.js';
 import { VARIETY_STEP, VARIETY_MAX, VARIETY_WINDOW } from '../player/variety.js';
 import { SNARE_RANGE, SNARE_HOLD } from '../world/snare.js';
 import { PULSE_GATE_SETTINGS } from '../world/pulseGate.js';
@@ -110,6 +112,12 @@ export function buildTopics({ table, touch = false, pad = false } = {}) {
 
   add('farming', 'Farming, soil and greenhouses', 'Systems', [
     { p: 'Till grass or dirt with a hoe, keep water within four blocks and plant seeds or roots on the farmland. Bone Meal ripens crops quickly; the Composter turns scraps into Bone Meal.' },
+    { h: 'Wild crops' },
+    { list: [
+      'Frostroots grow wild in small plots on snowy plains and in taiga; village farms in cold lands sometimes grow them too.',
+      'Dewberry Brambles stand on forest edges, in flower forests and in meadows, often ripe.',
+      'Sungourds lie in patches on savanna, in jungles and on warm plains; warm villages sometimes plant the stem. Break a Sungourd for Gourd Wedges, craft a wedge into seeds.',
+    ] },
     { h: 'Seasons and crops' },
     { list: [
       'Most crops grow at the season\'s speed (see Seasons): slow in winter, quick in spring.',
@@ -125,6 +133,8 @@ export function buildTopics({ table, touch = false, pad = false } = {}) {
 
   add('cooking', 'Cooking Pot', 'Systems', [
     { p: `The Cooking Pot (iron and a bowl, see the recipe book) cooks stews, soups and pies. Stand it on a campfire, fire, lava or a lit furnace, smoker or blast furnace. Put ingredients in one at a time (one of each kind: ${KINDS.map((k) => KIND_NAMES[k].toLowerCase()).join(', ')}), then stir with an empty hand or a stick. When the mix is a dish it simmers for about 20 seconds; take a serving with a Bowl (soups) or an empty hand (pies). Sneak with an empty hand to tip the ingredients out.` },
+    { h: 'Campfire cooking' },
+    { p: `A campfire cooks raw food by itself: right-click it with raw meat, fish, a potato or a Frostroot to lay it on the fire (up to ${CAMP_SLOTS} at a time). Each piece takes ${Math.round(CAMP_COOK_TICKS / 20)} seconds and pops out cooked when it is done; right-click with an empty hand to take everything back off, and breaking the campfire drops what is on it. Cooks: ${Object.keys(SMELTING).map(Number).filter((id) => campCooked(id) !== undefined).map((id) => (ITEMS[id] || BLOCKS[id]).name).join(', ')}.` },
     { h: 'Ingredient kinds' },
     { list: KINDS.map((k) => `${KIND_NAMES[k]}: ${KIND_ITEMS[k].filter((id) => id !== undefined).map((id) => (ITEMS[id] || BLOCKS[id]).name).join(', ')}`) },
     { h: 'Dishes' },

@@ -11,6 +11,7 @@ import { isPot, canAdd, startBrew, takeServing, kindsIn, KIND_NAMES, hasHeat, is
 import { bitOfItem, kindStandIn, DISHES } from '../world/cooking.js';
 import { varietyBonus, recordMeal, countsForVariety } from './variety.js';
 import { aimTip } from '../world/aimTips.js';
+import { campAdd, canCampCook, campCount, CAMP_SLOTS } from '../world/campfireCooking.js';
 import { B, BLOCKS, SOLID, SHAPE, isFluid, CROPS, isFurnace, DOOR_SETS, CANDLES, POTTED, WATERLOGGED_FORM, isPropagule, PROPAGULE_HANGING, isBox, BOX_COLORS } from '../world/blocks.js';
 import { ITEMS, I, toolOf, isBlockItem, WOOL_ITEMS, POTION_ITEM, isArrow, DISCS } from '../world/items.js';
 import { POTIONS } from '../world/potions.js';
@@ -125,7 +126,7 @@ export class Interaction {
     if (p.dead) return;
     if (p.gamemode === 'spectator') { this.target = null; this.mobTarget = null; this.boatTarget = null; this.standTarget = null; this.eating = 0; return; } // spectators only watch
     this.updateTarget();
-    if (g.hud && g.hud.setAimTip && g.ticks % 4 === 0) g.hud.setAimTip(this.target && !g.ui.open ? aimTip(g.world, this.target) : null); // farmland, crops and pots tell their state when looked at
+    if (g.hud && g.hud.setAimTip && g.ticks % 4 === 0) g.hud.setAimTip(this.target && !g.ui.open ? aimTip(g.world, this.target, g.campfires) : null); // farmland, crops and pots tell their state when looked at
     if (this.breakDelay > 0) this.breakDelay--;
     if (this.useDelay > 0) this.useDelay--;
     if (this.swing > 0) this.swing--;
@@ -635,6 +636,38 @@ export class Interaction {
     return true;
   }
 
+  /**
+   * Campfire (world/campfireCooking.js): right-click with a raw food (meat, fish, a potato, a Frostroot...) lays it on the fire
+   * (up to four, each cooks for 30 s and pops out when done); an empty hand takes back everything that lies there.
+   * Anything else (blocks, tools) is used as usual.
+   */
+  useCampfire(t, st) {
+    const g = this.game, p = g.player, toast = (m) => g.hud.toast(m, 2000);
+    const at = [t.x + 0.5, t.y + 0.7, t.z + 0.5], cur = g.campfires.get(`${t.x},${t.y},${t.z}`);
+    if (st && canCampCook(st.id)) {
+      if (p.sneaking) return false; // (sneak places blocks as usual)
+      const next = campAdd(cur, st.id);
+      if (!next) { toast(`The campfire is full (${CAMP_SLOTS} at a time).`); return true; }
+      g.setCampfire(t.x, t.y, t.z, next);
+      if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
+      g.audio.play('ignite', at, 0.35);
+      if (g.particles.smoke) g.particles.smoke(at[0], at[1] + 0.2, at[2], 4, 0.2);
+      toast(`Cooking on the campfire: ${campCount(next)}/${CAMP_SLOTS}`);
+      return true;
+    }
+    if (st || !cur || p.sneaking) return false;
+    // an empty hand takes the food back off the fire (raw, or whatever is still cooking)
+    for (const e of cur.slots) {
+      if (!e) continue;
+      const out = { id: e.id, count: 1, damage: 0 };
+      if (p.inventory.add(out)) g.entities.spawnItem(at[0], at[1] + 0.3, at[2], out);
+    }
+    g.setCampfire(t.x, t.y, t.z, null);
+    p.inventory.changed();
+    g.audio.play('pop', at);
+    return true;
+  }
+
   /** Fill a composter with the held plant matter, or empty a ready one (Bone Meal pops out). */
   useComposter(t, st) {
     const g = this.game, p = g.player, w = g.world, level = w.getMeta(t.x, t.y, t.z) & 15;
@@ -1027,6 +1060,7 @@ export class Interaction {
     }
     if (t && t.id === B.COMPOSTER && !p.sneaking && this.useComposter(t, st)) { this.swing = SWING_TICKS; return true; }
     if (t && (t.id === B.SWEET_BERRY_BUSH || t.id === B.DEWBERRY_BRAMBLE) && this.useBerryBush(t, st, d)) { this.swing = SWING_TICKS; return true; }
+    if (t && t.id === B.CAMPFIRE && this.useCampfire(t, st)) { this.swing = SWING_TICKS; return true; }
     if (t && isPot(t.id) && this.useCookingPot(t, st, d)) { this.swing = SWING_TICKS; return true; }
     if (t && t.id === B.CAVE_VINES_LIT) {
       // pick the glow berries
