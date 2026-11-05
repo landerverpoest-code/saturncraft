@@ -6,6 +6,8 @@
 import { B } from '../blocks.js';
 import { Simplex, hash4, hashf, mulberry32 } from '../noise.js';
 import { CHUNK_VOLUME, cidx } from '../constants.js';
+import { SUB_BIOMES, pickSub, subFloor, decorateSubBiomes } from './cinderBiomes.js';
+import { stampForges, inForge } from './cinderForge.js';
 
 export const CINDER_FLOOR = 0, CINDER_CEILING = 127, CINDER_LAVA = 31;
 const GH = 4, GV = 8, NY = 128 / GV + 1; // density grid spacing (horizontal, vertical)
@@ -19,6 +21,20 @@ export class CinderdeepGenerator {
     this.dimension = 'cinderdeep';
     const s = (k) => new Simplex(hash4(this.seed, k, 6661, 13));
     this.nCave = s(1); this.nDetail = s(2); this.nPatch = s(3); this.nPatch2 = s(4);
+    this.nBiomeA = s(5); this.nBiomeB = s(6); // sub-biomes (cinderBiomes.js)
+  }
+
+  /** The sub-biome (SUB.*) of the column (x, z): 0 in the plain Cinderdeep. */
+  subBiomeAt(x, z) {
+    return pickSub(this.nBiomeA.noise2(x / 96, z / 96), this.nBiomeB.noise2(x / 80 + 300, z / 80));
+  }
+
+  /** Spawn zone at (x, y, z): 'bastion', 'cinderForge', a sub-biome's table key, or null for the plain Cinderdeep. */
+  zoneAt(x, y, z) {
+    if (this.inBastion(x, y, z)) return 'bastion';
+    if (inForge(this, x, y, z)) return 'cinderForge';
+    const sub = this.subBiomeAt(x, z);
+    return sub ? SUB_BIOMES[sub].table : null;
   }
 
   /** Solid when > 0. Caverns in the middle, solid towards floor and ceiling. */
@@ -55,10 +71,12 @@ export class CinderdeepGenerator {
       }
     }
 
-    // 2. surfaces: Mournsand / gravel shores and valleys
+    // 2. surfaces: Mournsand / gravel shores and valleys (and the sub-biomes' own floors)
+    const sub = new Uint8Array(256);
     for (let z = 0; z < 16; z++) for (let x = 0; x < 16; x++) {
       const wx = x0 + x, wz = z0 + z;
       const p = this.nPatch.noise2(wx / 28, wz / 28), q = this.nPatch2.noise2(wx / 13, wz / 13);
+      const sb = sub[x + z * 16] = this.subBiomeAt(wx, wz);
       for (let y = CINDER_LAVA - 3; y < CINDER_CEILING - 6; y++) {
         const i = cidx(x, y, z);
         if (blocks[i] !== B.CINDERSTONE) continue;
@@ -68,6 +86,7 @@ export class CinderdeepGenerator {
         let mat = 0;
         if (p > 0.45 || (shore && p > 0.1)) mat = B.MOURNSAND;
         else if (q > 0.55 && shore) mat = B.GRAVEL;
+        if (sb && y > CINDER_LAVA + 1) mat = subFloor(sb, q) || mat;
         if (!mat) continue;
         const depth = 1 + Math.floor(hashf(this.seed, wx, y, wz) * 3);
         for (let d = 0; d < depth; d++) if (blocks[cidx(x, y - d, z)] === B.CINDERSTONE) blocks[cidx(x, y - d, z)] = mat;
@@ -152,6 +171,10 @@ export class CinderdeepGenerator {
         }
       }
     }
+
+    // 10. sub-biome ores, Glowcap trees, slag columns and spires (their own random stream), 11. Cinderforges
+    decorateSubBiomes(this.seed, blocks, cx, cz, sub);
+    stampForges(this, blocks, meta, cx, cz);
 
     for (let z = 0; z < 16; z++) for (let x = 0; x < 16; x++) {
       let y = CINDER_CEILING;

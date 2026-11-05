@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { skyState } from './suns.js';
 import { DIMENSIONS } from '../world/dimensions/dims.js';
+import { SUB_BIOMES } from '../world/dimensions/cinderBiomes.js';
 
 const vert = `
 varying vec3 vDir;
@@ -53,6 +54,24 @@ export class DimensionSky {
     this.dome.visible = false;
     scene.add(this.dome);
     this.background = new THREE.Color();
+    this.fogCur = null;     // the Cinderdeep's fog [r, g, b, near, far] easing towards the sub-biome under the player
+    this.fogTarget = null;
+    this.frame = 0;
+  }
+
+  /** The Cinderdeep's fog, drifting from one sub-biome's haze to the next (world/dimensions/cinderBiomes.js). */
+  cinderFog(game, def, seconds = 0) {
+    const cur = this.fogCur || (this.fogCur = [...def.fog, def.fogNear, def.fogFar]);
+    const dt = Math.min(0.5, Math.max(0, seconds - (this.lastSec ?? seconds))); // (eases at the same pace whatever the frame rate)
+    this.lastSec = seconds;
+    if (!this.fogTarget || ++this.frame % 15 === 0) {
+      const gen = game.world.dimGenerator, p = game.player;
+      const s = SUB_BIOMES[gen && gen.subBiomeAt ? gen.subBiomeAt(Math.floor(p.x), Math.floor(p.z)) : 0] || SUB_BIOMES[0];
+      this.fogTarget = [...s.fog, s.fogNear, s.fogFar];
+    }
+    const k = 1 - Math.exp(-dt * 1.2);
+    for (let i = 0; i < 5; i++) cur[i] += (this.fogTarget[i] - cur[i]) * k;
+    return cur;
   }
 
   /** Show/hide the overworld sky pieces for a dimension. */
@@ -65,6 +84,7 @@ export class DimensionSky {
     this.dome.visible = dim === 'hollow';
     if (over) { game.scene.background = null; return; }
     const f = DIMENSIONS[dim].fog;
+    this.fogCur = null; this.fogTarget = null; this.lastSec = undefined;
     this.background.setRGB(f[0], f[1], f[2]);
     game.scene.background = dim === 'cinderdeep' ? this.background : null;
   }
@@ -74,14 +94,15 @@ export class DimensionSky {
     const sky = game.sky, def = DIMENSIONS[dim];
     const st = { ...skyState(t), aboveCount: 1, isDay: true, phase: 'day', combined: 1, skyDarken: 0, sunlit: false };
     sky.state = st;
-    sky.horizon.setRGB(def.fog[0], def.fog[1], def.fog[2]);
+    const fog = dim === 'cinderdeep' ? this.cinderFog(game, def, seconds) : def.fog;
+    sky.horizon.setRGB(fog[0], fog[1], fog[2]);
     sky.zenith.copy(sky.horizon);
     for (const l of sky.lights) { l.intensity = 0; l.shadow.needsUpdate = false; }
     if (dim === 'cinderdeep') {
       // a warm dim glow for mobs, items and the held item; terrain uses block light and the ambient floor
       sky.hemi.color.setRGB(1.0, 0.62, 0.48); sky.hemi.groundColor.setRGB(0.5, 0.18, 0.1); sky.hemi.intensity = 1.1;
       const flick = 0.92 + 0.08 * Math.sin(seconds * 0.7) * Math.sin(seconds * 1.9);
-      this.background.setRGB(def.fog[0] * flick, def.fog[1] * flick, def.fog[2] * flick);
+      this.background.setRGB(fog[0] * flick, fog[1] * flick, fog[2] * flick);
       sky.horizon.copy(this.background);
     } else {
       sky.hemi.color.setRGB(0.78, 0.72, 0.9); sky.hemi.groundColor.setRGB(0.3, 0.26, 0.36); sky.hemi.intensity = 0.95;

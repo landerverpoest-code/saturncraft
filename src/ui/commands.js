@@ -14,6 +14,8 @@ import { nearestSunTomb } from '../world/sunTombs.js';
 import { nearestSkywatch } from '../world/skywatch.js';
 import { nearestRimekeep } from '../world/rimekeep.js';
 import { nearestSporehall } from '../world/sporehall.js';
+import { nearestForge } from '../world/dimensions/cinderForge.js';
+import { nearestWyrmRibs } from '../world/dimensions/wyrmRibs.js';
 import { nearestMonument } from '../world/monuments.js';
 import { BLOCKS, isBlockId } from '../world/blocks.js';
 import { MOBS, MOB_KEYS } from '../mobs/mobTypes.js';
@@ -84,7 +86,7 @@ export const HELP = [
   '/enchant <name> [level]  (the held item; names: ' + ENCH_KEYS.join(', ') + ')',
   '/summon <mob> [x y z]',
   '/xp <amount> [levels]',
-  '/locate <village|temple|igloo|outpost|shipwreck|monument|mineshaft|sanctum|bastion|hut|ruin|buried|vaults|sunken|tomb|skywatch|rimekeep|sporehall|city|gate> or /locate biome <name>',
+  '/locate <village|temple|igloo|outpost|shipwreck|monument|mineshaft|sanctum|bastion|hut|ruin|buried|vaults|sunken|tomb|skywatch|rimekeep|sporehall|city|gate|forge|ribs> or /locate biome <name>',
   '/dimension <overworld|cinderdeep|hollow>',
   '/effect give <effect> [seconds] [level],  /effect clear  (effects: ' + EFFECT_KEYS.join(', ') + ')',
   '/raid <patrol|start [level]|stop|status>',
@@ -350,6 +352,13 @@ export function runCommand(game, text) {
         if (!list.length) return 'No bastion found nearby';
         const b = list.reduce((a, c) => (Math.hypot(c.cx - p.x, c.cz - p.z) < Math.hypot(a.cx - p.x, a.cz - p.z) ? c : a));
         return `The nearest Ember Bastion is at ${b.cx}, ${b.y + 1}, ${b.cz} (${Math.round(Math.hypot(b.cx - p.x, b.cz - p.z))} blocks away)`;
+      }
+      if (['forge', 'cinderforge', 'smithy', 'ribs', 'wyrmribs', 'wyrm_ribs'].includes(what)) {
+        const forge = what === 'forge' || what === 'cinderforge' || what === 'smithy';
+        if (game.world.dimension !== (forge ? 'cinderdeep' : 'hollow')) return forge ? 'Cinderforges are only found in the Cinderdeep' : 'Wyrm Ribs are only found in the Hollow';
+        const t = (forge ? nearestForge : nearestWyrmRibs)(game.world.dimGenerator, p.x, p.z);
+        if (!t) return forge ? 'No Cinderforge found nearby' : 'No Wyrm Ribs found nearby';
+        return `The nearest ${forge ? 'Cinderforge' : 'set of Wyrm Ribs'} is at ${t.cx}, ${t.y + 1}, ${t.cz} (${Math.round(Math.hypot(t.cx - p.x, t.cz - p.z))} blocks away)`;
       }
       if (what === 'ruin' || what === 'ruined_portal' || what === 'portal') {
         const list = ruinsNear(game.world.gen, p.x - 1500, p.z - 1500, p.x + 1500, p.z + 1500);

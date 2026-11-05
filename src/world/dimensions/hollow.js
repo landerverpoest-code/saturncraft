@@ -10,6 +10,7 @@ import { CHUNK_VOLUME, cidx } from '../constants.js';
 import { sideOf } from '../shapes.js';
 import { planCity, Plan } from './hollowCity.js';
 import { growHushvinePlant } from './hushvine.js';
+import { planRibs } from './wyrmRibs.js';
 
 export const HOLLOW_ISLAND_R = 96;
 export const HOLLOW_ARRIVAL = { x: 100, y: 48, z: 0 }; // obsidian platform, built on arrival
@@ -91,11 +92,13 @@ export class HollowGenerator {
       }
       // the far end of the Far Gate, on the island it leads to
       const gw = this.gatewayExit();
+      // Wyrm Ribs on city-less islands other than the Far Gate's (wyrmRibs.js; its own random stream, so the plants above are unchanged)
+      const ribs = !city && !(gw.ci === ci && gw.cj === cj) ? planRibs(this.seed, ci, cj, o, ground, P) : null;
       if (gw.ci === ci && gw.cj === cj) {
         for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) for (let dy = 1; dy <= 4; dy++) P.set(gw.x + dx, gw.y + dy, gw.z + dz, B.AIR);
         P.set(gw.x, gw.y, gw.z, B.BEDROCK); P.set(gw.x, gw.y + 1, gw.z, B.FAR_GATE); P.set(gw.x, gw.y + 2, gw.z, B.FAR_GATE); P.set(gw.x, gw.y + 3, gw.z, B.BEDROCK);
       }
-      out = { island: o, city, plan: P.finish() };
+      out = { island: o, city, plan: P.finish(), ribs };
     }
     if (this._plans.size > 48) this._plans.clear();
     this._plans.set(k, out);

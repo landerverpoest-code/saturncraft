@@ -86,9 +86,11 @@ export class GuideTracker {
   }
 
   findStructures() {
-    if (!this.overworld()) return;
+    // the overworld's structures, or the Cinderforges and Wyrm Ribs of the dimension the player is in
+    const w = this.game.world, gen = this.overworld() ? w.gen : w.dimension === 'cinderdeep' || w.dimension === 'hollow' ? w.dimGenerator : null;
+    if (!gen) return;
     const p = this.game.player, guide = this.guide();
-    for (const s of landmarksInBox(this.game.world.gen, p.x - SIGHT, p.z - SIGHT, p.x + SIGHT, p.z + SIGHT)) {
+    for (const s of landmarksInBox(gen, p.x - SIGHT, p.z - SIGHT, p.x + SIGHT, p.z + SIGHT)) {
       discover(guide, 'structures', s.kind, LEVEL.FOUND, this.now(), { x: s.x, z: s.z });
     }
   }

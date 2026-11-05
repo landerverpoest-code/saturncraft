@@ -9,6 +9,7 @@ import { DIMENSIONS, DIM, scaleCoord, clampPortalY, dimensionByName } from './di
 import { nearestRift, findPortalSite, buildRiftPortal } from './portal.js';
 import { HOLLOW_ARRIVAL } from './hollow.js';
 import { nearestSanctum } from './sanctum.js';
+import { SUB } from './cinderBiomes.js';
 import { DimensionSky } from '../../sky/dimensionSky.js';
 import { terrainUniforms } from '../../render/terrainMaterial.js';
 import { VoidEye } from '../../entities/voidEye.js';
@@ -17,6 +18,7 @@ import { canLight, FIRE_DELAY } from '../fire.js';
 import { SIDE_DIRS, BED_HEAD } from '../shapes.js';
 import './register.js';
 import '../../mobs/gloomshell.js'; // the Hollow Cities' Gloomshells
+import '../../mobs/cinderMobs.js'; // the Cinderdeep sub-biomes' Capwalkers and Dirge Wailers
 
 export const PORTAL_TICKS = 80; // 4 s standing in a Rift (instant in creative)
 const WYRM_MAX = 200;
@@ -75,7 +77,8 @@ export class DimensionManager {
   adjustFog(fog, R) {
     const d = DIMENSIONS[this.current];
     if (this.current === DIM.OVERWORLD || !d.fogFar) return;
-    fog.near = R * d.fogNear; fog.far = R * d.fogFar;
+    const cf = this.current === DIM.CINDERDEEP ? this.sky.fogCur : null; // the sub-biome's haze (cinderBiomes.js)
+    fog.near = R * (cf ? cf[3] : d.fogNear); fog.far = R * (cf ? cf[4] : d.fogFar);
   }
 
   // ---- travelling ----------------------------------------------------------------
@@ -300,6 +303,22 @@ export class DimensionManager {
       for (let k = 0; k < 2; k++) {
         g.particles.emit(p.x + (Math.random() - 0.5) * 20, p.y + (Math.random() - 0.3) * 10, p.z + (Math.random() - 0.5) * 20,
           (Math.random() - 0.5) * 0.01, -0.005, (Math.random() - 0.5) * 0.01, 1, 0.45 + Math.random() * 0.3, 0.2, 60, 0);
+      }
+      // sub-biome weather: ash falling over the Slagfall Delta, glowing spores rising in the Thicket, pale wisps in the Dirgevale
+      if (g.ticks % 10 === 0 || this.subHere === undefined) {
+        const gen = w.dimGenerator;
+        this.subHere = gen && gen.subBiomeAt ? gen.subBiomeAt(Math.floor(p.x), Math.floor(p.z)) : 0;
+      }
+      const sub = this.subHere, rnd = Math.random;
+      if (sub === SUB.DELTA) {
+        for (let k = 0; k < 4; k++) {
+          const gray = 0.35 + rnd() * 0.35;
+          g.particles.emit(p.x + (rnd() - 0.5) * 24, p.y + 2 + rnd() * 9, p.z + (rnd() - 0.5) * 24, (rnd() - 0.5) * 0.012, -0.045 - rnd() * 0.02, (rnd() - 0.5) * 0.012, gray, gray * 0.95, gray * 0.9, 90, 0);
+        }
+      } else if (sub === SUB.THICKET) {
+        for (let k = 0; k < 2; k++) g.particles.emit(p.x + (rnd() - 0.5) * 20, p.y + (rnd() - 0.3) * 8, p.z + (rnd() - 0.5) * 20, (rnd() - 0.5) * 0.01, 0.012 + rnd() * 0.01, (rnd() - 0.5) * 0.01, 0.35, 1, 0.8, 70, 0);
+      } else if (sub === SUB.VALE) {
+        g.particles.emit(p.x + (rnd() - 0.5) * 22, p.y + (rnd() - 0.4) * 8, p.z + (rnd() - 0.5) * 22, (rnd() - 0.5) * 0.015, 0.02, (rnd() - 0.5) * 0.015, 0.55, 0.75, 1, 60, 0);
       }
     }
   }

@@ -417,3 +417,23 @@ for (const [kind, name, p, e, g, w] of [
   ['rimekeep', 'Rimekeep Chart', '#e4f0f8', '#5a8aa8', '#8fd4f4', '#4a7aa0'],
   ['sporehall', 'Sporehall Chart', '#dfe8c8', '#5a7a30', '#9ccc40', '#6a8a3a'],
 ]) CHARTS[kind] = item(`chart_${kind}`, name, { stack: 16, chart: kind, iconStyle: ['map', { p, e, g, w }] }).id;
+
+// Cinderdeep sub-biome resources and gear (world/dimensions/cinderBiomes.js), appended so no item id shifts:
+// Glowcap Spores from the Thicket's caps (and Capwalkers), Slag Chunks from the Delta's Slag Ore (smelted into Slagsteel Ingots),
+// Dirge Crystals from the Dirgevale; a Slagsteel Pickaxe, Dirgestep Boots and (a block) the Spore Lantern are made from them.
+item('glowcap_spores', 'Glowcap Spores', { iconStyle: ['dust', { h: '#58e8c4' }] });
+item('slag_chunk', 'Slag Chunk', { iconStyle: ['lump', { h: '#4a3a3e' }] });
+item('slagsteel_ingot', 'Slagsteel Ingot', { iconStyle: ['ingot', { h: '#8a7a86' }] });
+item('dirge_crystal', 'Dirge Crystal', { iconStyle: ['gem', { h: '#7ac8f0' }] });
+// Slagsteel: a little better than iron (mines diamond ore, 480 uses)
+MATERIALS.slagsteel = { speed: 7, durability: 480, tier: TIER.IRON, color: '#8a7a86' };
+item('slagsteel_pickaxe', 'Slagsteel Pickaxe', {
+  stack: 1, durability: 480, repairWith: 'SLAGSTEEL_INGOT',
+  tool: { type: 'pickaxe', material: 'slagsteel', speed: 7, tier: TIER.IRON, damage: 4.5, attackSpeed: 1.2 },
+});
+// Dirgestep Boots: Mournsand, Spore Loam and the like barely slow the wearer (physics/body.js, input.treadDeep)
+ARMOR_MATERIALS.dirge = { defense: [0, 0, 0, 3], durability: 26, toughness: 0, color: '#5aa8d8', name: 'Dirgestep' };
+item('dirgestep_boots', 'Dirgestep Boots', {
+  stack: 1, durability: 13 * 26, repairWith: 'DIRGE_CRYSTAL',
+  armor: { slot: 3, piece: 'boots', material: 'dirge', defense: 3, toughness: 0, dirgestep: true },
+});

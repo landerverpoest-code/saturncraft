@@ -788,6 +788,22 @@ for (const [key, name, tex] of [['MASONRY_BENCH', 'Masonry Bench', 'masonry_benc
 ext('STARFALL_CORE');
 def(B.STARFALL_CORE, 'Starfall Core', { hardness: 4, resistance: 8, tool: TOOL.PICKAXE, tier: TIER.IRON, sound: 'stone', emit: 13, tex: { all: 'starfall_core' } });
 
+// Cinderdeep sub-biomes (world/dimensions/cinderBiomes.js) and the Hollow's Wyrm Ribs (world/dimensions/wyrmRibs.js), appended so no id shifts:
+// the Glowcap Thicket (Spore Loam floor, pale Glowcap Stalks under glowing Glowcap Caps), the Slagfall Delta (dark Slagstone, Slag Ore),
+// the Dirgevale (blue-grey Dirgestone with Dirge Crystal Ore and Wraithbone spires), the craftable Spore Lantern and the Wyrmbone of the ribs.
+ext('SPORE_LOAM'); ext('GLOWCAP_STALK'); ext('GLOWCAP_CAP'); ext('SLAGSTONE'); ext('SLAG_ORE');
+ext('DIRGE_STONE'); ext('DIRGE_CRYSTAL_ORE'); ext('WRAITHBONE'); ext('SPORE_LANTERN'); ext('WYRMBONE');
+def(B.SPORE_LOAM, 'Spore Loam', { hardness: 0.5, resistance: 0.5, tool: TOOL.SHOVEL, sound: 'gravel', speedFactor: 0.8 });
+def(B.GLOWCAP_STALK, 'Glowcap Stalk', { hardness: 0.8, resistance: 0.8, tool: TOOL.AXE, sound: 'wood', tex: { top: 'glowcap_stalk_top', bottom: 'glowcap_stalk_top', side: 'glowcap_stalk' } });
+def(B.GLOWCAP_CAP, 'Glowcap Cap', { hardness: 0.3, resistance: 0.3, emit: 12, sound: 'wool', drops: { item: 'GLOWCAP_SPORES', min: 1, max: 3 } });
+def(B.SLAGSTONE, 'Slagstone', { hardness: 1.8, resistance: 5, tool: TOOL.PICKAXE, tier: TIER.WOOD });
+def(B.SLAG_ORE, 'Slag Ore', { ...ore(TIER.STONE, { item: 'SLAG_CHUNK', min: 1, max: 2 }), emit: 2 });
+def(B.DIRGE_STONE, 'Dirgestone', { hardness: 1.2, resistance: 4, tool: TOOL.PICKAXE, tier: TIER.WOOD, tex: { all: 'dirge_stone' } });
+def(B.DIRGE_CRYSTAL_ORE, 'Dirge Crystal Ore', { ...ore(TIER.STONE, { item: 'DIRGE_CRYSTAL', min: 1, max: 2 }), emit: 5 });
+def(B.WRAITHBONE, 'Wraithbone', { hardness: 1.5, resistance: 4, tool: TOOL.PICKAXE, tier: TIER.WOOD, tex: { top: 'wraithbone_top', bottom: 'wraithbone_top', side: 'wraithbone' } });
+def(B.SPORE_LANTERN, 'Spore Lantern', { hardness: 0.3, resistance: 0.3, emit: 15, sound: 'glass' });
+def(B.WYRMBONE, 'Wyrmbone', { hardness: 2, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD, tex: { top: 'wyrmbone_top', bottom: 'wyrmbone_top', side: 'wyrmbone' } });
+
 export const NUM_BLOCKS = BLOCKS.length;
 
 // Flat lookup tables used by hot loops (mesher, lighting, physics) and workers.

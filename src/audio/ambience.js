@@ -55,15 +55,18 @@ const SURFACE = {
 
 /** Facts the game gathers once a second. */
 export function emptyFacts() {
-  return { dimension: 'overworld', biome: 'plains', under: false, depthBelowSurface: 0, skyLight: 15, y: 70, lavaNear: 0, night: false, raining: false };
+  return { dimension: 'overworld', biome: 'plains', under: false, depthBelowSurface: 0, skyLight: 15, y: 70, lavaNear: 0, night: false, raining: false, cinderBiome: null };
 }
 
-export const LAVA_LAKE_MIN = 8;      // lava blocks in the sampled box that make a cavern a lake cavern
+/** Cinderdeep sub-biome key (SUB_BIOMES[..].key) -> soundscape. */
+export const CINDER_SCAPES = { thicket: 'cinder_thicket', delta: 'cinder_delta', vale: 'cinder_vale' };
+
+export const LAVA_LAKE_MIN = 8;     // lava blocks in the sampled box that make a cavern a lake cavern
 export const RIFT_MIN_DEPTH = 20;    // how far below the rim a sky-lit shaft must be to count as a rift
 
 /** The soundscape key for the player's surroundings. */
 export function pickSoundscape(f) {
-  if (f.dimension === 'cinderdeep') return 'cinderdeep';
+  if (f.dimension === 'cinderdeep') return CINDER_SCAPES[f.cinderBiome] || 'cinderdeep'; // a sub-biome has its own soundscape (world/dimensions/cinderBiomes.js)
   if (f.dimension === 'hollow') return 'hollow';
   if (f.lavaNear >= LAVA_LAKE_MIN && f.y < 0) return 'magma';
   if (f.depthBelowSurface >= RIFT_MIN_DEPTH && f.skyLight >= 5) return 'rift';
@@ -129,6 +132,19 @@ export const SOUNDSCAPES = {
   cinderdeep: { music: null, bed: { rumble: 0.07, sizzle: 0.035 }, nightBed: null, events: [
     { sound: 'lava_pop', every: [2, 6], vol: 0.5, dist: [4, 14], when: 'any' },
     { sound: 'ember_snap', every: [3, 9], vol: 0.45, dist: [3, 12], when: 'any' },
+  ] },
+  // Glowcap Thicket: soft rustling and puffs of spores; Slagfall Delta: ash hissing down over a low rumble; Dirgevale: a cold wind and far wails
+  cinder_thicket: { music: null, bed: { insects: 0.03, rumble: 0.035 }, nightBed: null, events: [
+    { sound: 'spore_puff', every: [3, 8], vol: 0.45, dist: [3, 11], when: 'any' },
+    { sound: 'drip', every: [6, 14], vol: 0.35, dist: [2, 10], when: 'any' },
+  ] },
+  cinder_delta: { music: null, bed: { wind: 0.05, rumble: 0.09, sizzle: 0.05 }, nightBed: null, events: [
+    { sound: 'ash_hiss', every: [3, 8], vol: 0.45, dist: [3, 12], when: 'any' },
+    { sound: 'lava_pop', every: [3, 8], vol: 0.45, dist: [4, 14], when: 'any' },
+  ] },
+  cinder_vale: { music: null, bed: { wind: 0.11, rumble: 0.03 }, nightBed: null, events: [
+    { sound: 'dirge_wail', every: [14, 36], vol: 0.35, dist: [8, 15], when: 'any' },
+    { sound: 'rift_moan', every: [30, 80], vol: 0.2, dist: [8, 15], when: 'any' },
   ] },
   hollow: { music: null, bed: { wind: 0.08, rumble: 0.02 }, nightBed: null, events: [
     { sound: 'void_whisper', every: [12, 34], vol: 0.35, dist: [6, 15], when: 'any' },

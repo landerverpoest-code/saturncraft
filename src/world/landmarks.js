@@ -19,6 +19,8 @@ import { sunTombsNear, nearestSunTomb } from './sunTombs.js';
 import { skywatchesNear, nearestSkywatch } from './skywatch.js';
 import { rimekeepsNear, nearestRimekeep } from './rimekeep.js';
 import { sporehallsNear, nearestSporehall } from './sporehall.js';
+import { forgesNear, nearestForge } from './dimensions/cinderForge.js';
+import { wyrmRibsNear, nearestWyrmRibs } from './dimensions/wyrmRibs.js';
 
 export const SIGHT = 40;      // how close a holder must come to a structure for the map to note it
 export const MAX_MARKS = 48;  // marks one map keeps (destinations first)
@@ -38,12 +40,17 @@ const FINDERS = {
   skywatch: { near: skywatchesNear, nearest: nearestSkywatch },
   rimekeep: { near: rimekeepsNear, nearest: nearestRimekeep },
   sporehall: { near: sporehallsNear, nearest: nearestSporehall },
+  // other dimensions (their generators have `dimension`; the overworld's does not)
+  cinderforge: { near: forgesNear, nearest: nearestForge },
+  wyrmribs: { near: wyrmRibsNear, nearest: nearestWyrmRibs },
 };
 
-/** Every landmark of every kind whose centre lies in the box: [{ kind, x, z }]. */
+/** Every landmark of every kind of the generator's dimension whose centre lies in the box: [{ kind, x, z }]. */
 export function landmarksInBox(gen, x0, z0, x1, z1) {
   const out = [];
-  for (const { key } of LANDMARK_KINDS) {
+  const dim = gen && gen.dimension && gen.dimension !== 'overworld' ? gen.dimension : null;
+  for (const { key, dim: kdim } of LANDMARK_KINDS) {
+    if ((kdim || null) !== dim) continue;
     for (const s of FINDERS[key].near(gen, x0, z0, x1, z1)) {
       if (s.cx >= x0 && s.cx <= x1 && s.cz >= z0 && s.cz <= z1) out.push({ kind: key, x: s.cx, z: s.cz });
     }

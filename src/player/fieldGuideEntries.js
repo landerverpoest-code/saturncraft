@@ -27,7 +27,10 @@ const uniq = (a) => [...new Set(a)];
 const named = (ids) => uniq(ids.filter((id) => id !== undefined && id !== null && (ITEMS[id] || BLOCKS[id])));
 
 const KIND_LABEL = { [CATEGORY.CREATURE]: 'Creature', [CATEGORY.MONSTER]: 'Monster', [CATEGORY.AMBIENT]: 'Wildlife' };
-const DIM_PLACES = { cinderdeep: 'The Cinderdeep', bastion: 'Cinderdeep bastions', hollow: 'The Hollow', hollowCity: 'Hollow cities' };
+const DIM_PLACES = {
+  cinderdeep: 'The Cinderdeep', bastion: 'Cinderdeep bastions', hollow: 'The Hollow', hollowCity: 'Hollow cities',
+  cinderThicket: 'Glowcap Thickets of the Cinderdeep', cinderDelta: 'The Slagfall Delta of the Cinderdeep', cinderVale: 'The Dirgevale of the Cinderdeep', cinderForge: 'Cinderforges',
+};
 /** Where a creature lives when no spawn table says so (looked up by key; anything else gets a general note by kind). */
 const HABITAT_NOTES = {
   wobbler: 'Swamps and the dark underground of slime chunks',
@@ -140,6 +143,8 @@ const STRUCTURE_NOTES = {
   skywatch: 'A tower that looks out over the land.',
   rimekeep: 'A frozen fortress in the cold.',
   sporehall: 'A hall grown among giant mushrooms.',
+  cinderforge: 'An abandoned smithy of Scorched Bricks in the Cinderdeep, with a lava pit and a Cinder Brute spawner.',
+  wyrmribs: 'The bleached ribcage of a Void Wyrm on an outer island of the Hollow.',
 };
 
 function structureEntries() {
