@@ -49,6 +49,7 @@ import { runRandomTicks } from '../world/randomTicks.js';
 import { addXp } from '../player/experience.js';
 import { MAX_USES } from '../mobs/trades.js';
 import { claimSeat } from '../mobs/duneStrider.js';
+import { releaseTarnling } from '../mobs/fauna.js';
 import { EFFECTS } from '../player/effects.js';
 import { FATIGUE_AMP, FATIGUE_TICKS, needsFatigue } from '../mobs/oceanMobs.js';
 import { runCommand } from '../ui/commands.js';
@@ -663,6 +664,10 @@ export class HostSession extends Session {
       ents.spawnBoat(m.x, m.y, m.z, +m.yaw || 0, !!m.cart);
     } else if (m.k === 'stand') {
       ents.spawnStand(m.x, m.y, m.z, +m.yaw || 0);
+    } else if (m.k === 'critter') {
+      // a guest let a Tarnling go from its bucket: it swims off in the host's world, if that cell is water
+      const x = Math.floor(m.x), y = Math.floor(m.y), z = Math.floor(m.z);
+      if (g.world.getBlock(x, y, z) === B.WATER) releaseTarnling(g, x, y, z, m.col | 0);
     } else if (m.k === 'tnt') {
       // a guest lit TNT: it burns (and blows up) here, so the blast reaches everyone
       const x = Math.floor(m.x), y = Math.floor(m.y), z = Math.floor(m.z);
@@ -1364,7 +1369,7 @@ export class ClientSession extends Session {
   requestSpawn(kind, d) {
     if (kind === 'falling') return; // the host's own world simulation makes those
     const r2 = (v) => Math.round(v * 100) / 100;
-    this.send({ t: 'spawn', k: kind, x: r2(d.x), y: r2(d.y), z: r2(d.z), st: d.st ? copyStack(d.st) : undefined, v: d.v ? d.v.map(r2) : undefined, n: d.n, pd: d.pd, crit: d.crit, yaw: d.yaw, power: d.power });
+    this.send({ t: 'spawn', k: kind, x: r2(d.x), y: r2(d.y), z: r2(d.z), st: d.st ? copyStack(d.st) : undefined, v: d.v ? d.v.map(r2) : undefined, n: d.n, pd: d.pd, crit: d.crit, yaw: d.yaw, power: d.power, col: d.col });
   }
 
   /** Right-click on a mob or player. */

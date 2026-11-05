@@ -76,7 +76,7 @@ export const MOBS = {
   howler: {
     name: 'Howler', role: 'wolf', category: CATEGORY.CREATURE, tameable: true,
     health: 8, tamedHealth: 20, speed: 0.3, width: 0.6, height: 0.85, attack: 2, tamedAttack: 4, sound: 'howl',
-    drops: [], food: [I.RAW_PORK, I.COOKED_PORK, I.RAW_BEEF, I.STEAK, I.RAW_CHICKEN, I.COOKED_CHICKEN, I.RAW_MUTTON, I.COOKED_MUTTON, I.ROTTEN_FLESH],
+    drops: [], food: [I.RAW_PORK, I.COOKED_PORK, I.RAW_BEEF, I.STEAK, I.RAW_CHICKEN, I.COOKED_CHICKEN, I.RAW_MUTTON, I.COOKED_MUTTON, I.RAW_VENISON, I.COOKED_VENISON, I.ROTTEN_FLESH],
   },
   squawklet: {
     name: 'Squawklet', role: 'parrot', category: CATEGORY.CREATURE, flying: true, parrot: true, tameable: true, noFallDamage: true, sound: 'squawk',

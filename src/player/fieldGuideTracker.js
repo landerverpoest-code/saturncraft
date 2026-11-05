@@ -73,6 +73,7 @@ export class GuideTracker {
     let eye = null, look = null;
     for (const e of g.entities.list) {
       if (e.kind !== 'mob' || e.dead || e.removed || !e.type || recordOf(guide, 'creatures', e.type)) continue;
+      if (e.special && e.def && e.def.burrower) continue; // a Dustmole under the sand is not seen
       if (Math.abs(e.x - p.x) > SEE_RANGE || Math.abs(e.z - p.z) > SEE_RANGE) continue;
       if (!eye) { eye = p.eyePos(); look = p.lookDir(); }
       if (canSee(g.world, eye, look, e)) discover(guide, 'creatures', e.type, LEVEL.SEEN, this.now());

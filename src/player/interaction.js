@@ -39,6 +39,7 @@ import { bundleTakeLast } from '../world/bundles.js';
 import { isSuspicious, archaeologyLoot, potDrops } from '../world/archaeology.js';
 import { interactStrider, guestWantsSeat } from '../mobs/duneStrider.js';
 import { interactHoverling } from '../mobs/hoverling.js';
+import { catchTarnling, releaseTarnling } from '../mobs/fauna.js';
 import { galeLeap } from '../mobs/gustling.js';
 import { isBook } from '../world/books.js';
 import { carveFacing, CARVE_SEEDS } from '../mobs/pumpkins.js';
@@ -1136,6 +1137,7 @@ export class Interaction {
     if (placeId === B.OBSERVER) meta = circuitPlaceMeta(placeId, t.face, [ldx, ldy, ldz]); // the face looks away from the player
     let chestPair = null;
     if (placeId === B.CHEST) { const pr = pairOnPlace(w, px, py, pz, meta, p.sneaking); meta = pr.meta; chestPair = pr.neighbour; } // join a lone chest beside it
+    if (placeId === B.WATER && w.dimension === 'cinderdeep' && d.releases) return false; // (a Tarnling is not poured into boiling air)
     if (placeId === B.WATER && w.dimension === 'cinderdeep') {
       // water boils away at once in the Cinderdeep
       g.audio.play('fizz', [px + 0.5, py + 0.5, pz + 0.5]);
@@ -1155,6 +1157,10 @@ export class Interaction {
     if (isFluid(placeId)) w.scheduleTick(px, py, pz, 5);
     g.audio.play('place_' + BLOCKS[placeId].sound, [px + 0.5, py + 0.5, pz + 0.5]);
     if (g.hush) g.hush.blockEvent(px, py, pz, 'place', p);
+    if (d.releases === 'tarnling') { // a Bucket of Tarnling: the pond dweller swims off (a guest asks the host to make it)
+      if (g.net && g.net.isClient) g.net.requestSpawn('critter', { x: px + 0.5, y: py, z: pz + 0.5, col: st.damage | 0 });
+      else releaseTarnling(g, px, py, pz, st.damage | 0);
+    }
     if (d.places === B.WATER || d.places === B.LAVA) {
       p.inventory.slots[p.inventory.selected] = { id: I.BUCKET, count: 1, damage: 0 };
       p.inventory.changed();
@@ -1330,6 +1336,7 @@ export class Interaction {
     // multiplayer guest: the back seat of a host's saddled Dune Strider (the host keeps the seat for us, see net/session.js)
     if (mob.netProxy && guestWantsSeat(mob, p, st)) { g.mount(mob); this.swing = SWING_TICKS; return true; }
     if (mob.netProxy) return g.net.interactMob(mob); // multiplayer guest: the host feeds, shears, tames or trades
+    if (mob.def.bucketable && catchTarnling(g, mob, p, st, () => { this.swing = SWING_TICKS; })) return true; // scoop a Tarnling out of its pond (mobs/fauna.js)
     if ((mob.def.villager || mob.def.trader) && mob.deathTime === 0 && mob.trades.length && !(d && d.food && mob.def.food)) { g.ui.openTrade(mob); g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); return true; }
     if ((mob.def.tameable || mob.def.companion) && mob.deathTime === 0 && this.interactHowler(mob, st, d)) return true;
     const useOne = () => { if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1); this.swing = SWING_TICKS; };

@@ -32,6 +32,7 @@ import { babyHealth } from './babies.js';
 import { SEA_LEVEL } from '../world/constants.js';
 import { tickMonumentSpawns, spawnElders } from './oceanMobs.js';
 import { spawnVillageStrider, desertChunkSpawn } from './duneStrider.js';
+import { faunaTick, lynxMaySpawn } from './fauna.js';
 import { CAGE, forestChunkSpawn, hollowSpawnTick } from './hoverling.js';
 import { caravanTick } from './peddler.js';
 import { addPumpkinHead } from './pumpkins.js';
@@ -189,6 +190,8 @@ export class MobSpawner {
       }
       return isDarkEnoughToSpawn(raw, blk, this.game.sky.state.skyDarken);
     }
+    // Gloamlynxes only appear at dusk and in the dark (mobs/fauna.js), and also settle on snowy grass
+    if (MOBS[type].spawnWhen === 'dusk') return lynxMaySpawn(this.game.sky.state.combined) && (below === B.GRASS || below === B.SNOWY_GRASS) && isBrightEnoughForAnimal(raw, blk);
     return (below === B.GRASS || below === B.MYCELIUM || below === B.MUD) && isBrightEnoughForAnimal(raw, blk); // (Croakers on mangrove mud)
   }
 
@@ -243,6 +246,7 @@ export class MobSpawner {
       if (e.kind !== 'mob' || e.dead) continue;
       if (e.def.fish) { if (!e.def.newt) fish++; continue; }
       if (e.def.category === CATEGORY.AMBIENT) { ambient++; continue; }
+      if (e.def.burrower || e.def.bucketable) continue; // Dustmoles and Tarnlings have a cap of their own (mobs/fauna.js)
       if (e.def.category !== CATEGORY.MONSTER) { creatures++; continue; }
       monsters++;
       if (e.y >= w.heightAt(Math.floor(e.x), Math.floor(e.z)) - 1) surface++;
@@ -305,6 +309,7 @@ export class MobSpawner {
     }
     hollowSpawnTick(this); // Hoverlings drifting through Hollow Cities
     caravanTick(this); // a Roving Peddler with Packhorns now and then (mobs/peddler.js)
+    faunaTick(this); // Dustmoles under desert sand, Tarnlings in ponds (mobs/fauna.js)
     if (g.ticks % CREATURE_SPAWN_INTERVAL === 0 && creatures < seasonalCreatureCap(scaledCap(CATEGORY.CREATURE, chunks.length))) { // (more animals in spring, fewer in winter)
       for (const [cx, cz] of chunks) creatures += this.attempt(cx, cz, CATEGORY.CREATURE);
     }
@@ -433,6 +438,7 @@ export class MobSpawner {
       const bx = cx * 16 + Math.floor(Math.random() * 16), bz = cz * 16 + Math.floor(Math.random() * 16);
       const entry = weightedPick(spawnTable(CATEGORY.CREATURE, w.biomeAt(bx, bz)));
       if (!entry) break;
+      if (MOBS[entry.type].spawnWhen === 'dusk') continue; // (stalkers of dusk are not placed in broad daylight)
       const n = entry.min + Math.floor(Math.random() * (entry.max - entry.min + 1));
       for (let i = 0; i < n; i++) {
         const x = Math.max(cx * 16, Math.min(cx * 16 + 15, bx + Math.floor(Math.random() * 5) - 2));

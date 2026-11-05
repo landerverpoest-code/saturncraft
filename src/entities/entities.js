@@ -533,7 +533,7 @@ export class EntityManager {
   raycastMob(ox, oy, oz, dx, dy, dz, maxDist) {
     let best = null;
     for (const e of this.list) {
-      if (e.kind !== 'mob' || e.dead || e.deathTime > 0) continue;
+      if (e.kind !== 'mob' || e.dead || e.deathTime > 0 || (e.special && e.def.burrower)) continue; // (a Dustmole under the sand cannot be aimed at)
       const hw = e.width / 2;
       const t = rayAABB(ox, oy, oz, dx, dy, dz, e.x - hw, e.y, e.z - hw, e.x + hw, e.y + e.height, e.z + hw);
       if (t !== null && t <= maxDist && (!best || t < best.dist)) best = { mob: e, dist: t };
@@ -545,7 +545,7 @@ export class EntityManager {
   sweepHit(proj, ox, oy, oz, dx, dy, dz, maxDist) {
     let best = null, bestT = Infinity;
     const p = this.game.player;
-    const cands = this.list.filter((e) => e.kind === 'mob' && !e.dead && e.deathTime === 0);
+    const cands = this.list.filter((e) => e.kind === 'mob' && !e.dead && e.deathTime === 0 && !(e.special && e.def.burrower));
     if (!p.dead) cands.push(p.asTarget || (p.asTarget = makePlayerTarget(this.game)));
     if (this.game.net) cands.push(...this.game.net.remoteTargets(proj));
     for (const e of cands) {

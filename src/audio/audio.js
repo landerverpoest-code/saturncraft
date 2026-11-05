@@ -266,6 +266,10 @@ export class Audio {
       case 'lightning': this.noise(t, 0.25, 6000, 0.3, 0.8 * gain, out, 'highpass'); this.noise(t, 0.6, 1500, 0.4, 0.6 * gain, out); break;
       case 'mew': this.tone(t, 0.22, 700 + Math.random() * 120, 1000, 0.12 * gain, out, 'triangle'); this.tone(t + 0.12, 0.2, 1000, 620, 0.1 * gain, out, 'triangle'); break;
       case 'squeak': this.tone(t, 0.06, 3200 + Math.random() * 800, 2600, 0.06 * gain, out, 'sine'); this.tone(t + 0.08, 0.05, 3400, 2800, 0.05 * gain, out, 'sine'); break;
+      case 'thistle': this.tone(t, 0.35, 190 + Math.random() * 30, 150, 0.16 * gain, out, 'triangle'); this.tone(t + 0.04, 0.3, 380, 300, 0.05 * gain, out, 'sine'); break; // a Thistlehorn's soft lowing
+      case 'burrow': this.noise(t, 0.22, 1800, 1, 0.16 * gain, out, 'lowpass'); this.tone(t + 0.05, 0.08, 1500 + Math.random() * 300, 1900, 0.05 * gain, out, 'sine'); this.noise(t + 0.12, 0.15, 2600, 2, 0.1 * gain, out); break; // a Dustmole's scuffle and chirr in the sand
+      case 'yowl': this.tone(t, 0.5, 420, 760, 0.11 * gain, out, 'sawtooth'); this.tone(t + 0.35, 0.45, 760, 380, 0.1 * gain, out, 'sawtooth'); this.noise(t, 0.4, 1600, 3, 0.04 * gain, out); break; // a Gloamlynx's far-off yowl
+      case 'plip': this.tone(t, 0.07, 520 + Math.random() * 120, 980, 0.12 * gain, out, 'sine'); this.tone(t + 0.08, 0.05, 780, 1100, 0.06 * gain, out, 'sine'); break; // a Tarnling's bloop
       case 'strider': this.tone(t, 0.6, 120, 85, 0.22 * gain, out, 'sawtooth'); this.noise(t + 0.1, 0.4, 300, 1, 0.12 * gain, out, 'lowpass'); break; // a Dune Strider's low grumble
       case 'hoverling': for (let k = 0; k < 3; k++) this.tone(t + k * 0.07, 0.18, 1500 + k * 260 + Math.random() * 120, 1900 + k * 260, 0.05 * gain, out, 'sine'); break; // a Hoverling's twinkle
       case 'gust': this.noise(t, 0.45, 2200, 0.7, 0.22 * gain, out, 'highpass'); this.tone(t, 0.35, 380, 760, 0.05 * gain, out, 'sine'); break; // a Gustling's rush of wind

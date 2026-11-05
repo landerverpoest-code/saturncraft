@@ -19,7 +19,8 @@ export function nextColorBlind(mode) { return COLOR_BLIND_MODES[(Math.max(0, COL
  * and for the newer sky and particle effects:
  * twinkle (stars and firework sparks that blink: off with either setting), skyDrift (how fast the
  * Veilfire curtains move), streaks (falling stars and meteorite trails), sparks (how many sparks a
- * firework burst or meteorite impact throws, so fewer bright points appear in one frame), sand (the
+ * firework burst or meteorite impact throws, so fewer bright points appear in one frame), critters (how many butterflies, fireflies, leaves,
+ * skimmers and birds are drawn, render/critters.js) and critterSpeed (how fast they move), sand (the
  * streaming grains of a dust storm).
  */
 export function motionScales(settings) {
@@ -28,6 +29,7 @@ export function motionScales(settings) {
   return {
     bob: calm ? 0 : 1, tilt: calm ? 0 : 1, sprintFov: calm ? 0 : 1, apparitionShake: calm ? 0 : 1, flash: dim ? 0.2 : 1,
     twinkle: calm || dim ? 0 : 1, skyDrift: calm ? 0.1 : 1, streaks: calm ? 0 : dim ? 0.4 : 1, sparks: dim ? 0.4 : 1, sand: calm ? 0.25 : 1,
+    critters: calm ? 0.25 : 1, critterSpeed: calm ? 0.35 : 1,
   };
 }
 
@@ -91,6 +93,7 @@ export const CAPTION_TEXT = {
   breeze: 'Breeze sighs', meteor_boom: 'Meteorite booms', ember_snap: 'Embers snap', void_whisper: 'Void whispers',
   parry: 'Shield parries', shield_break: 'Shield knocked down',
   spore_puff: 'Spores puff', ash_hiss: 'Ash hisses', dirge_wail: 'Dirge wails',
+  thistle: 'Thistlehorn lows', burrow: 'Dustmole scuffles in the sand', yowl: 'Gloamlynx yowls', plip: 'Tarnling plips',
 };
 
 /** Sounds that are only interface feedback when they have no place in the world. */

@@ -162,7 +162,7 @@ export class EntityMirror {
       e.prevYaw = e.yaw; e.prevFuse = e.fuse; if (e.hurtTime > 0) e.hurtTime--;
       if (e.emerging > 0 || e.digging > 0) { // count down between snapshots (smooth rising / sinking), throwing up dirt
         if (e.emerging > 0) e.emerging--; else e.digging--;
-        if (g.ticks % 4 === 0 && g.particles) dirt(e, g);
+        if (g.ticks % 4 === 0 && g.particles) (e.def && e.def.digDust ? e.def.digDust : dirt)(e, g); // (a Dustmole throws sand, a Hushkeeper dirt)
       }
     }
     if (e.kind === 'boat') e.prevYaw = e.yaw;

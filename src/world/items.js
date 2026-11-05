@@ -437,3 +437,9 @@ item('dirgestep_boots', 'Dirgestep Boots', {
   stack: 1, durability: 13 * 26, repairWith: 'DIRGE_CRYSTAL',
   armor: { slot: 3, piece: 'boots', material: 'dirge', defense: 3, toughness: 0, dirgestep: true },
 });
+
+// Fauna round (mobs/fauna.js), appended so no item id shifts: Thistlehorn venison, and a bucket with a pond Tarnling in it
+// (right-click a Tarnling in its pond with an empty Bucket; placing the full bucket pours out the water and lets it go).
+item('raw_venison', 'Raw Venison', { food: { hunger: 3, saturation: 1.8 }, iconStyle: ['meat', { h: '#b8404a', w: '#f2e0dc' }] });
+item('cooked_venison', 'Roast Venison', { food: { hunger: 8, saturation: 12.8 }, iconStyle: ['meat', { h: '#8a4a2a', w: '#e0c0a0' }] });
+item('tarnling_bucket', 'Bucket of Tarnling', { stack: 1, places: B.WATER, releases: 'tarnling', iconStyle: ['bucket', { h: '#b8b8b8', w: '#5aa0c8' }] });

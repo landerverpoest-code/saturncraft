@@ -9,6 +9,7 @@
 import { MOBS, CATEGORY } from '../mobs/mobTypes.js';
 import { SPAWN_TABLES } from '../mobs/spawnRules.js';
 import { DIM_SPAWN_TABLES } from '../mobs/dimensionMobs.js';
+import { SPECIAL_HABITATS } from '../mobs/fauna.js';
 import { BIOMES } from '../world/biomes.js';
 import { LANDMARK_KINDS } from '../world/landmarkKinds.js';
 import { ITEMS, I, CHARTS } from '../world/items.js';
@@ -47,6 +48,9 @@ const HABITAT_NOTES = {
   buzzling: 'Flowery lands, around hives',
   hoverling: 'Caged at Raider Outposts, drifting through Hollow cities',
   dune_strider: 'Desert villages and the open desert',
+  dustmole: 'Hidden in the sand until it digs out',
+  tarnling: 'Quiet ponds, tarns and waterholes',
+  gloamlynx: 'Only at dusk and by night',
   gustling: 'Proving Vaults',
   hushkeeper: 'The Deep Hush, called by noise',
   peddler: 'Wanders in with a caravan now and then',
@@ -73,6 +77,10 @@ function habitatOf(key, def) {
       const b = BIOMES.find((x) => x.key === bk);
       if (b) where.push(b.name);
     }
+  }
+  for (const bk of SPECIAL_HABITATS[key] || []) { // placed by faunaTick rather than the tables (Dustmoles in the sand, Tarnlings in ponds)
+    const b = BIOMES.find((x) => x.key === bk);
+    if (b) where.push(b.name);
   }
   for (const [dk, list] of Object.entries(DIM_SPAWN_TABLES)) if (list.some((e) => e.type === key) && DIM_PLACES[dk]) where.push(DIM_PLACES[dk]);
   if (HABITAT_NOTES[key]) where.push(HABITAT_NOTES[key]);
@@ -105,7 +113,7 @@ function creatureEntries() {
     return {
       key, name: def.name || key, kind: KIND_LABEL[def.category] || 'Creature', category: def.category,
       habitat: habitatOf(key, def), drops: dropIds(def), feeds, tames,
-      traits: [def.boss && 'Boss', def.neutral && 'Neutral until provoked', def.burnsInSun && 'Burns in sunlight', def.explosive && 'Explodes', def.ranged && 'Shoots from afar', def.flying && 'Flies', (def.aquatic || def.swimmer) && 'Swims', def.rideable && 'Can be ridden', def.tameable || def.companion ? 'Can be tamed' : false].filter(Boolean),
+      traits: [def.boss && 'Boss', def.neutral && 'Neutral until provoked', def.burnsInSun && 'Burns in sunlight', def.explosive && 'Explodes', def.ranged && 'Shoots from afar', def.flying && 'Flies', (def.aquatic || def.swimmer) && 'Swims', def.rideable && 'Can be ridden', def.tameable || def.companion ? 'Can be tamed' : false, def.burrower && 'Burrows in sand', def.shy && 'Shy: flees from light', def.bucketable && 'Can be caught in a bucket', def.spawnWhen === 'dusk' && 'Out at dusk and by night'].filter(Boolean),
     };
   });
 }
@@ -118,7 +126,8 @@ export function climateOf(temp) {
 function biomeEntries() {
   return BIOMES.map((b) => {
     const wildlife = uniq([...(SPAWN_TABLES.creature[b.key] || []), ...(SPAWN_TABLES.monster[b.key] || [])]
-      .filter((e) => MOBS[e.type] && !(SPAWN_TABLES.monster.default || []).some((d) => d.type === e.type)).map((e) => MOBS[e.type].name));
+      .filter((e) => MOBS[e.type] && !(SPAWN_TABLES.monster.default || []).some((d) => d.type === e.type)).map((e) => MOBS[e.type].name)
+      .concat(Object.entries(SPECIAL_HABITATS).filter(([k, keys]) => MOBS[k] && keys.includes(b.key)).map(([k]) => MOBS[k].name)));
     const features = [
       b.temp < 0.15 ? 'Snow falls instead of rain' : b.dry ? 'Dry: no rain' : 'Rain falls',
       b.humid >= 0.8 ? 'Humid' : b.humid <= 0.2 ? 'Arid' : null,

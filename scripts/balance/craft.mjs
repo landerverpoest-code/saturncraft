@@ -24,6 +24,7 @@ import '../../src/mobs/gloomshell.js';
 import '../../src/mobs/gustling.js';
 import '../../src/mobs/hoverling.js';
 import '../../src/mobs/hushkeeper.js';
+import '../../src/mobs/fauna.js';
 import { MOBS } from '../../src/mobs/mobTypes.js';
 
 const TOOLS = ['DIAMOND_PICKAXE', 'DIAMOND_AXE', 'DIAMOND_SHOVEL', 'DIAMOND_SWORD', 'DIAMOND_HOE', 'SHEARS'].map((k) => (ITEMS[I[k]] || {}).tool || (ITEMS[I[k]] || {}).shears && { shears: true, type: 'shears', tier: 9 }).filter(Boolean);

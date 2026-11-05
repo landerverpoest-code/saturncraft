@@ -29,6 +29,7 @@ import { PlayerModel } from './render/playerModel.js';
 import { Sky } from './sky/sky.js';
 import { Clouds, CLOUD_CELL } from './sky/clouds.js';
 import { Weather, WeatherRenderer } from './sky/weather.js';
+import { Critters } from './render/critters.js';
 import { Seasons, climate } from './world/seasons.js';
 import { SignRenderer } from './render/signs.js';
 import { FrameRenderer } from './render/frames.js';
@@ -108,7 +109,6 @@ const CAVE_FOG = new THREE.Color(0.012, 0.012, 0.018);
 const DARK_FOG = new THREE.Color(0, 0, 0);
 const EVENT_FOG = new THREE.Color(); // scratch colour for the dust storm / ground fog tint
 export const DIFFICULTIES = ['peaceful', 'easy', 'normal', 'hard'];
-const FIREFLY_BIOMES = new Set(['swamp', 'forest', 'flower_forest', 'blossom_grove', 'mangrove_swamp', 'dark_forest', 'jungle', 'birch_forest']);
 
 const ACCESS_KEYS = new Set(['reduceMotion', 'reduceFlashing', 'highContrast', 'largeText', 'colorBlind']);
 
@@ -196,6 +196,7 @@ export class Game {
     this.world.rainingAt = (x, y, z) => this.world.dimension === 'overworld' && this.weather.level >= 0.2 && Weather.precipitation(this.world.biomeAt(x, z)) === 'rain' && this.world.heightAt(x, z) <= y;
     this.chat = this.chat || new Chat(this);
     this.weatherFx = new WeatherRenderer(this.scene);
+    this.critters = new Critters(this.scene); // butterflies, fireflies, falling leaves, skimmers and bird flocks (cosmetic only, render/critters.js)
     this.lightning = new Lightning(this.scene);
     this.particles = new Particles(this.scene);
     this.signRenderer = new SignRenderer(this);
@@ -1089,20 +1090,6 @@ export class Game {
     }
     this.wasInWater = b.inWater;
     if (w.dimension !== 'overworld') return;
-    const night = 1 - Math.min(1, this.sky.state.combined * 1.6);
-    // fireflies over swamps, forests and jungles on warm dry nights
-    if (night > 0.5 && this.weather.level < 0.2 && Math.random() < 0.5 * night) {
-      const a = Math.random() * Math.PI * 2, r = 5 + Math.random() * 12; // not right in front of the eyes
-      const x = p.x + Math.cos(a) * r, z = p.z + Math.sin(a) * r;
-      const key = BIOMES[w.biomeAt(Math.floor(x), Math.floor(z))]?.key;
-      if (FIREFLY_BIOMES.has(key)) {
-        const y = w.heightAt(Math.floor(x), Math.floor(z)) + 1 + Math.random() * 3;
-        if (!w.getBlock(Math.floor(x), Math.floor(y), Math.floor(z))) {
-          const glow = this.postfx.enabled ? 1.8 : 1; // above white: the bloom pass haloes them
-          this.particles.emit(x, y, z, (Math.random() - 0.5) * 0.04, (Math.random() - 0.5) * 0.02, (Math.random() - 0.5) * 0.04, 0.75 * glow, 1.3 * glow, 0.12 * glow, 50 + Math.random() * 70, 0);
-        }
-      }
-    }
     // dust hanging in the air of caves
     if (this.caveDark > 0.5 && Math.random() < 0.6) {
       const x = p.x + (Math.random() - 0.5) * 12, y = p.y + Math.random() * 4 - 1, z = p.z + (Math.random() - 0.5) * 12;
@@ -1552,6 +1539,7 @@ export class Game {
     }
     terrainUniforms.uWet.value = this.world.dimension === 'overworld' && Weather.precipitation(this.world.biomeAt(Math.floor(x), Math.floor(z))) === 'rain' ? this.weather.level : 0;
     this.weatherFx.uniforms.uAlpha.value = this.postfx.enabled ? 0.55 : 1;
+    this.critters.update(this, this.camera, sec); // cosmetic fauna: closed-form positions from the seed and a local clock
     terrainUniforms.uGlow.value = this.postfx.enabled ? 1 : 0;
     terrainUniforms.uSkyTop.value.copy(this.sky.zenith); terrainUniforms.uSkyLow.value.copy(this.sky.horizon);
     // torches and lanterns carried by the other players light the terrain around them too
