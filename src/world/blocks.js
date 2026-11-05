@@ -821,6 +821,18 @@ def(B.SUNGOURD, 'Sungourd', { hardness: 1, resistance: 1, tool: TOOL.AXE, sound:
 CROPS.add(B.FROSTROOTS); CROPS.add(B.SUNGOURD_STEM);
 STEM_FRUIT[B.SUNGOURD_STEM] = B.SUNGOURD;
 
+// Cinnabar contraption depth (world/snare.js, world/pulseGate.js, world/circuits.js), appended so no id shifts.
+// Snare Post: hangs on the side of a block and looks along a line; two posts facing each other with Snare Cord between them
+// (up to 40 blocks) form a tripline, and anything that touches a cord makes both posts send power. Meta: bits 0-1 the side it
+// looks along (SIDE_DIRS), bit 2 = a complete line is tied, bit 3 = tripped. Snare Cord: bit 0 = runs east-west (drawing only).
+// Pulse Gate: like a repeater (bits 0-1 = output side) with bits 2-4 = the setting (0-3 Limiter: a rising edge gives a pulse of
+// 2/4/8/20 ticks and edges are ignored until it has rested as long again; 4-7 Metronome: while powered it beats on and off every
+// 4/10/20/40 ticks), bit 5 = sending, bit 6 = the input was seen high, bit 7 = resting.
+ext('SNARE_POST'); ext('SNARE_CORD'); ext('PULSE_GATE');
+def(B.SNARE_POST, 'Snare Post', { ...part, hardness: 0.3, resistance: 0.3, shape: SHAPE.CIRCUIT, sound: 'metal', tex: { all: 'snare_post' } });
+def(B.SNARE_CORD, 'Snare Cord', { ...part, hardness: 0, resistance: 0, needsSupport: false, shape: SHAPE.CIRCUIT, sound: 'wool', tex: { all: 'snare_cord' } });
+def(B.PULSE_GATE, 'Pulse Gate', { ...part, shape: SHAPE.CIRCUIT, sound: 'stone', tex: { top: 'pulse_gate', bottom: 'smooth_stone', side: 'smooth_stone' } });
+
 export const NUM_BLOCKS = BLOCKS.length;
 
 // Flat lookup tables used by hot loops (mesher, lighting, physics) and workers.

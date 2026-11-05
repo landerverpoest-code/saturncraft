@@ -86,6 +86,27 @@ function observerBack(c, h, on) {
   for (let y = 6; y < 10; y++) for (let x = 6; x < 10; x++) c.set(x, y, (x === 6 || x === 9) && (y === 6 || y === 9) ? h.shade(dot, 0.7) : dot);
 }
 
+/** Pulse Gate tops. Limiter: a short blip at the back widens into one clean pulse at the front. Metronome: a square wave. */
+function pulseGate(c, h, clock, on) {
+  smoothStone(c, h);
+  const wire = on ? h.hex('#ff3a20') : h.hex('#7a1a14'), dark = h.shade(h.hex('#a2a2a4'), 0.7);
+  const dot = (x, y) => { c.set(x, y, wire); c.set(x + 1, y, h.shade(wire, 0.85)); };
+  // sockets of the front torch and the brass pegs at the back
+  for (let k = 0; k < 4; k++) { c.set(6 + k, 1, dark); c.set(6 + k, 4, dark); c.set(6, 1 + k, dark); c.set(9, 1 + k, dark); }
+  for (let x = 2; x < 14; x++) c.set(x, 11, dark);
+  if (!clock) {
+    // input line, then a step to a wide pulse
+    for (let y = 9; y < 15; y++) dot(7, y);
+    for (let x = 4; x < 12; x++) dot(x, 8);
+    for (let y = 5; y < 8; y++) { dot(4, y); dot(10, y); }
+    for (let x = 4; x < 12; x++) dot(x, 5);
+  } else {
+    // a square wave: up, across, down, across
+    const pts = [[3, 9], [3, 8], [3, 7], [4, 7], [5, 7], [6, 7], [6, 8], [6, 9], [7, 9], [8, 9], [9, 9], [9, 8], [9, 7], [10, 7], [11, 7], [12, 7], [12, 8], [12, 9]];
+    for (const [x, y] of pts) { c.set(x, y, wire); c.set(x, y - 3, h.shade(wire, 0.8)); }
+  }
+}
+
 function pistonSide(c, h) {
   // a plank band at the top (towards the front), cobbled body below
   h.gen.cobblestone(c);
@@ -141,6 +162,22 @@ export const CIRCUIT_TEX = {
     // (the 6-px high block shows rows 10-15: a glass rim over a wooden base)
     h.planks(c, '#9a7a4a');
     for (let x = 0; x < 16; x++) { c.set(x, 10, h.hex('#c8c8b8')); c.set(x, 11, h.hex('#4a6a9a')); }
+  },
+  pulse_gate: (c, h) => pulseGate(c, h, false, false),
+  pulse_gate_on: (c, h) => pulseGate(c, h, false, true),
+  pulse_gate_clock: (c, h) => pulseGate(c, h, true, false),
+  pulse_gate_clock_on: (c, h) => pulseGate(c, h, true, true),
+  pulse_gate_peg: (c, h) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, h.shade(h.mix(h.hex('#d8a838'), h.hex('#f0cc60'), c.h(x, y, 5)), (x === 0 || y === 0 ? 0.8 : 1) * (0.92 + c.h(x, y) * 0.12))); },
+  // the hook: dark iron with a brass rivet; the cord: twisted tan fibre
+  snare_post: (c, h) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const edge = x === 0 || y === 0 || x === 15 || y === 15;
+      c.set(x, y, h.shade(h.mix(h.hex('#5a5c64'), h.hex('#74767e'), c.h(x >> 1, y >> 1, 8)), edge ? 0.7 : 0.9 + c.h(x, y) * 0.15));
+    }
+    for (const [x, y] of [[7, 7], [8, 7], [7, 8], [8, 8]]) c.set(x, y, h.hex(y === 7 ? '#f0cc60' : '#b88a28'));
+  },
+  snare_cord: (c, h) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, h.shade(((x + y) & 3) < 2 ? h.hex('#d8c8a0') : h.hex('#b8a47a'), 0.9 + c.h(x, y) * 0.15));
   },
   piston_top: (c, h) => { h.planks(c, '#b08a52'); for (let i = 0; i < 16; i++) { c.set(i, 0, h.hex('#6a4a28')); c.set(i, 15, h.hex('#6a4a28')); c.set(0, i, h.hex('#6a4a28')); c.set(15, i, h.hex('#6a4a28')); } },
   piston_top_sticky: (c, h) => {

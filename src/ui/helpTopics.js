@@ -28,6 +28,9 @@ import { SMELTING } from '../player/crafting.js';
 import { TEMPER_STEPS } from '../world/enchantments.js';
 import { COLOSSUS } from '../mobs/slagColossus.js';
 import { VARIETY_STEP, VARIETY_MAX, VARIETY_WINDOW } from '../player/variety.js';
+import { SNARE_RANGE, SNARE_HOLD } from '../world/snare.js';
+import { PULSE_GATE_SETTINGS } from '../world/pulseGate.js';
+import { LOOP_LIMIT, LOOP_FUSE, OBSERVE_PER_TICK, SCHEDULED_PER_TICK } from '../world/circuits.js';
 
 export const GROUP_ORDER = ['Basics', 'Controls', 'Systems', 'Reference'];
 
@@ -150,7 +153,24 @@ export function buildTopics({ table, touch = false, pad = false } = {}) {
 
   add('cinnabar', 'Cinnabar and machines', 'Systems', [
     { p: 'Cinnabar Dust is mined from cinnabar ore. Lay it as wire to carry a signal from a power source (a lever, a button, a pressure plate, a cinnabar torch) to something that reacts, such as a lamp, a piston or a rail.' },
-    { list: ['Repeaters boost and delay a signal.', 'Pistons push blocks when powered; sticky ones pull them back.'] },
+    { list: ['Repeaters boost and delay a signal.', 'Pistons push blocks when powered; sticky ones pull them back. Slime and Honey Blocks hold on to what touches them, so a piston moves the whole cluster.'] },
+    { h: 'Reading and sensing' },
+    { list: [
+      'A Comparator compares or subtracts signal strength (right-click switches the mode). Behind a chest, barrel, hopper, dispenser, dropper, furnace, brewing stand or composter it reads how full that container is, from 0 to 15, also through one solid block; it reads a jukebox, a cake, a lectern and an item frame too.',
+      'An Observer sends a short pulse out of its back whenever the block its face looks at changes.',
+      'A Daylight Sensor gives 0 to 15 by the sky light and the three suns; right-click inverts it, so it is strongest at night.',
+      `Two Snare Posts facing each other, up to ${SNARE_RANGE} blocks apart with Snare Cord between them, make a tripline: anything that touches the cord makes both posts send power, and for ${SNARE_HOLD / 20} s after it lets go. Cut the cord and the line goes quiet.`,
+    ] },
+    { h: 'Timing' },
+    { list: [
+      `The Pulse Gate has eight settings (right-click steps through them). As a Limiter it answers a rising signal with one clean pulse of ${PULSE_GATE_SETTINGS.slice(0, 4).map((s) => s.ticks / 20).join(', ')} s, ignores more edges until it has rested as long again, and gives only one pulse to a signal that stays on: a pulse extender, a pulse shortener and a rate cap in one. As a Metronome it beats on and off every ${PULSE_GATE_SETTINGS.slice(4).map((s) => s.ticks / 20).join(', ')} s while it is powered.`,
+      'A cinnabar torch inverts the block it sits on; two of them facing each other remember a signal. Torches that are flipped too often burn out for a while.',
+    ] },
+    { h: 'Safety' },
+    { list: [
+      `Runaway loops cannot freeze the game: a block is updated at most ${LOOP_LIMIT} times in one tick (the rest waits for the next tick, and a loop that never calms down is given up after ${LOOP_FUSE} ticks), no more than ${OBSERVE_PER_TICK} Observers start a pulse in one tick, and at most ${SCHEDULED_PER_TICK} scheduled block updates run per tick.`,
+      'Ideas to build: a T flip-flop (a latch of two torches steered by a Pulse Gate pulse), a pulse extender (a Pulse Gate on its longest Limiter setting in front of a piston) and an item sorter (a hopper filled with filler items, so only the wanted item fits, read by a Comparator that unlocks the hopper below).',
+    ] },
   ]);
 
   add('building', 'Building tools', 'Systems', [

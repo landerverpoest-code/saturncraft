@@ -1255,6 +1255,7 @@ export class Game {
     });
     w.on('circuitFx', (x, y, z, kind) => {
       if (kind === 'burnout') { this.particles.smoke(x + 0.5, y + 0.7, z + 0.5, 6, 0.3); this.audio.play('burnout', [x + 0.5, y + 0.5, z + 0.5]); }
+      else if (kind === 'overload') { this.particles.smoke(x + 0.5, y + 0.7, z + 0.5, 10, 0.4); this.audio.play('burnout', [x + 0.5, y + 0.5, z + 0.5]); } // the loop guard held a runaway loop back (world/circuits.js)
     });
     // an extending piston shoves whoever stands where the blocks go
     w.on('pistonMoved', (x, y, z, f, n, out, cells) => {
@@ -1304,7 +1305,8 @@ export class Game {
         if (!weighted) weighted = new Map();
         const c = weighted.get(k);
         if (c) c[3]++; else weighted.set(k, [bx, by, bz, 1]);
-      }
+      } else if (id === B.SNARE_CORD) ci.trip(bx, by, bz);
+      else if (w.getBlock(bx, by + 1, bz) === B.SNARE_CORD) ci.trip(bx, by + 1, bz); // (a cord at head height catches anyone tall enough)
     };
     const p = this.player;
     if (!p.dead && !p.spectator) press(p.x, p.y, p.z, true);

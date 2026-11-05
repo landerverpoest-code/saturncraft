@@ -132,6 +132,20 @@ function circuitIcon(ctx, c, b) {
     tex('comparator', 0, 0, 16, 16, 2, 2, 28, 28); outline(2, 2, 28, 28);
     ctx.fillStyle = '#5a1a14'; ctx.fillRect(14, 4, 4, 4);
     ctx.fillStyle = '#e02a18'; ctx.fillRect(7, 21, 4, 4); ctx.fillRect(21, 21, 4, 4);
+  } else if (b.id === B.PULSE_GATE) {
+    tex('pulse_gate', 0, 0, 16, 16, 2, 2, 28, 28); outline(2, 2, 28, 28);
+    ctx.fillStyle = '#d8a838'; ctx.fillRect(7, 23, 4, 5); ctx.fillRect(13, 23, 4, 5);
+    ctx.fillStyle = '#5a1a14'; ctx.fillRect(14, 5, 4, 5);
+  } else if (b.id === B.SNARE_POST) {
+    // a hook on a plate with a cord running off to the corner
+    tex('snare_post', 0, 0, 16, 16, 6, 5, 20, 22); outline(6, 5, 20, 22);
+    ctx.fillStyle = '#d8c8a0'; for (let k = 0; k < 12; k++) ctx.fillRect(16 + k, 18 + (k >> 1), 2, 2);
+    ctx.fillStyle = '#f0cc60'; ctx.fillRect(14, 14, 4, 4);
+  } else if (b.id === B.SNARE_CORD) {
+    // a taut thread seen from the side
+    ctx.fillStyle = '#b8a47a'; ctx.fillRect(2, 19, 28, 4);
+    ctx.fillStyle = '#d8c8a0'; for (let x = 2; x < 30; x += 4) ctx.fillRect(x, 19, 2, 2);
+    ctx.fillStyle = 'rgba(20,20,20,0.35)'; ctx.fillRect(2, 23, 28, 2);
   } else if (b.id === B.DAYLIGHT_SENSOR) {
     // seen from above at a slant: the glass top over a thin wooden side
     tex('daylight_sensor_top', 0, 0, 16, 16, 2, 4, 28, 20); outline(2, 4, 28, 20);

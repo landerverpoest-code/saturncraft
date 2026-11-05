@@ -13,7 +13,7 @@ import { SPECIAL_HABITATS } from '../mobs/fauna.js';
 import { BIOMES } from '../world/biomes.js';
 import { LANDMARK_KINDS } from '../world/landmarkKinds.js';
 import { ITEMS, I, CHARTS } from '../world/items.js';
-import { BLOCKS } from '../world/blocks.js';
+import { B, BLOCKS } from '../world/blocks.js';
 import { DISHES } from '../world/cooking.js';
 import { TABS, countFound, recordOf, LEVEL } from './fieldGuide.js';
 
@@ -169,12 +169,16 @@ function structureEntries() {
 /** Finds worth a mention besides what mobs drop and the charts (by `I` key; ones that do not exist are skipped). */
 const EXTRA_NOTABLE = ['DIAMOND', 'BERYL', 'VOID_PEARL', 'CHARM_OF_UNDYING', 'TIDESPEAR', 'ENCHANTED_BOOK', 'SADDLE', 'FROSTROOT', 'DEWBERRIES', 'SUNGOURD_SEEDS', 'GOURD_WEDGE', 'SLAG_SIGIL', 'COLOSSUS_CORE', 'SLAGSTEEL_INGOT', 'DIRGE_CRYSTAL'];
 
+/** Cinnabar contraption parts (block keys): sensors and timers a builder makes, listed so the guide notes the first one you hold. */
+const CONTRAPTION_PARTS = ['COMPARATOR', 'OBSERVER', 'DAYLIGHT_SENSOR', 'SNARE_POST', 'SNARE_CORD', 'PULSE_GATE'];
+
 function itemEntries() {
   const sources = new Map();
   const add = (id, why) => { if (!sources.has(id)) sources.set(id, []); if (why && !sources.get(id).includes(why)) sources.get(id).push(why); };
   for (const def of Object.values(MOBS)) for (const id of dropIds(def)) add(id, def.name);
   for (const id of Object.values(CHARTS)) add(id, 'Cartographers and wreck chests');
   for (const k of EXTRA_NOTABLE) if (I[k] !== undefined) add(I[k], null);
+  for (const k of CONTRAPTION_PARTS) if (B[k] !== undefined) add(B[k], 'Cinnabar and machines (crafted)'); // (world/circuits.js: the parts of cinnabar contraptions)
   for (const d of DISHES) add(d.id, 'Cooking Pot'); // every dish the Cooking Pot can make (world/cookingPot.js), so a new recipe joins the guide by itself
   return [...sources.entries()].sort((a, b) => a[0] - b[0]).map(([id, from]) => ({ key: String(id), id, name: itemName(id), from }));
 }

@@ -217,7 +217,11 @@ export function makeTarget(rp) {
     lastHurtBy: null, lastAttacked: null,
     stats: { kills: 0, blocksMined: 0 },
     reputation: {}, // what villages think of this guest (mobs/reputation.js); the host keeps it and tells the guest
-    inventory: { get selectedStack() { const h = st().held; return h == null ? null : { id: h, count: 1 }; } },
+    inventory: {
+      get selectedStack() { const h = st().held; return h == null ? null : { id: h, count: 1 }; },
+      // what they wear (helmet first), as stacks: mob AI reads it (a Carved Pumpkin hides the face from a Voidwalker; armour counts for some mobs)
+      get armor() { const a = st().armor; return [0, 1, 2, 3].map((i) => (Array.isArray(a) && a[i] ? { id: a[i], count: 1, damage: 0 } : null)); },
+    },
     eyePos() { const s = st(); return [s.x, s.y + this.eyeHeight, s.z]; },
     lookDir() { const s = st(), cp = Math.cos(s.pitch); return [-Math.sin(s.yaw) * cp, Math.sin(s.pitch), -Math.cos(s.yaw) * cp]; },
     // a mob, an explosion or another player hurts this player: their own game applies it (armour etc.)
