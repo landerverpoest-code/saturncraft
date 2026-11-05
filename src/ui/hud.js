@@ -58,6 +58,7 @@ export class HUD {
       <div id="coords" class="hidden"></div>
       <div id="markers-root"></div>
       <div id="toast" role="status" aria-live="polite"></div>
+      <div id="aimtip" class="hidden"></div>
       <div id="steps" class="hidden" role="region" aria-label="First Steps"><div class="st-head"><b>First Steps</b><button type="button" class="st-skip">Skip</button></div><ol class="st-list"></ol><div class="st-tip"></div><div class="st-foot"></div></div>
       <div id="captions" role="log" aria-live="polite" aria-label="Sound captions"></div>
       <div id="raidbar" class="hidden" role="progressbar" aria-label="Raid"><div class="rb-name"></div><div class="rb-track"><div class="rb-fill"></div></div></div>
@@ -253,6 +254,15 @@ export class HUD {
     this.toastEl.style.opacity = 1;
     clearTimeout(this._toastT);
     this._toastT = setTimeout(() => { this.toastEl.style.opacity = 0; }, ms);
+  }
+
+  /** The small hover tip under the crosshair (farmland, crops, Cooking Pots; world/aimTips.js); null hides it. */
+  setAimTip(text) {
+    if (!this.aimTipEl) this.aimTipEl = this.root.querySelector('#aimtip');
+    if (!this.aimTipEl || text === this._aimTip) return;
+    this._aimTip = text;
+    this.aimTipEl.textContent = text || '';
+    this.aimTipEl.classList.toggle('hidden', !text);
   }
 
   renderSlot(el, st) {

@@ -11,6 +11,7 @@ import { rollCatch } from '../../src/entities/bobber.js';
 import { SITE_LOOT } from '../../src/world/archaeology.js';
 import { SPAWNER_REWARDS, OMINOUS_REWARDS, VAULT_LOOT } from '../../src/world/provingLoot.js';
 import { compost, COMPOST_CHANCE } from '../../src/world/composter.js';
+import { DISHES } from '../../src/world/cooking.js';
 import { PROFESSIONS } from './trade.mjs';
 import { seeded } from './rng.mjs';
 
@@ -57,6 +58,7 @@ export function naturalSources() {
   for (const t of [SPAWNER_REWARDS, OMINOUS_REWARDS, VAULT_LOOT]) for (const e of t) add(e[0], 'proving');
   for (const p of PROFESSIONS) for (const o of offerPool(p)) if (o[0] === 'sell') add(o[3], 'trade:' + p);
   void compost; void COMPOST_CHANCE;
+  for (const d of DISHES) add(d.id, 'cooking:pot'); // the Cooking Pot (world/cookingPot.js); its tests check every dish's ingredients are obtainable
   return src;
 }
 

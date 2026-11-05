@@ -696,3 +696,9 @@ html.large-text .pause-screen > .btn { min-width: min(300px, calc((100vw - 24px)
 html.large-text .pause-screen > .field, html.large-text .pause-screen > .btn-row { width: min(300px, calc((100vw - 24px) / var(--tz, 1))); }
 /* High contrast: the Field Guide pictures sit on white tiles, so an unseen creature's silhouette is not black on black */
 html.high-contrast .guide-card img { background: #fff; border: 1px solid #fff; }
+
+/* The hover tip under the crosshair for farmland, crops and Cooking Pots (ui/hud.js setAimTip) */
+#aimtip { position: absolute; left: 50%; top: calc(50% + 34px); transform: translateX(-50%); max-width: min(92vw, 520px); padding: 4px 10px; font-size: 13px; line-height: 1.35; text-align: center; text-shadow: 1px 1px 0 #000; background: rgba(0, 0, 0, .55); border-radius: 4px; pointer-events: none; }
+#aimtip.hidden { display: none; }
+html.large-text #aimtip { font-size: 17px; }
+html.high-contrast #aimtip { background: #000; border: 1px solid #fff; }

@@ -11,6 +11,7 @@
 //                into the temperate biomes, thaw melts their snow layers again)
 //  - rainClear / rainLen   scale the clear and rainy spells (spring is the wet one)
 //  - growth      crop growth speed (slow winter, quick spring)
+//  - warmth      0..1 how warm the season is (0.5 = neutral); crops with a seasonal preference (world/farming.js) read it
 //  - breedCooldown / creatureCap   animals breed sooner and flourish in spring
 //  - sunDecl     the suns climb higher in summer and hang low in winter
 //  - veil        Veilfire is stronger in the long winter nights
@@ -36,22 +37,22 @@ export const SUN_SEASONAL = { hearth: 1, pale: 0.45, ember: 0.6 };
 export const SEASON_DATA = {
   spring: {
     grass: [0.8, 1.4, 0.5, 0.2], leaf: [0.8, 1.45, 0.5, 0.22], leafVar: 0, frost: 0.06,
-    snowTemp: 0.15, rainClear: 0.55, rainLen: 1.25, growth: 1.35, breedCooldown: 0.6, creatureCap: 1.25,
+    snowTemp: 0.15, rainClear: 0.55, rainLen: 1.25, growth: 1.35, warmth: 0.55, breedCooldown: 0.6, creatureCap: 1.25,
     sunDecl: 0, veil: 0.85, skyTint: [0.98, 1.0, 1.0], amb: { wind: 1, bird: 1.9, cricket: 0.6, howl: 0.5 },
   },
   summer: {
     grass: [1.3, 1.1, 0.4, 0.12], leaf: [1.0, 1.2, 0.6, 0.08], leafVar: 0, frost: 0,
-    snowTemp: 0.15, rainClear: 1.15, rainLen: 0.8, growth: 1.0, breedCooldown: 0.9, creatureCap: 1.1,
+    snowTemp: 0.15, rainClear: 1.15, rainLen: 0.8, growth: 1.0, warmth: 1, breedCooldown: 0.9, creatureCap: 1.1,
     sunDecl: 1, veil: 0.6, skyTint: [1.02, 1.0, 1.03], amb: { wind: 0.8, bird: 1.2, cricket: 1.7, howl: 0.3 },
   },
   autumn: {
     grass: [1.5, 1.05, 0.4, 0.5], leaf: [2.8, 0.55, 0.1, 0.85], leafVar: 1, frost: 0.12,
-    snowTemp: 0.3, rainClear: 0.75, rainLen: 1.1, growth: 0.8, breedCooldown: 1.1, creatureCap: 0.9,
+    snowTemp: 0.3, rainClear: 0.75, rainLen: 1.1, growth: 0.8, warmth: 0.35, breedCooldown: 1.1, creatureCap: 0.9,
     sunDecl: 0, veil: 1.1, skyTint: [1.04, 0.98, 0.92], amb: { wind: 1.3, bird: 0.7, cricket: 0.8, howl: 1.3 },
   },
   winter: {
     grass: [1.15, 1.05, 0.8, 0.7], leaf: [0.95, 0.78, 0.6, 0.88], leafVar: 0, frost: 0.85,
-    snowTemp: 0.62, rainClear: 0.9, rainLen: 1.0, growth: 0.35, breedCooldown: 1.6, creatureCap: 0.65,
+    snowTemp: 0.62, rainClear: 0.9, rainLen: 1.0, growth: 0.35, warmth: 0, breedCooldown: 1.6, creatureCap: 0.65,
     sunDecl: -1, veil: 1.5, skyTint: [0.95, 1.0, 1.07], amb: { wind: 1.55, bird: 0.2, cricket: 0.0, howl: 2.5 },
   },
 };
@@ -60,7 +61,7 @@ export const SEASON_DATA = {
 export function neutralClimate() {
   return {
     on: false, grass: [1, 1, 1, 0], leaf: [1, 1, 1, 0], leafVar: 0, frost: 0,
-    snowTemp: 0.15, rainClear: 1, rainLen: 1, growth: 1, breedCooldown: 1, creatureCap: 1,
+    snowTemp: 0.15, rainClear: 1, rainLen: 1, growth: 1, warmth: 0.5, breedCooldown: 1, creatureCap: 1,
     sunDecl: 0, veil: 1, skyTint: [1, 1, 1], amb: { wind: 1, bird: 1, cricket: 1, howl: 1 },
   };
 }
