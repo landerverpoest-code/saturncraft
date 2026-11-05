@@ -97,7 +97,7 @@ function joinLink(code) {
   return `${location.origin}${location.pathname}?${keep}`;
 }
 
-const CONTAINER_BLOCKS = new Set([B.CHEST, B.BARREL, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.BREWING_STAND, B.GLOOMSHELL_BOX, ...BOX_COLORS, B.HOPPER, B.DISPENSER, B.DROPPER]);
+const CONTAINER_BLOCKS = new Set([B.CHEST, B.BARREL, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.BREWING_STAND, B.GLOOMSHELL_BOX, ...BOX_COLORS, B.HOPPER, B.DISPENSER, B.DROPPER, B.CAMPFIRE]);
 const contKey = (k, x, y, z) => `${k}:${x},${y},${z}`;
 const finite = (...v) => v.every(Number.isFinite);
 /** Stand-in for a player whose pet is waiting for them while they are offline. */
@@ -406,6 +406,13 @@ export class HostSession extends Session {
         this.broadcast({ t: 'lectern', x: m.x | 0, y: m.y | 0, z: m.z | 0, s: g.lecterns.get(`${m.x | 0},${m.y | 0},${m.z | 0}`) || null }, c);
         break;
       }
+      case 'camp': {
+        // a guest laid food on a campfire or took it off
+        if (!finite(m.x, m.y, m.z) || !this.near(c, m.x, m.y, m.z, 12)) break;
+        g.setCampfire(m.x | 0, m.y | 0, m.z | 0, m.s || null, true);
+        this.broadcast({ t: 'camp', x: m.x | 0, y: m.y | 0, z: m.z | 0, s: g.campfires.get(`${m.x | 0},${m.y | 0},${m.z | 0}`) || null }, c);
+        break;
+      }
       case 'note': {
         // a guest punched or retuned a Chime Block: the host plays it and tells the others (rings from signals travel as block edits)
         if (!finite(m.x, m.y, m.z) || !this.near(c, m.x, m.y, m.z, 12) || m.d !== g.world.dimension) break;
@@ -516,7 +523,7 @@ export class HostSession extends Session {
       soc: 1, teams: soc.teamsToWire(), // optional: the social layer (net/social.js); older guests ignore both
       worldSpawn: g.worldSpawn, pos: { x: p.x, y: p.y, z: p.z, yaw: p.yaw },
       player: g.netPlayers[name] || null,
-      signs: [...g.signs], frames: [...g.frames], pots: [...g.pots], lecterns: [...g.lecterns],
+      signs: [...g.signs], frames: [...g.frames], pots: [...g.pots], lecterns: [...g.lecterns], campfires: [...(g.campfires || [])],
       vaults: g.proving ? g.proving.vaults.save() : [], // who opened which Vault (world/provingSystem.js)
       players: [{ id: 0, name: this.name }, ...this.joined().map((o) => ({ id: o.id, name: o.name }))],
       chunks: chunks.length,
@@ -1071,6 +1078,7 @@ export class HostSession extends Session {
   sendFrame(x, y, z, st) { this.broadcast({ t: 'frame', x, y, z, st }); }
   sendPot(x, y, z, f) { this.broadcast({ t: 'pot', x, y, z, f }); }
   sendLectern(x, y, z, s) { this.broadcast({ t: 'lectern', x, y, z, s }); }
+  sendCampfire(x, y, z, s) { this.broadcast({ t: 'camp', x, y, z, s }); }
   sendNote(x, y, z) { this.broadcast({ t: 'note', x, y, z, d: this.game.world.dimension }); }
 
   tick() {
@@ -1226,6 +1234,7 @@ export class ClientSession extends Session {
     for (const [k, l] of w.signs || []) game.signs.set(k, l);
     for (const [k, st] of w.frames || []) game.frames.set(k, st);
     for (const [k, f] of w.pots || []) { const [x, y, z] = String(k).split(',').map(Number); if (finite(x, y, z)) game.setPot(x, y, z, f, true); }
+    for (const [k, c] of w.campfires || []) { const [x, y, z] = String(k).split(',').map(Number); if (finite(x, y, z)) game.setCampfire(x, y, z, c, true); }
     for (const [k, l] of w.lecterns || []) { const [x, y, z] = String(k).split(',').map(Number); if (finite(x, y, z)) game.setLectern(x, y, z, l, true); }
     if (game.proving) game.proving.vaults.load(w.vaults);
     if (typeof w.dl === 'boolean') game.settings.daylightCycle = w.dl;
@@ -1286,6 +1295,7 @@ export class ClientSession extends Session {
       case 'frame': g.setFrameItem(m.x | 0, m.y | 0, m.z | 0, m.st || null, true); break;
       case 'pot': g.setPot(m.x | 0, m.y | 0, m.z | 0, m.f || null, true); break;
       case 'lectern': g.setLectern(m.x | 0, m.y | 0, m.z | 0, m.s || null, true); break;
+      case 'camp': g.setCampfire(m.x | 0, m.y | 0, m.z | 0, m.s || null, true); break;
       case 'note': if (finite(m.x, m.y, m.z) && m.d === g.world.dimension) g.playChime(m.x | 0, m.y | 0, m.z | 0, { fromNet: true }); break;
       case 'vaultset': if (g.proving && typeof m.k === 'string' && /^-?\d+,-?\d+,-?\d+$/.test(m.k)) g.proving.vaults.set(m.k, m.n); break;
       case 'vaultno': if (g.hud) g.hud.toast(String(m.m || '').slice(0, 80)); break;
@@ -1575,6 +1585,7 @@ export class ClientSession extends Session {
   sendFrame(x, y, z, st) { this.send({ t: 'frame', x, y, z, st }); }
   sendPot(x, y, z, f) { this.send({ t: 'pot', x, y, z, f }); }
   sendLectern(x, y, z, s) { this.send({ t: 'lectern', x, y, z, s }); }
+  sendCampfire(x, y, z, s) { this.send({ t: 'camp', x, y, z, s }); }
   sendNote(x, y, z) { this.send({ t: 'note', x, y, z, d: this.game.world.dimension }); }
   /** Use the Vault at x,y,z with the held stack `st` (the host checks its ledger). */
   useVault(x, y, z, st) { this.send({ t: 'vault', x, y, z, st: st ? { id: st.id, count: 1 } : null }); }
