@@ -328,6 +328,7 @@ export class World {
       if ((metaIn ?? this.getMeta(x, y, z)) & PROPAGULE_HANGING) return this.getBlock(x, y + 1, z) === B.MANGROVE_LEAVES;
       return below === B.MUD || below === B.MUDDY_MANGROVE_ROOTS || below === B.CLAY || below === B.GRASS || below === B.DIRT || below === B.MOSS_BLOCK;
     }
+    if (id === B.BEANSTALK) return below === B.BEANSTALK || !!SOLID[below]; // (a stalk stands on any ground, or on its own lower segment)
     if (id === B.KELP) return below === B.KELP || (!!SOLID[below]);
     if (id === B.SEAGRASS || (BLOCKS[id].waterlogged && id !== B.KELP)) return !!SOLID[below];
     if (id === B.BAMBOO) return below === B.BAMBOO || below === B.GRASS || below === B.DIRT || below === B.SAND || below === B.GRAVEL || below === B.MYCELIUM;

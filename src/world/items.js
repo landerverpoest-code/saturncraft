@@ -399,6 +399,7 @@ export const isArrow = (id) => id === I.ARROW || !!(ITEMS[id] && ITEMS[id].tippe
 export function heldLightLevel(id) {
   const d = id != null && ITEMS[id];
   if (!d) return 0;
+  if (d.holdLight) return d.holdLight; // a Diver's Lamp: light without a block
   const b = BLOCKS[d.block ?? d.places];
   return b && b.emit ? b.emit : 0;
 }
@@ -520,3 +521,18 @@ const ICON_CORE = [
   '..hhwwffFFffwh..', '..hhHwwffffwhh..', '...hhHwwwwwhh...', '....hhHHHHhh....', '.....hhhhhh.....', '................', '................', '................',
 ];
 item('colossus_core', 'Colossus Core', { iconStyle: [ICON_CORE, { h: '#4a3a40', H: '#7a6670', w: '#c8641c', f: '#ffb43a', F: '#fff0b0' }] });
+
+// Ocean and sky round (world/deepSea.js, world/skyIsles.js, mobs/oceanSky.js), appended so no item id shifts:
+// Lanternfin meat and the Lantern Gland of the deep-sea fish, the Diver's Lamp (waterproof hand light) and Diver's Helm (breathes
+// under water for a while and wears a brow lamp), and the Skybean that grows a Beanstalk up to the cloud isles.
+const ICON_LAMP = [
+  '................', '......hhhh......', '.....hHHHHh.....', '.....hHffHh.....', '....hHffffHh....', '....hHffffHh....', '....hHffffHh....', '.....hHffHh.....',
+  '.....hHHHHh.....', '......ssss......', '......shhs......', '......ssss......', '................', '................', '................', '................',
+];
+item('raw_lanternfin', 'Raw Lanternfin', { food: { hunger: 2, saturation: 0.6, effects: [['night_vision', 200, 0]] }, iconStyle: ['fish', { h: '#2a4a6a', H: '#5ad8e8', s: '#ffe27a' }] });
+item('cooked_lanternfin', 'Cooked Lanternfin', { food: { hunger: 5, saturation: 6 }, iconStyle: ['fish', { h: '#8a5a3a', H: '#d8a868', s: '#ffe27a' }] });
+item('lantern_gland', 'Lantern Gland', { iconStyle: ['pearl', { h: '#ffe27a', H: '#fff8c8' }] });
+item('divers_lamp', "Diver's Lamp", { stack: 1, holdLight: 13, iconStyle: [ICON_LAMP, { h: '#6a7a86', H: '#aebcc6', s: '#3a444c', f: '#ffe27a' }] });
+ARMOR_MATERIALS.diver = { defense: [1, 0, 0, 0], durability: 15, toughness: 0, color: '#c8a050', name: "Diver's" };
+item('divers_helm', "Diver's Helm", { stack: 1, durability: 240, repairWith: 'LANTERN_GLAND', armor: { slot: 0, piece: 'helmet', material: 'diver', defense: 1, toughness: 0, diver: true } });
+item('skybean', 'Skybean', { places: B.BEANSTALK, iconStyle: ['egg', { h: '#6ab83a', H: '#b8e870' }] });

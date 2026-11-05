@@ -94,6 +94,7 @@ function baseDrops(blockId, b, rng, meta, tool) {
     case 'melon_stem': return [{ id: I.MELON_SEEDS, count: 1 + ((meta & 7) === 7 && rng() < 0.5 ? 1 : 0) }];
     case 'pumpkin_stem': return [{ id: I.PUMPKIN_SEEDS, count: 1 + ((meta & 7) === 7 && rng() < 0.5 ? 1 : 0) }];
     case 'cocoa': return [{ id: I.COCOA_BEANS, count: ((meta >> 2) & 3) >= 2 ? 2 + Math.floor(rng() * 2) : 1 }];
+    case 'beanstalk': return rng() < 0.06 ? [{ id: I.SKYBEAN, count: 1 }] : []; // (a toppled stalk drops a bean now and then, not one a segment)
     case 'item_frame': return [{ id: I.ITEM_FRAME, count: 1 }];
     case 'sign': return [{ id: I.SIGN, count: 1 }];
     case 'painting': return ((meta >> 2) & 15) === 0 ? [{ id: I.PAINTING, count: 1 }] : []; // one item per picture (from its first part)

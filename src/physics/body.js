@@ -279,7 +279,7 @@ export class Body {
     const x = Math.floor(this.x), z = Math.floor(this.z);
     for (let y = Math.floor(this.y); y <= Math.floor(this.y + this.height - 0.01); y++) {
       const id = world.getBlock(x, y, z);
-      if (id === B.LADDER || id === B.VINES) return 1;
+      if (id === B.LADDER || id === B.VINES || id === B.BEANSTALK) return 1;
       if (id === B.SCAFFOLDING) return 2;
     }
     return 0;

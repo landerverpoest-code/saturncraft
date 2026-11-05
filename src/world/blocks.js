@@ -833,6 +833,14 @@ def(B.SNARE_POST, 'Snare Post', { ...part, hardness: 0.3, resistance: 0.3, shape
 def(B.SNARE_CORD, 'Snare Cord', { ...part, hardness: 0, resistance: 0, needsSupport: false, shape: SHAPE.CIRCUIT, sound: 'wool', tex: { all: 'snare_cord' } });
 def(B.PULSE_GATE, 'Pulse Gate', { ...part, shape: SHAPE.CIRCUIT, sound: 'stone', tex: { top: 'pulse_gate', bottom: 'smooth_stone', side: 'smooth_stone' } });
 
+// Ocean and sky round (world/deepSea.js, world/skyIsles.js), appended so no block id shifts:
+// Cirrusstone (the pale rock cloud isles are made of), the Beanstalk (a climbable stalk that grows from a Skybean; meta unused)
+// and Gleamkelp (a waterlogged plant that glows in the deep sea and drops itself).
+ext('CIRRUSSTONE'); ext('BEANSTALK'); ext('GLEAMKELP');
+def(B.CIRRUSSTONE, 'Cirrusstone', { hardness: 1.2, resistance: 4, tool: TOOL.PICKAXE, tier: TIER.WOOD, sound: 'stone' });
+def(B.BEANSTALK, 'Beanstalk', { hardness: 0.3, resistance: 0.3, tool: TOOL.AXE, solid: false, opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, sound: 'grass', flatIcon: true, needsSupport: true, climbable: true, drops: 'beanstalk', tex: { all: 'beanstalk' } });
+def(B.GLEAMKELP, 'Gleamkelp', { ...plant, waterlogged: true, opacity: 1, emit: 9, drops: 'self', tex: { all: 'gleamkelp' } });
+
 export const NUM_BLOCKS = BLOCKS.length;
 
 // Flat lookup tables used by hot loops (mesher, lighting, physics) and workers.

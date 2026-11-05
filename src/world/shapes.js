@@ -240,6 +240,7 @@ const POT_BOXES = [[5 / 16, 0, 5 / 16, 11 / 16, 6 / 16, 11 / 16]];
 // Decorated Pot: a wide body, a narrow neck and a lip (render/pots.js lays the sherd pictures on the body)
 export const DECO_POT_BODY = [1 / 16, 0, 1 / 16, 15 / 16, 13 / 16, 15 / 16];
 const DECO_POT_BOXES = [DECO_POT_BODY, [4 / 16, 13 / 16, 4 / 16, 12 / 16, 14 / 16, 12 / 16], [3 / 16, 14 / 16, 3 / 16, 13 / 16, 1, 13 / 16]];
+const STALK_BOXES = [[5.5 / 16, 0, 5.5 / 16, 10.5 / 16, 1, 10.5 / 16]];
 const CHAIN_BOXES = [[6.5 / 16, 0, 6.5 / 16, 9.5 / 16, 1, 9.5 / 16]];
 const swapXZ = (boxes) => boxes.map(([x0, y0, z0, x1, y1, z1]) => [z0, y0, x0, z1, y1, x1]);
 const px16 = (...a) => a.map((v) => v / 16);
@@ -312,6 +313,7 @@ export function blockBoxes(id, meta) {
   if (id === B.FLOWER_POT) return POT_BOXES;
   if (id === B.DECORATED_POT) return DECO_POT_BOXES;
   if (id === B.CHAIN) return CHAIN_BOXES;
+  if (id === B.BEANSTALK) return STALK_BOXES;
   if (id === B.GRINDSTONE) return meta & 1 ? GRIND_Z : GRIND_X;
   if (id === B.STONECUTTER) return meta & 1 ? CUTTER_Z : CUTTER_X;
   if (id === B.HUSH_SENSOR || id === B.CALIBRATED_HUSH_SENSOR) return SENSOR_BOXES;
