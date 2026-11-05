@@ -443,3 +443,11 @@ item('dirgestep_boots', 'Dirgestep Boots', {
 item('raw_venison', 'Raw Venison', { food: { hunger: 3, saturation: 1.8 }, iconStyle: ['meat', { h: '#b8404a', w: '#f2e0dc' }] });
 item('cooked_venison', 'Roast Venison', { food: { hunger: 8, saturation: 12.8 }, iconStyle: ['meat', { h: '#8a4a2a', w: '#e0c0a0' }] });
 item('tarnling_bucket', 'Bucket of Tarnling', { stack: 1, places: B.WATER, releases: 'tarnling', iconStyle: ['bucket', { h: '#b8b8b8', w: '#5aa0c8' }] });
+
+// Surveyor Wand (creative building tools, ui/buildCommands.js): left click marks corner 1 of a selection, right click corner 2.
+// Not craftable: /wand or the creative inventory. The icon brings its own template (a staff with a glowing tip).
+const WAND_ICON = [
+  '................', '............hh..', '...........hHHh.', '...........hHhh.', '..........sshh..', '.........ss.....', '........ss......', '.......ss.......',
+  '......ss........', '.....ss.........', '....ss..........', '...ss...........', '..ss............', '.ss.............', '................', '................',
+];
+item('surveyor_wand', 'Surveyor Wand', { stack: 1, wand: true, iconStyle: [WAND_ICON, { s: '#8a6a3c', h: '#3fd0e0', H: '#c8f8ff' }] });

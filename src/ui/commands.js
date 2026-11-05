@@ -28,6 +28,8 @@ import { EFFECTS, EFFECT_KEYS, effectLabel } from '../player/effects.js';
 import { spawnCaravan } from '../mobs/peddler.js';
 import { SEASON_KEYS, SEASON_NAMES, MIN_DAYS, MAX_DAYS, DAY_TICKS } from '../world/seasons.js';
 import { EMOTES, emoteByName, gamemodeLabel } from '../net/social.js';
+import { BUILD_COMMANDS, runBuildCommand } from './buildCommands.js';
+import { DEFAULT_MAX_VOLUME, MAX_VOLUME_CAP } from '../world/buildTools.js';
 
 /** item lookup by key ("diamond_sword", "oak_planks", "grass_block") and by display name */
 let ITEM_KEYS = null;
@@ -70,8 +72,19 @@ function nextTime(t0, pred) {
 export const GAME_RULES = { doDaylightCycle: 'daylightCycle', doSeasons: 'seasons', doHostileSpawning: 'hostileMobs', doWorldEvents: 'worldEvents', fireworksHurtPlayers: 'fireworksHurtPlayers' };
 /** Rules that are off unless set (the others are on unless set to false). */
 export const RULES_DEFAULT_OFF = new Set(['fireworksHurtPlayers']);
+/** Game rules that hold a number: command name -> { settings key, default, range }. */
+export const NUMERIC_RULES = { maxBuildVolume: { key: 'maxBuildVolume', def: DEFAULT_MAX_VOLUME, min: 1, max: MAX_VOLUME_CAP } };
 /** The current value of a game rule setting key. */
 export const ruleValue = (settings, key) => (RULES_DEFAULT_OFF.has(key) ? settings[key] === true : settings[key] !== false);
+
+/** The building tools' lines of /help (also the Help screen's Building topic). */
+export const BUILD_HELP = [
+  'Building (creative players, ops and the host): /wand (Surveyor Wand: left click marks corner 1, right click corner 2),  /pos1 [x y z],  /pos2 [x y z],  /sel [clear|expand|contract|shift <n> [dir]]',
+  '  /fill <block> [hollow|outline|walls],  /replace <from> <to>,  /replacenear <radius> <from> <to>,  /clone <x y z> [replace|masked|filtered <mask>] [move|copy] [-c]   (blocks: stone, "60%stone,40%dirt"; masks: "stone,dirt", "!air", *)',
+  '  /sphere <block> <radius> [hollow] [-p],  /cyl <block> <radius> [height] [hollow] [-p],  /line <block> [thickness]  (corner 1 to corner 2)',
+  '  /copy,  /cut,  /paste [-a] [-c],  /rotate <90|180|270>,  /flip <x|y|z>,  /undo [steps],  /redo [steps],  /build <status|cancel>  (big edits run a slice per tick)',
+  '  /blueprint save <name> [-c],  /blueprint load|delete|export <name>,  /blueprint import <name> [text|clipboard],  /blueprint list;  /gamerule maxBuildVolume <blocks>  (default ' + DEFAULT_MAX_VOLUME + ')',
+];
 
 export const HELP = [
   '/gamemode <survival|creative|adventure|spectator>  (or /gm 0|1|2|3)',
@@ -92,19 +105,21 @@ export const HELP = [
   '/raid <patrol|start [level]|stop|status>',
   '/caravan  (a Roving Peddler and its Packhorns camp nearby)',
   '/kill,  /clear,  /spawnpoint,  /seed,  /heal',
+  ...BUILD_HELP,
   'Multiplayer: /list (who is here),  /msg <player> <text> (also /w, /tell; /r answers),  /ping (beacon for your team, key B),  /emote <wave|point|sit> (key V)',
   '  /team create <name> [color],  /team join <name>,  /team leave,  /team list,  /team ff <on|off>,  /team color <color>,  /tc <text> (team chat)',
   '  /spectate [player|next|off] (dead or creative players follow a friend);  host and ops: /kick <player> [reason],  /ban <player> [reason],  /pardon <player>,  /banlist;  host: /op, /deop, /oplist',
 ];
 
 /** Commands that change the world or the player; a world made with cheats off (world creation options) refuses them. */
-export const CHEAT_COMMANDS = new Set(['gamemode', 'gm', 'time', 'season', 'event', 'events', 'difficulty', 'gamerule', 'weather', 'tp', 'teleport', 'give', 'enchant', 'summon', 'xp', 'experience', 'kill', 'effect', 'raid', 'caravan', 'heal', 'clear', 'spawnpoint', 'dimension', 'dim']);
+export const CHEAT_COMMANDS = new Set(['gamemode', 'gm', 'time', 'season', 'event', 'events', 'difficulty', 'gamerule', 'weather', 'tp', 'teleport', 'give', 'enchant', 'summon', 'xp', 'experience', 'kill', 'effect', 'raid', 'caravan', 'heal', 'clear', 'spawnpoint', 'dimension', 'dim', ...BUILD_COMMANDS]);
 
 export function runCommand(game, text) {
   const p = game.player;
   const args = text.trim().replace(/^\//, '').split(/\s+/);
   const cmd = (args.shift() || '').toLowerCase();
   if (game.allowCheats === false && CHEAT_COMMANDS.has(cmd)) return 'Cheats are turned off in this world';
+  if (BUILD_COMMANDS.has(cmd)) return runBuildCommand(game, cmd, args);
   switch (cmd) {
     case 'help': case '?': return HELP;
     case 'gamemode': case 'gm': {
@@ -169,7 +184,18 @@ export function runCommand(game, text) {
       return `The difficulty has been set to ${d[0].toUpperCase() + d.slice(1)}`;
     }
     case 'gamerule': {
-      const usage = `Usage: /gamerule <${Object.keys(GAME_RULES).join('|')}> [true|false]`;
+      const usage = `Usage: /gamerule <${Object.keys(GAME_RULES).join('|')}> [true|false]  or  /gamerule maxBuildVolume [blocks]`;
+      const num = Object.keys(NUMERIC_RULES).find((k) => k.toLowerCase() === (args[0] || '').toLowerCase());
+      if (num) {
+        const r = NUMERIC_RULES[num], now = Number.isFinite(game.settings[r.key]) ? game.settings[r.key] : r.def;
+        if (args[1] === undefined) return `Gamerule ${num} is currently set to: ${now}`;
+        const who = game.cmdActor; // a guest's command, run by the host: only ops change what builders may do
+        if (who && !who.host && !who.op) return 'Only the host and the ops can change that';
+        const v = Number(args[1]);
+        if (!Number.isInteger(v) || v < r.min || v > r.max) return `Usage: /gamerule ${num} <${r.min} to ${r.max}>  (default ${r.def})`;
+        game.setSetting(r.key, v);
+        return `Gamerule ${num} is now set to: ${v}`;
+      }
       const rule = Object.keys(GAME_RULES).find((k) => k.toLowerCase() === (args[0] || '').toLowerCase());
       if (!rule) return usage;
       const key = GAME_RULES[rule];

@@ -900,11 +900,26 @@ export class HostSession extends Session {
     if (!this.guestCommands) { c.ch.send({ t: 'cmdout', lines: ['The host has turned off commands for guests'] }); return; }
     const real = g.player;
     if (commandName(text) === 'summon') g.player = c.rp.target; // "~" and the look direction are the guest's
+    g.cmdActor = this.buildActor(c); // who is asking: the building tools use their position, game mode and op status
     let out;
-    try { out = runCommand(g, text); } catch (e) { out = 'Command failed: ' + e.message; } finally { g.player = real; }
+    try { out = runCommand(g, text); } catch (e) { out = 'Command failed: ' + e.message; } finally { g.player = real; g.cmdActor = null; }
     c.ch.send({ t: 'cmdout', lines: [].concat(out || []) });
     g.chat.add(`[${c.name}: ${text}]`);
     this.sendEnv();
+  }
+
+  /** A guest as the building tools see them (ui/buildCommands.js): position, look direction, creative or op, and a way to answer later. */
+  buildActor(c) {
+    const t = c.rp.target, social = this.social, host = this.name;
+    return {
+      key: 'n:' + String(c.name).toLowerCase(), name: c.name, host: false,
+      get op() { return !!social && social.isOp(c.name, host); },
+      get creative() { return c.gm ? c.gm === 'creative' : !!t.creative; },
+      pos: () => ({ x: t.x, y: t.y, z: t.z }),
+      look: () => t.lookDir(),
+      say: (lines) => { try { c.ch.send({ t: 'cmdout', lines: [].concat(lines) }); } catch { /* they left */ } },
+      toast: () => {},
+    };
   }
 
   setOptions(m) { super.setOptions(m); this.sendEnv(); }

@@ -10,6 +10,7 @@ import { liveStands, loadStands } from '../entities/armorStand.js';
 import { saveState as saveCaravanState, loadState as loadCaravanState } from '../mobs/peddler.js';
 import { saveStats, loadStats } from '../player/stats.js';
 import { cleanReputation } from '../mobs/reputation.js';
+import { cleanBlueprints, MAX_VOLUME_CAP } from './buildTools.js';
 import { SocialState } from '../net/social.js';
 import { CURRENT_VERSION, cleanThumbnail } from './saveFormat.js';
 import { writeWorld } from './worldManager.js';
@@ -69,6 +70,7 @@ export function playerSaveData(p) {
     air: p.air, spawn: p.spawn, bed: p.bed || null, slots: p.inventory.slots, armor: p.inventory.armor, xp: p.xp, gamemode: p.gamemode, flying: p.flying, selected: p.inventory.selected, enchSeed: p.enchSeed,
     effects: p.effects,
     reputation: cleanReputation(p.reputation), // what villages think of the player (mobs/reputation.js)
+    blueprints: cleanBlueprints(p.blueprints), // named building blueprints (world/buildTools.js, ui/buildCommands.js)
   };
 }
 
@@ -88,7 +90,7 @@ export async function saveGame(game) {
     name: game.worldName || `World ${game.saveSlot || 1}`,
     seed: game.seed,
     time: game.time,
-    gameRules: { doDaylightCycle: game.settings.daylightCycle !== false, doSeasons: game.settings.seasons !== false, doHostileSpawning: game.settings.hostileMobs !== false, fireworksHurtPlayers: game.settings.fireworksHurtPlayers === true, doWorldEvents: game.settings.worldEvents !== false, difficulty: game.difficulty },
+    gameRules: { doDaylightCycle: game.settings.daylightCycle !== false, doSeasons: game.settings.seasons !== false, doHostileSpawning: game.settings.hostileMobs !== false, fireworksHurtPlayers: game.settings.fireworksHurtPlayers === true, maxBuildVolume: Number.isFinite(game.settings.maxBuildVolume) ? game.settings.maxBuildVolume : undefined, doWorldEvents: game.settings.worldEvents !== false, difficulty: game.difficulty },
     savedAt: Date.now(),
     // what the world list shows and the options chosen when the world was made (world/saveFormat.js)
     meta: { createdAt: game.createdAt || Date.now(), worldType: game.worldType || 'normal', allowCheats: game.allowCheats !== false, seedText: game.seedText || null, thumbnail: cleanThumbnail(game.thumbnail) },
@@ -121,6 +123,7 @@ export async function saveGame(game) {
     // which dimension the player (and the fields above) are in, plus the other dimensions' state
     ...(game.dims ? game.dims.saveData(packChunk) : {}),
     netPlayers: game.netPlayers || {}, // multiplayer guests' state by name
+    guestBlueprints: Object.fromEntries(Object.entries(game.guestBlueprints || {}).map(([k, v]) => [k, cleanBlueprints(v)]).filter(([, v]) => Object.keys(v).length)), // guests' building blueprints by name
     social: game.social ? game.social.save() : undefined, // multiplayer teams, the op list, bans and who is who (net/social.js)
   };
   await writeWorld(game.saveSlot || 1, data); // one transaction: the world, its list summary and (every so often) a backup
@@ -146,9 +149,14 @@ export function applySave(game, data) {
     if (typeof data.gameRules.doWorldEvents === 'boolean') game.settings.worldEvents = data.gameRules.doWorldEvents;
     if (typeof data.gameRules.doHostileSpawning === 'boolean') game.settings.hostileMobs = data.gameRules.doHostileSpawning;
     game.settings.fireworksHurtPlayers = data.gameRules.fireworksHurtPlayers === true; // (off unless the world turned it on)
+    // the most blocks one building command may touch (the default when the world never set it)
+    if (Number.isInteger(data.gameRules.maxBuildVolume) && data.gameRules.maxBuildVolume >= 1) game.settings.maxBuildVolume = Math.min(data.gameRules.maxBuildVolume, MAX_VOLUME_CAP);
+    else delete game.settings.maxBuildVolume;
     if (['peaceful', 'easy', 'normal', 'hard'].includes(data.gameRules.difficulty)) game.settings.difficulty = data.gameRules.difficulty;
   }
   game.netPlayers = data.netPlayers || {};
+  game.guestBlueprints = {};
+  for (const [k, v] of Object.entries(data.guestBlueprints || {})) game.guestBlueprints[k] = cleanBlueprints(v);
   if (data.social) game.social = SocialState.from(data.social);
   game.weather.load(data.weather);
   if (game.seasons) { game.seasons.load(data.seasons); game.seasons.enabled = game.settings.seasons !== false; }
@@ -195,6 +203,7 @@ export function applyPlayerSave(game, d) {
   if (Number.isInteger(d.enchSeed)) p.enchSeed = d.enchSeed;
   p.effects = cleanEffects(d.effects);
   p.reputation = cleanReputation(d.reputation); // (older saves have none)
+  p.blueprints = cleanBlueprints(d.blueprints); // (older saves have none)
   if (d.gamemode) p.setGamemode(d.gamemode);
   p.flying = !!d.flying && p.creative;
   p.inventory.selected = d.selected;

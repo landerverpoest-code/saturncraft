@@ -96,6 +96,7 @@ describe('crafting graph', () => {
     CROSSBOW_LOADED: 'loading a Crossbow', EYE_OF_THE_VOID: 'Void Pearl and Ember Powder (world/dimensions/register.js)',
     TARNLING_BUCKET: 'scooping a Tarnling with an empty Bucket (mobs/fauna.js)',
     SLAGSTEEL_INGOT: 'smelting Slag Chunks (world/dimensions/register.js)', SLAGSTEEL_PICKAXE: 'Slagsteel Ingots (world/dimensions/register.js)', DIRGESTEP_BOOTS: 'Dirge Crystals (world/dimensions/register.js)',
+    SURVEYOR_WAND: '/wand or the creative inventory (ui/buildCommands.js)',
   };
   const extra = new Set([
     ...ITEMS.filter((it) => it && (it.potion || it.splash || it.lingering)).map((i) => i.id), // brewed (world/brewing.js)
