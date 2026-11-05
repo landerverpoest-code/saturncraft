@@ -227,13 +227,27 @@ export function packEntity(e, riderOf = () => -1, playerIdOf = () => -1) {
     case 'item': return ['i', e.id, r2(e.x), r2(e.y), r2(e.z), e.stack.id, e.stack.count, e.stack.damage | 0, e.pickupDelay > 0 ? 1 : 0, e.stack.ench ? cleanEnch(e.stack.ench) : 0, e.stack.contents || 0, Number.isInteger(e.stack.map) ? [e.stack.map, e.stack.mapX | 0, e.stack.mapZ | 0] : 0, e.stack.sherds || 0, e.stack.pages || e.stack.title ? { p: e.stack.pages, t: e.stack.title, a: e.stack.author, g: e.stack.gen || undefined } : 0, e.stack.fw || 0];
     case 'xp': return ['x', e.id, r2(e.x), r2(e.y), r2(e.z), e.value];
     case 'arrow': return ['a', e.id, r2(e.x), r2(e.y), r2(e.z), r2(e.vx), r2(e.vy), r2(e.vz), e.stuck ? 1 : 0, e.pickup ? 1 : 0, e.thrown === 'spear' ? 4 : e.thrown === 'potion' ? 3 : e.thrown === 'egg' ? 2 : e.thrown ? 1 : 0, e.potion | 0];
-    case 'boat': return ['b', e.id, r2(e.x), r2(e.y), r2(e.z), r2(e.yaw), e.hitTime | 0, riderOf(e), e.cart ? 1 : 0, r2(e.pitch || 0)];
+    case 'boat': return ['b', e.id, r2(e.x), r2(e.y), r2(e.z), r2(e.yaw), e.hitTime | 0, riderOf(e), boatFlags(e), r2(e.pitch || 0), passengerOf(e)];
     case 'falling': return ['f', e.id, r2(e.x), r2(e.y), r2(e.z), e.blockId];
     case 'stand': return ['s', e.id, r2(e.x), r2(e.y), r2(e.z), r2(e.yaw), e.hitTime | 0, e.armor.map((st) => (st ? st.id : 0)), e.hand ? e.hand.id : 0];
     // a lingering elixir's (or the Wyrm's breath) cloud: radius to a tenth so it is resent only every few ticks
     case 'cloud': return ['c', e.id, r2(e.x), r2(e.y), r2(e.z), Math.round(e.radius * 10) / 10, e.potion | 0, e.breath ? 1 : 0];
     default: return null;
   }
+}
+/**
+ * A boat's or cart's flags in one number: bit 0 cart, bits 1-2 variant (1 chest, 2 furnace), bit 3 furnace alight (entities/entities.js).
+ * Index 10 of the snapshot is its second seat: a guest's player id, 0 (the host) or -2 (a creature aboard) or -1 (empty).
+ */
+export const BOAT_VARIANTS = [null, 'chest', 'furnace'];
+export function boatFlags(e) {
+  const v = Math.max(0, BOAT_VARIANTS.indexOf(e.variant || null));
+  return (e.cart ? 1 : 0) | (v << 1) | (e.furnace && e.fuel > 0 ? 8 : 0);
+}
+export function passengerOf(e) {
+  if (e.rider2) return 0;
+  if (e.remoteRider2 != null) return e.remoteRider2;
+  return e.mobPassenger ? -2 : -1;
 }
 const ENTITY_KINDS = { m: 'mob', i: 'item', x: 'xp', a: 'arrow', b: 'boat', f: 'falling', s: 'stand', c: 'cloud' };
 export function unpackEntity(a) {
@@ -245,7 +259,10 @@ export function unpackEntity(a) {
   if (k === 'i') Object.assign(o, { stack: withExtras({ id: a[5] | 0, count: a[6] | 0, damage: a[7] | 0 }, { ench: a[9], contents: a[10], sherds: a[12], fw: a[14], ...(a[13] && typeof a[13] === 'object' ? { pages: a[13].p, title: a[13].t, author: a[13].a, gen: a[13].g } : {}), ...(Array.isArray(a[11]) ? { map: a[11][0] | 0, mapX: a[11][1], mapZ: a[11][2] } : {}) }), delayed: !!a[8] });
   else if (k === 'x') o.value = a[5] | 0;
   else if (k === 'a') Object.assign(o, { vx: a[5], vy: a[6], vz: a[7], stuck: !!a[8], pickup: !!a[9], thrown: a[10] === 4 ? 'spear' : a[10] === 3 ? 'potion' : a[10] === 2 ? 'egg' : a[10] === 1 ? 'snowball' : null, potion: a[11] | 0 });
-  else if (k === 'b') Object.assign(o, { yaw: a[5], hitTime: a[6] | 0, rider: a[7], cart: !!a[8], pitch: +a[9] || 0 });
+  else if (k === 'b') {
+    const f = a[8] | 0;
+    Object.assign(o, { yaw: a[5], hitTime: a[6] | 0, rider: a[7], cart: !!(f & 1), variant: BOAT_VARIANTS[(f >> 1) & 3] || null, lit: !!(f & 8), pitch: +a[9] || 0, passenger: Number.isInteger(a[10]) ? a[10] : -1 });
+  }
   else if (k === 'f') o.blockId = a[5] | 0;
   else if (k === 'c') Object.assign(o, { radius: Math.max(0, Math.min(16, +a[5] || 0)), potion: a[6] | 0, breath: !!a[7] });
   else if (k === 's') {

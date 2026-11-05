@@ -30,6 +30,7 @@ import * as THREE from 'three';
 
 import { conversionStep, newConversion } from './hostileVariants.js'; // registers the Hexwife and the Shambler / Rattler variants
 import { outOfMeleeReach } from './duneStrider.js'; // registers the Dune Strider
+import { mountReady, rideMove, rideJump, mountTick, mountFollowStep, riderFallDamage } from './mounts.js'; // rules of Gallopers, Thistlehorns and Dune Striders
 import './fauna.js'; // registers the Thistlehorn, Dustmole, Gloamlynx and Tarnling
 import { moraleAI, soundAlarm } from './morale.js';
 import './peddler.js'; // registers the Roving Peddler and its Packhorns
@@ -583,7 +584,7 @@ export class Mob {
   tick(g) {
     this._game = g;
     const b = this.body;
-    if (!this.mount) this.prev = [b.x, b.y, b.z]; // (a rider is placed by its mount)
+    if (!this.mount && !this.boatSeat) this.prev = [b.x, b.y, b.z]; // (a rider is placed by its mount, a passenger of a boat by the boat)
     this.prevYaw = this.yaw;
     this.prevFuse = this.fuse;
     if (this.deathTime > 0) {
@@ -629,6 +630,11 @@ export class Mob {
     // a Blight Rose withers whatever brushes it (the Void Wyrm and Ashwraiths fly too high to care)
     if (b.inBlight && this.deathTime === 0 && (!this.effects.wither || this.effects.wither.ticks < 10)) addEffect(this.effects, 'wither', 40, 0);
     this.move = null;
+    if (this.boatSeat) {
+      // sitting in a boat (entities/entities.js seats it): it goes where the boat goes
+      if (this.boatSeat.dead || this.boatSeat.mobPassenger !== this) this.boatSeat = null;
+      else { this.path = null; b.vx = b.vy = b.vz = 0; b.fallDistance = 0; this.limbAmount *= 0.6; this.environment(g); return; }
+    }
     if (this.rider && this.def.rideable) this.riddenAI(g);
     else if (this.passenger) {
       // a jockey's mount goes where its rider wants
@@ -636,6 +642,7 @@ export class Mob {
       this.yaw = this.passenger.yaw;
       this.move = mv ? { forward: mv.forward, strafe: mv.strafe || 0, jump: mv.jump || (b.horizontalCollision && b.onGround), mod: mv.mod } : null;
     } else this.ai(g, p, pdist);
+    if (this.def.mount) mountTick(this, g); // stamina of a ridden mount, rest and healing of a free one
     if (this.mount) {
       // riding: the AI's walking goes to the mount; the rider itself sits still on top of it
       this.jockeyMove = this.move; this.move = null;
@@ -752,6 +759,9 @@ export class Mob {
       if (b.fallDistance > 0 && !this.def.noFallDamage) {
         const dmg = isStalagmiteTip(w, Math.floor(b.x), Math.floor(b.y - 0.01), Math.floor(b.z)) ? stalagmiteFallDamage(b.fallDistance) : fallDamage(b.fallDistance);
         if (dmg > 0) this.hurt(dmg, 'fall');
+        // whoever rides it feels the landing too
+        const rd = this.rider && !this.rider.dead ? riderFallDamage(b.fallDistance, this.def) : 0;
+        if (rd > 0 && this.rider.hurt) this.rider.hurt(rd, 'fall');
       }
       b.fallDistance = 0;
     }
@@ -800,6 +810,11 @@ export class Mob {
   // ---------------------------------------------------------------------------
   ai(g, p, pdist) {
     if (this.stunTicks > 0) { this.stunTicks--; this.move = null; this.path = null; return; } // staggered by a parry (player/shield.js)
+    if (this.def.mount && this.tamed && !this.rider) {
+      // a tamed mount told to stay (sneak + use) holds its place; otherwise it trots after its owner (mobs/mounts.js)
+      if (this.sitting) { this.move = null; this.path = null; this.wander = null; if (this.age < 0) this.age++; return; }
+      if (mountFollowStep(this, g, p, pdist)) return;
+    }
     if (this.def.ownAI) return this.def.ownAI(this, g, p, pdist); // Dune Striders, Hoverlings
     if (this.def.category === CATEGORY.MONSTER && moraleAI(this, g, p, pdist)) return; // running from a losing fight, answering an alarm (mobs/morale.js)
     if (this.def.villager) return this.settlerAI(g, p, pdist);
@@ -1543,11 +1558,10 @@ export class Mob {
       }
       return;
     }
-    if (!this.saddled || !input) { this.move = null; return; }
+    if (!mountReady(this) || !input) { this.move = null; return; }
     this.yaw = this.rider.yaw;
-    const sp = this.speed() * (input.sprint ? 1.25 : 1);
-    this.move = { forward: input.forward > 0 ? sp : input.forward < 0 ? -sp * 0.25 : 0, strafe: (input.strafe || 0) * sp * 0.5, jump: false, mod: 1 };
-    if (input.jump && b.onGround) { b.vy = this.jumpPower; this.jumped = true; }
+    this.move = rideMove(this, input); // full input and a top speed of about 8 blocks/s (mobs/mounts.js); tired and hurt mounts are slower
+    if (input.jump && b.onGround) { b.vy = rideJump(this); this.jumped = true; }
     b.stepHeight = 1.1;
   }
 

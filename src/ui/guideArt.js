@@ -21,7 +21,7 @@ export function modelRects(spec) {
   const axis = span(0) > span(2) ? 0 : 2;
   const boxes = parts.map(([, size, pivot, offset, color, opts = {}]) => {
     const cz = pivot[axis] + offset[axis], cy = pivot[1] + offset[1];
-    return { x0: cz - size[axis] / 2, x1: cz + size[axis] / 2, y0: cy - size[1] / 2, y1: cy + size[1] / 2, color, alpha: opts.alpha || 1 };
+    return { x0: cz - size[axis] / 2, x1: cz + size[axis] / 2, y0: cy - size[1] / 2, y1: cy + size[1] / 2, color, alpha: opts.gear ? 0 : opts.alpha || 1 }; // (tack and armour parts only show on a wearer: invisible in the picture)
   });
   const minX = Math.min(...boxes.map((b) => b.x0)), maxX = Math.max(...boxes.map((b) => b.x1));
   const minY = Math.min(...boxes.map((b) => b.y0)), maxY = Math.max(...boxes.map((b) => b.y1));

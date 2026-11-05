@@ -20,6 +20,7 @@ import { MODELS, FACES } from './models.js';
 import { I, heldLightLevel } from '../world/items.js';
 import { B, SOLID, isWaterish } from '../world/blocks.js';
 import { BIOMES } from '../world/biomes.js';
+import { mountGear, mountDeath, mountSave, mountLoad } from './mounts.js';
 
 // ---------------------------------------------------------------------------------------------
 // Numbers
@@ -199,6 +200,11 @@ function thistleRender(m, model) {
   pa.neck.rotation.x = (m.headPitch || 0) * 0.55;
   for (const k of ['antlerL', 'antlerR', 'tineL', 'tineR', 'earL', 'earR', 'snout']) pa[k].rotation.x = pa.head.rotation.x;
   pa.antlerL.visible = pa.antlerR.visible = pa.tineL.visible = pa.tineR.visible = m.age >= 0; // fawns have none yet
+  // tack (mobs/mounts.js): the harness is in the mount's gear (so guests see it through the snapshot's equipment ids), the saddle is a flag
+  const harnessed = !!mountGear(m).harness && m.age >= 0;
+  pa.harness.visible = pa.chestStrap.visible = pa.headstall.visible = harnessed;
+  pa.seat.visible = harnessed && !!m.saddled;
+  pa.headstall.rotation.x = pa.head.rotation.x;
 }
 
 MODELS.thistlehorn = {
@@ -214,6 +220,11 @@ MODELS.thistlehorn = {
     ['antlerR', [1, 7, 1], [0, 27, -7], [-1.6, 6, -1.2], '#d8c8a0'],
     ['tineL', [1, 1, 4], [0, 27, -7], [1.6, 8, -3], '#d8c8a0'],
     ['tineR', [1, 1, 4], [0, 27, -7], [-1.6, 8, -3], '#d8c8a0'],
+    // tack, shown by thistleRender: a leather harness round the body and chest, a headstall, and the saddle on top (hidden from the Field Guide picture)
+    ['harness', [8.8, 9.6, 1.6], [0, 17, 1], [0, 0.1, -2.6], '#b0763a', { gear: true }],
+    ['chestStrap', [8.6, 1.6, 4.6], [0, 21, -5], [0, 0, 0], '#b0763a', { gear: true }],
+    ['headstall', [5.4, 5.4, 1.4], [0, 27, -7], [0, 0, -2.4], '#c08a48', { gear: true }],
+    ['seat', [8.8, 2, 6.4], [0, 17, 1], [0, 5.4, 1.4], '#6a3a1e', { gear: true }],
     ['legFL', [3, 13, 3], [2.4, 13, -5], [0, -6.5, 0], '#7a6040', { anim: 'legA' }],
     ['legFR', [3, 13, 3], [-2.4, 13, -5], [0, -6.5, 0], '#7a6040', { anim: 'legB' }],
     ['legBL', [3, 13, 3], [2.4, 13, 7], [0, -6.5, 0], '#7a6040', { anim: 'legB' }],
@@ -491,12 +502,15 @@ FACES.tarnling = (c) => {
 // definitions
 
 export const THISTLEHORN = {
-  name: 'Thistlehorn', role: 'deer', category: CATEGORY.CREATURE, sound: 'thistle',
-  health: 14, speed: 0.22, width: 0.9, height: 1.6, panicSpeed: 1.7,
+  name: 'Thistlehorn', role: 'deer', category: CATEGORY.CREATURE, sound: 'thistle', rideable: true,
+  health: 14, tamedHealth: 20, speed: 0.22, width: 0.9, height: 1.6, panicSpeed: 1.7,
   drops: [{ id: I.LEATHER, min: 0, max: 2 }, { id: I.RAW_VENISON, min: 1, max: 3, cooked: I.COOKED_VENISON }],
-  food: [I.BEETROOT, I.SWEET_BERRIES],
+  food: [I.BEETROOT, I.SWEET_BERRIES], tameFood: [I.BEETROOT, I.SWEET_BERRIES],
+  // ridable once won over with its food (a chance each time), fitted with a Thistle Harness and a Saddle; it follows its owner, tires on
+  // long rides and is fed back to strength (mobs/mounts.js)
+  mount: { tack: true }, onDeath: mountDeath, saveExtra: mountSave, loadExtra: mountLoad,
   ownAI: thistleAI, onHurt: thistleHurt, customRender: thistleRender,
-  onSpawn: (m) => { m.woolColor = Math.floor(Math.random() * THISTLE_COATS.length); },
+  onSpawn: (m) => { m.woolColor = Math.floor(Math.random() * THISTLE_COATS.length); m.saddled = false; m.temper = 0; m.fatigue = 0; m.jumpPower = 0.46 + Math.random() * 0.14; m.seatY = 0.8; },
 };
 export const DUSTMOLE = {
   name: 'Dustmole', role: 'meerkat', category: CATEGORY.CREATURE, sound: 'burrow', burrower: true,

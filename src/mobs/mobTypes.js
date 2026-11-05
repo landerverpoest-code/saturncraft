@@ -2,6 +2,7 @@
 // each one stands in for (listed in `role`), under Saturncraft's own names.
 import { I } from '../world/items.js';
 import { B } from '../world/blocks.js';
+import { mountDeath, mountSave, mountLoad, mountGearRender } from './mounts.js';
 
 export const CATEGORY = { CREATURE: 'creature', MONSTER: 'monster', AMBIENT: 'ambient' };
 
@@ -114,6 +115,8 @@ export const MOBS = {
     name: 'Galloper', role: 'horse', category: CATEGORY.CREATURE, rideable: true, sound: 'neigh',
     health: 22, speed: 0.225, width: 1.4, height: 1.6, panicSpeed: 1.4,
     drops: [{ id: I.LEATHER, min: 0, max: 2 }], food: [I.WHEAT, I.APPLE],
+    // wears Horse Armour in three tiers once tame, tires on long rides and is fed back to strength; follows its owner (mobs/mounts.js)
+    mount: { armor: true }, onDeath: mountDeath, saveExtra: mountSave, loadExtra: mountLoad, customRender: mountGearRender,
   },
   inkling: {
     name: 'Inkling', role: 'squid', category: CATEGORY.CREATURE, aquatic: true, sound: 'squish',

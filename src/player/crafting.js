@@ -404,6 +404,16 @@ shaped(['SSS', 'SSS', 'SSS'], { S: I.SLIMEBALL }, B.SLIME_BLOCK, 1);
 shapeless([B.SLIME_BLOCK], I.SLIMEBALL, 9);
 shaped(['HH', 'HH'], { H: I.HONEYCOMB }, B.HONEY_BLOCK, 1);
 
+// Mounts and vehicles (mobs/mounts.js): a Chest Boat, carts that carry a chest or burn fuel, three tiers of Horse Armour for Gallopers and
+// the Thistle Harness that makes a tamed Thistlehorn ridable with a Saddle
+shapeless([B.CHEST, I.OAK_BOAT], I.OAK_CHEST_BOAT, 1);
+shapeless([B.CHEST, I.MINECART], I.MINECART_CHEST, 1);
+shapeless([B.FURNACE, I.MINECART], I.MINECART_FURNACE, 1);
+shaped(['  X', 'XLX', 'XXX'], { X: I.IRON_INGOT, L: I.LEATHER }, I.IRON_HORSE_ARMOR, 1);
+shaped(['  X', 'XLX', 'XXX'], { X: I.GOLD_INGOT, L: I.LEATHER }, I.GOLD_HORSE_ARMOR, 1);
+shaped(['  X', 'XLX', 'XXX'], { X: I.DIAMOND, L: I.LEATHER }, I.DIAMOND_HORSE_ARMOR, 1);
+shaped(['LSL', 'LGL', 'L L'], { L: I.LEATHER, S: I.STRING, G: I.GOLD_NUGGET }, I.THISTLE_HARNESS, 1);
+
 // Smelting: input -> output; 200 ticks per item (10 s)
 export const SMELT_TIME = 200;
 const ORE_INPUTS = new Set([I.RAW_IRON, I.RAW_GOLD, I.RAW_COPPER, B.IRON_ORE, B.GOLD_ORE, B.COPPER_ORE, B.DEEP_COPPER_ORE, B.DEEP_IRON_ORE, B.DEEP_GOLD_ORE]);

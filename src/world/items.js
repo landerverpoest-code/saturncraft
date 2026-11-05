@@ -451,3 +451,37 @@ const WAND_ICON = [
   '......ss........', '.....ss.........', '....ss..........', '...ss...........', '..ss............', '.ss.............', '................', '................',
 ];
 item('surveyor_wand', 'Surveyor Wand', { stack: 1, wand: true, iconStyle: [WAND_ICON, { s: '#8a6a3c', h: '#3fd0e0', H: '#c8f8ff' }] });
+
+// Mounts and vehicles round (mobs/mounts.js, entities/entities.js), appended so no item id shifts:
+// a Chest Boat (a second storage seat for cargo), a Minecart with Chest (storage, pulled along) and a Minecart with Furnace
+// (burns fuel and pushes carts ahead of it), Horse Armour in three tiers for Gallopers (worn in a mount's armour slot, not by players)
+// and the Thistle Harness, the leather tack that makes a tamed Thistlehorn ridable (with a Saddle).
+const BOAT_ICON_CHEST = [
+  '................', '................', '................', '.....cccc.......', '....cCCCCc....w.', '....cCkkCc...ww.', '....cCCCCc..ww..', '.s..cccccc.ww..s',
+  '.ssssssssssssss.', '.sHHHHHHHHHHHHs.', '..shhhhhhhhhhs..', '..shhhhhhhhhhs..', '...ssssssssss...', '................', '................', '................',
+];
+const CART_ICON_CHEST = [
+  '................', '................', '.....cccccc.....', '....cCCCCCCc....', '....cCCkkCCc....', '....cCCCCCCc....', '.hhhhhhhhhhhhhh.', '.hHHHHHHHHHHHHh.',
+  '.hHhhhhhhhhhhHh.', '..hhhhhhhhhhhh..', '..hhhhhhhhhhhh..', '...ss......ss...', '..ssss....ssss..', '...ss......ss...', '................', '................',
+];
+const CART_ICON_FURNACE = [
+  '................', '................', '.....gggggg.....', '....gGGGGGGg....', '....gGkkkkGg....', '....gGkffkGg....', '.hhhhgggggghhhh.', '.hHHHHHHHHHHHHh.',
+  '.hHhhhhhhhhhhHh.', '..hhhhhhhhhhhh..', '..hhhhhhhhhhhh..', '...ss......ss...', '..ssss....ssss..', '...ss......ss...', '................', '................',
+];
+item('oak_chest_boat', 'Chest Boat', { stack: 1, boat: true, boatVariant: 'chest', iconStyle: [BOAT_ICON_CHEST, { h: '#9c7444', H: '#c09060', s: '#5a3d1e', w: '#7a5a32', c: '#6a4a24', C: '#a87a3c', k: '#2a2a2e' }] });
+item('minecart_chest', 'Minecart with Chest', { stack: 1, minecart: true, cartVariant: 'chest', iconStyle: [CART_ICON_CHEST, { h: '#8a8a90', H: '#b8b8c0', s: '#2a2a2e', c: '#6a4a24', C: '#a87a3c', k: '#2a2a2e' }] });
+item('minecart_furnace', 'Minecart with Furnace', { stack: 1, minecart: true, cartVariant: 'furnace', iconStyle: [CART_ICON_FURNACE, { h: '#8a8a90', H: '#b8b8c0', s: '#2a2a2e', g: '#6e6e72', G: '#8a8a8e', k: '#1c1c1e', f: '#f08a2a' }] });
+const HORSE_ARMOR_ICON = [
+  '................', '................', '....hh..........', '...hHHh.........', '..hHHhhhhhh.....', '..hHhhhhhhhhh...', '..hhhhhhhHHhhh..', '...hhhhhhhhhhhh.',
+  '....hhhhhhhhhh..', '....hs..hs.hs...', '....hs..hs.hs...', '................', '................', '................', '................', '................',
+];
+// Horse Armour: [key, name, defence points, toughness, tiring factor (heavier plate wears a mount out sooner), colours]
+export const HORSE_ARMOR = {};
+for (const [tier, name, defense, toughness, tiring, h, H, s] of [
+  ['iron', 'Iron', 5, 0, 1.15, '#cfcfd4', '#f0f0f4', '#7a7a80'],
+  ['gold', 'Gold', 7, 0, 1.1, '#f1cc3a', '#fff0a0', '#a8841e'],
+  ['diamond', 'Diamond', 11, 2, 1.3, '#5fe6dc', '#c8fff8', '#2a9a94'],
+]) {
+  HORSE_ARMOR[tier] = item(`${tier}_horse_armor`, `${name} Horse Armour`, { stack: 1, horseArmor: { tier, defense, toughness, tiring }, iconStyle: [HORSE_ARMOR_ICON, { h, H, s }] }).id;
+}
+item('thistle_harness', 'Thistle Harness', { stack: 1, harness: 'thistlehorn', iconStyle: ['saddle', { h: '#a8743c', H: '#c8965a', s: '#e8c860' }] });

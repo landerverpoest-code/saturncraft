@@ -17,6 +17,7 @@ import { splashPotion } from './splash.js';
 import { ArmorStand, STAND_WIDTH, STAND_HEIGHT } from './armorStand.js';
 import { tickSpear } from './tidespear.js';
 import { buildSpearModel, lightSpear } from '../render/spearModel.js';
+import { seatCountOf, pickSeat, boatSeatOffset, newCargo, cargoItems, riderFallDamage, safeDismountSpot, FURNACE_CART, furnaceWant, furnaceSpeed, cartPush } from '../mobs/mounts.js';
 
 let nextEntityId = 1;
 export const ENTITY_RENDER_DIST = 64;
@@ -148,22 +149,65 @@ export class XPOrb {
   }
 }
 
-// Boat: floats on water, steered by its rider (W/S thrust, A/D turn).
+// Boat: floats on water, steered by its rider (W/S thrust, A/D turn). A boat seats two (the driver in front, a passenger behind: a second
+// player, or a calm creature led aboard); a Chest Boat has one seat and a 27-slot chest at the back. Variants (`variant`: 'chest') and their
+// seats live in mobs/mounts.js.
 export class Boat {
-  constructor(x, y, z, yaw = 0) {
+  constructor(x, y, z, yaw = 0, variant = null) {
     this.id = nextEntityId++;
     this.kind = 'boat';
     this.body = new Body(1.375, 0.5625);
     this.body.stepHeight = 0;
     this.body.setPos(x, y, z);
     this.yaw = yaw; this.prevYaw = yaw;
-    this.rider = null;
+    this.variant = variant === 'chest' || variant === 'furnace' ? variant : null;
+    this.rider = null;                  // the local player in seat 0 (the driver)
+    this.rider2 = null;                 // the local player in seat 1
+    this.remoteRider = null; this.remoteRider2 = null; // guests (ids) in seats 0 / 1 (multiplayer)
+    this.mobPassenger = null;           // a creature led aboard (seat 1)
+    this.cargo = this.variant === 'chest' ? newCargo() : null;
+    this.dropId = this.variant === 'chest' ? I.OAK_CHEST_BOAT : I.OAK_BOAT;
     this.hits = 0; this.hitTime = 0;
     this.dead = false;
     this.prev = [x, y, z];
   }
   get x() { return this.body.x; } get y() { return this.body.y; } get z() { return this.body.z; }
   get width() { return 1.375; } get height() { return 0.5625; }
+  get hasCargo() { return !!this.cargo; }
+  get furnace() { return this.variant === 'furnace'; }
+  get seatCount() { return seatCountOf(!!this.cart, this.variant); }
+  /** Is seat i taken (by us, a guest, or a creature)? On a guest's copy `seatSeen` carries what the host's snapshot said. */
+  seatTaken(i) {
+    if (i === 0) return !!(this.rider || this.remoteRider != null);
+    return !!(this.rider2 || this.remoteRider2 != null || this.mobPassenger || this.mobSeen);
+  }
+  /** The seat a new rider would get (`want` first if free), or -1. */
+  freeSeat(want = -1) { return pickSeat(this.seatCount, [this.seatTaken(0), this.seatTaken(1)], want); }
+  /** Is a player (local or a guest) in seat 0 or 1? */
+  hasPlayers() { return !!(this.rider || this.rider2 || this.remoteRider != null || this.remoteRider2 != null); }
+
+  /** A creature goes aboard as the second passenger (it sits still until let off or the boat breaks). */
+  boardMob(m) {
+    this.mobPassenger = m; m.boatSeat = this;
+    m.path = null; m.wander = null; m.target = null; m.persistent = true;
+    this.seatMob(m);
+  }
+  seatMob(m) {
+    const [dx, dz] = boatSeatOffset(this.yaw, 1), b = m.body;
+    m.prev = [b.x, b.y, b.z];
+    b.setPos(this.x + dx, this.y + 0.1, this.z + dz);
+    b.vx = b.vy = b.vz = 0; b.fallDistance = 0;
+    m.yaw = this.yaw;
+  }
+  /** Let the creature off on the nearest free ground. */
+  unloadMob(game) {
+    const m = this.mobPassenger;
+    if (!m) return;
+    this.mobPassenger = null; m.boatSeat = null;
+    const spot = safeDismountSpot(game.world, this.x, this.y, this.z, 2);
+    m.body.setPos(spot.x, spot.y, spot.z);
+    m.prev = [spot.x, spot.y, spot.z];
+  }
 
   /** Height of the water surface under the boat, or null on land. */
   waterLevel(world) {
@@ -179,10 +223,11 @@ export class Boat {
     this.prev = [b.x, b.y, b.z];
     this.prevYaw = this.yaw;
     if (this.hitTime > 0 && --this.hitTime === 0) this.hits = 0;
+    let thrust = 0;
     if (this.rider && input) {
       // reference speeds: 0.04 forward, 0.005 backward, about 1 degree of turn per tick while moving
       this.yaw -= (input.strafe || 0) * 0.05;
-      const thrust = input.forward > 0 ? 0.04 : input.forward < 0 ? -0.005 : 0;
+      thrust = input.forward > 0 ? 0.04 : input.forward < 0 ? -0.005 : 0;
       b.vx += -Math.sin(this.yaw) * thrust; b.vz += -Math.cos(this.yaw) * thrust;
     }
     const level = this.waterLevel(w);
@@ -190,6 +235,8 @@ export class Boat {
       b.vy += (level - 0.12 - b.y) * 0.25; // bob up to the surface
       b.vy *= 0.65;
       b.vx *= 0.9; b.vz *= 0.9;
+      b.fallDistance = 0;
+      if (thrust > 0 && game.ticks % 14 === 0 && game.audio) game.audio.play('paddle', [b.x, b.y, b.z], 0.45);
     } else {
       b.vy -= 0.04;
       const slip = b.onGround ? b.groundSlipperiness(w) : 0.98;
@@ -197,6 +244,16 @@ export class Boat {
       b.vx *= f; b.vz *= f;
     }
     b.move(w, b.vx, b.vy, b.vz);
+    // a boat that comes down on land shakes whoever sits in it (as the mount under a rider does)
+    if (b.onGround && b.fallDistance > 0) {
+      const dmg = level === null ? riderFallDamage(b.fallDistance) : 0;
+      if (dmg > 0) for (const r of [this.rider, this.rider2]) if (r && !r.dead && r.hurt) r.hurt(dmg, 'fall');
+      b.fallDistance = 0;
+    }
+    if (this.mobPassenger) {
+      const m = this.mobPassenger;
+      if (m.dead || m.removed || m.deathTime > 0 || m.boatSeat !== this) { if (m.boatSeat === this) m.boatSeat = null; this.mobPassenger = null; } else this.seatMob(m);
+    }
     if (b.y < MIN_Y - 64) this.dead = true;
   }
 }
@@ -208,17 +265,29 @@ export class Boat {
  * empty, top speed 0.4 blocks per tick; off the rails they slide to a stop.
  */
 export class Minecart extends Boat {
-  constructor(x, y, z, yaw = 0) {
-    super(x, y, z, yaw);
+  constructor(x, y, z, yaw = 0, variant = null) {
+    super(x, y, z, yaw, variant === 'furnace' ? 'furnace' : variant === 'chest' ? 'chest' : null);
     this.cart = true;
     this.body = new Body(0.98, 0.7);
     this.body.stepHeight = 0;
     this.body.setPos(x, y, z);
     this.seatY = 0.1;
-    this.dropId = I.MINECART;
+    this.dropId = this.variant === 'chest' ? I.MINECART_CHEST : this.variant === 'furnace' ? I.MINECART_FURNACE : I.MINECART;
     this.pitch = 0; this.prevPitch = 0;
+    this.fuel = 0; this.heading = [0, 0]; // a Minecart with Furnace: ticks of fuel left and the way it was pushed off
   }
   get width() { return 0.98; } get height() { return 0.7; }
+  /** Is the furnace alight? (Guests see it from the snapshot: `fuel` is 1 there.) */
+  get lit() { return this.fuel > 0; }
+  /** Stoke the furnace with `ticks` of fuel; it pushes off the way `yaw` looks. False when it is full. */
+  addFuel(ticks, yaw) {
+    if (!this.furnace || this.fuel >= FURNACE_CART.MAX_FUEL) return false;
+    this.fuel = Math.min(FURNACE_CART.MAX_FUEL, this.fuel + Math.max(0, ticks));
+    this.heading = [-Math.sin(yaw), -Math.cos(yaw)];
+    return true;
+  }
+  /** Guest copies: the fire's smoke, drawn from the lit flag of the snapshot. */
+  proxyTick(game) { if (this.fuel > 0 && game.ticks % 5 === 0 && game.particles) game.particles.smoke(this.x, this.y + 0.95, this.z, 1, 0.15); }
 
   railAt(w, x, y, z) {
     for (const dy of [0, -1, 1]) if (isRail(w.getBlock(x, y + dy, z))) return y + dy;
@@ -255,6 +324,12 @@ export class Minecart extends Boat {
     }
     s *= this.rider ? 0.997 : 0.96;
     s = Math.max(-0.4, Math.min(0.4, s));
+    // a Minecart with Furnace pulls itself along while the fire burns (mobs/mounts.js): it pushes off the way it was fuelled and keeps going that way
+    if (this.furnace && this.fuel > 0) {
+      this.fuel--;
+      s = furnaceSpeed(s, this.fuel, furnaceWant(s, this.heading[0] * dx + this.heading[1] * dz));
+      if (game.ticks % 5 === 0 && game.particles) game.particles.smoke(b.x, b.y + 0.95, b.z, 1, 0.15);
+    }
     // a Powered Rail speeds the cart up while it is on and holds it back while it is off (world/automation.js)
     if (railId === B.POWERED_RAIL) {
       const wall = (ex, ez) => !!SOLID[w.getBlock(bx + ex, ry, bz + ez)] || (!!up && up[0] === ex && up[1] === ez && !!SOLID[w.getBlock(bx + ex, ry + 1, bz + ez)]);
@@ -284,6 +359,21 @@ export class Minecart extends Boat {
     }
     this.pitch = up ? Math.atan2(1, 1) * Math.sign(-(up[0] * Math.sin(this.yaw) + up[1] * Math.cos(this.yaw))) : 0;
     if (Math.abs(s) > 0.1 && game.ticks % 6 === 0) game.audio.play('rail', [nx, ny, nz], Math.min(1, Math.abs(s) * 2.5));
+    if (this.furnace && Math.abs(s) > 0.02) this.pushCarts(game);
+  }
+
+  /** A burning furnace cart shoves the carts right ahead of it along at its own speed. */
+  pushCarts(game) {
+    const b = this.body, sv = Math.hypot(b.vx, b.vz);
+    if (sv < FURNACE_CART.MIN_PUSH) return;
+    const ux = b.vx / sv, uz = b.vz / sv;
+    for (const e of game.entities.list) {
+      if (e === this || e.kind !== 'boat' || !e.cart || e.dead || e.netProxy) continue;
+      const rx = e.x - b.x, rz = e.z - b.z, ahead = rx * ux + rz * uz, side = Math.abs(rx * uz - rz * ux);
+      if (ahead <= 0 || ahead > FURNACE_CART.PUSH_RANGE || side > 0.8 || Math.abs(e.y - b.y) > 1) continue;
+      const push = cartPush(b.vx, b.vz, e.body);
+      if (push) { e.body.vx += push[0]; e.body.vz += push[1]; }
+    }
   }
 }
 
@@ -447,6 +537,18 @@ export class Arrow {
 
 const tmpBox = new THREE.Box3();
 
+/** A chest or a furnace box on a boat or cart: textured like the blocks, its front towards -z. The materials join the model's (`userData.mats`) so they are lit and freed with it. */
+function addCargoBox(g, variant, w, h, d, x, y, z) {
+  const tex = (n) => new THREE.MeshLambertMaterial({ map: blockFaceTexture(n) });
+  const side = tex(variant === 'chest' ? 'chest_side' : 'furnace_side'), top = tex(variant === 'chest' ? 'chest_top' : 'furnace_top');
+  const front = tex(variant === 'chest' ? 'chest_front' : 'furnace_front');
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), [side, side, top, top, side, front]);
+  m.position.set(x, y, z); m.castShadow = true;
+  g.add(m);
+  g.userData.mats.push(side, top, front);
+  if (variant === 'furnace') g.userData.front = front;
+}
+
 export class EntityManager {
   constructor(game) {
     this.game = game;
@@ -474,7 +576,18 @@ export class EntityManager {
     if (this.netSpawn('xp', { x, y, z, n: Math.round(amount) })) return;
     for (const v of splitOrbs(Math.round(amount))) this.add(new XPOrb(x, y, z, v));
   }
-  spawnBoat(x, y, z, yaw, cart = false) { return this.netSpawn('boat', { x, y, z, yaw, cart }) ? null : this.add(cart ? new Minecart(x, y, z, yaw) : new Boat(x, y, z, yaw)); }
+  spawnBoat(x, y, z, yaw, cart = false, variant = null) { return this.netSpawn('boat', { x, y, z, yaw, cart, variant }) ? null : this.add(cart ? new Minecart(x, y, z, yaw, variant) : new Boat(x, y, z, yaw, variant)); }
+  /** Break a boat or cart (host / single player): everybody aboard is let off, the cargo spills and the boat itself drops (not in creative). */
+  breakBoat(boat, drop = true) {
+    const g = this.game;
+    boat.dead = true;
+    if (g.player.riding === boat) g.dismount();
+    boat.rider = boat.rider2 = null; boat.remoteRider = boat.remoteRider2 = null;
+    if (boat.mobPassenger) boat.unloadMob(g);
+    for (const st of cargoItems(boat.cargo)) this.spawnItem(boat.x, boat.y + 0.5, boat.z, st);
+    if (boat.cargo) boat.cargo.slots.fill(null);
+    if (drop) this.spawnItem(boat.x, boat.y + 0.5, boat.z, { id: boat.dropId || I.OAK_BOAT, count: 1 });
+  }
   /** An armour stand (entities/armorStand.js) facing `yaw`; a guest asks the host for it. */
   spawnStand(x, y, z, yaw) { return this.netSpawn('stand', { x, y, z, yaw }) ? null : this.add(new ArmorStand(x, y, z, yaw)); }
   spawnFallingBlock(x, y, z, id) { return this.netSpawn('falling', {}) ? null : this.add(new FallingBlock(x, y, z, id)); }
@@ -647,7 +760,11 @@ export class EntityManager {
         m.position.set(px, py, pz);
         let dy = e.yaw - e.prevYaw; while (dy > Math.PI) dy -= Math.PI * 2; while (dy < -Math.PI) dy += Math.PI * 2;
         m.rotation.set(e.cart ? (e.prevPitch + (e.pitch - e.prevPitch) * alpha) : 0, e.prevYaw + dy * alpha, e.hitTime > 0 ? Math.sin(e.hitTime) * 0.1 : 0, 'YXZ');
-        m.userData.mats[0].color.setScalar(L);
+        for (const mt of m.userData.mats) mt.color.setScalar(L);
+        if (e.furnace && m.userData.front && m.userData.lit !== e.lit) { // the firebox glows while it burns
+          m.userData.lit = e.lit;
+          m.userData.front.map = blockFaceTexture(e.lit ? 'furnace_front_lit' : 'furnace_front');
+        }
       } else if (e.kind === 'xp') {
         m.position.set(px, py + 0.2, pz);
         const k = 0.5 + 0.5 * Math.sin(timeSec * 6 + e.phase);
@@ -699,7 +816,9 @@ export class EntityManager {
       const wheel = new THREE.MeshLambertMaterial({ color: 0x2a2a2e });
       for (const [wx, wz] of [[-0.4, -0.4], [0.4, -0.4], [-0.4, 0.4], [0.4, 0.4]]) { const wm = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.16, 0.16), wheel); wm.position.set(wx, 0.08, wz); g.add(wm); }
       g.userData.mats = [mat];
-      g.userData.dispose = () => { g.traverse((o) => { if (o.geometry) o.geometry.dispose(); }); mat.dispose(); wheel.dispose(); };
+      // a chest or a furnace sits in the cart (the front is -z, towards the way it rolls)
+      if (e.variant) addCargoBox(g, e.variant, 0.7, 0.56, 0.7, 0, 0.5, 0);
+      g.userData.dispose = () => { g.traverse((o) => { if (o.geometry) o.geometry.dispose(); }); mat.dispose(); wheel.dispose(); for (const m of g.userData.mats) m.dispose(); };
       return g;
     }
     if (e.kind === 'boat') {
@@ -709,9 +828,11 @@ export class EntityManager {
       box(1.25, 0.1, 1.9, 0, 0.05, 0);            // bottom
       box(0.1, 0.4, 1.9, -0.62, 0.3, 0); box(0.1, 0.4, 1.9, 0.62, 0.3, 0); // sides
       box(1.25, 0.4, 0.1, 0, 0.3, -0.95); box(1.25, 0.4, 0.1, 0, 0.3, 0.95); // ends
-      box(1.2, 0.08, 0.3, 0, 0.32, 0.2);          // seat
+      box(1.2, 0.08, 0.3, 0, 0.32, -0.2);         // the driver's bench
       g.userData.mats = [mat];
-      g.userData.dispose = () => { g.traverse((o) => { if (o.geometry) o.geometry.dispose(); }); mat.dispose(); };
+      if (e.variant === 'chest') addCargoBox(g, 'chest', 0.8, 0.5, 0.6, 0, 0.55, 0.52); // a chest where the second seat would be
+      else box(1.2, 0.08, 0.3, 0, 0.32, 0.5);     // the second seat
+      g.userData.dispose = () => { g.traverse((o) => { if (o.geometry) o.geometry.dispose(); }); for (const m of g.userData.mats) m.dispose(); };
       return g;
     }
     if (e.kind === 'xp') {

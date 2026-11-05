@@ -9,6 +9,7 @@ import { xpToNextLevel } from '../player/experience.js';
 import { PlayerMarkers } from './playerMarkers.js';
 import { PlayerList } from './playerList.js';
 import { dashGauge } from '../mobs/duneStrider.js';
+import { staminaGauge } from '../mobs/mounts.js';
 import { shieldGauge } from '../player/shield.js';
 import { paintGhostFace, ghostPose, GHOST_TICKS } from './ghostFace.js';
 import { hudPalette, motionScales } from './accessibility.js';
@@ -66,6 +67,7 @@ export class HUD {
         <div id="bars2" style="width:calc(var(--slot) * 9 + 8px);display:flex;justify-content:space-between"><div class="bar" id="armor"></div><div class="bar right" id="air"></div></div>
         <div id="bars"><div class="bar" id="health"></div><div class="bar right" id="food"></div></div>
         <div id="dashbar" class="hidden" title="Dash"><div></div></div>
+        <div id="staminabar" class="hidden" title="Mount's stamina: feed it when it runs low"><div></div></div>
         <div id="shieldbar" class="hidden" title="Shield knocked down"><div></div></div>
         <div id="xpbar"><div id="xpfill"></div><span id="xplevel"></span></div>
         <div class="hotbar" id="hotbar"></div>
@@ -342,6 +344,16 @@ export class HUD {
       dashEl.firstChild.style.width = `${Math.round((gge.charging ? gge.charge : gge.ready) * 100)}%`;
       dashEl.classList.toggle('charging', gge.charging);
       dashEl.classList.toggle('cooling', !gge.charging && gge.ready < 1);
+    }
+    // riding a mount (Galloper, Thistlehorn, Dune Strider): its stamina, green until it tires, then amber, then red (mobs/mounts.js)
+    const tired = p.riding && p.riding.def && p.riding.def.mount && !p.riding.netProxy ? p.riding : null;
+    const stEl = this.staminaEl || (this.staminaEl = this.root.querySelector('#staminabar'));
+    stEl.classList.toggle('hidden', !tired);
+    if (tired) {
+      const sg = staminaGauge(tired);
+      stEl.firstChild.style.width = `${Math.round(sg.stamina * 100)}%`;
+      stEl.classList.toggle('tired', sg.state === 'tired');
+      stEl.classList.toggle('worn', sg.state === 'exhausted');
     }
     // a shield knocked down by an axe: a bar fills while it recovers
     const sg = shieldGauge(p.shield);

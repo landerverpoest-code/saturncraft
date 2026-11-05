@@ -91,6 +91,7 @@ import { HushSystem } from './world/hushSystem.js';
 import { WorldEvents } from './world/events.js';
 import { darknessFactor } from './world/deepHush.js';
 import { resolveBlock } from './player/shield.js';
+import { safeDismountSpot, boatSeatOffset } from './mobs/mounts.js';
 
 // Spherical (radial distance) fog instead of view-depth fog, so chunk edges never show at screen corners
 THREE.ShaderChunk.fog_vertex = `#ifdef USE_FOG
@@ -625,23 +626,31 @@ export class Game {
     }
   }
 
-  // ---- boats --------------------------------------------------------------------
-  mount(boat) {
+  // ---- boats ----------------------------------------------------------------------------------
+  /** Climb into a boat (the driver's seat, or the second one when it is taken), a cart or a mount. Returns false when there is no seat. */
+  mount(boat, want = -1) {
     const p = this.player;
-    boat.rider = p; p.riding = boat;
-    if (boat.netProxy && this.net) this.net.ride(boat, true); // a shared boat: tell the host we steer it
+    let seat = 0;
+    if (boat.kind === 'boat') { seat = boat.freeSeat(want); if (seat < 0) return false; }
+    p.seat = seat;
+    if (seat === 0) boat.rider = p; else boat.rider2 = p; // (mobs and carts have the one seat)
+    p.riding = boat;
+    if (boat.netProxy && this.net) this.net.ride(boat, true, seat); // a shared boat: tell the host we sit in it
     this.seatPlayer();
+    return true;
   }
 
   dismount() {
     const p = this.player, boat = p.riding;
     if (!boat) return;
-    boat.rider = null; p.riding = null;
+    if (boat.rider === p) boat.rider = null;
+    if (boat.rider2 === p) boat.rider2 = null;
+    p.riding = null; p.seat = 0;
     if (boat.netProxy && this.net) this.net.ride(boat, false);
-    const bx = Math.floor(boat.x), by = Math.floor(boat.y + 0.5), bz = Math.floor(boat.z);
-    const spot = this.standNextTo(bx, by, bz);
-    if (spot) p.setPosition(spot.x, spot.y, spot.z);
-    else p.setPosition(boat.x, boat.y + 0.6, boat.z);
+    // the nearest free ground, never inside a block (mobs/mounts.js)
+    const spot = safeDismountSpot(this.world, boat.x, Math.floor(boat.y + 0.5), boat.z, 2);
+    p.setPosition(spot.x, spot.y, spot.z);
+    p.body.fallDistance = 0;
   }
 
   /** Keep the rider on the seat. */
@@ -650,6 +659,7 @@ export class Game {
     // a Dune Strider seats two: whoever rides the host's copy steers from the front, a guest sits behind
     const off = r.def && r.def.seatOffset ? r.def.seatOffset(r, !!r.netProxy) : null;
     if (off) p.body.setPos(b.x + off[0], b.y + off[1], b.z + off[2]);
+    else if (r.kind === 'boat' && !r.cart) { const [dx, dz] = boatSeatOffset(r.yaw, p.seat | 0); p.body.setPos(b.x + dx, b.y + (r.seatY ?? -0.3), b.z + dz); } // the driver in front, a passenger behind
     else p.body.setPos(b.x, b.y + (r.seatY ?? -0.3), b.z);
     p.body.vx = p.body.vy = p.body.vz = 0;
     p.body.fallDistance = 0;
@@ -1286,7 +1296,7 @@ export class Game {
     // Hold the player in place until the terrain under them has loaded (spawn, respawn, teleports)
     const p = this.player;
     if (p.sleeping) this.tickSleep();
-    if (p.riding && (mv.sneak || p.riding.dead || p.dead)) this.dismount();
+    if (p.riding && (mv.sneak || p.riding.dead || p.riding.removed || p.riding.deathTime > 0 || p.dead)) this.dismount(); // (a mount that is dying drops its rider)
     this.boatInput = p.riding ? mv : null;
     const still = { forward: 0, strafe: 0, jump: false, sneak: false, sprint: false };
     this.dims.tick(); // portals, arrivals, the Hollow's boss

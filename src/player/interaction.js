@@ -38,6 +38,7 @@ import { canName, nameMob } from '../mobs/names.js';
 import { bundleTakeLast } from '../world/bundles.js';
 import { isSuspicious, archaeologyLoot, potDrops } from '../world/archaeology.js';
 import { interactStrider, guestWantsSeat } from '../mobs/duneStrider.js';
+import { interactMount, canSeatMob, cartFuelTicks } from '../mobs/mounts.js';
 import { wandClick } from '../ui/buildCommands.js';
 import { interactHoverling } from '../mobs/hoverling.js';
 import { catchTarnling, releaseTarnling } from '../mobs/fauna.js';
@@ -150,14 +151,10 @@ export class Interaction {
         if (boat.netProxy) { g.net.hitBoat(boat); return; } // a shared boat: the host counts the hits
         boat.hits++; boat.hitTime = 10;
         g.audio.play('hit_wood', [boat.x, boat.y, boat.z]);
-        if (boat.hits >= 3 || p.creative) {
-          boat.dead = true;
-          if (boat.rider) g.dismount();
-          if (!p.creative) g.entities.spawnItem(boat.x, boat.y + 0.5, boat.z, { id: boat.dropId || I.OAK_BOAT, count: 1 });
-        }
+        if (boat.hits >= 3 || p.creative) g.entities.breakBoat(boat, !p.creative);
         return;
       }
-      if (input.rightPressed && !boat.rider && !boat.remoteRider && !p.riding) { g.mount(boat); return; }
+      if (input.rightPressed && !p.riding) { if (this.useBoat(boat, input)) return; }
     }
     if (input.leftPressed && this.mobTarget) {
       this.attack(this.mobTarget.mob);
@@ -839,7 +836,7 @@ export class Interaction {
       // carts go on rails
       if (!this.target || !isRail(this.target.id)) return false;
       const t = this.target;
-      g.entities.spawnBoat(t.x + 0.5, t.y + 1 / 16, t.z + 0.5, p.yaw, true);
+      g.entities.spawnBoat(t.x + 0.5, t.y + 1 / 16, t.z + 0.5, p.yaw, true, d.cartVariant || null); // (a cart with a chest or a furnace is a variant)
       if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
       this.swing = SWING_TICKS;
       return true;
@@ -852,7 +849,7 @@ export class Interaction {
       if (wh && wh.id === B.WATER) pos = [wh.x + 0.5, wh.y + 0.75, wh.z + 0.5];
       else if (this.target && this.target.face[1] === 1) pos = [this.target.x + 0.5, this.target.y + 1, this.target.z + 0.5];
       if (!pos) return false;
-      g.entities.spawnBoat(pos[0], pos[1], pos[2], p.yaw);
+      g.entities.spawnBoat(pos[0], pos[1], pos[2], p.yaw, false, d.boatVariant || null);
       p.inventory.removeFromSlot(p.inventory.selected, 1);
       this.swing = SWING_TICKS;
       return true;
@@ -1285,6 +1282,38 @@ export class Interaction {
    * Howlers (bones), Purrlings (fish), Squawklets (seeds) and the companions of mobs/companions.js (Vixlings with
    * berries, Cragbucks with bread): tame a wild one (1 in 3), heal/breed a tame one with its food, otherwise sit/stand.
    */
+  /**
+   * Right-click on a boat or cart: sneaking opens a Chest Boat's or Minecart with Chest's storage, with a lead in hand a mob goes
+   * aboard (or comes off), coal fuels a Minecart with Furnace, otherwise you climb in (the second seat of a boat when the first is taken).
+   * Returns true when the click was used.
+   */
+  useBoat(boat, input) {
+    const g = this.game, p = g.player, st = p.inventory.selectedStack;
+    if (boat.hasCargo && (p.sneaking || !boat.seatCount)) { // storage (a Chest Boat holds its rider's seat free, a cart only has the chest)
+      this.useDelay = USE_DELAY; this.swing = SWING_TICKS; g.ui.openCargo(boat);
+      return true;
+    }
+    if (boat.furnace) { // fuel (the cart pushes off the way you face)
+      const ticks = st ? cartFuelTicks(st.id) : 0;
+      if (!ticks) return false;
+      if (!boat.netProxy && !boat.addFuel(ticks, p.yaw)) return true; // (full: nothing is used up)
+      if (st.id === I.LAVA_BUCKET) p.inventory.slots[p.inventory.selected] = { id: I.BUCKET, count: 1, damage: 0 };
+      else if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
+      if (boat.netProxy) g.net.fuelCart(boat, ticks, p.yaw); // a shared cart: the host burns it
+      g.audio.play('cart_fuel', [boat.x, boat.y + 0.5, boat.z]);
+      this.swing = SWING_TICKS;
+      return true;
+    }
+    if (!boat.netProxy && boat.seatCount > 1) {
+      // a mob on a lead goes aboard as the second passenger; sneaking with an empty hand lets it off again
+      const led = g.entities.list.find((e) => e.kind === 'mob' && !e.dead && e.leashHolder === p && canSeatMob(e) && Math.hypot(e.x - boat.x, e.z - boat.z) < 4);
+      if (led && !boat.mobPassenger && !boat.rider2 && boat.remoteRider2 == null) { unleash(g, led, true); boat.boardMob(led); g.audio.play('equip', [boat.x, boat.y + 0.5, boat.z]); this.swing = SWING_TICKS; return true; }
+      if (p.sneaking && boat.mobPassenger && !st) { boat.unloadMob(g); this.swing = SWING_TICKS; return true; }
+    }
+    if (boat.seatCount && boat.freeSeat() >= 0) { g.mount(boat); return true; }
+    return false;
+  }
+
   interactHowler(mob, st, d) {
     const g = this.game, p = g.player;
     const use = () => { if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1); this.swing = SWING_TICKS; };
@@ -1352,9 +1381,10 @@ export class Interaction {
     if ((mob.def.villager || mob.def.trader) && mob.deathTime === 0 && mob.trades.length && !(d && d.food && mob.def.food)) { g.ui.openTrade(mob); g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); return true; }
     if ((mob.def.tameable || mob.def.companion) && mob.deathTime === 0 && this.interactHowler(mob, st, d)) return true;
     const useOne = () => { if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1); this.swing = SWING_TICKS; };
+    if (mob.def.mount && interactMount(g, mob, p, st, useOne)) return true; // horse armour, harness, feeding, stay (mobs/mounts.js)
     if (mob.def.strider) return interactStrider(g, mob, p, st, useOne); // saddle, cactus, climb on
     if (mob.def.hoverling) return interactHoverling(g, mob, p, st, useOne); // give it an item, take it back
-    if (mob.def.rideable && mob.deathTime === 0 && mob.age >= 0) {
+    if (mob.def.rideable && !(mob.def.mount && mob.def.mount.tack) && mob.deathTime === 0 && mob.age >= 0) {
       // Gallopers: saddle a tame one, feed it (taming goes faster), or climb on
       const use = () => { if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1); this.swing = SWING_TICKS; };
       if (d && d.saddle && mob.tamed && !mob.saddled) { mob.saddled = true; use(); g.audio.play('equip', [mob.x, mob.y + 1, mob.z]); return true; }

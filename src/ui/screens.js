@@ -664,6 +664,45 @@ export class UI {
     if (this.game.net && this.game.net.isClient) this.game.net.openContainer(halves ? 'chest2' : 'chest', c.x, c.y, c.z, c); // the host's chest
   }
 
+  /** The 27-slot storage of a Chest Boat or a Minecart with Chest (the same screen as a chest; a guest asks the host through the 'cargo' container). */
+  openCargo(boat) {
+    const c = boat.cargo;
+    if (!c) return;
+    this.game.input.unlock();
+    const inv = this.game.player.inventory, n = c.slots.length;
+    /** Move a stack into the cargo (merging first); returns what is left. */
+    const insert = (slots, from, to, st) => {
+      let left = st.count;
+      for (let k = from; k < to && left; k++) {
+        const s = slots[k];
+        if (canStack(s, st)) { const q = Math.min(left, maxStack(s.id) - s.count); s.count += q; left -= q; }
+      }
+      for (let k = from; k < to && left; k++) if (!slots[k]) { slots[k] = { ...st, count: left }; left = 0; }
+      return left;
+    };
+    this.showContainer('chest', boat.cart ? 'Minecart with Chest' : 'Chest Boat', (panel) => {
+      const grid = el(`<div class="grid" style="grid-template-columns:repeat(9,var(--slot));margin:0 auto 12px;width:max-content"></div>`);
+      for (let i = 0; i < n; i++) {
+        grid.appendChild(this.makeSlot(() => c.slots[i], (v) => { c.slots[i] = v; }, {
+          quickMove: () => { const st = c.slots[i]; const left = insert(inv.slots, 0, 36, st); c.slots[i] = left ? { ...st, count: left } : null; },
+        }));
+      }
+      panel.appendChild(grid);
+      panel.appendChild(this.inventoryGrid({
+        accept: (st) => {
+          const left = insert(c.slots, 0, n, st);
+          if (left === st.count) return false;
+          if (left) { st.count = left; return 'partial'; }
+          return true;
+        },
+      }));
+    });
+    c.x = boat.x - 0.5; c.y = boat.y; c.z = boat.z - 0.5; // (where the closing sound comes from; the screen reads a chest's position)
+    this.chest = c;
+    this.game.audio.play('chest_open', [boat.x, boat.y + 0.5, boat.z]);
+    if (this.game.net && this.game.net.isClient) this.game.net.openContainer('cargo', boat.netId, 0, 0, c); // the host's cargo
+  }
+
   /** A single-item work slot (enchanting table / anvil) whose stack lives in this.work[i]. */
   workSlot(i, opts = {}) {
     const inv = this.game.player.inventory;

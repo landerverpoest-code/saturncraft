@@ -287,6 +287,12 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 #dashbar > div { height: 100%; width: 100%; background: linear-gradient(#e8d28a, #b08a3a); }
 #dashbar.charging > div { background: linear-gradient(#ffe070, #e09a20); }
 #dashbar.cooling > div { background: linear-gradient(#9a9a9a, #5a5a5a); }
+/* A ridden mount's stamina (above the experience bar): green, amber once it tires, red when it is worn out */
+#staminabar { width: calc(var(--slot) * 9 + 8px); height: 4px; background: rgba(0,0,0,.55); border: 1px solid #000; box-sizing: border-box; }
+#staminabar.hidden { display: none; }
+#staminabar > div { height: 100%; width: 100%; background: linear-gradient(#9ae87a, #4a9a3a); }
+#staminabar.tired > div { background: linear-gradient(#f0d070, #c08a20); }
+#staminabar.worn > div { background: linear-gradient(#f07a6a, #b02a20); }
 /* Knocked-down shield gauge (fills while the shield recovers from an axe blow) */
 #shieldbar { width: calc(var(--slot) * 9 + 8px); height: 4px; background: rgba(0,0,0,.55); border: 1px solid #000; box-sizing: border-box; }
 #shieldbar.hidden { display: none; }
