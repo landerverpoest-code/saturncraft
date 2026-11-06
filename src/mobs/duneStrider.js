@@ -180,9 +180,8 @@ export function interactStrider(g, mob, p, st, use) {
 export function guestSeatFor(mob, p, st) {
   if (!mob.def.strider || !mob.saddled || mob.baby || mob.deathTime > 0 || p.riding || p.sneaking) return -1;
   if (st && (st.id === I.SADDLE || st.id === B.CACTUS)) return -1;
-  const driven = mob.netDriver != null && mob.netDriver >= 0;
-  if (driven) return mob.passengerId == null ? 1 : -1;
-  return 0;
+  if (mob.passengerId != null) return -1;
+  return mob.netDriver != null && mob.netDriver >= 0 ? 1 : 0;
 }
 
 /** True when a guest's click on a host's Strider is a ride (see guestSeatFor). */
