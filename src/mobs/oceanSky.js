@@ -129,6 +129,18 @@ FACES.trenchmaw = (c) => {
 // ---------------------------------------------------------------------------------------------
 // Lanternfin
 
+/** A school of Lanternfins: the ordinary fish AI, kept down near the floor (1 to 8 blocks over it) instead of drifting up to the surface. */
+function finAI(m, g, p, pdist) {
+  m.fishAI(g, p, pdist);
+  const b = m.body, w = g.world;
+  if (!b.inWater) return;
+  const x = Math.floor(m.x), z = Math.floor(m.z);
+  let y = Math.floor(m.y), k = 0;
+  while (k++ < 16 && isWaterish(w.getBlock(x, y - 1, z))) y--;
+  const h = m.y - y;
+  b.vy += h > 8 ? -0.015 : h < 1.2 ? 0.015 : 0;
+}
+
 function finRender(m, mesh, alpha, sec) {
   const pa = mesh.userData.parts; if (!pa || !pa.tail) return;
   pa.tail.rotation.y = Math.sin(sec * 10 + m.id) * 0.5;
@@ -209,13 +221,13 @@ FACES.skyray = (c) => {
 
 export const LANTERNFIN = {
   name: 'Lanternfin', role: 'anglerfish', category: CATEGORY.AMBIENT, fish: true, aquatic: true, deepSea: true, sound: 'lumen', noFallDamage: true,
-  health: 6, speed: 0.1, width: 0.6, height: 0.5,
+  health: 6, speed: 0.1, width: 0.6, height: 0.5, sinks: true, // (sinks: no automatic swimming up; finAI holds the depth)
   drops: [{ id: I.RAW_LANTERNFIN, min: 1, max: 1, cooked: I.COOKED_LANTERNFIN }, { id: I.LANTERN_GLAND, min: 0, max: 1, chance: 0.5 }],
-  customRender: finRender,
+  ownAI: finAI, customRender: finRender,
 };
 export const TRENCHMAW = {
   name: 'Trenchmaw', role: 'moray eel', category: CATEGORY.MONSTER, deepSea: true, breathesWater: true, sound: 'maw', noFallDamage: true,
-  health: 24, speed: 0.14, width: 1.1, height: 0.6, attack: MAW.DAMAGE,
+  health: 24, speed: 0.14, width: 1.1, height: 0.6, attack: MAW.DAMAGE, sinks: true,
   drops: [{ id: I.BONE, min: 0, max: 2 }, { id: I.LANTERN_GLAND, min: 0, max: 1, chance: 0.2 }, { id: I.TIDE_SHARD, min: 0, max: 1, chance: 0.3 }],
   ownAI: mawAI, customRender: mawRender,
   onSpawn: (m) => { m.persistent = false; m.dash = 0; m.retreat = 0; m.cooldown = 0; },
@@ -245,7 +257,8 @@ const countOf = (g, type) => { let n = 0; for (const e of g.entities.list) if (e
 /** A water cell at (x, floor + 1 .. floor + dy) with three clear water blocks above the floor, or null. */
 function waterSpot(w, x, z, dyMax = 4) {
   if (!w.isLoaded(x, z)) return null;
-  const floor = w.heightAt(x, z);
+  let floor = w.heightAt(x, z); // (the height map counts the water, so walk down to the sea floor)
+  for (let k = 0; k < 80 && isWaterish(w.getBlock(x, floor, z)); k++) floor--;
   const y = floor + 1 + Math.floor(Math.random() * dyMax);
   for (let k = 0; k < 3; k++) if (w.getBlock(x, y + k, z) !== B.WATER) return null;
   return { x, y, z, floor };
