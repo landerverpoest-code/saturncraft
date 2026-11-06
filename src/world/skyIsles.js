@@ -54,7 +54,7 @@ export function isleRim(s, t) {
 }
 /** Is local (u, dy, v) inside the isle's rock? dy = 0 is the grass layer, negative below. */
 export function isleSolid(s, u, dy, v) {
-  if (dy > 0 || dy < -ISLE_DEPTH) return false;
+  if (dy > 0 || dy <= -ISLE_DEPTH) return false;
   const t = Math.atan2(v, u), rim = isleRim(s, t), d = Math.hypot(u, v);
   const f = Math.pow(Math.max(0, 1 - Math.pow(-dy / ISLE_DEPTH, 1.6)), 0.6);
   const wobble = (hashf(s.seed, u, v, 13) - 0.5) * 0.6 * (-dy > 3 ? 1 : 0);
@@ -156,7 +156,7 @@ export function stampSkyIsles(gen, blocks, meta, cx, cz) {
     }
     // the wild Beanstalk from the ground up to the isle's underside
     if (s.ax >= X0 && s.ax < X0 + 16 && s.az >= Z0 && s.az < Z0 + 16) {
-      for (let y = s.ground + 1; y < s.y - ISLE_DEPTH; y++) set(s.ax, y, s.az, B.BEANSTALK, 0);
+      for (let y = s.ground + 1; y < s.y - 9; y++) set(s.ax, y, s.az, B.BEANSTALK, 0); // (up into the rock, where isleBlock carries it on)
     }
   }
 }

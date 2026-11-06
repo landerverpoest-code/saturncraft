@@ -44,7 +44,7 @@ export function trenchCut(gen, x, z) {
   if (n >= THR) return 0;
   const prof = 1 - (n / THR) ** 2;                              // 1 along the middle, 0 at the lip
   const amp = 0.45 + 0.55 * (N.width.noise2(x / 240, z / 240) * 0.5 + 0.5); // some stretches run deeper
-  return Math.round(TRENCH_MAX * amp * Math.pow(prof, 0.7));
+  return Math.round(TRENCH_MAX * amp * prof);
 }
 
 /** Is world (x, z) inside a Kelp Forest patch (before the depth test)? */
