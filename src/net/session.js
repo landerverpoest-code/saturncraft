@@ -49,7 +49,7 @@ import { runRandomTicks } from '../world/randomTicks.js';
 import { addXp } from '../player/experience.js';
 import { MAX_USES } from '../mobs/trades.js';
 import { claimSeat } from '../mobs/duneStrider.js';
-import { FURNACE_CART } from '../mobs/mounts.js';
+import { FURNACE_CART, driverRefusal, cleanSteer } from '../mobs/mounts.js';
 import { releaseTarnling } from '../mobs/fauna.js';
 import { EFFECTS } from '../player/effects.js';
 import { FATIGUE_AMP, FATIGUE_TICKS, needsFatigue } from '../mobs/oceanMobs.js';
@@ -74,6 +74,7 @@ const FULL_EVERY = 20;      // every 20th entity snapshot (2 s) is a full list, 
 const REACH = 12;           // blocks: how far from a player its edits / actions may be (reach + latency slack)
 const GUEST_SIM_RADIUS = 4; // chunks the host keeps loaded (and simulates) around each guest
 const GUEST_TICK_RADIUS = 2; // chunks around each guest that get random ticks (crops, leaves, fire, ice...); the costliest part per guest
+const TICK_FAILS_MAX = 20;  // an entity that throws this many ticks in a row is removed
 const SLEEP_MS = 4500;      // a guest has to lie in bed this long before the night can be skipped
 
 /** Message channel over a transport conn: JSON objects in, JSON objects out. */
@@ -463,8 +464,8 @@ export class HostSession extends Session {
       case 'boxput': if (this.near(c, m.x + 0.5, m.y + 0.5, m.z + 0.5, 8)) g.onBoxPlaced(m.x | 0, m.y | 0, m.z | 0, { contents: m.s }, true); break;
       case 'ride': {
         const b = this.entity(m.id);
-        // the back seat of a Dune Strider (mobs/duneStrider.js)
-        if (b && b.kind === 'mob' && (!m.on || this.near(c, b.x, b.y, b.z, 8))) { claimSeat(b, c.id, !!m.on); break; }
+        // the seats of a mount: the back seat of a Dune Strider (mobs/duneStrider.js), or the saddle of a Galloper, Thistlehorn or Strider
+        if (b && b.kind === 'mob') { this.remoteMobSeat(c, b, m); break; }
         if (!b || b.kind !== 'boat') break;
         if (m.on) {
           // a seat of the boat: the driver's, or the second one behind (the guest may ask for either; the snapshot tells it which it got)
@@ -482,6 +483,11 @@ export class HostSession extends Session {
         if (!b || b.kind !== 'boat' || b.remoteRider !== c.id || !finite(m.x, m.y, m.z, m.yaw) || !this.near(c, m.x, m.y, m.z, 6)) break;
         b.prev = [b.x, b.y, b.z]; b.prevYaw = b.yaw;
         b.body.setPos(m.x, m.y, m.z); b.yaw = m.yaw;
+        break;
+      }
+      case 'steer': { // the guest in the saddle of a mount: where it wants to go
+        const b = this.entity(m.id);
+        if (b && b.kind === 'mob' && b.rider === c.rp.target) b.remoteInput = cleanSteer(m, g.ticks);
         break;
       }
       case 'bhit': this.remoteBoatHit(c, m); break;
@@ -563,10 +569,11 @@ export class HostSession extends Session {
   drop(c, why = null) {
     if (!this.clients.has(c.id)) return;
     this.clients.delete(c.id);
+    console.warn('net: dropped', c.name, why || '(closed)');
     c.ch.close();
     if (!c.joined) return;
     for (const v of this.viewers.values()) v.ids.delete(c.id);
-    for (const e of this.game.entities.list) { if (e.remoteRider === c.id) e.remoteRider = null; if (e.remoteRider2 === c.id) e.remoteRider2 = null; if (e.passengerId === c.id) e.passengerId = null; }
+    for (const e of this.game.entities.list) { if (e.kind === 'mob' && e.rider === c.rp.target) this.freeSaddle(e); if (e.remoteRider === c.id) e.remoteRider = null; if (e.remoteRider2 === c.id) e.remoteRider2 = null; if (e.passengerId === c.id) e.passengerId = null; }
     for (const mob of heldBy(this.game, c.rp.target)) unleash(this.game, mob, true); // the leads they held fall
     // their record keeps the last place they stood (newer than the inventory copy of up to 5 s ago): a rejoin continues there
     const rec = this.game.netPlayers && this.game.netPlayers[c.name];
@@ -801,6 +808,36 @@ export class HostSession extends Session {
     c.ch.send({ t: 'rep', k: key, v: value });
   }
 
+  /** A guest asks for (`m.on`) or gives up a seat on a mob: the front seat is the saddle (steering), seat 1 the one behind (Dune Strider). */
+  remoteMobSeat(c, b, m) {
+    const me = c.rp.target;
+    if (!m.on) {
+      claimSeat(b, c.id, false);
+      if (b.rider === me) this.freeSaddle(b);
+      return;
+    }
+    const no = () => c.ch.send({ t: 'rno', id: b.id }); // the seat is not theirs: they get off at once
+    if (b.rider === me || b.passengerId === c.id) return;
+    if (!this.near(c, b.x, b.y, b.z, 8)) { no(); return; }
+    if (m.seat === 1) { if (!claimSeat(b, c.id, true)) no(); return; }
+    if (driverRefusal(b)) { no(); return; }
+    b.rider = me; b.remoteInput = null; b.sitting = false; b.path = null; b.wander = null; b.target = null;
+  }
+
+  /** A guest who died, left the area or went away no longer holds the reins. */
+  checkSaddles() {
+    for (const e of this.game.entities.list) {
+      const r = e.kind === 'mob' ? e.rider : null;
+      if (!r || !r.isRemotePlayer) continue;
+      if (r.dead || !this.remotes.has(r.remote.id) || Math.hypot(r.x - e.x, r.z - e.z) > 12 || e.dead || e.deathTime > 0) this.freeSaddle(e);
+    }
+  }
+
+  /** Nobody steers this mount any more. */
+  freeSaddle(b) {
+    b.rider = null; b.remoteInput = null; b.move = null;
+  }
+
   remoteBoatHit(c, m) {
     const g = this.game, b = this.entity(m.id), s = c.rp.state;
     if (!b || b.kind !== 'boat' || !s || Math.hypot(b.x - s.x, b.z - s.z) > 6) return;
@@ -856,9 +893,22 @@ export class HostSession extends Session {
         if (d < bd) { bd = d; best = pl.obj; }
       }
     }
-    if (!best || best === real) { e.tick(g); return; }
+    if (!best || best === real) { this.guardTick(e); return; }
     g.player = best;
-    try { e.tick(g); } finally { g.player = real; }
+    try { this.guardTick(e); } finally { g.player = real; }
+  }
+
+  /**
+   * One entity's tick, isolated: a mob whose AI trips over something about a guest (a field the stand-in lacks) must not
+   * abort the whole host tick (and with it every guest's snapshots, which would time them all out). It is logged once,
+   * and a creature that keeps failing is removed.
+   */
+  guardTick(e) {
+    try { e.tick(this.game); if (e.netErrors) e.netErrors = 0; } catch (err) {
+      e.netErrors = (e.netErrors | 0) + 1;
+      if (e.netErrors === 1) console.warn('net: entity tick failed', e.type || e.kind, err);
+      if (e.netErrors >= TICK_FAILS_MAX) { e.dead = true; if (e.kind === 'mob') e.removed = true; }
+    }
   }
 
   // ---- containers -----------------------------------------------------------------
@@ -1108,6 +1158,7 @@ export class HostSession extends Session {
     const e = this.edits.take();
     if (e.length) this.broadcast({ t: 'ed', e, d: g.world.dimension });
     this.simulateGuests();
+    if (this.ticks % 10 === 0) this.checkSaddles();
     this.tickSleep();
     if (this.ticks % STATE_EVERY === 0) {
       const list = [[0, ...this.ownState()]];
@@ -1387,7 +1438,7 @@ export class ClientSession extends Session {
       case 'rep': if (typeof m.k === 'string' && Number.isFinite(m.v)) setRep(g.player, m.k, m.v); break;
       case 'cont': this.onContainerState(m, false); break;
       case 'cack': case 'cnak': this.onContainerReply(m); break;
-      case 'cclose': if (this.cont && this.cont.kind === m.k && this.cont.x === m.x && this.cont.y === m.y && this.cont.z === m.z && g.ui.open === (m.k === 'chest2' || m.k === 'cargo' ? 'chest' : m.k)) g.ui.close(); break;
+      case 'cclose': if (this.cont && this.cont.kind === m.k && this.cont.x === m.x && this.cont.y === m.y && this.cont.z === m.z && this.screenOpen(this.cont)) g.ui.close(); break;
       case 'bolt': this._applyingOther = true; this.edits.applying = true; try { g.strikeLightning(m.x, m.y, m.z); } finally { this._applyingOther = false; this.edits.applying = false; } break;
       case 'wake': if (p.sleeping) { g.wakeUp(false); g.milestones.event('sleep'); } break;
       case 'dim': this.followDimension(m); break;
@@ -1398,6 +1449,7 @@ export class ClientSession extends Session {
         if (pd) { pd.x = x; pd.y = m.y; pd.z = z; pd.mode = 'exact'; } else p.setPosition(x, m.y, z);
         break;
       }
+      case 'rno': if (p.riding && p.riding.netId === m.id) g.dismount(); break; // the host refused the seat
       case 'bye': this.lost(m.reason || 'The host closed the world'); break;
       default: break;
     }
@@ -1554,15 +1606,18 @@ export class ClientSession extends Session {
     if (!c || c.kind !== m.k || c.x !== m.x || c.y !== m.y || c.z !== m.z) return;
     if (c.pending.length) { c.latest = m.s; return; } // ours are in flight; the replies carry the newer state
     loadContainerState(c.kind, c.obj, m.s);
-    if (this.game.ui.open === c.kind) this.game.ui.refreshAll(true);
+    if (this.screenOpen(c)) this.game.ui.refreshAll(true);
   }
+
+  /** Is the screen of this open container showing? (a double chest and a boat's cargo use the chest screen) */
+  screenOpen(c) { return this.game.ui.open === (c.kind === 'chest2' || c.kind === 'cargo' ? 'chest' : c.kind); }
 
   onContainerReply(m) {
     const c = this.cont, g = this.game;
     if (!c || c.kind !== m.k || c.x !== m.x || c.y !== m.y || c.z !== m.z) return;
     if (m.t === 'cack') {
       c.pending = c.pending.filter((p) => p.seq > m.seq);
-      if (!c.pending.length && m.s) { loadContainerState(c.kind, c.obj, m.s); if (g.ui.open === c.kind) g.ui.refreshAll(true); }
+      if (!c.pending.length && m.s) { loadContainerState(c.kind, c.obj, m.s); if (this.screenOpen(c)) g.ui.refreshAll(true); }
       return;
     }
     if (m.ep !== c.ep) return; // already rolled back
@@ -1576,7 +1631,7 @@ export class ClientSession extends Session {
     c.ep++;
     c.pending = [];
     if (m.s) loadContainerState(c.kind, c.obj, m.s);
-    if (g.ui.open === c.kind) g.ui.refreshAll(true);
+    if (this.screenOpen(c)) g.ui.refreshAll(true);
   }
 
   // ---- commands, dimensions, misc ---------------------------------------------------------
@@ -1665,6 +1720,7 @@ export class ClientSession extends Session {
   lost(msg, retry = false) {
     if (this.closed) return;
     this.closed = true;
+    console.warn('net: connection lost -', msg);
     clearInterval(this.bgTimer); if (this.bgWorker) { this.bgWorker.terminate(); this.bgWorker = null; }
     try { this.ch && this.ch.close(); } catch { /* gone */ }
     if (!this.game) { if (this._fail) this._fail(new Error(msg)); return; }

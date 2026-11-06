@@ -44,8 +44,8 @@ import { canLeash, leash, unleash, isFencePost, tieToFence, untieFromFence, isHo
 import { canName, nameMob } from '../mobs/names.js';
 import { bundleTakeLast } from '../world/bundles.js';
 import { isSuspicious, archaeologyLoot, potDrops } from '../world/archaeology.js';
-import { interactStrider, guestWantsSeat } from '../mobs/duneStrider.js';
-import { interactMount, canSeatMob, cartFuelTicks } from '../mobs/mounts.js';
+import { interactStrider, guestSeatFor } from '../mobs/duneStrider.js';
+import { interactMount, canSeatMob, cartFuelTicks, guestWantsMount } from '../mobs/mounts.js';
 import { wandClick } from '../ui/buildCommands.js';
 import { interactHoverling } from '../mobs/hoverling.js';
 import { catchTarnling, releaseTarnling } from '../mobs/fauna.js';
@@ -1487,7 +1487,11 @@ export class Interaction {
       return true;
     }
     // multiplayer guest: the back seat of a host's saddled Dune Strider (the host keeps the seat for us, see net/session.js)
-    if (mob.netProxy && guestWantsSeat(mob, p, st)) { g.mount(mob); this.swing = SWING_TICKS; return true; }
+    if (mob.netProxy) {
+      const seat = guestSeatFor(mob, p, st);
+      if (seat >= 0) { g.mount(mob, seat); this.swing = SWING_TICKS; return true; }
+      if (guestWantsMount(mob, p, st)) { g.mount(mob, 0); this.swing = SWING_TICKS; return true; } // a tacked-up Galloper or Thistlehorn: the guest rides it, the host moves it
+    }
     if (mob.netProxy) return g.net.interactMob(mob); // multiplayer guest: the host feeds, shears, tames or trades
     if (mob.def.bucketable && catchTarnling(g, mob, p, st, () => { this.swing = SWING_TICKS; })) return true; // scoop a Tarnling out of its pond (mobs/fauna.js)
     if ((mob.def.villager || mob.def.trader) && mob.deathTime === 0 && mob.trades.length && !(d && d.food && mob.def.food)) { g.ui.openTrade(mob); g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); return true; }
@@ -1504,7 +1508,7 @@ export class Interaction {
         if (mob.health < mob.maxHealth || !mob.tamed) { mob.health = Math.min(mob.maxHealth, mob.health + 2); mob.temper = Math.min(100, (mob.temper || 0) + 3); use(); g.audio.play('eat', [mob.x, mob.y + 1, mob.z]); mob.hearts(g, 2, true); return true; }
         if (mob.feed(g)) { use(); return true; }
       }
-      if (!mob.rider && !p.riding && !p.sneaking) { g.mount(mob); return true; }
+      if (!mob.rider && !p.riding && !p.sneaking && !p.isRemotePlayer) { g.mount(mob); return true; }
     }
     if (!d || mob.deathTime > 0 || mob.def.category !== 'creature') return false;
     if (d.dye && mob.type === 'fleecer' && mob.woolColor !== d.dye) {

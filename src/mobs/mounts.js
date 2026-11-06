@@ -38,6 +38,45 @@ export const MOUNT = {
 /** Terminal speed (blocks per tick) per unit of `travel` speed on default ground: 0.98 input scale / (1 - 0.6 x 0.91 friction). */
 export const GROUND_GAIN = 0.98 / (1 - PHYS.DEFAULT_SLIPPERINESS * PHYS.GROUND_FRICTION_MUL);
 
+// ---- steering ---------------------------------------------------------------------
+const NO_INPUT = { forward: 0, strafe: 0, jump: false, sneak: false, sprint: false };
+/** Ticks a guest's last steering message stays valid (a lost one must not leave a mount running). */
+export const STEER_TTL = 10;
+/** The input steering a ridden mount: the host's own keys, or the last `steer` message of the guest in the saddle (zero once it goes stale). */
+export function riderInput(m, g) {
+  const r = m.rider;
+  if (!r || !r.isRemotePlayer) return g.boatInput;
+  const s = m.remoteInput;
+  return s && g.ticks - s.at <= STEER_TTL ? s : NO_INPUT;
+}
+/** Clean a guest's steering message into an input: forward / strafe in -1..1, jump / sprint flags. */
+export function cleanSteer(m, ticks) {
+  const n = (v) => Math.max(-1, Math.min(1, Number.isFinite(+v) ? +v : 0));
+  return { forward: n(m.f), strafe: n(m.s), jump: !!m.j, sneak: false, sprint: !!m.sp, at: ticks };
+}
+/**
+ * A guest right-clicks a host's Galloper or Thistlehorn (a proxy: `netDriver` is who sits in front, -1 for nobody): climb into
+ * the saddle when it is tacked up and tame, and the click holds nothing that means something else (food, tack, a lead...).
+ */
+export function guestWantsMount(mob, p, st) {
+  if (!mob.def.rideable || mob.def.strider || p.riding || p.sneaking) return false;
+  if (mob.netDriver != null && mob.netDriver >= 0) return false;
+  if (mob.deathTime > 0 || mob.age < 0 || !mob.tamed || !mountReady(mob)) return false;
+  const d = st && ITEMS[st.id];
+  if (d && (d.food || d.saddle || d.horseArmor || d.harness || d.lead || d.nameTag || d.dye || d.shears)) return false;
+  return true;
+}
+
+/** Is a mount ready to take a guest as its driver? (grown, alive, tamed, saddled, free) -> null, or the reason why not. */
+export function driverRefusal(m) {
+  if (!m || m.kind !== 'mob' || !m.def || !m.def.rideable) return 'not rideable';
+  if (m.deathTime > 0 || m.removed || m.age < 0) return 'cannot be ridden now';
+  if (m.rider) return 'taken';
+  if (!m.tamed) return 'wild';
+  if (!mountReady(m)) return 'needs tack';
+  return null;
+}
+
 /** Rows of mob equipment (equip.armor[i]) a mount uses. */
 export const MOUNT_SLOT = { harness: 0, armor: 1 };
 
@@ -121,7 +160,7 @@ export function mountTick(m, g) {
   if (m.fatigue === undefined) m.fatigue = 0;
   const before = fatigueState(m.fatigue);
   if (m.rider) {
-    const b = m.body, input = g.boatInput;
+    const b = m.body, input = riderInput(m, g);
     const moving = Math.hypot(b.vx, b.vz) > 0.05;
     m.fatigue += tireStep(m, moving, !!(input && input.sprint && input.forward > 0));
     // worn out: it weakens, but exhaustion never kills

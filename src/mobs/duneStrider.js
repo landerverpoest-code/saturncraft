@@ -11,7 +11,7 @@ import { MODELS, FACES } from './models.js';
 import { I } from '../world/items.js';
 import { B, SOLID } from '../world/blocks.js';
 import { BIOMES } from '../world/biomes.js';
-import { mountReady, rideMove, fatigueState, feedMount } from './mounts.js';
+import { mountReady, rideMove, fatigueState, feedMount, riderInput } from './mounts.js';
 
 export const STRIDER_STEP = 1.5;            // blocks it walks straight up
 export const DASH_COOLDOWN = 55;            // ticks (2.75 s) after a dash
@@ -128,7 +128,7 @@ function striderAI(m, g, p, pdist) {
 
 /** Ridden by the player who climbed on first: WASD, sprint, and a charged dash on the jump key. */
 function striderRidden(m, g) {
-  const input = g.boatInput, b = m.body;
+  const input = riderInput(m, g), b = m.body;
   b.stepHeight = STRIDER_STEP;
   m.sitting = false;
   if (!m.dash) m.dash = newDash();
@@ -173,12 +173,20 @@ export function interactStrider(g, mob, p, st, use) {
   return false;
 }
 
-/** A guest right-clicks a host's Strider: take the back seat (the host decides through a `ride` message). */
-export function guestWantsSeat(mob, p, st) {
-  if (!mob.def.strider || !mob.saddled || mob.baby || mob.deathTime > 0 || p.riding || p.sneaking) return false;
-  if (st && (st.id === I.SADDLE || st.id === B.CACTUS)) return false;
-  return mob.passengerId == null;
+/**
+ * A guest right-clicks a host's Strider: take a seat (the host decides through a `ride` message). The front seat when nobody
+ * steers it, the one behind otherwise. Returns the seat (0 front, 1 back) or -1 when this click is not a ride.
+ */
+export function guestSeatFor(mob, p, st) {
+  if (!mob.def.strider || !mob.saddled || mob.baby || mob.deathTime > 0 || p.riding || p.sneaking) return -1;
+  if (st && (st.id === I.SADDLE || st.id === B.CACTUS)) return -1;
+  const driven = mob.netDriver != null && mob.netDriver >= 0;
+  if (driven) return mob.passengerId == null ? 1 : -1;
+  return 0;
 }
+
+/** True when a guest's click on a host's Strider is a ride (see guestSeatFor). */
+export const guestWantsSeat = (mob, p, st) => guestSeatFor(mob, p, st) >= 0;
 
 function striderRender(m, model, alpha, sec) {
   const pa = model.userData.parts;

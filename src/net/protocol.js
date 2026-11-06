@@ -127,12 +127,12 @@ export function* iterEdits(flat) {
 
 // ---- player state ----------------------------------------------------------------
 const r2 = (v) => Math.round(v * 100) / 100;
-export const PF = { SNEAK: 1, DEAD: 2, SLEEP: 4, CREATIVE: 8, HURT: 16, RIDING: 32, INVISIBLE: 64, CRAWL: 128, SWIM: 256, GLIDE: 512 }; // CRAWL: the 0.6-high pose (player/crawl.js); SWIM: sprint-swimming flat in the water; GLIDE: flying on a Voidwing
+export const PF = { SNEAK: 1, DEAD: 2, SLEEP: 4, CREATIVE: 8, HURT: 16, RIDING: 32, INVISIBLE: 64, CRAWL: 128, SWIM: 256, GLIDE: 512, SPRINT: 1024 }; // CRAWL: the 0.6-high pose (player/crawl.js); SWIM: sprint-swimming flat in the water; GLIDE: flying on a Voidwing
 /** Compact state of a player: [x, y, z, yaw, pitch, heldItemId|-1, flags, swingSeq, 4 armour ids, effect colour 0xRRGGBB|0]. */
 export function packPlayerState(p, held, swingSeq, armor = null) {
   const f = (p.sneaking ? PF.SNEAK : 0) | (p.dead ? PF.DEAD : 0) | (p.sleeping ? PF.SLEEP : 0) |
     (p.creative ? PF.CREATIVE : 0) | (p.hurtTime > 0 ? PF.HURT : 0) | (p.riding ? PF.RIDING : 0) | ((p.effects && p.effects.invisibility) || p.gamemode === 'spectator' ? PF.INVISIBLE : 0) | (p.crawling ? PF.CRAWL : 0) |
-    (p.swimming ? PF.SWIM : 0) | (p.gliding ? PF.GLIDE : 0);
+    (p.swimming ? PF.SWIM : 0) | (p.gliding ? PF.GLIDE : 0) | (p.sprinting ? PF.SPRINT : 0);
   const ar = armor || (p.inventory && p.inventory.armor ? p.inventory.armor.map((s) => (s ? s.id : 0)) : [0, 0, 0, 0]);
   return [r2(p.x), r2(p.y), r2(p.z), r2(p.yaw), r2(p.pitch), held == null ? -1 : held, f, swingSeq | 0, ...ar, effectColorInt(p.effects)];
 }
@@ -142,7 +142,7 @@ export function unpackPlayerState(a) {
   return {
     x: a[0], y: a[1], z: a[2], yaw: a[3], pitch: a[4], held: a[5] < 0 ? null : a[5] | 0,
     sneaking: !!(f & PF.SNEAK), dead: !!(f & PF.DEAD), sleeping: !!(f & PF.SLEEP), creative: !!(f & PF.CREATIVE),
-    hurt: !!(f & PF.HURT), riding: !!(f & PF.RIDING), invisible: !!(f & PF.INVISIBLE), crawling: !!(f & PF.CRAWL), swimming: !!(f & PF.SWIM), gliding: !!(f & PF.GLIDE), swing: a[7] | 0,
+    hurt: !!(f & PF.HURT), riding: !!(f & PF.RIDING), invisible: !!(f & PF.INVISIBLE), crawling: !!(f & PF.CRAWL), swimming: !!(f & PF.SWIM), gliding: !!(f & PF.GLIDE), sprinting: !!(f & PF.SPRINT), swing: a[7] | 0,
     armor: a.length >= 12 ? [a[8] | 0, a[9] | 0, a[10] | 0, a[11] | 0].map((i) => i || null) : [null, null, null, null],
     fx: a.length >= 13 && Number.isInteger(a[12]) && a[12] > 0 && a[12] <= 0xffffff ? a[12] : 0, // colour of the swirl of potion effects around them
   };
@@ -151,6 +151,9 @@ export function unpackPlayerState(a) {
 // ---- mob snapshots --------------------------------------------------------------
 /** Second mob flags: SADDLED (Gallopers, Dune Striders), DANCING (a Hoverling by a playing jukebox). */
 export const MF2 = { SADDLED: 1, DANCING: 2 };
+/** Bits 3 and up of flags2 name who sits in the front seat of a ridden mount: 0 nobody, else player id + 1 (the host is 0). Older peers ignore them. */
+export const DRIVER_SHIFT = 3;
+export const driverBits = (id) => (Number.isInteger(id) && id >= 0 && id < 4096 ? (id + 1) << DRIVER_SHIFT : 0);
 export const MF = { GROUND: 1, TARGET: 2, ANGRY: 4, BABY: 8, SHEARED: 16, TAMED: 32, SITTING: 64, ENEMY: 128, SPECIAL: 256, CAPTAIN: 512, RIDING: 1024 }; // RIDING: a jockey on its Cluckling; SPECIAL: a Hexwife drinking, a Shambler about to convert
 // ---- leads (entities/leash.js) ----------------------------------------------------
 /**
@@ -185,7 +188,7 @@ export function packMob(m, playerIdOf = () => -1) {
     m.beam ? [r2(m.beam.x), r2(m.beam.y), r2(m.beam.z)] : 0, m.moving ? 1 : 0, // Deepeye beams (mobs/oceanMobs.js)
     m.customName || 0, packLeash(m.leashHolder, playerIdOf), m.emerging > 0 ? m.emerging | 0 : 0, m.digging > 0 ? m.digging | 0 : 0,
     equipIds(m.equip) || 0, // worn armour and held weapon (mobs/equipment.js)
-    (m.saddled ? MF2.SADDLED : 0) | (m.dancing ? MF2.DANCING : 0), m.passengerId != null ? m.passengerId : -1, m.held ? m.held.id : 0, // Dune Strider seats, Hoverling items
+    (m.saddled ? MF2.SADDLED : 0) | (m.dancing ? MF2.DANCING : 0) | (m.rider ? driverBits(playerIdOf(m.rider)) : 0), m.passengerId != null ? m.passengerId : -1, m.held ? m.held.id : 0, // Dune Strider seats, Hoverling items
     offhandId(m.offhand)]; // off-hand items (mobs/offhand.js)
 }
 export function unpackMob(a) {
@@ -199,7 +202,7 @@ export function unpackMob(a) {
     beam: Array.isArray(a[14]) && a[14].length === 3 && a[14].every(Number.isFinite) ? { x: a[14][0], y: a[14][1], z: a[14][2] } : null, moving: !!a[15],
     name: cleanLabel(a[16]), leash: unpackLeash(a[17]), emerging: Math.max(0, a[18] | 0), digging: Math.max(0, a[19] | 0),
     equip: Array.isArray(a[20]) ? a[20].slice(0, 5).map((v) => (Number.isInteger(v) && v > 0 ? v : 0)) : null,
-    saddled: !!((a[21] | 0) & MF2.SADDLED), dancing: !!((a[21] | 0) & MF2.DANCING), passenger: Number.isInteger(a[22]) ? a[22] : -1, heldItem: a[23] | 0, offhand: a[24] | 0,
+    saddled: !!((a[21] | 0) & MF2.SADDLED), dancing: !!((a[21] | 0) & MF2.DANCING), driver: ((a[21] | 0) >> DRIVER_SHIFT) - 1, passenger: Number.isInteger(a[22]) ? a[22] : -1, heldItem: a[23] | 0, offhand: a[24] | 0,
   };
 }
 

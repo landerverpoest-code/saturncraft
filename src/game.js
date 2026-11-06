@@ -634,8 +634,9 @@ export class Game {
     const p = this.player;
     let seat = 0;
     if (boat.kind === 'boat') { seat = boat.freeSeat(want); if (seat < 0) return false; }
+    else if (boat.netProxy && want === 1) seat = 1; // behind the driver of a shared Dune Strider (net/session.js asks the host)
     p.seat = seat;
-    if (seat === 0) boat.rider = p; else boat.rider2 = p; // (mobs and carts have the one seat)
+    if (seat === 0) boat.rider = p; else if (boat.kind === 'boat') boat.rider2 = p; // (mobs and carts have the one seat; a guest behind a shared mount is only known to the host)
     p.riding = boat;
     if (boat.netProxy && this.net) this.net.ride(boat, true, seat); // a shared boat: tell the host we sit in it
     this.seatPlayer();
@@ -659,7 +660,7 @@ export class Game {
   seatPlayer() {
     const p = this.player, r = p.riding, b = r.body;
     // a Dune Strider seats two: whoever rides the host's copy steers from the front, a guest sits behind
-    const off = r.def && r.def.seatOffset ? r.def.seatOffset(r, !!r.netProxy) : null;
+    const off = r.def && r.def.seatOffset ? r.def.seatOffset(r, !!r.netProxy && (p.seat | 0) === 1) : null;
     if (off) p.body.setPos(b.x + off[0], b.y + off[1], b.z + off[2]);
     else if (r.kind === 'boat' && !r.cart) { const [dx, dz] = boatSeatOffset(r.yaw, p.seat | 0); p.body.setPos(b.x + dx, b.y + (r.seatY ?? -0.3), b.z + dz); } // the driver in front, a passenger behind
     else p.body.setPos(b.x, b.y + (r.seatY ?? -0.3), b.z);

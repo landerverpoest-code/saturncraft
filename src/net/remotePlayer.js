@@ -211,13 +211,19 @@ export function makeTarget(rp) {
     get crawling() { return !!st().crawling; },
     get swimming() { return !!st().swimming; },
     get gliding() { return !!st().gliding; },
+    get sprinting() { return !!st().sprinting; }, // thistle-shy fauna and moles read it (mobs/fauna.js)
     get eyeHeight() { return st().swimming || st().gliding ? 0.4 : st().crawling ? PHYS.PLAYER_CRAWL_EYE : st().sneaking ? PHYS.PLAYER_SNEAK_EYE : PHYS.PLAYER_EYE; },
     width: 0.6, get height() { return st().crawling || st().swimming ? PHYS.PLAYER_CRAWL_HEIGHT : PHYS.PLAYER_HEIGHT; }, // a crawler is a low target
     body: { get height() { return st().crawling || st().swimming ? PHYS.PLAYER_CRAWL_HEIGHT : PHYS.PLAYER_HEIGHT; }, width: PHYS.PLAYER_WIDTH, vx: 0, vy: 0, vz: 0, onGround: true },
     lastHurtBy: null, lastAttacked: null,
     stats: { kills: 0, blocksMined: 0 },
     reputation: {}, // what villages think of this guest (mobs/reputation.js); the host keeps it and tells the guest
-    inventory: { get selectedStack() { const h = st().held; return h == null ? null : { id: h, count: 1 }; } },
+    // what mob AI reads of a bag: the held stack and the worn armour (a Carved Pumpkin hides the face from a Voidwalker)
+    inventory: {
+      get selectedStack() { const h = st().held; return h == null ? null : { id: h, count: 1 }; },
+      get armor() { return (st().armor || [null, null, null, null]).map((id) => (id ? { id, count: 1, damage: 0 } : null)); },
+      changed() {},
+    },
     eyePos() { const s = st(); return [s.x, s.y + this.eyeHeight, s.z]; },
     lookDir() { const s = st(), cp = Math.cos(s.pitch); return [-Math.sin(s.yaw) * cp, Math.sin(s.pitch), -Math.cos(s.yaw) * cp]; },
     // a mob, an explosion or another player hurts this player: their own game applies it (armour etc.)

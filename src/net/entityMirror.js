@@ -100,6 +100,7 @@ export class EntityMirror {
       e.target = s.target ? 'player' : null;
       e.angry = s.angry; e.sheared = s.sheared; e.tamed = s.tamed; e.sitting = s.sitting; e.enemy = s.enemy ? 'player' : null;
       e.woolColor = s.woolColor; e.fuse = s.fuse; e.special = s.special; e.beam = s.beam; e.moving = s.moving; e.captain = s.captain; // Marauder Captains carry a banner
+      e.netDriver = s.driver; // who steers it (a player's id, -1 nobody)
       e.saddled = s.saddled; e.dancing = s.dancing; e.passengerId = s.passenger >= 0 ? s.passenger : null; e.heldItemId = ITEMS[s.heldItem] ? s.heldItem : 0; // Dune Striders, Hoverlings
       if (e.def && e.def.villager) { // a settler's trade (robe colour) follows the host's, including losing it; a new one shows the green burst
         if (e.netProfSeen && s.profession && s.profession !== e.profession) e.jobBurst(this.game);
@@ -162,7 +163,7 @@ export class EntityMirror {
       this.checkBoatSeat(e);
       if (!(p.seat | 0)) { this.tickRiddenBoat(e); return; } // the driver steers here; a passenger just follows the host's boat
     }
-    if (e.kind === 'mob' && p.riding === e) this.checkSeat(e);
+    if (e.kind === 'mob' && p.riding === e) { this.checkSeat(e); this.steerMount(e); }
     e.prev = [e.x, e.y, e.z];
     if (e.kind === 'mob') {
       e.prevYaw = e.yaw; e.prevFuse = e.fuse; if (e.hurtTime > 0) e.hurtTime--;
@@ -191,11 +192,23 @@ export class EntityMirror {
     this.tryPickup(e);
   }
 
-  /** We sit behind on the host's Dune Strider: get off again if the host gave the seat to someone else (or never gave it). */
+  /** We sit on the host's Dune Strider, Galloper or Thistlehorn: get off again if the host gave the seat to someone else (or never gave it). */
   checkSeat(e) {
-    const mine = e.netState && e.netState.passenger === this.session.id;
+    const st = e.netState, me = this.session.id;
+    const mine = st && ((this.game.player.seat | 0) === 1 ? st.passenger === me : st.driver === me);
     e.seatWait = mine ? 0 : (e.seatWait || 0) + 1;
     if (e.seatWait > 40) { e.seatWait = 0; this.game.dismount(); }
+  }
+
+  /** The reins: tell the host where we steer the mount we sit on (the host moves it; every 4th tick, at once when the keys change). */
+  steerMount(e) {
+    const g = this.game, p = g.player;
+    if ((p.seat | 0) !== 0 || !g.boatInput) return;
+    const i = g.boatInput, f = Math.sign(i.forward || 0), s = Math.round((i.strafe || 0) * 10) / 10, j = !!i.jump, sp = !!i.sprint;
+    const key = `${f},${s},${j},${sp}`;
+    if (key === e.steerKey && g.ticks - (e.steerAt || 0) < 4) return;
+    e.steerKey = key; e.steerAt = g.ticks;
+    this.session.send({ t: 'steer', id: e.netId, f, s, j: j ? 1 : 0, sp: sp ? 1 : 0 });
   }
 
   /** We sit in this boat: get out again if the host never gave us the seat (someone else was quicker). */

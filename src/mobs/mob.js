@@ -30,7 +30,7 @@ import * as THREE from 'three';
 
 import { conversionStep, newConversion } from './hostileVariants.js'; // registers the Hexwife and the Shambler / Rattler variants
 import { outOfMeleeReach } from './duneStrider.js'; // registers the Dune Strider
-import { mountReady, rideMove, rideJump, mountTick, mountFollowStep, riderFallDamage } from './mounts.js'; // rules of Gallopers, Thistlehorns and Dune Striders
+import { mountReady, rideMove, rideJump, mountTick, mountFollowStep, riderFallDamage, riderInput } from './mounts.js'; // rules of Gallopers, Thistlehorns and Dune Striders
 import './fauna.js'; // registers the Thistlehorn, Dustmole, Gloamlynx and Tarnling
 import { moraleAI, soundAlarm } from './morale.js';
 import './peddler.js'; // registers the Roving Peddler and its Packhorns
@@ -1546,7 +1546,7 @@ export class Mob {
    */
   riddenAI(g) {
     if (this.def.riddenAI) return this.def.riddenAI(this, g); // Dune Striders steer and dash their own way
-    const input = g.boatInput, b = this.body;
+    const input = riderInput(this, g), b = this.body;
     if (!this.tamed) {
       if (this.buck === undefined) this.buck = 40 + Math.floor(Math.random() * 40);
       this.yaw += (Math.random() - 0.5) * 0.4;
