@@ -13,6 +13,7 @@ import { AreaCloud } from '../entities/areaCloud.js';
 import { I, ITEMS, maxStack } from '../world/items.js';
 import { unpackEntity, roomFor } from './protocol.js';
 import { knotAt } from '../entities/leash.js';
+import { deadReckon, velocityBetween } from './interp.js';
 import { dirt } from '../mobs/hushkeeper.js';
 
 const TAKE_RETRY = 10; // ticks between pickup requests for the same entity
@@ -48,6 +49,11 @@ export class EntityMirror {
       if (!e) e = this.create(s);
       if (!e) continue;
       seen.add(s.id);
+      if (s.kind === 'mob') { // its speed, to carry it on when the next snapshot is late (far mobs are sent less often)
+        const now = performance.now();
+        e.netVel = velocityBetween(e.netState, s, now - (e.netSnapAt || 0));
+        e.netSnapAt = now;
+      }
       e.netState = s;
       this.update(e, s);
     }
@@ -174,7 +180,9 @@ export class EntityMirror {
     }
     if (e.kind === 'boat') e.prevYaw = e.yaw;
     if (!s) return;
-    const dx = s.x - e.x, dy = s.y - e.y, dz = s.z - e.z;
+    let tx = s.x, tz = s.z;
+    if (e.kind === 'mob' && e.netVel && !(p.riding === e)) [tx, , tz] = deadReckon(s, e.netVel, performance.now() - e.netSnapAt);
+    const dx = tx - e.x, dy = s.y - e.y, dz = tz - e.z;
     if (dx * dx + dy * dy + dz * dz > 64) { place(e, s.x, s.y, s.z); e.prev = [s.x, s.y, s.z]; }
     else place(e, e.x + dx * 0.5, e.y + dy * 0.5, e.z + dz * 0.5);
     if (e.kind === 'mob' || e.kind === 'boat') {

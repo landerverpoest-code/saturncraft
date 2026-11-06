@@ -1,6 +1,6 @@
 // The Tab player list: everyone in the shared world with their team colour, game mode and ping.
 // Rows come from net/social.js playerRows (the host's roster); this only draws them.
-import { gamemodeLabel, pingClass } from '../net/social.js';
+import { gamemodeLabel, pingClass, pingBars } from '../net/social.js';
 
 /** The sentence a screen reader gets for a row: name, role, team, game mode and ping (the colours are a bonus, never the only cue). */
 export function playerRowLabel(r) {
@@ -58,7 +58,15 @@ export class PlayerList {
       mode.textContent = gamemodeLabel(r.gamemode);
       const ping = document.createElement('span');
       ping.className = 'tl-ping ' + pingClass(r.ping);
-      ping.textContent = r.ping >= 0 ? `${r.ping} ms` : r.host ? 'host' : '-';
+      const bars = pingBars(r.ping);
+      ping.textContent = '';
+      const sig = document.createElement('span');
+      sig.className = 'tl-bars';
+      sig.setAttribute('aria-hidden', 'true');
+      for (let b = 1; b <= 4; b++) { const i = document.createElement('i'); i.style.height = `${3 + b * 3}px`; if (b <= bars) i.className = 'on'; sig.appendChild(i); }
+      const ms = document.createElement('span');
+      ms.textContent = r.ping >= 0 ? `${r.ping} ms` : r.host ? 'host' : '-';
+      ping.append(sig, ms);
       row.append(name, team, mode, ping);
       this.el.appendChild(row);
     }

@@ -14,6 +14,7 @@ import { REMOTE_LIGHTS } from '../render/terrainMaterial.js';
 import { colorFromInt, effectSwirl } from '../player/effects.js';
 import { breaksSeat } from './social.js';
 import { applyEmote } from '../render/emotes.js';
+import { SnapshotBuffer } from './interp.js';
 
 const SWING_MS = 300;
 
@@ -65,6 +66,7 @@ export class RemotePlayer {
     this.anim = { id, type: 'player', limbSwing: 0, limbAmount: 0, hurtTime: 0, deathTime: 0, headPitch: 0, angry: false, target: null };
     this.state = null;          // latest received state
     this.from = null;           // displayed state when it arrived
+    this.buffer = new SnapshotBuffer(); // snapshots shown a little in the past, carried on by their speed when one is late (net/interp.js)
     this.t0 = 0; this.interval = 100; this.lastRecv = 0;
     this.shown = null;          // currently displayed {x,y,z,yaw,pitch}
     this.bodyYaw = 0;
@@ -104,10 +106,11 @@ export class RemotePlayer {
     if (!s) return;
     if (this.swingSeq !== null && s.swing !== this.swingSeq) this.swingAt = now;
     this.swingSeq = s.swing;
-    this.from = this.shown ? { ...this.shown } : { x: s.x, y: s.y, z: s.z, yaw: s.yaw, pitch: s.pitch };
+    this.buffer.push(s, now);
     if (this.lastRecv) this.interval = Math.max(50, Math.min(300, now - this.lastRecv));
     this.lastRecv = this.t0 = now;
     this.state = s;
+    this.lag = this.buffer.delay;
   }
 
   get x() { return this.state ? this.state.x : 0; }
@@ -138,11 +141,7 @@ export class RemotePlayer {
     this.effectSwirl(game, s);
     if (!s || s.dead || s.invisible) { this.root.visible = false; return; } // Invisibility hides the whole player
     this.root.visible = true;
-    const f = Math.min(1, (now - this.t0) / this.interval);
-    const a = this.from;
-    let dyaw = s.yaw - a.yaw;
-    while (dyaw > Math.PI) dyaw -= Math.PI * 2; while (dyaw < -Math.PI) dyaw += Math.PI * 2;
-    const cur = { x: a.x + (s.x - a.x) * f, y: a.y + (s.y - a.y) * f, z: a.z + (s.z - a.z) * f, yaw: a.yaw + dyaw * f, pitch: a.pitch + (s.pitch - a.pitch) * f };
+    const cur = this.buffer.sample(now) || { x: s.x, y: s.y, z: s.z, yaw: s.yaw, pitch: s.pitch };
     if (this.shown) {
       const moved = Math.hypot(cur.x - this.shown.x, cur.z - this.shown.z);
       this.anim.limbAmount += (Math.min(1, moved * 6) - this.anim.limbAmount) * 0.25;

@@ -28,7 +28,7 @@ import { COLOR_BLIND_LABELS, nextColorBlind, priceCue } from './accessibility.js
 import { MenuNav, labelScreens, AUTOFOCUS_SCREENS } from './menuNav.js';
 import { buildTopics, searchTopics } from './helpTopics.js';
 import { TOUCH_MODE_LABELS, SIZE_RANGE, OPACITY_RANGE, nextTouchMode, normalizeTouch, detectTouch, readTouchEnv } from './touchMath.js';
-import { loadPlayerName } from '../net/protocol.js';
+import { loadPlayerName, MAX_PLAYERS } from '../net/protocol.js';
 import { EMOTES, EMOTE_LABELS } from '../net/social.js';
 import { grindstoneAccepts, grindstoneResult, grindstoneXp, stonecutterOutputs, stonecutterAccepts, loomResult, loomAcceptsCloth, loomAcceptsDye, LOOM_BATCH } from '../world/workstations.js';
 import { BEACON_POWERS, POWER_LEVEL, SECONDARY, BEACON_PAYMENT, beaconLevel, beamColor, beaconMeta, beaconRange } from '../world/beacons.js';
@@ -1551,6 +1551,13 @@ export class UI {
       };
       opt('PvP', 'pvp', () => net.pvp);
       opt('Guest commands', 'gc', () => net.guestCommands);
+      opt('Team friendly fire (all)', 'ffa', () => net.friendlyFireAll);
+      // how many players fit (2 to 8, the host included): lowering it never removes anybody who is here
+      const mp = el('<button class="btn"></button>');
+      const showMp = () => { mp.textContent = `Max players: ${net.maxPlayers}`; };
+      mp.onclick = () => { net.setOptions({ mp: net.maxPlayers >= MAX_PLAYERS ? 2 : net.maxPlayers + 1 }); showMp(); };
+      showMp();
+      opts.appendChild(mp);
       box.append(opts);
     } else {
       const info = el('<p class="sub"></p>');

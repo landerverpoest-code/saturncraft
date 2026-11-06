@@ -315,6 +315,7 @@ export function runCommand(game, text) {
     case 'seed': return `Seed: [${game.seed}]`;
     case 'dimension': case 'dim': return game.dims ? game.dims.command(args[0]) : 'Dimensions unavailable';
     // ---- multiplayer social layer (net/social.js); the host runs the ones that change shared state
+    case 'wp': case 'waypoint':
     case 'msg': case 'w': case 'tell': case 'm': case 'r': case 'team': case 'tc':
     case 'kick': case 'ban': case 'pardon': case 'banlist': case 'op': case 'deop': case 'oplist':
       if (!game.net) return 'This is for shared worlds: press Esc and choose Open to Friends first';
