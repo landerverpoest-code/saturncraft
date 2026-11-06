@@ -26,6 +26,7 @@ import '../../src/mobs/gustling.js';
 import '../../src/mobs/hoverling.js';
 import '../../src/mobs/hushkeeper.js';
 import '../../src/mobs/fauna.js';
+import '../../src/mobs/oceanSky.js';
 import '../../src/mobs/slagColossus.js';
 import { MOBS } from '../../src/mobs/mobTypes.js';
 
