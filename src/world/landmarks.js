@@ -19,6 +19,8 @@ import { sunTombsNear, nearestSunTomb } from './sunTombs.js';
 import { skywatchesNear, nearestSkywatch } from './skywatch.js';
 import { rimekeepsNear, nearestRimekeep } from './rimekeep.js';
 import { sporehallsNear, nearestSporehall } from './sporehall.js';
+import { grottosNear, nearestGrotto } from './deepSea.js';
+import { isleNear, nearestIsle } from './skyIsles.js';
 import { forgesNear, nearestForge } from './dimensions/cinderForge.js';
 import { wyrmRibsNear, nearestWyrmRibs } from './dimensions/wyrmRibs.js';
 
@@ -40,6 +42,8 @@ const FINDERS = {
   skywatch: { near: skywatchesNear, nearest: nearestSkywatch },
   rimekeep: { near: rimekeepsNear, nearest: nearestRimekeep },
   sporehall: { near: sporehallsNear, nearest: nearestSporehall },
+  grotto: { near: grottosNear, nearest: nearestGrotto },
+  isle: { near: isleNear, nearest: nearestIsle },
   // other dimensions (their generators have `dimension`; the overworld's does not)
   cinderforge: { near: forgesNear, nearest: nearestForge },
   wyrmribs: { near: wyrmRibsNear, nearest: nearestWyrmRibs },
