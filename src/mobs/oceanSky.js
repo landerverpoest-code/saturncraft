@@ -14,7 +14,8 @@
 // once when their chunks are made. Everything is simulated on the host; guests see the mobs through the ordinary snapshots.
 import { MOBS, MOB_KEYS, CATEGORY } from './mobTypes.js';
 import { MODELS, FACES } from './models.js';
-import { I, heldLightLevel } from '../world/items.js';
+import { I } from '../world/items.js';
+import { lampLevel } from '../player/diving.js';
 import { B, SOLID, isWaterish } from '../world/blocks.js';
 import { BIOME } from '../world/biomes.js';
 import { SEA_LEVEL } from '../world/constants.js';
@@ -29,12 +30,7 @@ export const RAY = { ORBIT_MIN: 11, ORBIT_MAX: 19, CLIMB: 9, MAX: 4, NEAR: 90 };
 export const FIN = { MAX: 10, SCHOOL: 5 };
 
 /** Light level (0-15) a player carries underwater: the held item, or the brow lamp of a Diver's Helm. */
-export function playerLamp(p) {
-  const held = p && p.inventory && p.inventory.selectedStack ? heldLightLevel(p.inventory.selectedStack.id) : 0;
-  const helm = p && p.inventory && p.inventory.armor && p.inventory.armor[0];
-  return Math.max(held, helm && helm.id === I.DIVERS_HELM ? HELM_LIGHT : 0);
-}
-export const HELM_LIGHT = 10;
+export const playerLamp = (p) => lampLevel(p && p.inventory);
 
 /** How far a Trenchmaw keeps from a swimmer carrying this much light (0 = not frightened). */
 export function lampScareRange(level) { return level >= 13 ? 10 : level >= 10 ? 5 : 0; }

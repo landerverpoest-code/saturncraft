@@ -51,8 +51,7 @@ export function trenchCut(gen, x, z) {
 export function kelpForestNoise(gen, x, z) { return seaNoise(gen).forest.noise2(x / 70, z / 70); }
 export const FOREST_THRESHOLD = 0.18;
 
-/** How dark the water is at height y: 0 in the shallows, 1 below the deepest light (used for the fog, see game.js). */
-export function depthDarkness(y) { return Math.max(0, Math.min(1, (SEA_LEVEL - 12 - y) / 28)); }
+export { depthDarkness } from '../player/diving.js'; // how dark the water is at a height (the fog uses it, see player/diving.js)
 
 /** Which sea biome a floor of height `top` gets, from the Ocean biome it started as. */
 export function seaBiomeFor(gen, base, top, x, z) {
