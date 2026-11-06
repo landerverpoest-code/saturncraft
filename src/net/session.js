@@ -695,6 +695,14 @@ export class HostSession extends Session {
     return true;
   }
 
+  /** Something set a guest alight (a Wickling's touch): their own game burns them (at most once a second, so a stream of hits is one message). */
+  burnRemote(rp, ticks) {
+    const c = this.clients.get(rp.id), now = performance.now();
+    if (!c || rp.target.dead || rp.target.creative || now - (c.burnAt || -1e9) < 1000) return;
+    c.burnAt = now;
+    c.ch.send({ t: 'burn', d: Math.max(1, Math.min(600, ticks | 0)) });
+  }
+
   /** A splash elixir broke near a guest: their own game applies the effects (strength f). */
   splashRemote(t, potionId, f) {
     const c = this.clients.get(t.remote ? t.remote.id : -1);
@@ -1472,6 +1480,7 @@ export class ClientSession extends Session {
         break;
       case 'ents': if (m.d === g.world.dimension && !g.dims.pending) this.ents.apply(m.m, m.ids); break;
       case 'hurt': p.hurt(m.a, m.s, m.x != null ? { x: m.x, z: m.z } : null); break;
+      case 'burn': if (!p.creative && !p.dead) p.fireTicks = Math.max(p.fireTicks, Math.max(1, Math.min(600, m.d | 0))); break;
       case 'fx': {
         // a splash elixir reached us on the host
         const d = ITEMS[m.p | 0], f = Math.max(0, Math.min(1, +m.f || 0));

@@ -400,3 +400,26 @@ describe('player list and host settings', () => {
     delete globalThis.document;
   });
 });
+
+describe('content pack on a guest', () => {
+  it('a Wickling sets a guest alight through one message, at most once a second', () => {
+    const h = new HostSession('Host', null, 'ABCDEF');
+    const sent = [];
+    const target = { dead: false, creative: false };
+    const rp = { id: 2, target };
+    h.clients.set(2, { id: 2, ch: { send: (m) => sent.push(m) } });
+    h.burnRemote(rp, 100);
+    h.burnRemote(rp, 100);
+    expect(sent).toEqual([{ t: 'burn', d: 100 }]);
+    target.creative = true;
+    h.clients.get(2).burnAt = -1e9;
+    h.burnRemote(rp, 100);
+    expect(sent.length).toBe(1);
+    h.clients.get(2).burnAt = -1e9;
+    target.creative = false;
+    const t = makeTarget({ id: 2, name: 'Bo', state: { x: 0, y: 0, z: 0, yaw: 0, pitch: 0 }, session: h, target });
+    t.fireTicks = 160;
+    expect(sent.length).toBe(2);
+    expect(typeof t.fireTicks).toBe('number');
+  });
+});

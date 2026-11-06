@@ -195,6 +195,7 @@ export class EntityMirror {
       e.limbAmount += (Math.min(1, moved * 4) - e.limbAmount) * 0.4;
       e.limbSwing += moved * 4;
     }
+    if (e.type === 'wickling' && g.particles && g.particles.flame && Math.random() < (e.angry ? 0.5 : 0.22)) g.particles.flame(e.x + (Math.random() - 0.5) * 0.3, e.y + e.height + 0.05, e.z + (Math.random() - 0.5) * 0.3); // (the host's AI makes its flame sparks; here they are cosmetic)
     if (e.kind === 'xp' && e.age !== undefined) e.age++;
     if (e.proxyTick) e.proxyTick(g); // a lingering cloud's specks
     this.tryPickup(e);

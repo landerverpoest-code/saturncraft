@@ -210,6 +210,9 @@ export function makeTarget(rp) {
     get crawling() { return !!st().crawling; },
     get swimming() { return !!st().swimming; },
     get gliding() { return !!st().gliding; },
+    // a Wickling's touch (or anything else that sets a player alight): their own game burns them
+    get fireTicks() { return 0; },
+    set fireTicks(v) { if (v > 0 && rp.session && rp.session.burnRemote) rp.session.burnRemote(rp, v); },
     get sprinting() { return !!st().sprinting; }, // thistle-shy fauna and moles read it (mobs/fauna.js)
     get eyeHeight() { return st().swimming || st().gliding ? 0.4 : st().crawling ? PHYS.PLAYER_CRAWL_EYE : st().sneaking ? PHYS.PLAYER_SNEAK_EYE : PHYS.PLAYER_EYE; },
     width: 0.6, get height() { return st().crawling || st().swimming ? PHYS.PLAYER_CRAWL_HEIGHT : PHYS.PLAYER_HEIGHT; }, // a crawler is a low target
