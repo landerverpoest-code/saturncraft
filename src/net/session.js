@@ -49,7 +49,7 @@ import { runRandomTicks } from '../world/randomTicks.js';
 import { addXp } from '../player/experience.js';
 import { MAX_USES } from '../mobs/trades.js';
 import { claimSeat } from '../mobs/duneStrider.js';
-import { FURNACE_CART } from '../mobs/mounts.js';
+import { FURNACE_CART, driverRefusal, cleanSteer } from '../mobs/mounts.js';
 import { releaseTarnling } from '../mobs/fauna.js';
 import { EFFECTS } from '../player/effects.js';
 import { FATIGUE_AMP, FATIGUE_TICKS, needsFatigue } from '../mobs/oceanMobs.js';
@@ -62,6 +62,7 @@ import {
   makeResume, pickGuestRecord, reconnectDelay, GAMEMODE_LABEL, teamColor,
 } from './social.js';
 import { PingBeacons } from '../render/pingBeacons.js';
+import { GuestMeter, allowedEdits, updateEvery, sendsNow, Rate } from './guard.js';
 
 const STATE_EVERY = 2;      // ticks between player / entity updates (10 Hz)
 const ENV_EVERY = 20;       // time + weather once a second (also the heartbeat)
@@ -74,17 +75,21 @@ const FULL_EVERY = 20;      // every 20th entity snapshot (2 s) is a full list, 
 const REACH = 12;           // blocks: how far from a player its edits / actions may be (reach + latency slack)
 const GUEST_SIM_RADIUS = 4; // chunks the host keeps loaded (and simulates) around each guest
 const GUEST_TICK_RADIUS = 2; // chunks around each guest that get random ticks (crops, leaves, fire, ice...); the costliest part per guest
+const WARN_QUIET_MS = 2500; // a guest shows the connection warning after this long without a word from the host
+const LAG_WARN_MS = 6000;   // a guest silent this long is shown as having an unstable connection
+const TICK_FAILS_MAX = 20;  // an entity that throws this many ticks in a row is removed
 const SLEEP_MS = 4500;      // a guest has to lie in bed this long before the night can be skipped
 
 /** Message channel over a transport conn: JSON objects in, JSON objects out. */
 class Channel {
   constructor(conn, onMessage, onClose) {
     this.conn = conn;
+    this.rate = new Rate(); // characters sent (bandwidth readout)
     const re = new Reassembler();
     conn.onData = (d) => { const m = re.push(d); if (m) { try { onMessage(m); } catch (e) { console.warn('net message failed', m.t, e); } } };
     conn.onClose = onClose;
   }
-  send(msg) { for (const s of encodeMessage(msg)) this.conn.send(s); }
+  send(msg) { for (const s of encodeMessage(msg)) { this.rate.add(s.length); this.conn.send(s); } }
   /** Bytes queued but not yet sent on this connection (0 if the transport can't tell). */
   backlog() { return this.conn.backlog ? this.conn.backlog() : 0; }
   close() { this.conn.close(); }
@@ -118,6 +123,7 @@ class Session {
     this._applyingOther = false;
     this.pvp = true;            // host options (sent to guests)
     this.guestCommands = true;
+    this.friendlyFireAll = false; // host option: team mates can hurt each other whatever their team says
     this.social = new SocialState(); // teams, ops, bans (the host's copy is part of the save; guests mirror the teams)
     this.pings = new PingBoard();    // short-lived beacons
     this.beacons = null;             // their 3D markers (render/pingBeacons.js), made on first use
@@ -163,7 +169,7 @@ class Session {
   render(sec) {
     const now = performance.now();
     for (const rp of this.remotes.values()) rp.update(this.game, sec, now);
-    const act = this.activePings(now);
+    const act = this.activePings(now).concat(this.waypointList().map((w) => ({ from: 'wp:' + w.name, x: w.x, y: w.y, z: w.z, color: '#7fe2ff', life: 1 })));
     if (act.length || this.beacons) {
       if (!this.beacons) this.beacons = new PingBeacons(this.game.scene);
       this.beacons.set(act, now, sec);
@@ -174,8 +180,11 @@ class Session {
   /** A player object (ours, or a guest's stand-in) -> its name. */
   nameOf(o) { return o ? o.netName || (o.isPlayer ? this.name : null) : null; }
   /** True when the attacker may not hurt the victim: same team, friendly fire off (net/social.js). */
-  blocksPvp(attacker, victim) { return this.social.blocksDamage(this.nameOf(attacker), this.nameOf(victim)); }
+  blocksPvp(attacker, victim) { return !this.friendlyFireAll && this.social.blocksDamage(this.nameOf(attacker), this.nameOf(victim)); }
   colorOf(name) { return this.social.colorOf(name); }
+
+  /** Shared waypoints to show here (this dimension): [{ name, x, y, z, by }]. */
+  waypointList() { return []; }
 
   /** Beacons to show now (this dimension). */
   activePings(now = performance.now()) { return this.game ? this.pings.active(now, this.game.world.dimension) : []; }
@@ -284,6 +293,15 @@ class Session {
     if (this.beacons) { this.beacons.dispose(); this.beacons = null; }
   }
 
+  /** `/team chat [on|off]`: plain chat lines go to the team (kept on this machine). Returns the lines, or null for any other command. */
+  teamChatToggle(text) {
+    const a = String(text).trim().replace(/^\//, '').toLowerCase().split(/\s+/);
+    if (a[0] !== 'team' || a[1] !== 'chat') return null;
+    if (!this.social.teamOf(this.name)) return ['You are not in a team'];
+    this.teamChatOn = a[2] === 'on' ? true : a[2] === 'off' ? false : !this.teamChatOn;
+    return [this.teamChatOn ? 'Chat now goes to your team (/team chat off to go back)' : 'Chat goes to everybody again'];
+  }
+
   /** Another player under the crosshair (PvP): { target, dist } or null. */
   raycastPlayers(ox, oy, oz, dx, dy, dz, maxDist) {
     let best = null;
@@ -299,6 +317,8 @@ class Session {
   setOptions(m) {
     if (typeof m.pvp === 'boolean') this.pvp = m.pvp;
     if (typeof m.gc === 'boolean') this.guestCommands = m.gc;
+    if (typeof m.ffa === 'boolean') this.friendlyFireAll = m.ffa;
+    if (this.isHost && Number.isInteger(m.mp)) this.maxPlayers = Math.max(2, Math.min(MAX_PLAYERS, m.mp));
   }
 }
 
@@ -310,6 +330,7 @@ export class HostSession extends Session {
     this.code = code;
     this.clients = new Map(); // id -> { id, name, ch, rp, joined, lastSeen, raw, sleepSince, minEp }
     this.nextId = 1;
+    this.maxPlayers = MAX_PLAYERS; // the host can lower it (pause menu)
     this.viewers = new Map(); // container key -> { kind, x, y, z, ids: Set, sig }
   }
 
@@ -353,7 +374,7 @@ export class HostSession extends Session {
     for (const c of this.clients.values()) {
       if (!c.joined || c === except) continue;
       parts = parts || encodeMessage(msg);
-      for (const s of parts) c.ch.conn.send(s);
+      for (const s of parts) { if (c.ch.rate) c.ch.rate.add(s.length); c.ch.conn.send(s); }
     }
   }
 
@@ -361,7 +382,7 @@ export class HostSession extends Session {
     // the signalling server can hand us the same peer's offer twice (after a reconnect): keep the first
     for (const o of this.clients.values()) if (o.ch.conn.peer === conn.peer && !o.ch.conn.closed) { conn.onData = null; conn.onClose = null; return; }
     if (this.closed) { conn.close(); return; }
-    const c = { id: this.nextId++, name: null, joined: false, lastSeen: performance.now(), minEp: 0 };
+    const c = { id: this.nextId++, name: null, joined: false, lastSeen: performance.now(), minEp: 0, meter: new GuestMeter(performance.now()) };
     c.ch = new Channel(conn, (m) => this.onMessage(c, m), () => this.drop(c, 'left the game'));
     this.clients.set(c.id, c);
   }
@@ -374,9 +395,10 @@ export class HostSession extends Session {
   entity(id) { return this.game.entities.list.find((e) => e.id === id && !e.dead && !e.removed); }
 
   onMessage(c, m) {
-    c.lastSeen = performance.now();
+    const now = c.lastSeen = performance.now();
     if (!c.joined) { if (m.t === 'hello') this.welcome(c, m); return; }
     const g = this.game;
+    if (!this.meter(c, m, now)) return; // a flood: dropped (net/guard.js)
     switch (m.t) {
       case 'st': {
         const st = unpackPlayerState(m.s);
@@ -463,8 +485,8 @@ export class HostSession extends Session {
       case 'boxput': if (this.near(c, m.x + 0.5, m.y + 0.5, m.z + 0.5, 8)) g.onBoxPlaced(m.x | 0, m.y | 0, m.z | 0, { contents: m.s }, true); break;
       case 'ride': {
         const b = this.entity(m.id);
-        // the back seat of a Dune Strider (mobs/duneStrider.js)
-        if (b && b.kind === 'mob' && (!m.on || this.near(c, b.x, b.y, b.z, 8))) { claimSeat(b, c.id, !!m.on); break; }
+        // the seats of a mount: the back seat of a Dune Strider (mobs/duneStrider.js), or the saddle of a Galloper, Thistlehorn or Strider
+        if (b && b.kind === 'mob') { this.remoteMobSeat(c, b, m); break; }
         if (!b || b.kind !== 'boat') break;
         if (m.on) {
           // a seat of the boat: the driver's, or the second one behind (the guest may ask for either; the snapshot tells it which it got)
@@ -482,6 +504,11 @@ export class HostSession extends Session {
         if (!b || b.kind !== 'boat' || b.remoteRider !== c.id || !finite(m.x, m.y, m.z, m.yaw) || !this.near(c, m.x, m.y, m.z, 6)) break;
         b.prev = [b.x, b.y, b.z]; b.prevYaw = b.yaw;
         b.body.setPos(m.x, m.y, m.z); b.yaw = m.yaw;
+        break;
+      }
+      case 'steer': { // the guest in the saddle of a mount: where it wants to go
+        const b = this.entity(m.id);
+        if (b && b.kind === 'mob' && b.rider === c.rp.target) b.remoteInput = cleanSteer(m, g.ticks);
         break;
       }
       case 'bhit': this.remoteBoatHit(c, m); break;
@@ -520,7 +547,7 @@ export class HostSession extends Session {
     if (ban) { c.ch.send({ t: 'reject', reason: `You are banned from this world${ban.reason ? ': ' + ban.reason : ''}` }); setTimeout(() => this.drop(c), 500); return; }
     // the same guest coming back before the old link timed out: the old link goes, the name stays theirs
     if (tok) for (const o of this.joined()) if (o !== c && o.tok === tok && nameKey(o.name) === nameKey(base)) this.drop(o);
-    if (this.joined().length >= MAX_PLAYERS - 1) { c.ch.send({ t: 'reject', reason: `This world is full (${MAX_PLAYERS} players)` }); setTimeout(() => this.drop(c), 500); return; }
+    if (this.joined().length >= this.maxPlayers - 1) { c.ch.send({ t: 'reject', reason: `This world is full (${this.maxPlayers} players)` }); setTimeout(() => this.drop(c), 500); return; }
     let name = base;
     const taken = new Set(this.playerNames().map(nameKey));
     // a name belongs to the browser that first used it (ops, teams and saved belongings go by name)
@@ -532,8 +559,8 @@ export class HostSession extends Session {
     c.ch.send({
       t: 'welcome', v: PROTOCOL_VERSION, id: c.id, name, hostName: this.name,
       seed: g.seed, time: g.time, weather: g.weather.save(), gamemode: p.gamemode, dim: g.world.dimension,
-      dl: g.daylightCycle, df: g.difficulty, pvp: this.pvp, gc: this.guestCommands, se: g.seasons.save(), ev: g.worldEvents ? g.worldEvents.syncOut() : undefined,
-      soc: 1, teams: soc.teamsToWire(), // optional: the social layer (net/social.js); older guests ignore both
+      dl: g.daylightCycle, df: g.difficulty, pvp: this.pvp, gc: this.guestCommands, ffa: this.friendlyFireAll, mp: this.maxPlayers, se: g.seasons.save(), ev: g.worldEvents ? g.worldEvents.syncOut() : undefined,
+      soc: 1, teams: soc.teamsToWire(), wps: soc.waypointsToWire(name), // optional: the social layer (net/social.js); older guests ignore both
       worldSpawn: g.worldSpawn, pos: { x: p.x, y: p.y, z: p.z, yaw: p.yaw },
       player: g.netPlayers[name] || null,
       signs: [...g.signs], frames: [...g.frames], pots: [...g.pots], lecterns: [...g.lecterns], campfires: [...(g.campfires || [])],
@@ -563,10 +590,11 @@ export class HostSession extends Session {
   drop(c, why = null) {
     if (!this.clients.has(c.id)) return;
     this.clients.delete(c.id);
+    console.warn('net: dropped', c.name, why || '(closed)');
     c.ch.close();
     if (!c.joined) return;
     for (const v of this.viewers.values()) v.ids.delete(c.id);
-    for (const e of this.game.entities.list) { if (e.remoteRider === c.id) e.remoteRider = null; if (e.remoteRider2 === c.id) e.remoteRider2 = null; if (e.passengerId === c.id) e.passengerId = null; }
+    for (const e of this.game.entities.list) { if (e.kind === 'mob' && e.rider === c.rp.target) this.freeSaddle(e); if (e.remoteRider === c.id) e.remoteRider = null; if (e.remoteRider2 === c.id) e.remoteRider2 = null; if (e.passengerId === c.id) e.passengerId = null; }
     for (const mob of heldBy(this.game, c.rp.target)) unleash(this.game, mob, true); // the leads they held fall
     // their record keeps the last place they stood (newer than the inventory copy of up to 5 s ago): a rejoin continues there
     const rec = this.game.netPlayers && this.game.netPlayers[c.name];
@@ -582,9 +610,28 @@ export class HostSession extends Session {
   }
 
   // ---- blocks ---------------------------------------------------------------------
+  /** Meter a guest's message; false drops it. Warns the host once about a guest that floods, kicks one that will not stop. */
+  meter(c, m, now) {
+    if (!c.meter) return true;
+    if (m.t === 'ed') return true; // (counted edit by edit in applyGuestEdits)
+    if (c.meter.allow(m.t, now)) return true;
+    this.flagFlood(c);
+    return false;
+  }
+
+  flagFlood(c) {
+    const v = c.meter.verdict();
+    if (v === 'warn') { c.meter.warned = true; this.game.chat.add(`${c.name} is sending too fast: extra messages are ignored`); }
+    else if (v === 'kick') this.kickPlayer(c.name, 'flooding the host');
+  }
+
   applyGuestEdits(c, flat) {
     const g = this.game, w = g.world, broken = [], shaken = [];
+    const now = performance.now();
+    let budget = c.meter ? allowedEdits(c.meter, Math.floor((flat ? flat.length : 0) / 5), now) : Infinity;
+    if (c.meter && budget < Math.floor((flat ? flat.length : 0) / 5)) this.flagFlood(c);
     const bad = this.edits.apply(flat, (x, y, z, nid) => {
+      if (budget-- <= 0) return false; // too many edits at once: put the guest's world back
       if (!this.near(c, x + 0.5, y + 0.5, z + 0.5)) return false;
       const id = w.getBlock(x, y, z);
       if (CONTAINER_BLOCKS.has(id)) broken.push([x, y, z, id, w.getMeta(x, y, z)]);
@@ -646,6 +693,14 @@ export class HostSession extends Session {
     if (!c) return false;
     c.ch.send({ t: 'eff', e: type, d: ticks | 0, a: amp | 0 });
     return true;
+  }
+
+  /** Something set a guest alight (a Wickling's touch): their own game burns them (at most once a second, so a stream of hits is one message). */
+  burnRemote(rp, ticks) {
+    const c = this.clients.get(rp.id), now = performance.now();
+    if (!c || rp.target.dead || rp.target.creative || now - (c.burnAt || -1e9) < 1000) return;
+    c.burnAt = now;
+    c.ch.send({ t: 'burn', d: Math.max(1, Math.min(600, ticks | 0)) });
   }
 
   /** A splash elixir broke near a guest: their own game applies the effects (strength f). */
@@ -801,6 +856,36 @@ export class HostSession extends Session {
     c.ch.send({ t: 'rep', k: key, v: value });
   }
 
+  /** A guest asks for (`m.on`) or gives up a seat on a mob: the front seat is the saddle (steering), seat 1 the one behind (Dune Strider). */
+  remoteMobSeat(c, b, m) {
+    const me = c.rp.target;
+    if (!m.on) {
+      claimSeat(b, c.id, false);
+      if (b.rider === me) this.freeSaddle(b);
+      return;
+    }
+    const no = () => c.ch.send({ t: 'rno', id: b.id }); // the seat is not theirs: they get off at once
+    if (b.rider === me || b.passengerId === c.id) return;
+    if (!this.near(c, b.x, b.y, b.z, 8)) { no(); return; }
+    if (m.seat === 1) { if (!claimSeat(b, c.id, true)) no(); return; }
+    if (driverRefusal(b)) { no(); return; }
+    b.rider = me; b.remoteInput = null; b.sitting = false; b.path = null; b.wander = null; b.target = null;
+  }
+
+  /** A guest who died, left the area or went away no longer holds the reins. */
+  checkSaddles() {
+    for (const e of this.game.entities.list) {
+      const r = e.kind === 'mob' ? e.rider : null;
+      if (!r || !r.isRemotePlayer) continue;
+      if (r.dead || !this.remotes.has(r.remote.id) || Math.hypot(r.x - e.x, r.z - e.z) > 12 || e.dead || e.deathTime > 0) this.freeSaddle(e);
+    }
+  }
+
+  /** Nobody steers this mount any more. */
+  freeSaddle(b) {
+    b.rider = null; b.remoteInput = null; b.move = null;
+  }
+
   remoteBoatHit(c, m) {
     const g = this.game, b = this.entity(m.id), s = c.rp.state;
     if (!b || b.kind !== 'boat' || !s || Math.hypot(b.x - s.x, b.z - s.z) > 6) return;
@@ -856,9 +941,22 @@ export class HostSession extends Session {
         if (d < bd) { bd = d; best = pl.obj; }
       }
     }
-    if (!best || best === real) { e.tick(g); return; }
+    if (!best || best === real) { this.guardTick(e); return; }
     g.player = best;
-    try { e.tick(g); } finally { g.player = real; }
+    try { this.guardTick(e); } finally { g.player = real; }
+  }
+
+  /**
+   * One entity's tick, isolated: a mob whose AI trips over something about a guest (a field the stand-in lacks) must not
+   * abort the whole host tick (and with it every guest's snapshots, which would time them all out). It is logged once,
+   * and a creature that keeps failing is removed.
+   */
+  guardTick(e) {
+    try { e.tick(this.game); if (e.netErrors) e.netErrors = 0; } catch (err) {
+      e.netErrors = (e.netErrors | 0) + 1;
+      if (!e.netErrLogged) { e.netErrLogged = true; console.warn('net: entity tick failed', e.type || e.kind, err); }
+      if (e.netErrors >= TICK_FAILS_MAX) { e.dead = true; if (e.kind === 'mob') e.removed = true; }
+    }
   }
 
   // ---- containers -----------------------------------------------------------------
@@ -951,7 +1049,7 @@ export class HostSession extends Session {
   sendEnv() {
     const g = this.game;
     // rb: the raid under way (mobs/raids.js raidStatus): guests near the village show its bar
-    this.broadcast({ t: 'env', time: g.time, w: g.weather.save(), dl: g.daylightCycle, df: g.difficulty, pvp: this.pvp, gc: this.guestCommands, se: g.seasons.save(), ev: g.worldEvents ? g.worldEvents.syncOut() : undefined, rb: g.raids && g.raids.status ? g.raids.status() : null });
+    this.broadcast({ t: 'env', time: g.time, w: g.weather.save(), dl: g.daylightCycle, df: g.difficulty, pvp: this.pvp, gc: this.guestCommands, ffa: this.friendlyFireAll, mp: this.maxPlayers, se: g.seasons.save(), ev: g.worldEvents ? g.worldEvents.syncOut() : undefined, rb: g.raids && g.raids.status ? g.raids.status() : null });
   }
 
   /** Night is skipped once everybody has been asleep for a while (the host in bed for 5 s). */
@@ -1013,6 +1111,8 @@ export class HostSession extends Session {
       social: this.social, hostName: this.name,
       online: () => this.playerNames(),
       teamChanged: () => this.broadcastTeams(),
+      posOf: (name) => this.posOf(name),
+      waypointsChanged: () => this.sendWaypoints(),
       pm: (from, to, text) => this.deliverPm(from, to, text),
       teamSay: (from, text) => this.deliverTeam(from, text),
       kick: (name, reason) => this.kickPlayer(name, reason),
@@ -1021,7 +1121,7 @@ export class HostSession extends Session {
   }
 
   /** /msg, /team, /kick... typed by the host. */
-  socialCommand(text) { return runSocial(this.socialEnv(), this.name, text); }
+  socialCommand(text) { return this.teamChatToggle(text) || runSocial(this.socialEnv(), this.name, text); }
 
   /** The same typed by a guest: the host runs it for them and answers with the lines. */
   remoteSocial(c, m) {
@@ -1054,7 +1154,20 @@ export class HostSession extends Session {
     }
   }
 
-  broadcastTeams() { this.broadcast({ t: 'teams', teams: this.social.teamsToWire() }); }
+  broadcastTeams() { this.broadcast({ t: 'teams', teams: this.social.teamsToWire() }); this.sendWaypoints(); }
+
+  /** Where a player stands (for /wp add): { x, y, z, dim }. */
+  posOf(name) {
+    const pl = this.players().find((p) => nameKey(p.name) === nameKey(name));
+    return pl ? { x: pl.obj.x, y: pl.obj.y, z: pl.obj.z, dim: this.game.world.dimension } : null;
+  }
+
+  waypointList() { return this.game ? this.social.waypointsFor(this.name).filter((w) => w.dim === this.game.world.dimension) : []; }
+
+  /** Everybody gets the waypoints they may see (a team's are for its members). */
+  sendWaypoints() {
+    for (const c of this.joined()) c.ch.send({ t: 'wps', w: this.social.waypointsToWire(c.name) });
+  }
 
   kickPlayer(name, reason = '') {
     const c = this.clientByName(name);
@@ -1108,6 +1221,7 @@ export class HostSession extends Session {
     const e = this.edits.take();
     if (e.length) this.broadcast({ t: 'ed', e, d: g.world.dimension });
     this.simulateGuests();
+    if (this.ticks % 10 === 0) this.checkSaddles();
     this.tickSleep();
     if (this.ticks % STATE_EVERY === 0) {
       const list = [[0, ...this.ownState()]];
@@ -1129,8 +1243,11 @@ export class HostSession extends Session {
         const full = !c.entCache || c.entDim !== g.world.dimension || ++c.entCount % FULL_EVERY === 0;
         if (full) { c.entCache = new Map(); c.entDim = g.world.dimension; }
         const changed = [], ids = [], cache = new Map();
+        const pressure = c.ch.backlog() > BACKLOG_LIMIT / 4 ? (c.ch.backlog() > BACKLOG_LIMIT / 2 ? 2 : 1) : 0; // a guest whose link is filling up gets the far things less often
+        const n = c.entCount | 0;
         for (const x of ents) {
-          if (Math.abs(x.x - s.x) > ENTITY_RANGE || Math.abs(x.z - s.z) > ENTITY_RANGE) continue;
+          const dx = Math.abs(x.x - s.x), dz = Math.abs(x.z - s.z);
+          if (dx > ENTITY_RANGE || dz > ENTITY_RANGE) continue;
           let p = packed.get(x);
           if (p === undefined) {
             const a = packEntity(x, riderOf, playerIdOf);
@@ -1138,9 +1255,12 @@ export class HostSession extends Session {
             packed.set(x, p);
           }
           if (!p) continue;
-          cache.set(p.a[1], p.key);
-          ids.push(p.a[1]);
-          if (c.entCache.get(p.a[1]) !== p.key) changed.push(p.a);
+          const id = p.a[1], old = c.entCache.get(id);
+          ids.push(id);
+          // far mobs, items and orbs are resent every 2nd or 4th snapshot (a full list sends everything); what is skipped keeps its old key and goes out later
+          if (!full && old !== undefined && old !== p.key && !sendsNow(updateEvery(x.kind, Math.hypot(dx, dz), pressure), id, n)) { cache.set(id, old); continue; }
+          cache.set(id, p.key);
+          if (old !== p.key) changed.push(p.a);
         }
         c.entCache = cache;
         c.ch.send(full ? { t: 'ents', m: changed, d: g.world.dimension } : { t: 'ents', m: changed, ids, d: g.world.dimension });
@@ -1150,7 +1270,15 @@ export class HostSession extends Session {
     if (this.ticks % ENV_EVERY === 0) {
       this.sendEnv();
       const now = performance.now();
-      for (const c of [...this.clients.values()]) if (now - c.lastSeen > TIMEOUT_MS) this.drop(c, 'timed out');
+      for (const c of [...this.clients.values()]) {
+        if (now - c.lastSeen > TIMEOUT_MS) { this.drop(c, 'timed out'); continue; }
+        if (!c.joined) continue;
+        if (c.ch.rate) c.ch.rate.tick(now);
+        // a guest that went quiet: say so (once), and when it is back
+        const quiet = now - c.lastSeen > LAG_WARN_MS;
+        if (quiet && !c.lagging) { c.lagging = true; this.game.chat.add(`${c.name}'s connection is unstable`); }
+        else if (!quiet && c.lagging) { c.lagging = false; this.game.chat.add(`${c.name}'s connection recovered`); }
+      }
     }
   }
 
@@ -1190,6 +1318,8 @@ export class ClientSession extends Session {
     this.resume = null;   // what a dropped link left behind: our place and belongings (net/social.js makeResume)
     this.rtt = -1;        // round trip to the host in ms (shown in the Tab list)
     this.hostSocial = false; // does the host speak the social messages?
+    this.waypoints = [];     // shared waypoints the host sent (net/social.js)
+    this.teamChatOn = false; // plain chat lines go to the team (/team chat)
   }
 
   async connect(transport, code, onStatus = () => {}) {
@@ -1213,7 +1343,7 @@ export class ClientSession extends Session {
   onMessage(m) {
     this.lastSeen = performance.now();
     if (!this.game) {
-      if (m.t === 'welcome') { this.welcome = m; this.id = m.id; this.name = m.name; this.setOptions(m); this.hostSocial = !!m.soc; this.social.teamsFromWire(m.teams); }
+      if (m.t === 'welcome') { this.welcome = m; this.id = m.id; this.name = m.name; this.setOptions(m); this.hostSocial = !!m.soc; this.social.teamsFromWire(m.teams); this.waypoints = SocialState.waypointsFromWire(m.wps); }
       else if (m.t === 'ck') { this.chunks.push(m); if (this.welcome && this.onStatus) this.onStatus(`Downloading the world… ${this.chunks.length}/${this.welcome.chunks} chunks`); }
       else if (m.t === 'ready') this._ready();
       else if (m.t === 'reject') this.lost(m.reason || 'The host refused the connection');
@@ -1222,6 +1352,26 @@ export class ClientSession extends Session {
       return;
     }
     this.handle(m);
+  }
+
+  /** The connection warning: nothing from the host for a while (shown before the link is given up on). */
+  render(sec) {
+    super.render(sec);
+    this.updateWarning(performance.now());
+  }
+
+  updateWarning(now) {
+    const quiet = this.closed ? 0 : now - this.lastSeen;
+    const show = quiet > WARN_QUIET_MS;
+    if (!show && !this.warnEl) return;
+    if (!this.warnEl) {
+      this.warnEl = document.createElement('div');
+      this.warnEl.id = 'netwarn';
+      this.warnEl.setAttribute('role', 'alert');
+      document.body.appendChild(this.warnEl);
+    }
+    this.warnEl.classList.toggle('hidden', !show);
+    if (show) this.warnEl.textContent = `No news from the host for ${Math.floor(quiet / 1000)} s - the connection is unstable (disconnecting in ${Math.max(0, Math.ceil((TIMEOUT_MS - quiet) / 1000))} s)`;
   }
 
   get worldSpawn() { return this.welcome.worldSpawn; }
@@ -1300,6 +1450,7 @@ export class ClientSession extends Session {
       case 'pm': g.chat.add(m.from ? PM_FROM(String(m.from).slice(0, 16), String(m.m || '').slice(0, 256)) : PM_TO(String(m.to || '').slice(0, 16), String(m.m || '').slice(0, 256)), PM_COLOR); break;
       case 'tchat': { const t = this.social.teamOf(m.from); g.chat.add(TEAM_CHAT(String(m.team || '').slice(0, 12), String(m.from || '').slice(0, 16), String(m.m || '').slice(0, 256)), t ? t.color : null); break; }
       case 'teams': this.social.teamsFromWire(m.teams); break;
+      case 'wps': this.waypoints = SocialState.waypointsFromWire(m.w); break;
       case 'roster': this.roster = cleanRoster(m.r); break;
       case 'pong': { const r = performance.now() - m.ts; if (Number.isFinite(r) && r >= 0) this.rtt = this.rtt < 0 ? Math.round(r) : Math.round(this.rtt * 0.5 + r * 0.5); break; }
       case 'ping': {
@@ -1329,6 +1480,7 @@ export class ClientSession extends Session {
         break;
       case 'ents': if (m.d === g.world.dimension && !g.dims.pending) this.ents.apply(m.m, m.ids); break;
       case 'hurt': p.hurt(m.a, m.s, m.x != null ? { x: m.x, z: m.z } : null); break;
+      case 'burn': if (!p.creative && !p.dead) p.fireTicks = Math.max(p.fireTicks, Math.max(1, Math.min(600, m.d | 0))); break;
       case 'fx': {
         // a splash elixir reached us on the host
         const d = ITEMS[m.p | 0], f = Math.max(0, Math.min(1, +m.f || 0));
@@ -1387,7 +1539,7 @@ export class ClientSession extends Session {
       case 'rep': if (typeof m.k === 'string' && Number.isFinite(m.v)) setRep(g.player, m.k, m.v); break;
       case 'cont': this.onContainerState(m, false); break;
       case 'cack': case 'cnak': this.onContainerReply(m); break;
-      case 'cclose': if (this.cont && this.cont.kind === m.k && this.cont.x === m.x && this.cont.y === m.y && this.cont.z === m.z && g.ui.open === (m.k === 'chest2' || m.k === 'cargo' ? 'chest' : m.k)) g.ui.close(); break;
+      case 'cclose': if (this.cont && this.cont.kind === m.k && this.cont.x === m.x && this.cont.y === m.y && this.cont.z === m.z && this.screenOpen(this.cont)) g.ui.close(); break;
       case 'bolt': this._applyingOther = true; this.edits.applying = true; try { g.strikeLightning(m.x, m.y, m.z); } finally { this._applyingOther = false; this.edits.applying = false; } break;
       case 'wake': if (p.sleeping) { g.wakeUp(false); g.milestones.event('sleep'); } break;
       case 'dim': this.followDimension(m); break;
@@ -1398,6 +1550,7 @@ export class ClientSession extends Session {
         if (pd) { pd.x = x; pd.y = m.y; pd.z = z; pd.mode = 'exact'; } else p.setPosition(x, m.y, z);
         break;
       }
+      case 'rno': if (p.riding && p.riding.netId === m.id) g.dismount(); break; // the host refused the seat
       case 'bye': this.lost(m.reason || 'The host closed the world'); break;
       default: break;
     }
@@ -1554,15 +1707,18 @@ export class ClientSession extends Session {
     if (!c || c.kind !== m.k || c.x !== m.x || c.y !== m.y || c.z !== m.z) return;
     if (c.pending.length) { c.latest = m.s; return; } // ours are in flight; the replies carry the newer state
     loadContainerState(c.kind, c.obj, m.s);
-    if (this.game.ui.open === c.kind) this.game.ui.refreshAll(true);
+    if (this.screenOpen(c)) this.game.ui.refreshAll(true);
   }
+
+  /** Is the screen of this open container showing? (a double chest and a boat's cargo use the chest screen) */
+  screenOpen(c) { return this.game.ui.open === (c.kind === 'chest2' || c.kind === 'cargo' ? 'chest' : c.kind); }
 
   onContainerReply(m) {
     const c = this.cont, g = this.game;
     if (!c || c.kind !== m.k || c.x !== m.x || c.y !== m.y || c.z !== m.z) return;
     if (m.t === 'cack') {
       c.pending = c.pending.filter((p) => p.seq > m.seq);
-      if (!c.pending.length && m.s) { loadContainerState(c.kind, c.obj, m.s); if (g.ui.open === c.kind) g.ui.refreshAll(true); }
+      if (!c.pending.length && m.s) { loadContainerState(c.kind, c.obj, m.s); if (this.screenOpen(c)) g.ui.refreshAll(true); }
       return;
     }
     if (m.ep !== c.ep) return; // already rolled back
@@ -1576,7 +1732,7 @@ export class ClientSession extends Session {
     c.ep++;
     c.pending = [];
     if (m.s) loadContainerState(c.kind, c.obj, m.s);
-    if (g.ui.open === c.kind) g.ui.refreshAll(true);
+    if (this.screenOpen(c)) g.ui.refreshAll(true);
   }
 
   // ---- commands, dimensions, misc ---------------------------------------------------------
@@ -1584,12 +1740,16 @@ export class ClientSession extends Session {
 
   /** /msg, /team, /kick...: the host runs them and answers with the lines (as 'cmdout'). */
   socialCommand(text) {
+    const t = this.teamChatToggle(text);
+    if (t) return t;
     if (!this.hostSocial) return ['The host runs an older version of Saturncraft without these commands'];
     this.send({ t: 'scmd', text });
     return [];
   }
 
   hostName() { return this.welcome ? this.welcome.hostName : ''; }
+
+  waypointList() { return this.game ? this.waypoints.filter((w) => w.dim === this.game.world.dimension) : []; }
 
   /** The host's roster, or (older host) one we make out of the players we can see. */
   currentRoster() {
@@ -1665,6 +1825,8 @@ export class ClientSession extends Session {
   lost(msg, retry = false) {
     if (this.closed) return;
     this.closed = true;
+    console.warn('net: connection lost -', msg);
+    if (this.warnEl) { this.warnEl.remove(); this.warnEl = null; }
     clearInterval(this.bgTimer); if (this.bgWorker) { this.bgWorker.terminate(); this.bgWorker = null; }
     try { this.ch && this.ch.close(); } catch { /* gone */ }
     if (!this.game) { if (this._fail) this._fail(new Error(msg)); return; }

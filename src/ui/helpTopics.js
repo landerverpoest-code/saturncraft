@@ -151,6 +151,18 @@ export function buildTopics({ table, touch = false, pad = false } = {}) {
     }) },
   ]);
 
+  add('landmarks2', 'Lighthouses, shrines and observatories', 'Systems', [
+    { p: 'Three newer ruins wait to be found (find them with /locate lighthouse, /locate mire or /locate observatory): a red-and-white Hermit\'s Lighthouse on a beach point, a Mire Shrine sunk in a swamp with a flooded crypt under its altar, and a Stargazer\'s Observatory with a mostly fallen glass dome on open hills. Each has chests, and one chest in each keeps a written log or chart you can read.' },
+    { h: 'Building with what you find' },
+    { list: [
+      'Azure Mosaic (with slabs and stairs) and Sunburst Mosaic: smooth stone round azurite or gold nuggets.',
+      'Leaded Glass, Leaded Glass Panes and the Rose Window: see-through glass in lead; the window takes a red, a blue and a yellow dye.',
+      'Lighthouse Lens: a bright block that lets its light through; Chandeliers and Iron Braziers light a room from above or below.',
+      'Rope Ladder: climb it like a ladder, hung on the side of a block. Made from string and a plank.',
+      'Brinecrabs scuttle on beaches and mud (cook Raw Crab on a campfire); Wicklings, candle-headed ghouls whose touch sets you alight, come out at night in swamps and dark forests. Water and rain snuff them.',
+    ] },
+  ]);
+
   add('depths', 'The deep sea and the sky', 'Systems', [
     { p: `Under the ocean the floor falls away. Where it lies ${SEA_LEVEL - DEEP_TOP} or more blocks under the surface the biome is Deep Ocean, and the water goes dark with depth: the fog closes in and the colour drains out. Patches of the shallower floor are Kelp Forests, thick with tall kelp. There is no pressure down there and no need to equalise, only the dark (and the breath you hold).` },
     { h: 'Going down' },

@@ -25,6 +25,8 @@ export const TEAM_COLOR_KEYS = Object.keys(TEAM_COLORS);
 export const MAX_TEAMS = 8;
 export const MAX_TEAM_NAME = 12;
 
+export const MAX_WAYPOINTS = 32;
+export function cleanWaypointName(s) { return String(s || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 16); }
 export const nameKey = (n) => String(n || '').trim().toLowerCase();
 export function cleanTeamName(s) { return String(s || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, MAX_TEAM_NAME); }
 /** A colour key or "#rrggbb" -> "#rrggbb" (or null). */
@@ -61,6 +63,7 @@ export class SocialState {
     this.bans = new Map();    // lower-case player name -> { name, reason, by, tok }
     this.ids = new Map();     // lower-case player name -> guest token (first come, first served)
     this.reply = new Map();   // lower-case player name -> who last wrote to them (not saved)
+    this.waypoints = new Map(); // lower-case waypoint name -> { name, x, y, z, dim, by, team }: shared places everybody (or one team) sees
   }
 
   // ---- teams
@@ -151,6 +154,43 @@ export class SocialState {
     }
   }
 
+  // ---- shared waypoints: a named place that stays (unlike a ping), for the sender's team or, without a team, for everybody
+  addWaypoint(by, name, pos) {
+    const n = cleanWaypointName(name);
+    if (!n) return { ok: false, msg: 'Usage: /wp add <name>  (marks the place you stand at)' };
+    if (!pos || ![pos.x, pos.y, pos.z].every(Number.isFinite)) return { ok: false, msg: 'Cannot tell where you are' };
+    const k = nameKey(n), old = this.waypoints.get(k);
+    if (old && nameKey(old.by) !== nameKey(by)) return { ok: false, msg: `${n} already marks another place (made by ${old.by})` };
+    if (!old && this.waypoints.size >= MAX_WAYPOINTS) return { ok: false, msg: `There can be at most ${MAX_WAYPOINTS} waypoints` };
+    const t = this.teamOf(by);
+    const r1 = (v) => Math.round(v * 10) / 10;
+    this.waypoints.set(k, { name: n, x: r1(pos.x), y: r1(pos.y), z: r1(pos.z), dim: pos.dim || 'overworld', by: cleanName(by), team: t ? t.name : null });
+    return { ok: true, msg: `${old ? 'Moved' : 'Marked'} waypoint ${n}${t ? ' for team ' + t.name : ' for everybody'}` };
+  }
+  delWaypoint(by, name, isOp = false) {
+    const k = nameKey(cleanWaypointName(name)), w = this.waypoints.get(k);
+    if (!w) return { ok: false, msg: `No waypoint called ${name || ''}. /wp list shows them` };
+    if (nameKey(w.by) !== nameKey(by) && !isOp) return { ok: false, msg: `Only ${w.by} (or an op) can remove ${w.name}` };
+    this.waypoints.delete(k);
+    return { ok: true, msg: `Removed waypoint ${w.name}` };
+  }
+  /** The waypoints `player` may see: those for everybody and those of their own team. */
+  waypointsFor(player) {
+    const t = this.teamOf(player);
+    return [...this.waypoints.values()].filter((w) => !w.team || (t && nameKey(t.name) === nameKey(w.team)));
+  }
+  waypointsToWire(player) { return this.waypointsFor(player).map((w) => [w.name, w.x, w.y, w.z, w.dim, w.by]); }
+  static waypointsFromWire(list) {
+    if (!Array.isArray(list)) return [];
+    const out = [];
+    for (const a of list.slice(0, MAX_WAYPOINTS)) {
+      if (!Array.isArray(a) || ![a[1], a[2], a[3]].every(Number.isFinite)) continue;
+      const name = cleanWaypointName(a[0]);
+      if (name) out.push({ name, x: a[1], y: a[2], z: a[3], dim: typeof a[4] === 'string' ? a[4].slice(0, 24) : 'overworld', by: cleanName(a[5]) });
+    }
+    return out;
+  }
+
   // ---- ops, bans and identities (host only; saved with the world)
   isOp(name, hostName = null) { const k = nameKey(name); return (!!hostName && k === nameKey(hostName)) || this.ops.has(k); }
   op(name) { this.ops.set(nameKey(name), cleanName(name)); }
@@ -186,6 +226,7 @@ export class SocialState {
       ops: [...this.ops.values()],
       bans: [...this.bans.values()],
       ids: Object.fromEntries(this.ids),
+      waypoints: [...this.waypoints.values()],
     };
   }
   static from(d) {
@@ -194,6 +235,11 @@ export class SocialState {
     s.teamsFromWire(d.teams);
     for (const n of Array.isArray(d.ops) ? d.ops.slice(0, 64) : []) if (typeof n === 'string') s.op(n);
     for (const b of Array.isArray(d.bans) ? d.bans.slice(0, 256) : []) if (b && typeof b.name === 'string') s.ban(b.name, b.reason, b.by, b.tok);
+    for (const w of Array.isArray(d.waypoints) ? d.waypoints.slice(0, MAX_WAYPOINTS) : []) {
+      if (!w || ![w.x, w.y, w.z].every(Number.isFinite)) continue;
+      const n = cleanWaypointName(w.name);
+      if (n) s.waypoints.set(nameKey(n), { name: n, x: w.x, y: w.y, z: w.z, dim: typeof w.dim === 'string' ? w.dim : 'overworld', by: cleanName(w.by), team: typeof w.team === 'string' ? w.team : null });
+    }
     if (d.ids && typeof d.ids === 'object') for (const [k, v] of Object.entries(d.ids).slice(0, 512)) if (cleanToken(v)) s.ids.set(nameKey(k), v);
     return s;
   }
@@ -201,7 +247,7 @@ export class SocialState {
 
 // ---- commands ---------------------------------------------------------------------------
 /** Commands the host runs for everyone (a guest's are sent as 'scmd'). */
-export const HOST_SOCIAL_COMMANDS = new Set(['msg', 'w', 'tell', 'm', 'r', 'team', 'tc', 'kick', 'ban', 'pardon', 'banlist', 'op', 'deop', 'oplist']);
+export const HOST_SOCIAL_COMMANDS = new Set(['wp', 'waypoint', 'msg', 'w', 'tell', 'm', 'r', 'team', 'tc', 'kick', 'ban', 'pardon', 'banlist', 'op', 'deop', 'oplist']);
 export const socialCommandName = (text) => String(text).trim().replace(/^\//, '').split(/\s+/)[0].toLowerCase();
 
 /**
@@ -260,6 +306,25 @@ export function runSocial(env, actor, text) {
       else return ['Usage: /team <create <name> [color] | join <name> | leave | list | ff <on|off> | color <color> | disband | msg <text>>'];
       if (r.ok) env.teamChanged();
       return [r.msg];
+    }
+    case 'wp': case 'waypoint': {
+      const sub = (args.shift() || 'list').toLowerCase();
+      if (sub === 'list') {
+        const list = social.waypointsFor(actor), at = env.posOf ? env.posOf(actor) : null;
+        if (!list.length) return ['No waypoints. /wp add <name> marks the place you stand at'];
+        return list.map((w) => `${w.name}: ${Math.round(w.x)}, ${Math.round(w.y)}, ${Math.round(w.z)}${w.dim !== 'overworld' ? ' (' + w.dim + ')' : ''}${at && at.dim === w.dim ? ' - ' + Math.round(Math.hypot(w.x - at.x, w.z - at.z)) + ' m' : ''}${w.team ? ' [' + w.team + ']' : ''}`);
+      }
+      if (sub === 'add' || sub === 'set') {
+        const r = social.addWaypoint(actor, args[0], env.posOf ? env.posOf(actor) : null);
+        if (r.ok && env.waypointsChanged) env.waypointsChanged();
+        return [r.msg];
+      }
+      if (sub === 'del' || sub === 'remove' || sub === 'rm') {
+        const r = social.delWaypoint(actor, args[0], isOp);
+        if (r.ok && env.waypointsChanged) env.waypointsChanged();
+        return [r.msg];
+      }
+      return ['Usage: /wp <add <name> | del <name> | list>  (shared places that stay on everyone\'s screen)'];
     }
     case 'kick': case 'ban': {
       const target = who(args[0]), reason = rest(1);
@@ -396,6 +461,8 @@ export function nextSpectateTarget(names, current, dir = 1) {
 // ---- the player list (Tab) --------------------------------------------------------------------------
 export const GAMEMODE_LABEL = { survival: 'Survival', creative: 'Creative', adventure: 'Adventure', spectator: 'Spectator' };
 export const gamemodeLabel = (g) => GAMEMODE_LABEL[g] || 'Survival';
+/** 0 (unknown) to 4 lit bars for a ping in ms. */
+export function pingBars(ms) { return !Number.isFinite(ms) || ms < 0 ? 0 : ms < 60 ? 4 : ms < 120 ? 3 : ms < 220 ? 2 : 1; }
 export function pingClass(ms) { return !Number.isFinite(ms) || ms < 0 ? 'none' : ms < 120 ? 'good' : ms < 300 ? 'ok' : 'bad'; }
 /** A ping in ms, or -1 for none / nonsense. */
 export const cleanPing = (v) => (Number.isFinite(+v) && +v >= 0 ? Math.min(9999, Math.round(+v)) : -1);

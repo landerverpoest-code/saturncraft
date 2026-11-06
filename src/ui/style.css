@@ -712,3 +712,10 @@ html.high-contrast .guide-card img { background: #fff; border: 1px solid #fff; }
 #aimtip.hidden { display: none; }
 html.large-text #aimtip { font-size: 17px; }
 html.high-contrast #aimtip { background: #000; border: 1px solid #fff; }
+
+/* multiplayer round 4: latency bars in the Tab list, the connection warning */
+#tablist .tl-bars { display: inline-flex; align-items: flex-end; gap: 1px; margin-right: 5px; height: 15px; vertical-align: middle; }
+#tablist .tl-bars i { display: block; width: 3px; background: rgba(255, 255, 255, .22); }
+#tablist .tl-bars i.on { background: currentColor; }
+#netwarn { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 40; max-width: 92vw; padding: 6px 14px; background: rgba(60, 12, 12, .88); border: 2px solid #ff6b6b; border-radius: 6px; color: #fff; font: 14px/1.4 sans-serif; text-align: center; pointer-events: none; }
+#netwarn.hidden { display: none; }

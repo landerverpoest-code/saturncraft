@@ -27,6 +27,9 @@ import { stampSunTombs } from './sunTombs.js';
 import { stampSkywatches } from './skywatch.js';
 import { stampRimekeeps } from './rimekeep.js';
 import { stampSporehalls } from './sporehall.js';
+import { stampLighthouses } from './lighthouse.js';
+import { stampMireShrines } from './mireShrine.js';
+import { stampObservatories } from './observatory.js';
 import { BIOME, BIOMES } from './biomes.js';
 import { MIN_Y, WORLD_HEIGHT, SEA_LEVEL, CHUNK_VOLUME, cidx } from './constants.js';
 import { grassColor, foliageColor } from './textures.js';
@@ -512,6 +515,9 @@ export class TerrainGenerator {
     stampSkywatches(this, blocks, meta, cx, cz);  // Skywatch Towers on mountain summits (world/skywatch.js)
     stampRimekeeps(this, blocks, meta, cx, cz);   // Rimekeeps on snowy plains and taiga (world/rimekeep.js)
     stampSporehalls(this, blocks, meta, cx, cz);  // Sporehalls in jungles and Highland Meadows (world/sporehall.js)
+    stampLighthouses(this, blocks, meta, cx, cz); // Hermit's Lighthouses on beaches (world/lighthouse.js)
+    stampMireShrines(this, blocks, meta, cx, cz); // Mire Shrines in swamps (world/mireShrine.js)
+    stampObservatories(this, blocks, meta, cx, cz); // Stargazer's Observatories on open hills (world/observatory.js)
     stampSkyIsles(this, blocks, meta, cx, cz);    // Cloud Isles and their wild Beanstalks (world/skyIsles.js): high above everything else, a pass of its own
 
     // Final heightmap: highest non-air block

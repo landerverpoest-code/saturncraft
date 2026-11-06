@@ -60,7 +60,9 @@ export class Chat {
           this.game.ui.close(); return;
         }
         const out = text.startsWith('/') ? runCommand(this.game, text) : null;
-        if (!text.startsWith('/')) {
+        if (!text.startsWith('/') && net && net.teamChatOn && net.social.teamOf(net.name)) {
+          for (const l of [].concat(net.socialCommand('/tc ' + text))) this.add(l); // team chat mode: the line goes to the team only
+        } else if (!text.startsWith('/')) {
           this.add(`<${net ? net.name : 'Player'}> ${text}`, net && net.social ? net.social.colorOf(net.name) : null);
           if (net) net.sendChat(text);
         }

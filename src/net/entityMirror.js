@@ -13,6 +13,7 @@ import { AreaCloud } from '../entities/areaCloud.js';
 import { I, ITEMS, maxStack } from '../world/items.js';
 import { unpackEntity, roomFor } from './protocol.js';
 import { knotAt } from '../entities/leash.js';
+import { deadReckon, velocityBetween } from './interp.js';
 import { dirt } from '../mobs/hushkeeper.js';
 
 const TAKE_RETRY = 10; // ticks between pickup requests for the same entity
@@ -48,6 +49,11 @@ export class EntityMirror {
       if (!e) e = this.create(s);
       if (!e) continue;
       seen.add(s.id);
+      if (s.kind === 'mob') { // its speed, to carry it on when the next snapshot is late (far mobs are sent less often)
+        const now = performance.now();
+        e.netVel = velocityBetween(e.netState, s, now - (e.netSnapAt || 0));
+        e.netSnapAt = now;
+      }
       e.netState = s;
       this.update(e, s);
     }
@@ -100,6 +106,7 @@ export class EntityMirror {
       e.target = s.target ? 'player' : null;
       e.angry = s.angry; e.sheared = s.sheared; e.tamed = s.tamed; e.sitting = s.sitting; e.enemy = s.enemy ? 'player' : null;
       e.woolColor = s.woolColor; e.fuse = s.fuse; e.special = s.special; e.beam = s.beam; e.moving = s.moving; e.captain = s.captain; // Marauder Captains carry a banner
+      e.netDriver = s.driver; // who steers it (a player's id, -1 nobody)
       e.saddled = s.saddled; e.dancing = s.dancing; e.passengerId = s.passenger >= 0 ? s.passenger : null; e.heldItemId = ITEMS[s.heldItem] ? s.heldItem : 0; // Dune Striders, Hoverlings
       if (e.def && e.def.villager) { // a settler's trade (robe colour) follows the host's, including losing it; a new one shows the green burst
         if (e.netProfSeen && s.profession && s.profession !== e.profession) e.jobBurst(this.game);
@@ -162,7 +169,7 @@ export class EntityMirror {
       this.checkBoatSeat(e);
       if (!(p.seat | 0)) { this.tickRiddenBoat(e); return; } // the driver steers here; a passenger just follows the host's boat
     }
-    if (e.kind === 'mob' && p.riding === e) this.checkSeat(e);
+    if (e.kind === 'mob' && p.riding === e) { this.checkSeat(e); this.steerMount(e); }
     e.prev = [e.x, e.y, e.z];
     if (e.kind === 'mob') {
       e.prevYaw = e.yaw; e.prevFuse = e.fuse; if (e.hurtTime > 0) e.hurtTime--;
@@ -173,7 +180,9 @@ export class EntityMirror {
     }
     if (e.kind === 'boat') e.prevYaw = e.yaw;
     if (!s) return;
-    const dx = s.x - e.x, dy = s.y - e.y, dz = s.z - e.z;
+    let tx = s.x, tz = s.z;
+    if (e.kind === 'mob' && e.netVel && !(p.riding === e)) [tx, , tz] = deadReckon(s, e.netVel, performance.now() - e.netSnapAt);
+    const dx = tx - e.x, dy = s.y - e.y, dz = tz - e.z;
     if (dx * dx + dy * dy + dz * dz > 64) { place(e, s.x, s.y, s.z); e.prev = [s.x, s.y, s.z]; }
     else place(e, e.x + dx * 0.5, e.y + dy * 0.5, e.z + dz * 0.5);
     if (e.kind === 'mob' || e.kind === 'boat') {
@@ -186,16 +195,29 @@ export class EntityMirror {
       e.limbAmount += (Math.min(1, moved * 4) - e.limbAmount) * 0.4;
       e.limbSwing += moved * 4;
     }
+    if (e.type === 'wickling' && g.particles && g.particles.flame && Math.random() < (e.angry ? 0.5 : 0.22)) g.particles.flame(e.x + (Math.random() - 0.5) * 0.3, e.y + e.height + 0.05, e.z + (Math.random() - 0.5) * 0.3); // (the host's AI makes its flame sparks; here they are cosmetic)
     if (e.kind === 'xp' && e.age !== undefined) e.age++;
     if (e.proxyTick) e.proxyTick(g); // a lingering cloud's specks
     this.tryPickup(e);
   }
 
-  /** We sit behind on the host's Dune Strider: get off again if the host gave the seat to someone else (or never gave it). */
+  /** We sit on the host's Dune Strider, Galloper or Thistlehorn: get off again if the host gave the seat to someone else (or never gave it). */
   checkSeat(e) {
-    const mine = e.netState && e.netState.passenger === this.session.id;
+    const st = e.netState, me = this.session.id;
+    const mine = st && ((this.game.player.seat | 0) === 1 ? st.passenger === me : st.driver === me);
     e.seatWait = mine ? 0 : (e.seatWait || 0) + 1;
     if (e.seatWait > 40) { e.seatWait = 0; this.game.dismount(); }
+  }
+
+  /** The reins: tell the host where we steer the mount we sit on (the host moves it; every 4th tick, at once when the keys change). */
+  steerMount(e) {
+    const g = this.game, p = g.player;
+    if ((p.seat | 0) !== 0 || !g.boatInput) return;
+    const i = g.boatInput, f = Math.sign(i.forward || 0), s = Math.round((i.strafe || 0) * 10) / 10, j = !!i.jump, sp = !!i.sprint;
+    const key = `${f},${s},${j},${sp}`;
+    if (key === e.steerKey && g.ticks - (e.steerAt || 0) < 4) return;
+    e.steerKey = key; e.steerAt = g.ticks;
+    this.session.send({ t: 'steer', id: e.netId, f, s, j: j ? 1 : 0, sp: sp ? 1 : 0 });
   }
 
   /** We sit in this boat: get out again if the host never gave us the seat (someone else was quicker). */

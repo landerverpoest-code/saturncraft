@@ -521,6 +521,11 @@ const ICON_CORE = [
   '..hhwwffFFffwh..', '..hhHwwffffwhh..', '...hhHwwwwwhh...', '....hhHHHHhh....', '.....hhhhhh.....', '................', '................', '................',
 ];
 item('colossus_core', 'Colossus Core', { iconStyle: [ICON_CORE, { h: '#4a3a40', H: '#7a6670', w: '#c8641c', f: '#ffb43a', F: '#fff0b0' }] });
+// Shore round (mobs/shoreMobs.js), appended so no item id shifts: Brinecrab meat (cooked on a campfire or in a furnace) and a Wickling's Tallow,
+// the waxy stub of its candle-head (a slow fuel, and a candle with a string).
+item('raw_crab', 'Raw Crab', { food: { hunger: 2, saturation: 1.2 }, iconStyle: ['meat', { h: '#e0704a', w: '#f6e6dc' }] });
+item('cooked_crab', 'Roast Crab', { food: { hunger: 6, saturation: 9.6 }, iconStyle: ['meat', { h: '#c4501e', w: '#f2d8c0' }] });
+item('tallow', 'Tallow', { fuel: 400, iconStyle: ['seeds', { h: '#e8dcb0', H: '#fff6d8' }] });
 
 // Ocean and sky round (world/deepSea.js, world/skyIsles.js, mobs/oceanSky.js), appended so no item id shifts:
 // Lanternfin meat and the Lantern Gland of the deep-sea fish, the Diver's Lamp (waterproof hand light) and Diver's Helm (breathes

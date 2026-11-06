@@ -81,6 +81,23 @@ export class PlayerMarkers {
         }
       }
     }
+    if (net && net.waypointList && cam) {
+      // shared waypoints (net/social.js): a diamond with the name and how far it is, pinned to the edge with an arrow when off screen
+      const w = window.innerWidth, h = window.innerHeight;
+      for (const wp of net.waypointList()) {
+        const id = 'wp:' + wp.name;
+        seen.add(id);
+        const m = this.marker(id);
+        _p.set(wp.x, wp.y + 1.6, wp.z);
+        const { x, y, inside, arrow } = screenSpot(_p, cam, w, h);
+        m.style.transform = `translate(${x.toFixed(0)}px, ${y.toFixed(0)}px)`;
+        m.classList.toggle('pinned', !inside);
+        m.classList.add('ping');
+        m.innerHTML = `${arrow}<i>\u25c7</i><b></b><span class="d">${Math.round(Math.hypot(wp.x - p.x, wp.y - p.y, wp.z - p.z))} m</span>`;
+        m.querySelector('i').style.color = '#7fe2ff';
+        m.querySelector('b').textContent = wp.name;
+      }
+    }
     for (const [id, m] of this.byId) if (!seen.has(id)) { m.remove(); this.byId.delete(id); }
   }
 

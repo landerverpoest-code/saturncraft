@@ -242,6 +242,15 @@ export const DECO_POT_BODY = [1 / 16, 0, 1 / 16, 15 / 16, 13 / 16, 15 / 16];
 const DECO_POT_BOXES = [DECO_POT_BODY, [4 / 16, 13 / 16, 4 / 16, 12 / 16, 14 / 16, 12 / 16], [3 / 16, 14 / 16, 3 / 16, 13 / 16, 1, 13 / 16]];
 const STALK_BOXES = [[5.5 / 16, 0, 5.5 / 16, 10.5 / 16, 1, 10.5 / 16]];
 const CHAIN_BOXES = [[6.5 / 16, 0, 6.5 / 16, 9.5 / 16, 1, 9.5 / 16]];
+// Chandelier (hangs from its chain): a chain, a hub, an iron ring with a cross and a candle with a flame at each corner of the ring.
+// Iron Brazier: a foot, a stand, a bowl and a heap of fire above it.
+const CHANDELIER_BOXES = [[7 / 16, 11 / 16, 7 / 16, 9 / 16, 1, 9 / 16], [6 / 16, 8 / 16, 6 / 16, 10 / 16, 11 / 16, 10 / 16],
+  [2 / 16, 7 / 16, 2 / 16, 14 / 16, 8 / 16, 4 / 16], [2 / 16, 7 / 16, 12 / 16, 14 / 16, 8 / 16, 14 / 16], [2 / 16, 7 / 16, 4 / 16, 4 / 16, 8 / 16, 12 / 16], [12 / 16, 7 / 16, 4 / 16, 14 / 16, 8 / 16, 12 / 16],
+  [7.5 / 16, 7 / 16, 2 / 16, 8.5 / 16, 8 / 16, 14 / 16], [2 / 16, 7 / 16, 7.5 / 16, 14 / 16, 8 / 16, 8.5 / 16],
+  ...[[2, 2], [12, 2], [2, 12], [12, 12]].flatMap(([x, z]) => [[x / 16, 8 / 16, z / 16, (x + 2) / 16, 12 / 16, (z + 2) / 16], [(x + 0.5) / 16, 12 / 16, (z + 0.5) / 16, (x + 1.5) / 16, 14 / 16, (z + 1.5) / 16]])];
+const BRAZIER_BOXES = [[4 / 16, 0, 4 / 16, 12 / 16, 2 / 16, 12 / 16], [6 / 16, 2 / 16, 6 / 16, 10 / 16, 7 / 16, 10 / 16], [2 / 16, 7 / 16, 2 / 16, 14 / 16, 10 / 16, 14 / 16],
+  [4 / 16, 10 / 16, 4 / 16, 12 / 16, 15 / 16, 12 / 16]];
+const BRAZIER_COLLISION = BRAZIER_BOXES.slice(0, 3);
 const swapXZ = (boxes) => boxes.map(([x0, y0, z0, x1, y1, z1]) => [z0, y0, x0, z1, y1, x1]);
 const px16 = (...a) => a.map((v) => v / 16);
 // Grindstone (meta bit 0 = axis; 0: the wheel's faces look along x): the wheel, then each leg and its pivot
@@ -313,6 +322,8 @@ export function blockBoxes(id, meta) {
   if (id === B.FLOWER_POT) return POT_BOXES;
   if (id === B.DECORATED_POT) return DECO_POT_BOXES;
   if (id === B.CHAIN) return CHAIN_BOXES;
+  if (id === B.CHANDELIER) return CHANDELIER_BOXES;
+  if (id === B.IRON_BRAZIER) return BRAZIER_BOXES;
   if (id === B.BEANSTALK) return STALK_BOXES;
   if (id === B.GRINDSTONE) return meta & 1 ? GRIND_Z : GRIND_X;
   if (id === B.STONECUTTER) return meta & 1 ? CUTTER_Z : CUTTER_X;
@@ -338,7 +349,7 @@ SHAPED_COLLISION[B.SNOW_LAYER] = 1;
 SHAPED_COLLISION[B.SEEPSTONE_SPIKE] = 1;
 SHAPED_COLLISION[B.MUD] = 1; // you sink into mud a little
 const MUD_BOX = [[0, 0, 0, 1, 14 / 16, 1]];
-for (const id of [B.COBBLESTONE_WALL, B.MOSSY_COBBLESTONE_WALL, B.OAK_TRAPDOOR, B.ENCHANTING_TABLE, B.ANVIL, B.CAMPFIRE, B.LANTERN, B.BREWING_STAND, B.TURTLE_EGG, B.HOPPER, B.COMPOSTER, B.SCAFFOLDING, B.FLOWER_POT, B.DECORATED_POT, B.CHAIN, B.GRINDSTONE, B.STONECUTTER, B.HUSH_SENSOR, B.CALIBRATED_HUSH_SENSOR, B.HUSH_SHRIEKER, B.LECTERN, B.CAKE, B.COOKING_POT, B.COOKING_POT_BREW]) SHAPED_COLLISION[id] = 1;
+for (const id of [B.COBBLESTONE_WALL, B.MOSSY_COBBLESTONE_WALL, B.OAK_TRAPDOOR, B.ENCHANTING_TABLE, B.ANVIL, B.CAMPFIRE, B.LANTERN, B.BREWING_STAND, B.TURTLE_EGG, B.HOPPER, B.COMPOSTER, B.SCAFFOLDING, B.FLOWER_POT, B.DECORATED_POT, B.CHAIN, B.GRINDSTONE, B.STONECUTTER, B.HUSH_SENSOR, B.CALIBRATED_HUSH_SENSOR, B.HUSH_SHRIEKER, B.LECTERN, B.CAKE, B.COOKING_POT, B.COOKING_POT_BREW, B.CHANDELIER, B.IRON_BRAZIER]) SHAPED_COLLISION[id] = 1;
 /** Snow layer box (n = meta + 1 layers); collision is one layer lower, so a single layer has none. */
 export const snowBox = (meta, collide = false) => [0, 0, 0, 1, ((meta & 7) + (collide ? 0 : 1)) * 2 / 16, 1];
 for (const id of [B.OAK_FENCE, B.SPRUCE_FENCE, B.BIRCH_FENCE, B.OAK_FENCE_GATE]) SHAPED_COLLISION[id] = 1;
@@ -373,7 +384,7 @@ export function collisionBoxes(id, meta, world, x, y, z) {
   if (sh === SHAPE.STAIRS) return world ? stairBoxes(meta, (dx, dz) => [world.getBlock(x + dx, y, z + dz), world.getMeta(x + dx, y, z + dz)], (n) => BLOCKS[n] && BLOCKS[n].shape === SHAPE.STAIRS) : stairBoxes(meta);
   if (id === B.HUSH_SENSOR || id === B.CALIBRATED_HUSH_SENSOR) return SENSOR_COLLISION;
   if (id === B.HUSH_SHRIEKER) return SHRIEKER_COLLISION;
-  if (sh === SHAPE.BOXES) return id === B.STONECUTTER ? CUTTER_BASE : id === B.ANVIL ? [boundsOf(blockBoxes(id, meta))] : id === B.BREWING_STAND ? ALEMBIC_COLLISION : blockBoxes(id, meta);
+  if (sh === SHAPE.BOXES) return id === B.STONECUTTER ? CUTTER_BASE : id === B.ANVIL ? [boundsOf(blockBoxes(id, meta))] : id === B.BREWING_STAND ? ALEMBIC_COLLISION : id === B.IRON_BRAZIER ? BRAZIER_COLLISION : blockBoxes(id, meta);
   if (sh === SHAPE.CIRCUIT) return circuitCollision(id, meta);
   if (sh === SHAPE.CRYSTAL) return [crystalBox(id, meta)];
   return null;
@@ -395,7 +406,7 @@ export function selectionBox(id, meta) {
   if (BLOCKS[id].shape === SHAPE.GATE) return (meta & 1) === 0 ? [0, 0, 6 / 16, 1, 1, 10 / 16] : [6 / 16, 0, 0, 10 / 16, 1, 1];
   if (id === B.BED) return BED_BOX;
   if (BLOCKS[id].shape === SHAPE.SLAB) return slabBox(meta);
-  if (id === B.LADDER || id === B.VINES) return ladderBox(meta);
+  if (id === B.LADDER || id === B.VINES || id === B.ROPE_LADDER) return ladderBox(meta);
   if (id === B.LILY_PAD) return [0, 0, 0, 1, 1 / 64, 1];
   if (id === B.TORCH || id === B.CINNABAR_TORCH || id === B.CINNABAR_TORCH_OFF) return torchBox(meta);
   if (BLOCKS[id].shape === SHAPE.WIRE || BLOCKS[id].shape === SHAPE.CIRCUIT) return circuitSelection(id, meta);

@@ -371,6 +371,18 @@ shaped(['GGG', 'QQQ', 'SSS'], { G: B.GLASS, Q: I.EMBER_QUARTZ, S: 'wood_slab' },
 shaped(['I', 'S', 'P'], { I: I.IRON_INGOT, S: I.STICK, P: 'planks' }, B.SNARE_POST, 2);
 shapeless([I.STRING], B.SNARE_CORD, 2);
 shaped(['TQT', 'GCG', 'SSS'], { T: B.CINNABAR_TORCH, Q: I.EMBER_QUARTZ, G: I.GOLD_INGOT, C: I.CINNABAR, S: B.STONE }, B.PULSE_GATE, 1);
+// The lighthouse / shrine / observatory pack (world/packTextures.js): mosaics and leaded glass for builders, a Lighthouse Lens and Chandelier and
+// Iron Brazier for light, and a Rope Ladder that climbs like a ladder (hung on a wall)
+shaped(['SA', 'AS'], { S: B.SMOOTH_STONE, A: I.AZURITE }, B.AZURE_MOSAIC, 4);
+shaped(['SG', 'GS'], { S: B.SMOOTH_STONE, G: I.GOLD_NUGGET }, B.SUNBURST_MOSAIC, 4);
+shaped(['NGN', 'GNG', 'NGN'], { N: I.IRON_NUGGET, G: B.GLASS }, B.LEADED_GLASS, 4);
+shaped(['GGG', 'GGG'], { G: B.LEADED_GLASS }, B.LEADED_GLASS_PANE, 16);
+shapeless([B.LEADED_GLASS, D('RED'), D('BLUE'), D('YELLOW')], B.ROSE_WINDOW, 1);
+shaped(['GIG', 'ILI', 'GIG'], { G: B.GLASS, I: I.GOLD_INGOT, L: B.GLOWSHARD }, B.LIGHTHOUSE_LENS, 1);
+shaped([' H ', 'III', 'C C'], { H: B.CHAIN, I: I.IRON_INGOT, C: CANDLE_IDS[0] }, B.CHANDELIER, 1);
+shaped(['ICI', 'III', ' I '], { I: I.IRON_INGOT, C: I.COAL }, B.IRON_BRAZIER, 1);
+shaped(['S S', 'SPS', 'S S'], { S: I.STRING, P: 'planks' }, B.ROPE_LADDER, 3);
+shapeless([I.TALLOW, I.STRING], CANDLE_IDS[0], 2); // (a Wickling's Tallow, rolled round a wick)
 // a Hush Sensor and three Hush Shards tune it: the Calibrated Hush Sensor (world/vibrations.js)
 shaped([' S ', 'SHS'], { S: I.HUSH_SHARD, H: B.HUSH_SENSOR }, B.CALIBRATED_HUSH_SENSOR, 1);
 // Firework Stars and Star Rockets (world/items.js, entities/skyRocket.js)
@@ -439,7 +451,7 @@ export const SMELTING = {
   [B.IRON_ORE]: I.IRON_INGOT, [B.GOLD_ORE]: I.GOLD_INGOT, [B.COPPER_ORE]: I.COPPER_INGOT, [B.DEEP_COPPER_ORE]: I.COPPER_INGOT,
   [B.SAND]: B.GLASS, [I.CLAY_BALL]: I.BRICK, [B.CLAY]: B.BRICKS, [B.CACTUS]: DYES[COLOR.GREEN], [B.COBBLESTONE]: B.STONE, [B.COBBLED_DEEPSTONE]: B.DEEPSTONE,
   [I.RAW_PORK]: I.COOKED_PORK, [I.POTATO]: I.BAKED_POTATO, [I.RAW_RABBIT]: I.COOKED_RABBIT, [I.RAW_SILVERFIN]: I.COOKED_SILVERFIN, [I.RAW_LANTERNFIN]: I.COOKED_LANTERNFIN, [I.RAW_REDFIN]: I.COOKED_REDFIN, [I.RAW_BEEF]: I.STEAK, [I.RAW_CHICKEN]: I.COOKED_CHICKEN,
-  [I.RAW_MUTTON]: I.COOKED_MUTTON, [I.RAW_VENISON]: I.COOKED_VENISON, [B.OAK_LOG]: I.COAL, [B.SPRUCE_LOG]: I.COAL, [B.BIRCH_LOG]: I.COAL,
+  [I.RAW_MUTTON]: I.COOKED_MUTTON, [I.RAW_VENISON]: I.COOKED_VENISON, [I.RAW_CRAB]: I.COOKED_CRAB, [B.OAK_LOG]: I.COAL, [B.SPRUCE_LOG]: I.COAL, [B.BIRCH_LOG]: I.COAL,
   [B.JUNGLE_LOG]: I.COAL, [B.ACACIA_LOG]: I.COAL, [B.DARK_OAK_LOG]: I.COAL, [B.BLOSSOM_LOG]: I.COAL, [B.MANGROVE_LOG]: I.COAL, [B.RED_SAND]: B.GLASS,
   [B.WET_SOAKMOSS]: B.SOAKMOSS, [B.KELP]: I.DRIED_KELP, [B.STONE]: B.SMOOTH_STONE, [B.STONE_BRICKS]: B.CRACKED_STONE_BRICKS,
   [I.FROSTROOT]: I.ROASTED_FROSTROOT,
