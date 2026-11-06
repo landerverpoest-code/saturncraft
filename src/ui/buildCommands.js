@@ -117,7 +117,7 @@ function writeTile(game, x, y, z, tile) {
  * undo (or redo) step. Undo and redo sets are applied last cell first, so a cell edited twice comes back right.
  */
 export class BuildQueue {
-  constructor(game) { this.game = game; this.jobs = []; this.sliceMs = SLICE_MS; this.sliceCells = SLICE_CELLS; }
+  constructor(game) { this.game = game; this.jobs = []; this.sliceMs = SLICE_MS; this.sliceCells = SLICE_CELLS; this.firstSliceMs = 4; }
   get busy() { return this.jobs.length; }
 
   /**
@@ -136,7 +136,7 @@ export class BuildQueue {
     job.rec = new EditSet(Math.min(Math.max(16, sets[0].n), 1 << 16));
     st.job = job;
     this.jobs.push(job);
-    const result = this.work(job, Math.min(this.sliceMs, 4), this.sliceCells);
+    const result = this.work(job, Math.min(this.sliceMs, this.firstSliceMs), this.sliceCells);
     if (result) return result;
     return `${label} ${plural(total, 'block')}: ${fmt(Math.floor(100 * job.progress()))}% so far, the rest follows over the next moments`;
   }
