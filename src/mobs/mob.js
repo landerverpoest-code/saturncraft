@@ -32,6 +32,7 @@ import { conversionStep, newConversion } from './hostileVariants.js'; // registe
 import { outOfMeleeReach } from './duneStrider.js'; // registers the Dune Strider
 import { mountReady, rideMove, rideJump, mountTick, mountFollowStep, riderFallDamage, riderInput } from './mounts.js'; // rules of Gallopers, Thistlehorns and Dune Striders
 import './fauna.js'; // registers the Thistlehorn, Dustmole, Gloamlynx and Tarnling
+import './shoreMobs.js'; // registers the Brinecrab and the Wickling
 import { moraleAI, soundAlarm } from './morale.js';
 import './peddler.js'; // registers the Roving Peddler and its Packhorns
 import { gazeProvokes } from './pumpkins.js';

@@ -1229,7 +1229,7 @@ export class Interaction {
       meta = s | (upper ? TRAPDOOR_TOP : 0);
     }
     const torch = placeId === B.TORCH || placeId === B.CINNABAR_TORCH;
-    if (torch || placeId === B.LADDER || placeId === B.VINES) {
+    if (torch || placeId === B.LADDER || placeId === B.VINES || placeId === B.ROPE_LADDER) {
       // torches stand on floors or hang on walls; ladders only hang on walls
       if (t.face[1] === -1 || (!torch && t.face[1] === 1)) return false;
       if (t.face[1] === 0) { const s = sideOf(-t.face[0], -t.face[2]); meta = torch ? 1 + s : s; }

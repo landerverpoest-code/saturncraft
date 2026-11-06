@@ -833,6 +833,32 @@ def(B.SNARE_POST, 'Snare Post', { ...part, hardness: 0.3, resistance: 0.3, shape
 def(B.SNARE_CORD, 'Snare Cord', { ...part, hardness: 0, resistance: 0, needsSupport: false, shape: SHAPE.CIRCUIT, sound: 'wool', tex: { all: 'snare_cord' } });
 def(B.PULSE_GATE, 'Pulse Gate', { ...part, shape: SHAPE.CIRCUIT, sound: 'stone', tex: { top: 'pulse_gate', bottom: 'smooth_stone', side: 'smooth_stone' } });
 
+// Lighthouse, shrine and observatory pack (world/lighthouse.js, mireShrine.js, observatory.js), appended so no id shifts.
+// Azure and Sunburst Mosaic: glazed tile floors (the Azure one comes with slabs and stairs, joining STONE_SETS); Leaded Glass
+// and its Pane (clear glass in a lead lattice) and the Rose Window (a round window of coloured glass) are see-through; the
+// Lighthouse Lens throws light 15 and lets it through; the Chandelier hangs from a chain and the Iron Brazier stands on the
+// floor, both bright; the Rope Ladder climbs like a ladder (hung on the side of a block).
+ext('AZURE_MOSAIC'); ext('AZURE_MOSAIC_SLAB'); ext('AZURE_MOSAIC_STAIRS'); ext('SUNBURST_MOSAIC');
+ext('LEADED_GLASS'); ext('LEADED_GLASS_PANE'); ext('ROSE_WINDOW'); ext('LIGHTHOUSE_LENS');
+ext('CHANDELIER'); ext('IRON_BRAZIER'); ext('ROPE_LADDER');
+{
+  const tile = { hardness: 1.5, resistance: 5, tool: TOOL.PICKAXE, tier: TIER.WOOD };
+  def(B.AZURE_MOSAIC, 'Azure Mosaic', tile);
+  const common = { ...tile, opaque: false, opacity: 15, tex: { all: 'azure_mosaic' }, base: B.AZURE_MOSAIC };
+  def(B.AZURE_MOSAIC_SLAB, 'Azure Mosaic Slab', { ...common, shape: SHAPE.SLAB, drops: 'slab' });
+  def(B.AZURE_MOSAIC_STAIRS, 'Azure Mosaic Stairs', { ...common, shape: SHAPE.STAIRS });
+  STONE_SETS.push([B.AZURE_MOSAIC, B.AZURE_MOSAIC_SLAB, B.AZURE_MOSAIC_STAIRS, 'Azure Mosaic']);
+  def(B.SUNBURST_MOSAIC, 'Sunburst Mosaic', tile);
+  const glass = { hardness: 0.3, resistance: 0.3, opaque: false, opacity: 0, layer: LAYER.TRANSLUCENT, drops: null, sound: 'glass' };
+  def(B.LEADED_GLASS, 'Leaded Glass', glass);
+  def(B.LEADED_GLASS_PANE, 'Leaded Glass Pane', { ...glass, shape: SHAPE.PANE, tex: { all: 'leaded_glass' } });
+  def(B.ROSE_WINDOW, 'Rose Window', glass);
+  def(B.LIGHTHOUSE_LENS, 'Lighthouse Lens', { ...glass, emit: 15 });
+  def(B.CHANDELIER, 'Chandelier', { hardness: 1, resistance: 1, tool: TOOL.PICKAXE, sound: 'metal', opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, emit: 14, flatIcon: true, tex: { top: 'chandelier_top', bottom: 'chandelier_top', side: 'chandelier' } });
+  def(B.IRON_BRAZIER, 'Iron Brazier', { hardness: 2, resistance: 3, tool: TOOL.PICKAXE, sound: 'metal', opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, emit: 15, flatIcon: true, tex: { top: 'iron_brazier_top', bottom: 'iron_brazier_top', side: 'iron_brazier' } });
+  def(B.ROPE_LADDER, 'Rope Ladder', { hardness: 0.4, resistance: 0.4, tool: TOOL.AXE, sound: 'wool', flammable: true, solid: false, opaque: false, shape: SHAPE.LADDER, layer: LAYER.CUTOUT, needsSupport: true });
+}
+
 export const NUM_BLOCKS = BLOCKS.length;
 
 // Flat lookup tables used by hot loops (mesher, lighting, physics) and workers.

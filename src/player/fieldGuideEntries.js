@@ -52,6 +52,8 @@ const HABITAT_NOTES = {
   dustmole: 'Hidden in the sand until it digs out',
   tarnling: 'Quiet ponds, tarns and waterholes',
   gloamlynx: 'Only at dusk and by night',
+  brinecrab: 'Sand, mud and gravel along the shore',
+  wickling: 'Swamps and dark forests by night; the Mire Shrine, Observatory and Lighthouse',
   gustling: 'Proving Vaults',
   hushkeeper: 'The Deep Hush, called by noise',
   peddler: 'Wanders in with a caravan now and then',
@@ -154,6 +156,9 @@ const STRUCTURE_NOTES = {
   skywatch: 'A tower that looks out over the land.',
   rimekeep: 'A frozen fortress in the cold.',
   sporehall: 'A hall grown among giant mushrooms.',
+  lighthouse: 'A red-and-white tower on a beach point, its lens still waiting for a keeper.',
+  mireshrine: 'A shrine sunk knee-deep in the bog, with a rose window and a flooded crypt.',
+  observatory: 'A domed star-watching house on the hills, its glass mostly fallen.',
   cinderforge: 'An abandoned smithy of Scorched Bricks in the Cinderdeep, with a lava pit and a Cinder Brute spawner. A Slagheart Sigil used in its courtyard wakes the Slag Colossus.',
   wyrmribs: 'The bleached ribcage of a Void Wyrm on an outer island of the Hollow.',
 };
