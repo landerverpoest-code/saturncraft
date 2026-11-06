@@ -50,7 +50,7 @@ const SURFACE = {
   taiga: 'cold', snowy_taiga: 'cold', snowy_plains: 'cold', snowy_peaks: 'cold', frozen_ocean: 'cold', frozen_river: 'cold',
   swamp: 'swamp', mangrove_swamp: 'swamp', jungle: 'jungle', mushroom_fields: 'swamp',
   desert: 'desert', badlands: 'desert', savanna: 'desert',
-  ocean: 'shore', beach: 'shore', river: 'shore', stony_peaks: 'peaks',
+  ocean: 'shore', deep_ocean: 'shore', kelp_forest: 'shore', beach: 'shore', river: 'shore', stony_peaks: 'peaks',
 };
 
 /** Facts the game gathers once a second. */
