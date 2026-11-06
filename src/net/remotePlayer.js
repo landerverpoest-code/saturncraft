@@ -218,10 +218,10 @@ export function makeTarget(rp) {
     lastHurtBy: null, lastAttacked: null,
     stats: { kills: 0, blocksMined: 0 },
     reputation: {}, // what villages think of this guest (mobs/reputation.js); the host keeps it and tells the guest
-    // what mob AI reads of a bag: the held stack and the worn armour (a Carved Pumpkin hides the face from a Voidwalker)
     inventory: {
       get selectedStack() { const h = st().held; return h == null ? null : { id: h, count: 1 }; },
-      get armor() { return (st().armor || [null, null, null, null]).map((id) => (id ? { id, count: 1, damage: 0 } : null)); },
+      // what they wear (helmet first), as stacks: mob AI reads it (a Carved Pumpkin hides the face from a Voidwalker; armour counts for some mobs)
+      get armor() { const a = st().armor; return [0, 1, 2, 3].map((i) => (Array.isArray(a) && a[i] ? { id: a[i], count: 1, damage: 0 } : null)); },
       changed() {},
     },
     eyePos() { const s = st(); return [s.x, s.y + this.eyeHeight, s.z]; },

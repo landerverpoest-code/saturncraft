@@ -435,6 +435,7 @@ describe('/fill, /replace, /replacenear', () => {
     const { game, world } = makeGame();
     select(game, [0, 64, 0], [19, 64, 19]);
     run(game, '/fill 75%stone,25%dirt');
+    drain(game);
     const s = world.count(B.STONE), d = world.count(B.DIRT);
     expect(s + d).toBe(400);
     expect(s / 400).toBeGreaterThan(0.65);

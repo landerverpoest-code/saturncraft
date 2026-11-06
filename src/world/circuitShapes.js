@@ -12,6 +12,8 @@ const SIDE_DIRS = [[0, 0, -1], [1, 0, 0], [0, 0, 1], [-1, 0, 0]];
 /** Six directions in the reference order: down, up, -z, +z, -x, +x. */
 export const FACING6 = [[0, -1, 0], [0, 1, 0], [0, 0, -1], [0, 0, 1], [-1, 0, 0], [1, 0, 0]];
 export const facingOf = (dx, dy, dz) => FACING6.findIndex(([a, b, c]) => a === dx && b === dy && c === dz);
+/** The FACING6 index in a piston's (or observer's) meta; data from outside can carry 6 or 7, which face down. */
+export const facingIdx = (meta) => { const f = meta & 7; return f < 6 ? f : 0; };
 /** FACING6 index of a horizontal side index (0 -z, 1 +x, 2 +z, 3 -x). */
 export const SIDE_TO_FACING = [2, 5, 3, 4];
 

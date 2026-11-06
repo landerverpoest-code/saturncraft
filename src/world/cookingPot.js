@@ -57,7 +57,7 @@ export const kindsIn = (mask) => KINDS.filter((k) => mask & KIND_BIT[k]);
 export const brewMeta = (dish, stage) => dish | (stage << 4);
 export const readyMeta = (dish, servings) => READY | dish | ((servings - 1) << 4);
 export const isReady = (m) => !!(m & READY);
-export const dishOf = (m) => m & 15;
+export const dishOf = (m) => { const d = m & 15; return d < RECIPES.length ? d : 0; }; // (a meta from outside data can name a dish there is none of)
 export const stageOf = (m) => (m >> 4) & 3;
 export const servingsOf = (m) => (isReady(m) ? ((m >> 4) & 3) + 1 : 0);
 

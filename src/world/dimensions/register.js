@@ -36,6 +36,10 @@ if (!RECIPES.some((r) => r.result === I.SLAGSTEEL_PICKAXE)) {
   shaped(['SSS', 'SES', 'SSS'], { S: I.GLOWCAP_SPORES, E: I.EMBER_ROD }, B.SPORE_LANTERN, 2);
   shaped(['XX', 'XX'], { X: I.BONE }, B.WYRMBONE, 2);
 }
+// the Slagheart Sigil (mobs/slagColossus.js): wakes the Slag Colossus in a Cinderforge courtyard
+if (!RECIPES.some((r) => r.result === I.SLAG_SIGIL)) {
+  shaped(['ESE', 'SDS', 'OSO'], { E: I.EMBER_ROD, S: I.SLAGSTEEL_INGOT, D: I.DIRGE_CRYSTAL, O: B.OBSIDIAN }, I.SLAG_SIGIL);
+}
 SMELTING[I.SLAG_CHUNK] = I.SLAGSTEEL_INGOT;
 SMELTING[B.SLAG_ORE] = I.SLAGSTEEL_INGOT;
 SMELTING[I.HUSHFRUIT] = I.POPPED_HUSHFRUIT;
@@ -59,5 +63,9 @@ for (const m of [
   { id: 'slagsteel', title: 'Slag and Steel', desc: 'Smelt a Slagsteel Ingot', icon: I.SLAGSTEEL_INGOT, inv: (g) => has(g, I.SLAGSTEEL_INGOT) },
   { id: 'dirgestep', title: 'Light on Mournsand', desc: 'Make Dirgestep Boots', icon: I.DIRGESTEP_BOOTS, inv: (g) => has(g, I.DIRGESTEP_BOOTS) || (g.player.inventory.armor[3] && g.player.inventory.armor[3].id === I.DIRGESTEP_BOOTS) },
   { id: 'cinderforge', title: 'Cold Anvils', desc: 'Find a Cinderforge', icon: B.SCORCHED_BRICKS, tick: (g) => g.world.dimension === 'cinderdeep' && forgesNear(g.world.dimGenerator, g.player.x - 14, g.player.z - 14, g.player.x + 14, g.player.z + 14).some((f) => Math.abs(f.y - g.player.y) < 20) },
+  // the Slag Colossus and tempering (mobs/slagColossus.js, world/enchantments.js)
+  { id: 'sigil', title: 'A Light in the Embers', desc: 'Make a Slagheart Sigil', icon: I.SLAG_SIGIL, inv: (g) => has(g, I.SLAG_SIGIL) },
+  { id: 'colossus', title: 'Cold Forge', desc: 'Defeat the Slag Colossus', icon: I.COLOSSUS_CORE, event: 'colossus' },
+  { id: 'temper', title: 'Tempered', desc: 'Temper a piece of gear at an anvil', icon: I.SLAGSTEEL_INGOT, event: 'temper' },
   { id: 'wyrm_ribs', title: 'What the Wyrm Left', desc: 'Find the Wyrm Ribs on an outer island', icon: B.WYRMBONE, tick: (g) => g.world.dimension === 'hollow' && wyrmRibsNear(g.world.dimGenerator, g.player.x - 14, g.player.z - 14, g.player.x + 14, g.player.z + 14).length > 0 },
 ]) if (!MILESTONES.some((x) => x.id === m.id)) MILESTONES.push(m);

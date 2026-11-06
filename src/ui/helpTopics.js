@@ -18,13 +18,15 @@ import { EVENT_KINDS, EVENT_ORDER } from '../world/events.js';
 import { STANDINGS, REP, REFUSE_BELOW, MAX_CUT, MAX_SURCHARGE } from '../mobs/reputation.js';
 import { MAX_USES, LEVEL_NAMES, LEVEL_AT } from '../mobs/trades.js';
 import { BLOCKS } from '../world/blocks.js';
-import { ITEMS } from '../world/items.js';
+import { ITEMS, I } from '../world/items.js';
 import { EFFECTS } from '../player/effects.js';
 import { CROP_TRAITS, bestSeasons, GREENHOUSE_LIGHT, GREENHOUSE_REACH, YIELD_FACTOR } from '../world/farming.js';
 import { KIND_NAMES, KINDS } from '../world/cookingPot.js';
 import { DISHES, KIND_ITEMS } from '../world/cooking.js';
 import { CAMP_SLOTS, CAMP_COOK_TICKS, campCooked } from '../world/campfireCooking.js';
 import { SMELTING } from '../player/crafting.js';
+import { TEMPER_STEPS } from '../world/enchantments.js';
+import { COLOSSUS } from '../mobs/slagColossus.js';
 import { VARIETY_STEP, VARIETY_MAX, VARIETY_WINDOW } from '../player/variety.js';
 import { SNARE_RANGE, SNARE_HOLD } from '../world/snare.js';
 import { PULSE_GATE_SETTINGS } from '../world/pulseGate.js';
@@ -181,6 +183,26 @@ export function buildTopics({ table, touch = false, pad = false } = {}) {
       'Blocks are named like oak_planks; a pattern such as 60%stone,40%dirt mixes them, and a mask such as stone,dirt or !air picks what to replace.',
     ] },
     { cmds: BUILD_HELP },
+  ]);
+
+  add('endgame', 'Bosses, tempering and elixirs', 'Systems', [
+    { p: 'Three fights wait for those who go furthest. The Void Wyrm guards the Hollow, the Hushkeeper answers noise in the Deep Hush, and the Slag Colossus sleeps in the Cinderdeep until you wake it. A bar across the top of the screen shows a boss health and its phases.' },
+    { h: 'The Slag Colossus' },
+    { list: [
+      `Make a Slagheart Sigil (4 Slagsteel Ingots, 2 Ember Rods, a Dirge Crystal and 2 Obsidian) and use it inside the courtyard of a Cinderforge. Find one with /locate forge. Only the host can wake it in a shared world.`,
+      `It has ${COLOSSUS.HEALTH} health and fights in three phases (below ${Math.round(COLOSSUS.PHASE_AT[0] * 100)}% and ${Math.round(COLOSSUS.PHASE_AT[1] * 100)}% it changes). Watch what it does with its arms: raised arms mean a slam is coming, and a shockwave spreads across the floor, so jump it. It cannot be hurt for a moment between phases.`,
+      'Phase 2 adds lava pillars (a ring of flame on the floor, a second to leave it) and two Cinder Brutes. In phase 3 it charges in a straight line after pawing the ground: step aside and it may run into a wall and be stunned, which makes it take half again as much damage.',
+      'A Colossus nobody is fighting withdraws after a minute and leaves the sigil behind. It drops a Colossus Core, Slagsteel, Dirge Crystals and Ember Rods, and sometimes a book of Sunmend.',
+    ] },
+    { h: 'Tempering gear' },
+    { p: 'Put a sword, axe, spear, tool or piece of armour on the left of an anvil and a tempering material on the right. Each step needs the one before it:' },
+    { list: [
+      ...TEMPER_STEPS.map((s) => `Level ${s.level}: ${s.per} ${ITEMS[I[s.mat]].name} (${s.xp} levels, plus the anvil prior-work cost).`),
+      'Forgebite (swords, axes, spears) adds a point of damage a level. Forgeward (armour) adds protection against fire, lava and blasts. Forgegrip (pickaxes, shovels, hoes) adds mining speed.',
+      'Sunmend repairs gear you wear or hold from the experience you pick up, two points of wear for each point of experience.',
+    ] },
+    { h: 'More elixirs' },
+    { list: ['Glowcap Spores brew Haste, Dirge Crystals brew Ironskin (Resistance) and a Gilded Apple brews Warding (Absorption) on a Murky Elixir, as other ingredients do; Cinnabar Dust lengthens them and Glowshard Dust strengthens them.'] },
   ]);
 
   add('guide', 'Field Guide and Milestones', 'Systems', [

@@ -51,6 +51,16 @@ export const POTIONS = {
   decay:             { name: 'Elixir of Decay', effects: [['wither', 40 * 20, 1]], late: true },
   luck:              { name: 'Elixir of Luck', effects: [['luck', 5 * M, 0]], late: true },
   unluck:            { name: 'Elixir of Bad Luck', effects: [['unluck', 5 * M, 0]], late: true },
+  // the endgame round: Haste (from Glowcap Spores), Resistance (from Dirge Crystals) and Absorption (from a Gilded Apple)
+  haste:             { name: 'Elixir of Haste', effects: [['haste', 3 * M, 0]], late: true },
+  long_haste:        { name: 'Elixir of Haste', effects: [['haste', 8 * M, 0]], late: true },
+  strong_haste:      { name: 'Elixir of Haste', effects: [['haste', 1.5 * M, 1]], late: true },
+  ironskin:          { name: 'Elixir of Ironskin', effects: [['resistance', 2 * M, 0]], late: true },
+  long_ironskin:     { name: 'Elixir of Ironskin', effects: [['resistance', 5 * M, 0]], late: true },
+  strong_ironskin:   { name: 'Elixir of Ironskin', effects: [['resistance', 45 * 20, 1]], late: true },
+  warding:           { name: 'Elixir of Warding', effects: [['absorption', 2 * M, 0]], color: '#2552a5', late: true },
+  long_warding:      { name: 'Elixir of Warding', effects: [['absorption', 5 * M, 0]], color: '#2552a5', late: true },
+  strong_warding:    { name: 'Elixir of Warding', effects: [['absorption', 1 * M, 1]], color: '#2552a5', late: true },
 };
 export const POTION_KEYS = Object.keys(POTIONS);
 
@@ -78,6 +88,9 @@ export const EFFECT_INGREDIENTS = {
   turtle_shell: 'turtle_master',   // the Shellback Helmet (reference: turtle shell)
   blight_rose: 'decay',            // reference: the Bedrock-only decay elixir has no brew; here a Blight Rose makes it
   glimmerfin: 'luck',              // the rare fishing catch
+  glowcap_spores: 'haste',         // the Glowcap Thicket's spores quicken the hands
+  dirge_crystal: 'ironskin',       // a Dirgevale crystal hardens the skin (reference: no equivalent; Resistance is otherwise only a Turtle Master side effect)
+  gilded_apple: 'warding',         // reference: the golden apple's Absorption, bottled
 };
 
 const CORRUPT = {

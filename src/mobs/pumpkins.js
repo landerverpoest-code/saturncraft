@@ -40,7 +40,7 @@ export function addPumpkinHead(eq, date = new Date(), rng = Math.random) {
 }
 
 /** Does this player wear a pumpkin on the head (the first armour slot)? */
-export const wearsPumpkin = (player) => !!(player && player.inventory && isPumpkinHead(player.inventory.armor[0]));
+export const wearsPumpkin = (player) => !!(player && player.inventory && player.inventory.armor && isPumpkinHead(player.inventory.armor[0]));
 
 /** Would a Voidwalker take the player's gaze as a challenge? Not while the player's face is hidden by a pumpkin. */
 export const gazeProvokes = (player) => !wearsPumpkin(player);

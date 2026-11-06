@@ -93,6 +93,7 @@ export const CAPTION_TEXT = {
   breeze: 'Breeze sighs', meteor_boom: 'Meteorite booms', ember_snap: 'Embers snap', void_whisper: 'Void whispers',
   parry: 'Shield parries', shield_break: 'Shield knocked down',
   spore_puff: 'Spores puff', ash_hiss: 'Ash hisses', dirge_wail: 'Dirge wails',
+  colossus_roar: 'Colossus roars', colossus_slam: 'Ground slams', colossus_erupt: 'Slag erupts',
   paddle: 'Boat paddles', mount_pant: 'Mount pants, tired', harness: 'Harness buckles', cart_fuel: 'Furnace cart roars',
   thistle: 'Thistlehorn lows', burrow: 'Dustmole scuffles in the sand', yowl: 'Gloamlynx yowls', plip: 'Tarnling plips',
 };
