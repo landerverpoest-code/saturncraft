@@ -374,7 +374,7 @@ export class HostSession extends Session {
     for (const c of this.clients.values()) {
       if (!c.joined || c === except) continue;
       parts = parts || encodeMessage(msg);
-      for (const s of parts) { c.ch.rate.add(s.length); c.ch.conn.send(s); }
+      for (const s of parts) { if (c.ch.rate) c.ch.rate.add(s.length); c.ch.conn.send(s); }
     }
   }
 
@@ -946,7 +946,7 @@ export class HostSession extends Session {
   guardTick(e) {
     try { e.tick(this.game); if (e.netErrors) e.netErrors = 0; } catch (err) {
       e.netErrors = (e.netErrors | 0) + 1;
-      if (e.netErrors === 1) console.warn('net: entity tick failed', e.type || e.kind, err);
+      if (!e.netErrLogged) { e.netErrLogged = true; console.warn('net: entity tick failed', e.type || e.kind, err); }
       if (e.netErrors >= TICK_FAILS_MAX) { e.dead = true; if (e.kind === 'mob') e.removed = true; }
     }
   }
@@ -1265,7 +1265,7 @@ export class HostSession extends Session {
       for (const c of [...this.clients.values()]) {
         if (now - c.lastSeen > TIMEOUT_MS) { this.drop(c, 'timed out'); continue; }
         if (!c.joined) continue;
-        c.ch.rate.tick(now);
+        if (c.ch.rate) c.ch.rate.tick(now);
         // a guest that went quiet: say so (once), and when it is back
         const quiet = now - c.lastSeen > LAG_WARN_MS;
         if (quiet && !c.lagging) { c.lagging = true; this.game.chat.add(`${c.name}'s connection is unstable`); }

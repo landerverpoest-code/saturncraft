@@ -54,9 +54,9 @@ export class GuestMeter {
   allow(type, now, n = 1) {
     const kind = KIND_OF[type];
     if (!kind) return true;
+    if (now - this.strikeAt > STRIKE_WINDOW_MS) { this.strikes = 0; this.strikeAt = now; this.warned = false; } // the count is per window
     if (this.buckets[kind].take(n, now)) return true;
     this.dropped++;
-    if (now - this.strikeAt > STRIKE_WINDOW_MS) { this.strikes = 0; this.strikeAt = now; this.warned = false; }
     this.strikes++;
     return false;
   }
