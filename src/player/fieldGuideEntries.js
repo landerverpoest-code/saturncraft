@@ -10,6 +10,7 @@ import { MOBS, CATEGORY } from '../mobs/mobTypes.js';
 import { SPAWN_TABLES } from '../mobs/spawnRules.js';
 import { DIM_SPAWN_TABLES } from '../mobs/dimensionMobs.js';
 import { SPECIAL_HABITATS } from '../mobs/fauna.js';
+import { OCEAN_SKY_HABITATS } from '../mobs/oceanSky.js';
 import { BIOMES } from '../world/biomes.js';
 import { LANDMARK_KINDS } from '../world/landmarkKinds.js';
 import { ITEMS, I, CHARTS } from '../world/items.js';
@@ -54,6 +55,9 @@ const HABITAT_NOTES = {
   gloamlynx: 'Only at dusk and by night',
   brinecrab: 'Sand, mud and gravel along the shore',
   wickling: 'Swamps and dark forests by night; the Mire Shrine, Observatory and Lighthouse',
+  lanternfin: 'The Deep Ocean floor and trenches, in schools; its lure is the only light down there',
+  trenchmaw: 'Trenches and Abyssal Grottos; hates a bright lamp',
+  skyray: 'Gliding round Cloud Isles high above the land',
   gustling: 'Proving Vaults',
   hushkeeper: 'The Deep Hush, called by noise',
   peddler: 'Wanders in with a caravan now and then',
@@ -82,7 +86,7 @@ function habitatOf(key, def) {
       if (b) where.push(b.name);
     }
   }
-  for (const bk of SPECIAL_HABITATS[key] || []) { // placed by faunaTick rather than the tables (Dustmoles in the sand, Tarnlings in ponds)
+  for (const bk of SPECIAL_HABITATS[key] || OCEAN_SKY_HABITATS[key] || []) { // placed by faunaTick rather than the tables (Dustmoles in the sand, Tarnlings in ponds)
     const b = BIOMES.find((x) => x.key === bk);
     if (b) where.push(b.name);
   }
@@ -131,7 +135,7 @@ function biomeEntries() {
   return BIOMES.map((b) => {
     const wildlife = uniq([...(SPAWN_TABLES.creature[b.key] || []), ...(SPAWN_TABLES.monster[b.key] || [])]
       .filter((e) => MOBS[e.type] && !(SPAWN_TABLES.monster.default || []).some((d) => d.type === e.type)).map((e) => MOBS[e.type].name)
-      .concat(Object.entries(SPECIAL_HABITATS).filter(([k, keys]) => MOBS[k] && keys.includes(b.key)).map(([k]) => MOBS[k].name)));
+      .concat(Object.entries({ ...SPECIAL_HABITATS, ...OCEAN_SKY_HABITATS }).filter(([k, keys]) => MOBS[k] && keys.includes(b.key)).map(([k]) => MOBS[k].name)));
     const features = [
       b.temp < 0.15 ? 'Snow falls instead of rain' : b.dry ? 'Dry: no rain' : 'Rain falls',
       b.humid >= 0.8 ? 'Humid' : b.humid <= 0.2 ? 'Arid' : null,
@@ -159,6 +163,8 @@ const STRUCTURE_NOTES = {
   lighthouse: 'A red-and-white tower on a beach point, its lens still waiting for a keeper.',
   mireshrine: 'A shrine sunk knee-deep in the bog, with a rose window and a flooded crypt.',
   observatory: 'A domed star-watching house on the hills, its glass mostly fallen.',
+  grotto: 'A sea cave in a rock dome on the deep floor: Gleamkelp, a tidestone dais with two chests and a wrecked diving skiff. Trenchmaws lurk inside; bring a lamp.',
+  isle: 'A grassy island in the sky over pale Cirrusstone, with an Aerie of two chests, a bean plot and ore. A wild Beanstalk climbs to it from the ground below; Skyrays glide round it.',
   cinderforge: 'An abandoned smithy of Scorched Bricks in the Cinderdeep, with a lava pit and a Cinder Brute spawner. A Slagheart Sigil used in its courtyard wakes the Slag Colossus.',
   wyrmribs: 'The bleached ribcage of a Void Wyrm on an outer island of the Hollow.',
 };

@@ -12,6 +12,7 @@ import * as THREE from 'three';
 import { World } from './world/world.js';
 import { B, BLOCKS, SOLID, SHAPE, isFurnace, FURNACE_KIND, isBox } from './world/blocks.js';
 import { ITEMS, I, toolOf, heldLightLevel, DISCS } from './world/items.js';
+import { lampLevel, underwaterView } from './player/diving.js';
 import { heldLights } from './net/remotePlayer.js';
 import { EMOTES } from './net/social.js';
 import { blockDrops } from './world/mining.js';
@@ -1574,7 +1575,7 @@ export class Game {
     if (this.darkness > 0) terrainUniforms.uMinLight.value *= 1 - this.darkness;
     // a torch (or any light-giving block) in the hand lights up the area around the player
     const held = p.dead ? null : p.inventory.selectedStack;
-    this.handLight = held ? heldLightLevel(held.id) : 0;
+    this.handLight = p.dead ? 0 : Math.max(held ? heldLightLevel(held.id) : 0, b.eyeInWater ? lampLevel(p.inventory) : 0); // (a Diver's Helm lights the way under water)
     terrainUniforms.uHand.value = this.handLight;
     const ss = this.shaftSun(st, 0);
     if (ss) { terrainUniforms.uSunDir.value.set(ss.dir[0], ss.dir[1], ss.dir[2]); terrainUniforms.uSunCol.value.copy(ss.color).multiplyScalar(Math.min(1, ss.strength * 1.6)); }
@@ -1627,8 +1628,10 @@ export class Game {
     if (this.world.dimension === 'overworld' && this.sky.rings) for (const k of ['ring', 'particles']) if (this.sky.rings[k]) this.sky.rings[k].visible = cd < 0.6;
     if (b.eyeInWater) {
       // clearer and brighter by day (Water Breathing or Night Vision see further)
-      const day = 0.25 + 0.75 * Math.min(1, st.combined) * (1 - cd), clear = p.effects.water_breathing || this.nightVision ? 1.5 : 1;
-      this.scene.fog.color.setRGB(0.05 * day, 0.17 * day, 0.4 * day); this.scene.fog.near = 2; this.scene.fog.far = 26 * clear;
+      // and darker with depth: below the sunlit shallows the sea fades to black, unless a lamp, Night Vision or a Diver's Helm wins some back (player/diving.js)
+      const uv = underwaterView(y + eye, { lamp: this.handLight, nightVision: this.nightVision, breathing: !!p.effects.water_breathing });
+      const day = (0.25 + 0.75 * Math.min(1, st.combined) * (1 - cd)) * (1 - uv.dim);
+      this.scene.fog.color.setRGB(0.05 * day, 0.17 * day, 0.4 * day); this.scene.fog.near = 2; this.scene.fog.far = 26 * uv.far;
     }
     else if (b.eyeInLava) { this.scene.fog.color.setRGB(0.6, 0.15, 0.02); this.scene.fog.near = 0; this.scene.fog.far = 2; }
     else { this.scene.fog.near = R * (0.65 - cd * 0.45); this.scene.fog.far = R * (1 - cd * 0.25); this.dims.adjustFog(this.scene.fog, R); }

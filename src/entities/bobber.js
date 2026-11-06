@@ -5,9 +5,13 @@
 import * as THREE from 'three';
 import { B, SOLID } from '../world/blocks.js';
 import { I } from '../world/items.js';
+import { BIOMES } from '../world/biomes.js';
 import { luckOf } from '../player/effects.js';
 
 let nextId = 7_000_000;
+
+/** Share of each catch group that is replaced by a local one, by biome key (the depths of the sea). */
+export const DEEP_CATCH = { deep_ocean: { fish: 0.45, junk: 0.4, treasure: 0.5 }, kelp_forest: { fish: 0.1, junk: 0.5, treasure: 0.2 } };
 
 /**
  * Weights of the three catch groups at a luck (reference: fish 85 - luck, junk 10 - 2 luck,
@@ -18,19 +22,23 @@ export function catchWeights(luck = 0) {
 }
 
 /** Weighted loot: fish (silverfin 60, redfin 25, spinefish 13, glimmerfin 2), junk and treasure. */
-export function rollCatch(rng = Math.random, luck = 0) {
+export function rollCatch(rng = Math.random, luck = 0, biomeKey = '') {
   const w = catchWeights(luck), total = w.fish + w.junk + w.treasure;
   const r = rng();
   const fishCut = w.fish / total, junkCut = (w.fish + w.junk) / total;
+  const deep = DEEP_CATCH[biomeKey]; // the ocean depths add their own catches (Lanternfins, Gleamkelp, Lantern Glands, Tide Shards)
   if (r < fishCut) {
+    if (deep && rng() < deep.fish) return { id: I.RAW_LANTERNFIN, count: 1 };
     const f = rng() * 100;
     return { id: f < 60 ? I.RAW_SILVERFIN : f < 85 ? I.RAW_REDFIN : f < 98 ? I.SPINEFISH : I.GLIMMERFIN, count: 1 };
   }
   if (r < junkCut) {
+    if (deep && rng() < deep.junk) return { id: rng() < 0.5 ? B.GLEAMKELP : B.KELP, count: 1 };
     const junk = [[I.STICK, 1], [I.BONE, 1], [I.STRING, 1], [I.BOWL, 1], [I.ROTTEN_FLESH, 1], [I.LEATHER, 1], [B.LILY_PAD ?? I.STICK, 1], [I.LEATHER_BOOTS, 1]];
     const [id, count] = junk[Math.floor(rng() * junk.length)];
     return { id, count, damage: id === I.LEATHER_BOOTS ? Math.floor(rng() * 40) : 0 };
   }
+  if (deep && rng() < deep.treasure) { const t = [[I.LANTERN_GLAND, 2], [I.TIDE_SHARD, 3], [I.DIVERS_LAMP, 1], [I.TIDE_CRYSTAL, 1], [I.SKYBEAN, 1]]; const [id, count] = t[Math.floor(rng() * t.length)]; return { id, count, damage: 0 }; }
   const treasure = [[I.BOW, 1], [I.FISHING_ROD, 1], [I.DIAMOND, 1], [I.IRON_INGOT, 3], [I.BOOK, 1]];
   const [id, count] = treasure[Math.floor(rng() * treasure.length)];
   return { id, count, damage: id === I.BOW || id === I.FISHING_ROD ? Math.floor(rng() * 40) : 0 };
@@ -100,7 +108,7 @@ export class Bobber {
     const p = game.player;
     let dmg = 0;
     if (this.bite > 0) {
-      const st = rollCatch(Math.random, luckOf(p.effects));
+      const bk = BIOMES[game.world.biomeAt(Math.floor(this.x), Math.floor(this.z))]; const st = rollCatch(Math.random, luckOf(p.effects), bk ? bk.key : '');
       const dx = p.x - this.x, dy = p.y + 1 - this.y, dz = p.z - this.z;
       const d = Math.hypot(dx, dy, dz) || 1;
       game.entities.spawnItem(this.x, this.y + 0.3, this.z, st, [dx * 0.1, dy * 0.1 + Math.sqrt(d) * 0.08, dz * 0.1]);

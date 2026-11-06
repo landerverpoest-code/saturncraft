@@ -269,6 +269,9 @@ export class Audio {
       case 'thistle': this.tone(t, 0.35, 190 + Math.random() * 30, 150, 0.16 * gain, out, 'triangle'); this.tone(t + 0.04, 0.3, 380, 300, 0.05 * gain, out, 'sine'); break; // a Thistlehorn's soft lowing
       case 'burrow': this.noise(t, 0.22, 1800, 1, 0.16 * gain, out, 'lowpass'); this.tone(t + 0.05, 0.08, 1500 + Math.random() * 300, 1900, 0.05 * gain, out, 'sine'); this.noise(t + 0.12, 0.15, 2600, 2, 0.1 * gain, out); break; // a Dustmole's scuffle and chirr in the sand
       case 'yowl': this.tone(t, 0.5, 420, 760, 0.11 * gain, out, 'sawtooth'); this.tone(t + 0.35, 0.45, 760, 380, 0.1 * gain, out, 'sawtooth'); this.noise(t, 0.4, 1600, 3, 0.04 * gain, out); break; // a Gloamlynx's far-off yowl
+      case 'lumen': this.tone(t, 0.25, 900 + Math.random() * 120, 1300, 0.07 * gain, out, 'sine'); this.tone(t + 0.12, 0.3, 1300, 1000, 0.05 * gain, out, 'sine'); break; // a Lanternfin's soft ping
+      case 'maw': this.tone(t, 0.5, 90, 55, 0.2 * gain, out, 'sawtooth'); this.noise(t, 0.35, 500, 1, 0.16 * gain, out, 'lowpass'); break; // a Trenchmaw's growl through the water
+      case 'skyray': this.tone(t, 0.7, 520, 380, 0.07 * gain, out, 'sine'); this.tone(t + 0.15, 0.6, 780, 560, 0.04 * gain, out, 'sine'); break; // a Skyray's airy call
       case 'plip': this.tone(t, 0.07, 520 + Math.random() * 120, 980, 0.12 * gain, out, 'sine'); this.tone(t + 0.08, 0.05, 780, 1100, 0.06 * gain, out, 'sine'); break; // a Tarnling's bloop
       case 'clack': this.noise(t, 0.04, 2600, 2, 0.12 * gain, out); this.noise(t + 0.09, 0.04, 3000, 2, 0.1 * gain, out); this.tone(t + 0.02, 0.05, 1500, 1100, 0.04 * gain, out, 'square'); break; // a Brinecrab's claws clacking
       case 'sputter': this.noise(t, 0.3, 1400, 1, 0.12 * gain, out, 'highpass'); this.tone(t, 0.25, 220 + Math.random() * 40, 140, 0.07 * gain, out, 'sawtooth'); this.noise(t + 0.2, 0.15, 2400, 2, 0.08 * gain, out); break; // a Wickling's flame guttering

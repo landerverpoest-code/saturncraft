@@ -17,6 +17,7 @@ import { AUTOMATION_TEX } from './automationTextures.js';
 import { EVENT_TEX } from './eventTextures.js';
 import { COOKING_TEX } from './cookingTextures.js';
 import { PACK_TEX } from './packTextures.js';
+import { OCEANSKY_TEX } from './oceanSkyTextures.js';
 
 export const TEX_SIZE = 16;
 
@@ -57,6 +58,7 @@ for (const n of Object.keys(AUTOMATION_TEX)) addTex(n); // switched rails, Slime
 for (const n of Object.keys(EVENT_TEX)) addTex(n); // the Starfall Core (world/eventTextures.js)
 for (const n of Object.keys(COOKING_TEX)) addTex(n); // the Cooking Pot, new crops, tired farmland (world/cookingTextures.js)
 for (const n of Object.keys(PACK_TEX)) addTex(n); // mosaics, leaded glass, lens, chandelier, brazier, rope ladder (world/packTextures.js)
+for (const n of Object.keys(OCEANSKY_TEX)) addTex(n); // Cirrusstone, the Beanstalk, Gleamkelp (world/oceanSkyTextures.js)
 ARTS.forEach(([, w, h], art) => { for (let p = 0; p < w * h; p++) addTex(`painting_${art}_${p}`); });
 for (let i = 0; i < 8; i++) addTex('fire_' + i);
 addTex('lava_flow');
@@ -1311,6 +1313,7 @@ function paint(c, name) {
   else if (EVENT_TEX[name]) EVENT_TEX[name](c, { hex, mix, shade });
   else if (COOKING_TEX[name]) COOKING_TEX[name](c, { hex, mix, shade });
   else if (PACK_TEX[name]) PACK_TEX[name](c, { hex, mix, shade });
+  else if (OCEANSKY_TEX[name]) OCEANSKY_TEX[name](c, { hex, mix, shade });
   else c.noiseFill(P.stone);
 }
 

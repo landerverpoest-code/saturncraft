@@ -17,6 +17,8 @@ export const LANDMARK_KINDS = [
   { key: 'lighthouse', name: "Hermit's Lighthouse", color: '#f07060', shape: 'tower' },
   { key: 'mireshrine', name: 'Mire Shrine', color: '#58b0a0', shape: 'diamond' },
   { key: 'observatory', name: "Stargazer's Observatory", color: '#b8a8f0', shape: 'dome' },
+  { key: 'grotto', name: 'Abyssal Grotto', color: '#2a8aa8', shape: 'dome' },
+  { key: 'isle', name: 'Cloud Isle', color: '#dce8ff', shape: 'star' },
   // other dimensions: found (and drawn on the Field Guide page) in the dimension named by `dim`, never in the overworld
   { key: 'cinderforge', name: 'Cinderforge', color: '#ff8a30', shape: 'tower', dim: 'cinderdeep' },
   { key: 'wyrmribs', name: 'Wyrm Ribs', color: '#d8d2e8', shape: 'dome', dim: 'hollow' },

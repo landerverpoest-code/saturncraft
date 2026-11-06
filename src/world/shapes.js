@@ -240,6 +240,7 @@ const POT_BOXES = [[5 / 16, 0, 5 / 16, 11 / 16, 6 / 16, 11 / 16]];
 // Decorated Pot: a wide body, a narrow neck and a lip (render/pots.js lays the sherd pictures on the body)
 export const DECO_POT_BODY = [1 / 16, 0, 1 / 16, 15 / 16, 13 / 16, 15 / 16];
 const DECO_POT_BOXES = [DECO_POT_BODY, [4 / 16, 13 / 16, 4 / 16, 12 / 16, 14 / 16, 12 / 16], [3 / 16, 14 / 16, 3 / 16, 13 / 16, 1, 13 / 16]];
+const STALK_BOXES = [[5.5 / 16, 0, 5.5 / 16, 10.5 / 16, 1, 10.5 / 16]];
 const CHAIN_BOXES = [[6.5 / 16, 0, 6.5 / 16, 9.5 / 16, 1, 9.5 / 16]];
 // Chandelier (hangs from its chain): a chain, a hub, an iron ring with a cross and a candle with a flame at each corner of the ring.
 // Iron Brazier: a foot, a stand, a bowl and a heap of fire above it.
@@ -323,6 +324,7 @@ export function blockBoxes(id, meta) {
   if (id === B.CHAIN) return CHAIN_BOXES;
   if (id === B.CHANDELIER) return CHANDELIER_BOXES;
   if (id === B.IRON_BRAZIER) return BRAZIER_BOXES;
+  if (id === B.BEANSTALK) return STALK_BOXES;
   if (id === B.GRINDSTONE) return meta & 1 ? GRIND_Z : GRIND_X;
   if (id === B.STONECUTTER) return meta & 1 ? CUTTER_Z : CUTTER_X;
   if (id === B.HUSH_SENSOR || id === B.CALIBRATED_HUSH_SENSOR) return SENSOR_BOXES;
