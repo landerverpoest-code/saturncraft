@@ -172,9 +172,9 @@ MODELS.wickling = {
     ['armL', [2.5, 8, 2.5], [5, 15, 0], [0, -4, 0], '#6a5a44', { anim: 'armSwing' }],
     ['armR', [2.5, 8, 2.5], [-5, 15, 0], [0, -4, 0], '#6a5a44', { anim: 'armSwingB' }],
     ['head', [6, 6, 6], [0, 15, 0], [0, 3, 0], '#e8dcb0', { face: 'wickling' }],
-    ['wick', [1, 2, 1], [0, 24, 0], [0, 1, 0], '#2a2420'],
-    ['flame', [3.4, 4.6, 3.4], [0, 25, 0], [0, 2.3, 0], '#ffb030', { emissive: '#ff8a20' }],
-    ['flameCore', [1.6, 3, 1.6], [0, 25.4, 0], [0, 1.5, 0], '#fff0a0', { emissive: '#fff0a0' }],
+    ['wick', [1, 2, 1], [0, 20.6, 0], [0, 1, 0], '#2a2420'], // stands on the crown of the head (the head spans 15 to 21)
+    ['flame', [3.4, 4.6, 3.4], [0, 21.4, 0], [0, 2.3, 0], '#ffb030', { emissive: '#ff8a20' }],
+    ['flameCore', [1.6, 3, 1.6], [0, 21.8, 0], [0, 1.5, 0], '#fff0a0', { emissive: '#fff0a0' }],
   ],
 };
 // two hollow, glowing eyes and a gaping mouth sagging in the wax
