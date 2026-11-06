@@ -20,6 +20,7 @@ import { stampRuins } from './ruinedPortals.js';
 import { stampSmallFeatures } from './smallFeatures.js';
 import { stampWildCrops } from './wildCrops.js';
 import { stampDeepSea } from './deepSea.js';
+import { stampSkyIsles } from './skyIsles.js';
 import { stampBuriedRuins } from './buriedRuins.js';
 import { stampSunkenRuins } from './sunkenRuins.js';
 import { stampSunTombs } from './sunTombs.js';
@@ -511,6 +512,7 @@ export class TerrainGenerator {
     stampSkywatches(this, blocks, meta, cx, cz);  // Skywatch Towers on mountain summits (world/skywatch.js)
     stampRimekeeps(this, blocks, meta, cx, cz);   // Rimekeeps on snowy plains and taiga (world/rimekeep.js)
     stampSporehalls(this, blocks, meta, cx, cz);  // Sporehalls in jungles and Highland Meadows (world/sporehall.js)
+    stampSkyIsles(this, blocks, meta, cx, cz);    // Cloud Isles and their wild Beanstalks (world/skyIsles.js): high above everything else, a pass of its own
 
     // Final heightmap: highest non-air block
     for (let z = 0; z < 16; z++) for (let x = 0; x < 16; x++) {
