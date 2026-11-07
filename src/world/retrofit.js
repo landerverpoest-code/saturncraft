@@ -24,7 +24,7 @@ import { LEAVES } from './trees.js';
 
 /**
  * The passes that were added after the first release of the generator, in the order the generator runs them. `since` is
- * the feature version that introduced it (add new passes at the end with the next number and raise CURRENT_FEATURE_VERSION),
+ * the feature version that introduced it (add new passes last, with the next number and raise CURRENT_FEATURE_VERSION),
  * `link` how far apart (in blocks) two changed cells may be and still belong to the same unit.
  */
 export const FEATURES = [
