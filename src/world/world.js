@@ -20,6 +20,7 @@ import { updateSpike, crystalSupported } from './caves.js';
 import { scaffoldTick } from './scaffolding.js';
 import { potTick, isReady as potReady, BREW_STAGE_TICKS } from './cookingPot.js';
 import { SETTLE_TICKS } from './composter.js';
+import { CURRENT_FEATURE_VERSION } from './retrofit.js';
 import { SIDE_DIRS, selectionBox, collisionBoxes, SHAPED_COLLISION, DOOR_UPPER, BED_HEAD } from './shapes.js';
 
 export function chunkKey(cx, cz) { return (cx + 32768) * 65536 + (cz + 32768); }
@@ -41,6 +42,7 @@ export class Chunk {
     this.blocks = d.blocks; this.meta = d.meta; this.light = d.light;
     this.biomes = d.biomes; this.colors = d.colors; this.heightmap = d.heightmap;
     this.modified = !!d.modified;
+    this.fv = Number.isInteger(d.fv) ? d.fv : CURRENT_FEATURE_VERSION; // feature version the chunk was made or retrofitted at (world/retrofit.js); a chunk generated now has every pass
     // content revision (bumped by setBlock and setLight) and the packed copy made at one (world/save.js packChunk); carried over from an unloaded chunk's copy
     this.rev = d.rev || 0; this.packRev = d.packCache ? d.packRev : -1; this.packCache = d.packCache || null;
     this.sectionNonAir = new Uint16Array(SECTION_COUNT);
@@ -443,7 +445,7 @@ export class World {
     const k = chunkKey(cx, cz);
     const c = this.chunks.get(k);
     if (!c) return null;
-    if (c.modified) this.saved.set(k, { blocks: c.blocks, meta: c.meta, light: c.light, biomes: c.biomes, colors: c.colors, heightmap: c.heightmap, modified: true, rev: c.rev, packRev: c.packRev, packCache: c.packCache });
+    if (c.modified) this.saved.set(k, { blocks: c.blocks, meta: c.meta, light: c.light, biomes: c.biomes, colors: c.colors, heightmap: c.heightmap, modified: true, fv: c.fv, rev: c.rev, packRev: c.packRev, packCache: c.packCache });
     this.chunks.delete(k);
     this._lastKey = -1;
     return c;

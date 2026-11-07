@@ -15,6 +15,7 @@ import { cleanBlueprints, MAX_VOLUME_CAP } from './buildTools.js';
 import { SocialState, cleanHostSettings } from '../net/social.js';
 import { CURRENT_VERSION, cleanThumbnail } from './saveFormat.js';
 import { writeWorld } from './worldManager.js';
+import { CURRENT_FEATURE_VERSION, cleanFeatureVersion } from './retrofit.js';
 import { cargoFromSave, FURNACE_CART } from '../mobs/mounts.js';
 
 export { MAX_WORLDS, listWorlds, loadGame, loadWorld, deleteSave, renameWorld, duplicateWorld, listBackups, restoreBackup, repairWorld, exportWorld, importWorld, writeWorld } from './worldManager.js';
@@ -52,6 +53,7 @@ export function packChunk(c) {
   const p = {
     blocks: rleEncode(c.blocks), meta: rleEncode(c.meta), light: rleEncode(c.light),
     biomes: c.biomes.slice(), colors: c.colors.slice(), heightmap: new Int16Array(c.heightmap),
+    fv: Number.isInteger(c.fv) ? c.fv : CURRENT_FEATURE_VERSION, // feature version (world/retrofit.js)
   };
   if (c.rev !== undefined) { c.packCache = p; c.packRev = c.rev; }
   return p;
@@ -61,6 +63,7 @@ export function unpackChunk(p) {
   return {
     blocks: rleDecode(p.blocks, V, Uint16Array), meta: rleDecode(p.meta, V), light: rleDecode(p.light, V),
     biomes: p.biomes, colors: p.colors, heightmap: p.heightmap, modified: true,
+    fv: Number.isInteger(p.fv) ? p.fv : 0, // (a chunk saved before feature versions has none of the newer passes)
   };
 }
 
@@ -92,6 +95,7 @@ export async function saveGame(game) {
     name: game.worldName || `World ${game.saveSlot || 1}`,
     seed: game.seed,
     time: game.time,
+    featureVersion: cleanFeatureVersion(game.featureVersion, CURRENT_FEATURE_VERSION), // the generator feature version this world's saved chunks have all been brought to (world/retrofit.js; /retrofit)
     gameRules: { doDaylightCycle: game.settings.daylightCycle !== false, doSeasons: game.settings.seasons !== false, doHostileSpawning: game.settings.hostileMobs !== false, fireworksHurtPlayers: game.settings.fireworksHurtPlayers === true, maxBuildVolume: Number.isFinite(game.settings.maxBuildVolume) ? game.settings.maxBuildVolume : undefined, doWorldEvents: game.settings.worldEvents !== false, difficulty: game.difficulty },
     savedAt: Date.now(),
     // what the world list shows and the options chosen when the world was made (world/saveFormat.js)
@@ -139,6 +143,7 @@ export function applySave(game, data) {
   for (const [k, p] of Object.entries(data.chunks)) game.world.saved.set(+k, unpackChunk(p));
   if (game.dims) game.dims.loadData(data, unpackChunk);
   game.time = data.time;
+  game.featureVersion = cleanFeatureVersion(data.featureVersion, 0); // a save from before feature versions: its edited chunks lack the newer passes
   if (data.meta) {
     game.createdAt = data.meta.createdAt || 0;
     game.worldType = data.meta.worldType || 'normal';

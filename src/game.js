@@ -6,6 +6,7 @@ import { containerSignal } from './world/comparators.js';
 import { Fireball } from './entities/fireball.js';
 import { powerInto } from './world/circuits.js';
 import { newMap, updateMap, MAP_SIZE } from './world/maps.js';
+import { CURRENT_FEATURE_VERSION } from './world/retrofit.js';
 import { noteLandmarks, chartMap, mapTitle } from './world/landmarks.js';
 import { KEEP_BITS, unpairAfterBreak } from './world/chests.js';
 import * as THREE from 'three';
@@ -125,6 +126,7 @@ export class Game {
     this.canvas = canvas;
     this.saveData = saveData;
     this.seed = seed;
+    this.featureVersion = CURRENT_FEATURE_VERSION; // see world/retrofit.js; a loaded older save lowers it (applySave)
     this.settings = { ...DEFAULT_SETTINGS, ...settings };
     Object.assign(this.settings, normalizeTouch(this.settings)); // (saved touch settings may be anything)
     this.fx = motionScales(this.settings); // how much of each motion / flash effect to show (ui/accessibility.js)
