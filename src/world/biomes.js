@@ -10,6 +10,7 @@ export const BIOME = {
   MUSHROOM_FIELDS: 16, SNOWY_TAIGA: 17, FLOWER_FOREST: 18, BLOSSOM_GROVE: 19, MANGROVE_SWAMP: 20,
   RIVER: 21, FROZEN_RIVER: 22,
   HIGHLAND_MEADOW: 23,
+  DEEP_OCEAN: 24, KELP_FOREST: 25, // the ocean depths (world/deepSea.js paints them over the ocean afterwards; the terrain is untouched)
 };
 
 export const BIOMES = [
@@ -39,6 +40,9 @@ export const BIOMES = [
   { id: 22, key: 'frozen_river', name: 'Frozen River', temp: 0.0, humid: 0.5, water: [196, 214, 255] },
   // high mountain pastures under the bare summits, threaded by cascades (world/highlands.js)
   { id: 23, key: 'highland_meadow', name: 'Highland Meadow', temp: 0.55, humid: 0.7, grass: [128, 206, 92], foliage: [96, 184, 72] },
+  // deep sea floors and the kelp forests of the mid-depths: the same sea, darker and greener
+  { id: 24, key: 'deep_ocean', name: 'Deep Ocean', temp: 0.5, humid: 0.5, water: [150, 190, 235] },
+  { id: 25, key: 'kelp_forest', name: 'Kelp Forest', temp: 0.5, humid: 0.5, water: [170, 235, 205] },
 ];
 
 export function biomeName(id) { return BIOMES[id] ? BIOMES[id].name : '?'; }

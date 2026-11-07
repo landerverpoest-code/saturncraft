@@ -19,6 +19,8 @@ import { FIELD_BIOMES, FIELD_THRESHOLD, FIELD_FLOWER_P, FIELD_GRASS_P, THICKET_B
 import { stampRuins } from './ruinedPortals.js';
 import { stampSmallFeatures } from './smallFeatures.js';
 import { stampWildCrops } from './wildCrops.js';
+import { stampDeepSea } from './deepSea.js';
+import { stampSkyIsles } from './skyIsles.js';
 import { stampBuriedRuins } from './buriedRuins.js';
 import { stampSunkenRuins } from './sunkenRuins.js';
 import { stampSunTombs } from './sunTombs.js';
@@ -494,6 +496,8 @@ export class TerrainGenerator {
     this.decorate(blocks, meta, biomes, heightmap, cx, cz, cols);
     stampWildCrops(this, blocks, meta, cx, cz, heightmap, biomes); // Frostroots, Dewberry Brambles, Sungourds (world/wildCrops.js): own hash salts, nothing before changes
 
+    stampDeepSea(this, blocks, meta, cx, cz, heightmap, biomes); // Deep Ocean and Kelp Forest biomes, trenches, Gleamkelp, Abyssal Grottos (world/deepSea.js): a separate pass, the terrain noise is untouched
+
     // 9. Villages
     stampVillages(this, blocks, meta, cx, cz);
     stampTemples(this, blocks, meta, cx, cz);
@@ -514,6 +518,7 @@ export class TerrainGenerator {
     stampLighthouses(this, blocks, meta, cx, cz); // Hermit's Lighthouses on beaches (world/lighthouse.js)
     stampMireShrines(this, blocks, meta, cx, cz); // Mire Shrines in swamps (world/mireShrine.js)
     stampObservatories(this, blocks, meta, cx, cz); // Stargazer's Observatories on open hills (world/observatory.js)
+    stampSkyIsles(this, blocks, meta, cx, cz);    // Cloud Isles and their wild Beanstalks (world/skyIsles.js): high above everything else, a pass of its own
 
     // Final heightmap: highest non-air block
     for (let z = 0; z < 16; z++) for (let x = 0; x < 16; x++) {

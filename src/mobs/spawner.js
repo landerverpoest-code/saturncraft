@@ -37,6 +37,7 @@ import { SEA_LEVEL } from '../world/constants.js';
 import { tickMonumentSpawns, spawnElders } from './oceanMobs.js';
 import { spawnVillageStrider, desertChunkSpawn } from './duneStrider.js';
 import { faunaTick, lynxMaySpawn } from './fauna.js';
+import { oceanSkyTick, oceanSkyChunkSpawn } from './oceanSky.js';
 import { CAGE, forestChunkSpawn, hollowSpawnTick } from './hoverling.js';
 import { caravanTick } from './peddler.js';
 import { addPumpkinHead } from './pumpkins.js';
@@ -250,6 +251,7 @@ export class MobSpawner {
     let monsters = 0, creatures = 0, surface = 0, ambient = 0, fish = 0;
     for (const e of g.entities.list) {
       if (e.kind !== 'mob' || e.dead) continue;
+      if (e.def.deepSea || e.def.glider) continue; // Lanternfins, Trenchmaws and Skyrays have caps of their own (mobs/oceanSky.js)
       if (e.def.fish) { if (!e.def.newt) fish++; continue; }
       if (e.def.category === CATEGORY.AMBIENT) { ambient++; continue; }
       if (e.def.burrower || e.def.bucketable) continue; // Dustmoles and Tarnlings have a cap of their own (mobs/fauna.js)
@@ -316,6 +318,7 @@ export class MobSpawner {
     hollowSpawnTick(this); // Hoverlings drifting through Hollow Cities
     caravanTick(this); // a Roving Peddler with Packhorns now and then (mobs/peddler.js)
     faunaTick(this); // Dustmoles under desert sand, Tarnlings in ponds (mobs/fauna.js)
+    oceanSkyTick(this); // Lanternfins over the deep floor, Trenchmaws in dark trenches, Skyrays near Cloud Isles (mobs/oceanSky.js)
     if (g.ticks % CREATURE_SPAWN_INTERVAL === 0 && creatures < seasonalCreatureCap(scaledCap(CATEGORY.CREATURE, chunks.length))) { // (more animals in spring, fewer in winter)
       for (const [cx, cz] of chunks) creatures += this.attempt(cx, cz, CATEGORY.CREATURE);
     }
@@ -399,6 +402,7 @@ export class MobSpawner {
       for (const t of mireShrinesNear(gen, X0, Z0, X0 + 15, Z0 + 15)) for (const g of mireGuards(t)) guard(g.type, g.x, g.y, g.z);
       for (const t of observatoriesNear(gen, X0, Z0, X0 + 15, Z0 + 15)) for (const g of observatoryGuards(t)) guard(g.type, g.x, g.y, g.z);
     }
+    oceanSkyChunkSpawn(this, cx, cz); // Trenchmaws in Abyssal Grottos, Skyrays over Cloud Isles (mobs/oceanSky.js)
     // three Elder Deepeyes in every Tide Citadel
     if (this.hostileEnabled()) spawnElders(this, cx, cz);
     // one Ironguard keeps watch by each village well
@@ -436,7 +440,7 @@ export class MobSpawner {
     if (Math.random() < 0.15) {
       const bx = cx * 16 + 2 + Math.floor(Math.random() * 12), bz = cz * 16 + 2 + Math.floor(Math.random() * 12);
       const key = BIOMES[w.biomeAt(bx, bz)] && BIOMES[w.biomeAt(bx, bz)].key;
-      if (key === 'ocean' || key === 'frozen_ocean') {
+      if (key === 'ocean' || key === 'frozen_ocean' || key === 'deep_ocean') {
         for (let i = 0, n = 2 + Math.floor(Math.random() * 3); i < n; i++) {
           const x = bx + Math.floor(Math.random() * 3) - 1, z = bz + Math.floor(Math.random() * 3) - 1, y = 56 + Math.floor(Math.random() * 5);
           if (w.getBlock(x, y, z) === B.WATER && w.getBlock(x, y + 1, z) === B.WATER) this.spawnMob('inkling', x + 0.5, y, z + 0.5);

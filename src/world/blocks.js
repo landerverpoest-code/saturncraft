@@ -858,6 +858,13 @@ ext('CHANDELIER'); ext('IRON_BRAZIER'); ext('ROPE_LADDER');
   def(B.IRON_BRAZIER, 'Iron Brazier', { hardness: 2, resistance: 3, tool: TOOL.PICKAXE, sound: 'metal', opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, emit: 15, flatIcon: true, tex: { top: 'iron_brazier_top', bottom: 'iron_brazier_top', side: 'iron_brazier' } });
   def(B.ROPE_LADDER, 'Rope Ladder', { hardness: 0.4, resistance: 0.4, tool: TOOL.AXE, sound: 'wool', flammable: true, solid: false, opaque: false, shape: SHAPE.LADDER, layer: LAYER.CUTOUT, needsSupport: true });
 }
+// Ocean and sky round (world/deepSea.js, world/skyIsles.js), appended so no block id shifts:
+// Cirrusstone (the pale rock cloud isles are made of), the Beanstalk (a climbable stalk that grows from a Skybean; meta unused)
+// and Gleamkelp (a waterlogged plant that glows in the deep sea and drops itself).
+ext('CIRRUSSTONE'); ext('BEANSTALK'); ext('GLEAMKELP');
+def(B.CIRRUSSTONE, 'Cirrusstone', { hardness: 1.2, resistance: 4, tool: TOOL.PICKAXE, tier: TIER.WOOD, sound: 'stone' });
+def(B.BEANSTALK, 'Beanstalk', { hardness: 0.3, resistance: 0.3, tool: TOOL.AXE, solid: false, opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, sound: 'grass', flatIcon: true, needsSupport: true, climbable: true, drops: 'beanstalk', tex: { all: 'beanstalk' } });
+def(B.GLEAMKELP, 'Gleamkelp', { ...plant, waterlogged: true, opacity: 1, emit: 9, drops: 'self', tex: { all: 'gleamkelp' } });
 
 // Bounty Board (player/quests.js, world/villages.js): the notice board standing beside every new village's well (and craftable)
 // where the day's bounties and the Village Elder's tales are given out. Meta bit 0 = the axis (0: the board faces along z).

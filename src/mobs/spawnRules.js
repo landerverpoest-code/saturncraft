@@ -50,6 +50,8 @@ export const SPAWN_TABLES = {
     // oceans: the default monsters plus drowned 5 (in deep water, 1 attempt in 40)
     ocean: withWeights(DEFAULT_MONSTERS, [{ type: 'sodden_shambler', weight: 5, min: 1, max: 1 }], {}),
     frozen_ocean: withWeights(DEFAULT_MONSTERS, [{ type: 'sodden_shambler', weight: 5, min: 1, max: 1 }], {}),
+    deep_ocean: withWeights(DEFAULT_MONSTERS, [{ type: 'sodden_shambler', weight: 5, min: 1, max: 1 }], {}),
+    kelp_forest: withWeights(DEFAULT_MONSTERS, [{ type: 'sodden_shambler', weight: 3, min: 1, max: 1 }], {}),
     // rivers (where the world has them): drowned 100 in the water, 1 attempt in 15, at night like any monster
     river: withWeights(DEFAULT_MONSTERS, [{ type: 'sodden_shambler', weight: 100, min: 1, max: 1 }], {}),
     frozen_river: withWeights(DEFAULT_MONSTERS, [{ type: 'sodden_shambler', weight: 1, min: 1, max: 1 }], {}),

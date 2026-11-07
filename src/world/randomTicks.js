@@ -15,6 +15,7 @@ import { cropGrowthMultiplier, brambleChance, BRAMBLE_LIGHT, REST_CHANCE, MOISTU
 import { BREW_STAGE_TICKS } from './cookingPot.js';
 
 export const RANDOM_TICK_SPEED = 3;
+export const BEANSTALK_MAX = 48; // tallest a planted Beanstalk grows
 
 function rawLight(world, x, y, z) {
   const l = world.getLight(x, y, z);
@@ -110,6 +111,12 @@ export function randomTickBlock(world, x, y, z, id, rng = Math.random) {
     let h = 1;
     while (world.getBlock(x, y - h, z) === B.KELP) h++;
     if (h < 16) world.setBlock(x, y + 1, z, B.KELP, 0);
+  } else if (id === B.BEANSTALK) {
+    // a Beanstalk climbs towards the clouds: a new segment every so often, up to 48 tall, while the sky above is clear
+    if (world.getBlock(x, y + 1, z) || rng() > 0.15) return;
+    let h = 1;
+    while (world.getBlock(x, y - h, z) === B.BEANSTALK) h++;
+    if (h < BEANSTALK_MAX) world.setBlock(x, y + 1, z, B.BEANSTALK, 0);
   } else if (id === B.BAMBOO) {
     // bamboo shoots up fast: a new section every 4 random ticks, up to 12 tall in the light
     if (world.getBlock(x, y + 1, z) || rawLight(world, x, y + 1, z) < 9) return;
@@ -206,7 +213,7 @@ function rawBlockLight(world, x, y, z) { return world.getLight(x, y, z) & 15; }
 
 /** Ids that react to random ticks (fast pre-filter). */
 export const RANDOM_TICKS = new Uint8Array(BLOCK_LIMIT);
-for (const id of [B.HUSHVINE_FLOWER, B.CINDERROOT, B.GRASS, B.FARMLAND, B.SUGAR_CANE, B.BAMBOO, B.KELP, B.CAVE_VINES, B.CAVE_VINES_LIT, B.LAVA, B.FIRE, B.SNOW_LAYER, B.ICE, B.COCOA, B.SWEET_BERRY_BUSH, B.DEWBERRY_BRAMBLE, B.COOKING_POT_BREW, B.TURTLE_EGG, ...CROPS, ...LEAVES, ...Object.keys(SAPLING_TREE).map(Number)]) RANDOM_TICKS[id] = 1;
+for (const id of [B.HUSHVINE_FLOWER, B.CINDERROOT, B.GRASS, B.FARMLAND, B.SUGAR_CANE, B.BAMBOO, B.KELP, B.BEANSTALK, B.CAVE_VINES, B.CAVE_VINES_LIT, B.LAVA, B.FIRE, B.SNOW_LAYER, B.ICE, B.COCOA, B.SWEET_BERRY_BUSH, B.DEWBERRY_BRAMBLE, B.COOKING_POT_BREW, B.TURTLE_EGG, ...CROPS, ...LEAVES, ...Object.keys(SAPLING_TREE).map(Number)]) RANDOM_TICKS[id] = 1;
 for (let id = 0; id < BLOCK_LIMIT; id++) if (CIRCUIT_SETTLE[id]) RANDOM_TICKS[id] = 1;
 const CAVE_TICK = new Uint8Array(BLOCK_LIMIT);
 for (const id of CAVE_TICKING) { CAVE_TICK[id] = 1; RANDOM_TICKS[id] = 1; }

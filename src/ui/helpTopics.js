@@ -27,6 +27,11 @@ import { CAMP_SLOTS, CAMP_COOK_TICKS, campCooked } from '../world/campfireCookin
 import { SMELTING } from '../player/crafting.js';
 import { TEMPER_STEPS } from '../world/enchantments.js';
 import { COLOSSUS } from '../mobs/slagColossus.js';
+import { DEEP_TOP, TRENCH_MAX } from '../world/deepSea.js';
+import { BEANSTALK_MAX } from '../world/randomTicks.js';
+import { HELM_WEAR_TICKS, HELM_LIGHT } from '../player/diving.js';
+import { lampScareRange } from '../mobs/oceanSky.js';
+import { SEA_LEVEL } from '../world/constants.js';
 import { VARIETY_STEP, VARIETY_MAX, VARIETY_WINDOW } from '../player/variety.js';
 import { SNARE_RANGE, SNARE_HOLD } from '../world/snare.js';
 import { PULSE_GATE_SETTINGS } from '../world/pulseGate.js';
@@ -155,6 +160,23 @@ export function buildTopics({ table, touch = false, pad = false } = {}) {
       'Lighthouse Lens: a bright block that lets its light through; Chandeliers and Iron Braziers light a room from above or below.',
       'Rope Ladder: climb it like a ladder, hung on the side of a block. Made from string and a plank.',
       'Brinecrabs scuttle on beaches and mud (cook Raw Crab on a campfire); Wicklings, candle-headed ghouls whose touch sets you alight, come out at night in swamps and dark forests. Water and rain snuff them.',
+    ] },
+  ]);
+
+  add('depths', 'The deep sea and the sky', 'Systems', [
+    { p: `Under the ocean the floor falls away. Where it lies ${SEA_LEVEL - DEEP_TOP} or more blocks under the surface the biome is Deep Ocean, and the water goes dark with depth: the fog closes in and the colour drains out. Patches of the shallower floor are Kelp Forests, thick with tall kelp. There is no pressure down there and no need to equalise, only the dark (and the breath you hold).` },
+    { h: 'Going down' },
+    { list: [
+      `Trenches wind across the deep floor, up to ${TRENCH_MAX} blocks deeper than the floor beside them. Gleamkelp glows on their floors, and Lanternfins school over them: their lures are the only light for a long way. Catch one for a Raw Lanternfin (a little Night Vision when eaten) and sometimes a Lantern Gland.`,
+      `The Diver's Lamp (a Lantern Gland, a glass pane and iron) is a light you hold, lit under water. The Diver's Helm (iron, glass pane and a Lantern Gland) lets you breathe under water, wears one point every ${HELM_WEAR_TICKS / 20} seconds you are submerged and has a brow lamp (light ${HELM_LIGHT}). Repair it with a Lantern Gland at an anvil.`,
+      `Abyssal Grottos are sea caves in rock domes on the deep floor (/locate grotto): Gleamkelp among the rocks, a tidestone dais with two chests and the wreck of a diving skiff with a third. Trenchmaws lurk in the dark: they lunge at swimmers, but keep ${lampScareRange(13)} blocks from a held Diver's Lamp and ${lampScareRange(HELM_LIGHT)} from a Diver's Helm.`,
+      'Fishing in the Deep Ocean turns up Lanternfins, Gleamkelp, Lantern Glands, Tide Shards and the odd Skybean.',
+    ] },
+    { h: 'Going up' },
+    { list: [
+      `Cloud Isles float high over the land (/locate isle): grass on pale Cirrusstone, a pond, an oak, an Aerie with two chests, a bean plot and veins of ore. A wild Beanstalk rises from the ground below to each one: climb it like a ladder.`,
+      `A Skybean planted on dirt or grass grows a Beanstalk of its own, a segment at a time, up to ${BEANSTALK_MAX} blocks. Breaking a stalk brings the part above it down and now and then drops a Skybean.`,
+      'Skyrays, broad pale gliders, circle the isles and never attack; they drop Drift Membrane, which mends a Voidwing, and feathers.',
     ] },
   ]);
 

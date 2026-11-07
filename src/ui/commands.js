@@ -17,6 +17,8 @@ import { nearestSporehall } from '../world/sporehall.js';
 import { nearestLighthouse } from '../world/lighthouse.js';
 import { nearestMireShrine } from '../world/mireShrine.js';
 import { nearestObservatory } from '../world/observatory.js';
+import { nearestGrotto } from '../world/deepSea.js';
+import { nearestIsle } from '../world/skyIsles.js';
 import { nearestForge } from '../world/dimensions/cinderForge.js';
 import { nearestWyrmRibs } from '../world/dimensions/wyrmRibs.js';
 import { nearestMonument } from '../world/monuments.js';
@@ -102,7 +104,7 @@ export const HELP = [
   '/enchant <name> [level]  (the held item; names: ' + ENCH_KEYS.join(', ') + ')',
   '/summon <mob> [x y z]',
   '/xp <amount> [levels]',
-  '/locate <village|temple|igloo|outpost|shipwreck|monument|mineshaft|sanctum|bastion|hut|ruin|buried|vaults|sunken|tomb|skywatch|rimekeep|sporehall|lighthouse|mire|observatory|city|gate|forge|ribs> or /locate biome <name>',
+  '/locate <village|temple|igloo|outpost|shipwreck|monument|mineshaft|sanctum|bastion|hut|ruin|buried|vaults|sunken|tomb|skywatch|rimekeep|sporehall|grotto|isle|lighthouse|mire|observatory|city|gate|forge|ribs> or /locate biome <name>',
   '/dimension <overworld|cinderdeep|hollow>',
   '/effect give <effect> [seconds] [level],  /effect clear  (effects: ' + EFFECT_KEYS.join(', ') + ')',
   '/raid <patrol|start [level]|stop|status>',
@@ -412,6 +414,8 @@ export function runCommand(game, text) {
         [['lighthouse', 'hermit', 'beacon_tower', 'light'], "Hermit's Lighthouse", null, nearestLighthouse],
         [['mire', 'mireshrine', 'mire_shrine', 'shrine', 'bog'], 'Mire Shrine', null, nearestMireShrine],
         [['observatory', 'stargazer', 'star', 'dome'], "Stargazer's Observatory", null, nearestObservatory],
+        [['grotto', 'sea_cave', 'seacave', 'abyss', 'abyssal'], 'Abyssal Grotto', null, nearestGrotto],
+        [['isle', 'cloud_isle', 'cloudisle', 'island_in_the_sky', 'sky'], 'Cloud Isle', null, nearestIsle, (t) => `, its Beanstalk rises from ${t.ax}, ${t.ground + 1}, ${t.az}`],
       ]) {
         if (!names.includes(what)) continue;
         if (game.world.dimension !== 'overworld') return `${label}s are only found in the overworld`;
