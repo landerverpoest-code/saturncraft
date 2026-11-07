@@ -155,6 +155,8 @@ export function relieve(m, amount = MOUNT.FEED_RELIEF) {
 }
 
 const TIRED_TEXT = { tired: 'Your mount is tired: let it rest or feed it', exhausted: 'Your mount is worn out and needs food and rest' };
+/** The warning shown when a mount tires (`state` from fatigueState), or null for a fresh one. */
+export const tiredText = (state) => TIRED_TEXT[state] || null;
 /** One tick of a mount's stamina (called for every Mob with `def.mount`, host side). */
 export function mountTick(m, g) {
   if (m.fatigue === undefined) m.fatigue = 0;

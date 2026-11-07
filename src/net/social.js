@@ -25,6 +25,19 @@ export const TEAM_COLOR_KEYS = Object.keys(TEAM_COLORS);
 export const MAX_TEAMS = 8;
 export const MAX_TEAM_NAME = 12;
 
+// ---- host options (saved with the world) --------------------------------------------------
+export const HOST_MAX_PLAYERS = 8; // (the same as protocol.js MAX_PLAYERS; kept here so this module stays free of imports)
+/** Defaults of the host's options: PvP on, guest commands on, team friendly fire as each team says, room for everybody. */
+export const DEFAULT_HOST_SETTINGS = { pvp: true, gc: true, ffa: false, mp: HOST_MAX_PLAYERS };
+/** Options from a save (or anything else untrusted): booleans stay booleans, the player limit is 2 to 8. */
+export function cleanHostSettings(d) {
+  const o = { ...DEFAULT_HOST_SETTINGS };
+  if (!d || typeof d !== 'object') return o;
+  for (const k of ['pvp', 'gc', 'ffa']) if (typeof d[k] === 'boolean') o[k] = d[k];
+  if (Number.isInteger(d.mp)) o.mp = Math.max(2, Math.min(HOST_MAX_PLAYERS, d.mp));
+  return o;
+}
+
 export const MAX_WAYPOINTS = 32;
 export function cleanWaypointName(s) { return String(s || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 16); }
 export const nameKey = (n) => String(n || '').trim().toLowerCase();

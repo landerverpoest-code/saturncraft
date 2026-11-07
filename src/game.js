@@ -151,6 +151,7 @@ export class Game {
     this.proving = new ProvingSystem(this); // Proving Spawners and Vaults (world/provingSystem.js)
     this.fps = 0; this.frameCount = 0; this.fpsTime = 0;
     this.net = null;              // multiplayer session (src/net/session.js), null in single-player
+    this.hostSettings = null;     // the saved options of an open world: PvP, guest commands, friendly fire, player limit (net/social.js cleanHostSettings)
     this.allowCheats = true;      // commands such as /give and /gamemode (a world can be made without them; saved in meta)
     this.worldType = 'normal';    // the generator the world was made with
     this.createdAt = 0;
@@ -1725,6 +1726,7 @@ export class Game {
       `Food ${p.hunger.food} sat ${p.hunger.saturation.toFixed(1)} exh ${p.hunger.exhaustion.toFixed(2)}  air ${p.air}`,
       t ? `Target ${BLOCKS[t.id].name} @ ${t.x}, ${t.y}, ${t.z}` : 'Target -',
       `Seed ${this.seed}`,
+      ...(this.net ? this.net.debugLines() : []), // multiplayer: bandwidth and ping (net/session.js)
     ].join('\n');
   }
 }

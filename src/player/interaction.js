@@ -609,7 +609,7 @@ export class Interaction {
       if (!isReady(meta)) { toast(`Simmering... ${Math.min(99, Math.round((stageOf(meta) / BREW_STAGES) * 100))}%${hasHeat(w, t.x, t.y, t.z) ? '' : ' (it needs a fire below)'}`); return true; }
       const dish = DISHES[dishOf(meta)];
       if (dish.bowl ? !(st && st.id === I.BOWL) : !!st) { toast(dish.bowl ? `${dish.name}: ${servingsOf(meta)} left. Hold a Bowl to ladle it.` : `${dish.name}: ${servingsOf(meta)} left. Take one with an empty hand.`); return true; }
-      if (takeServing(w, t.x, t.y, t.z) < 0) return true;
+      if (takeServing(w, t.x, t.y, t.z, true) < 0) return true; // (urgent: a guest's change goes to the host)
       if (dish.bowl && !p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
       const out = { id: dish.id, count: 1, damage: 0 };
       if (p.inventory.add(out)) g.entities.spawnItem(at[0], at[1] + 0.4, at[2], out);
@@ -638,7 +638,7 @@ export class Interaction {
       return true;
     }
     if (st && st.id !== I.STICK) return false; // other items and blocks go where they would anyway
-    const r = startBrew(w, t.x, t.y, t.z);
+    const r = startBrew(w, t.x, t.y, t.z, true);
     if (r === 'started') { g.audio.play('ignite', at, 0.4); puff(8); toast('The pot starts to simmer.'); }
     else if (r === 'empty') toast('The pot is empty. Put in ingredients, then stir with an empty hand.');
     else if (r === 'nomatch') toast('In the pot: ' + kindsIn(meta).map((k) => KIND_NAMES[k]).join(', ') + '. That is not a dish yet; add more or tip it out (sneak with an empty hand).');
@@ -1423,7 +1423,7 @@ export class Interaction {
       if (!boat.netProxy && !boat.addFuel(ticks, p.yaw)) return true; // (full: nothing is used up)
       if (st.id === I.LAVA_BUCKET) p.inventory.slots[p.inventory.selected] = { id: I.BUCKET, count: 1, damage: 0 };
       else if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
-      if (boat.netProxy) g.net.fuelCart(boat, ticks, p.yaw); // a shared cart: the host burns it
+      if (boat.netProxy) g.net.fuelCart(boat, ticks, p.yaw, st.id); // a shared cart: the host burns it (and gives the fuel back if it cannot)
       g.audio.play('cart_fuel', [boat.x, boat.y + 0.5, boat.z]);
       this.swing = SWING_TICKS;
       return true;
