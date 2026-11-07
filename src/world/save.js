@@ -13,7 +13,7 @@ import { saveState as saveCaravanState, loadState as loadCaravanState } from '..
 import { saveStats, loadStats } from '../player/stats.js';
 import { cleanReputation } from '../mobs/reputation.js';
 import { cleanBlueprints, MAX_VOLUME_CAP } from './buildTools.js';
-import { SocialState } from '../net/social.js';
+import { SocialState, cleanHostSettings } from '../net/social.js';
 import { CURRENT_VERSION, cleanThumbnail } from './saveFormat.js';
 import { writeWorld } from './worldManager.js';
 import { cargoFromSave, FURNACE_CART } from '../mobs/mounts.js';
@@ -115,6 +115,7 @@ export async function saveGame(game) {
     seasons: game.seasons ? game.seasons.save() : undefined, // season length and the calendar offset set by /season (world/seasons.js)
     weather: game.weather.save(),
     milestones: game.milestones.save(),
+    quests: game.quests ? game.quests.save() : undefined, // accepted bounties by group and story chains by player (player/quests.js)
     onboarding: game.onboarding ? game.onboarding.save() : undefined, // hints shown and First Steps ticked (player/onboarding.js)
     stats: saveStats(p.stats), // blocks, distances, kills, deaths, trades and play time (player/stats.js)
     raids: game.raids ? game.raids.save() : null, // patrol timer and the raid under way (mobs/raids.js)
@@ -129,6 +130,7 @@ export async function saveGame(game) {
     netPlayers: game.netPlayers || {}, // multiplayer guests' state by name
     guestBlueprints: Object.fromEntries(Object.entries(game.guestBlueprints || {}).map(([k, v]) => [k, cleanBlueprints(v)]).filter(([, v]) => Object.keys(v).length)), // guests' building blueprints by name
     social: game.social ? game.social.save() : undefined, // multiplayer teams, the op list, bans and who is who (net/social.js)
+    hostSettings: game.net && game.net.isHost ? game.net.settingsSave() : game.hostSettings || undefined, // PvP, guest commands, friendly fire and the player limit of an open world (net/social.js)
   };
   await writeWorld(game.saveSlot || 1, data); // one transaction: the world, its list summary and (every so often) a backup
   return data;
@@ -162,10 +164,12 @@ export function applySave(game, data) {
   game.guestBlueprints = {};
   for (const [k, v] of Object.entries(data.guestBlueprints || {})) game.guestBlueprints[k] = cleanBlueprints(v);
   if (data.social) game.social = SocialState.from(data.social);
+  if (data.hostSettings) game.hostSettings = cleanHostSettings(data.hostSettings);
   game.weather.load(data.weather);
   if (game.seasons) { game.seasons.load(data.seasons); game.seasons.enabled = game.settings.seasons !== false; }
   if (game.worldEvents) game.worldEvents.load(data.worldEvents);
   game.milestones.load(data.milestones);
+  if (game.quests) game.quests.load(data.quests);
   if (game.onboarding) game.onboarding.load(data.onboarding);
   game.player.stats = loadStats(data.stats);
   if (game.raids) game.raids.load(data.raids);

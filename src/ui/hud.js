@@ -374,7 +374,7 @@ export class HUD {
       dashEl.classList.toggle('cooling', !gge.charging && gge.ready < 1);
     }
     // riding a mount (Galloper, Thistlehorn, Dune Strider): its stamina, green until it tires, then amber, then red (mobs/mounts.js)
-    const tired = p.riding && p.riding.def && p.riding.def.mount && !p.riding.netProxy ? p.riding : null;
+    const tired = p.riding && p.riding.def && p.riding.def.mount && (!p.riding.netProxy || p.riding.fatigue !== undefined) ? p.riding : null; // (a shared mount's gauge arrives from the host: net/session.js 'stam')
     const stEl = this.staminaEl || (this.staminaEl = this.root.querySelector('#staminabar'));
     stEl.classList.toggle('hidden', !tired);
     if (tired) {

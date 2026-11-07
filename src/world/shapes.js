@@ -266,6 +266,9 @@ export const SHRIEKER_BOXES = [px16(0, 0, 0, 16, 8, 16), px16(1, 8, 1, 15, 15, 3
 const SENSOR_COLLISION = [SENSOR_BOXES[0]], SHRIEKER_COLLISION = [px16(0, 0, 0, 16, 15, 16)];
 // Lectern (meta bits 0-1 = the side the reader stands on, SIDE_DIRS; bit 2 = a book on it): a base plate,
 // a post and a desk that steps up away from the reader, with the open book on its low front part
+// Bounty Board (axis 0: the board's face looks along z): two posts, a plank board between them and a little roof over it
+const BOARD_Z = [px16(1, 0, 6.5, 3, 16, 9.5), px16(13, 0, 6.5, 15, 16, 9.5), px16(0, 4, 7, 16, 13, 9), px16(0, 13, 5.5, 16, 16, 10.5)];
+const BOARD_X = swapXZ(BOARD_Z);
 const LECTERN_Z = [px16(0, 0, 0, 16, 2, 16), px16(4, 2, 4, 12, 13, 12), px16(0, 12, 1, 16, 14, 15), px16(0, 14, 8, 16, 16, 15)];
 const LECTERN_BOOK_Z = px16(2, 14, 2.5, 14, 15, 7.5);
 const turnBox = ([x0, y0, z0, x1, y1, z1], side) => (side === 0 ? [x0, y0, z0, x1, y1, z1] : side === 2 ? [x0, y0, 1 - z1, x1, y1, 1 - z0]
@@ -329,6 +332,7 @@ export function blockBoxes(id, meta) {
   if (id === B.STONECUTTER) return meta & 1 ? CUTTER_Z : CUTTER_X;
   if (id === B.HUSH_SENSOR || id === B.CALIBRATED_HUSH_SENSOR) return SENSOR_BOXES;
   if (id === B.HUSH_SHRIEKER) return SHRIEKER_BOXES;
+  if (id === B.BOUNTY_BOARD) return meta & 1 ? BOARD_X : BOARD_Z;
   if (id === B.LECTERN) return LECTERN_BOXES[meta & 3][(meta >> 2) & 1];
   if (id === B.CAKE) return CAKE_BOXES[Math.min(6, meta & 7)];
   return TABLE_BOXES;
@@ -349,7 +353,7 @@ SHAPED_COLLISION[B.SNOW_LAYER] = 1;
 SHAPED_COLLISION[B.SEEPSTONE_SPIKE] = 1;
 SHAPED_COLLISION[B.MUD] = 1; // you sink into mud a little
 const MUD_BOX = [[0, 0, 0, 1, 14 / 16, 1]];
-for (const id of [B.COBBLESTONE_WALL, B.MOSSY_COBBLESTONE_WALL, B.OAK_TRAPDOOR, B.ENCHANTING_TABLE, B.ANVIL, B.CAMPFIRE, B.LANTERN, B.BREWING_STAND, B.TURTLE_EGG, B.HOPPER, B.COMPOSTER, B.SCAFFOLDING, B.FLOWER_POT, B.DECORATED_POT, B.CHAIN, B.GRINDSTONE, B.STONECUTTER, B.HUSH_SENSOR, B.CALIBRATED_HUSH_SENSOR, B.HUSH_SHRIEKER, B.LECTERN, B.CAKE, B.COOKING_POT, B.COOKING_POT_BREW, B.CHANDELIER, B.IRON_BRAZIER]) SHAPED_COLLISION[id] = 1;
+for (const id of [B.COBBLESTONE_WALL, B.MOSSY_COBBLESTONE_WALL, B.OAK_TRAPDOOR, B.ENCHANTING_TABLE, B.ANVIL, B.CAMPFIRE, B.LANTERN, B.BREWING_STAND, B.TURTLE_EGG, B.HOPPER, B.COMPOSTER, B.SCAFFOLDING, B.FLOWER_POT, B.DECORATED_POT, B.CHAIN, B.GRINDSTONE, B.STONECUTTER, B.HUSH_SENSOR, B.CALIBRATED_HUSH_SENSOR, B.HUSH_SHRIEKER, B.LECTERN, B.CAKE, B.COOKING_POT, B.COOKING_POT_BREW, B.CHANDELIER, B.IRON_BRAZIER, B.BOUNTY_BOARD]) SHAPED_COLLISION[id] = 1;
 /** Snow layer box (n = meta + 1 layers); collision is one layer lower, so a single layer has none. */
 export const snowBox = (meta, collide = false) => [0, 0, 0, 1, ((meta & 7) + (collide ? 0 : 1)) * 2 / 16, 1];
 for (const id of [B.OAK_FENCE, B.SPRUCE_FENCE, B.BIRCH_FENCE, B.OAK_FENCE_GATE]) SHAPED_COLLISION[id] = 1;

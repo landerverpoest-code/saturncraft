@@ -89,6 +89,9 @@ export function updateEvery(kind, dist, pressure = 0) {
 /** Does entity `id` go out in snapshot number `n`? (the phase differs per entity, so the far ones do not all come at once) */
 export const sendsNow = (every, id, n) => every <= 1 || ((n + (id | 0)) % every === 0);
 
+/** "1.2 KB/s" for a rate in characters (about bytes) per second. */
+export const rateText = (bps) => (bps >= 1024 ? `${(bps / 1024).toFixed(bps >= 10240 ? 0 : 1)} KB/s` : `${Math.round(bps || 0)} B/s`);
+
 /** Bytes per second, smoothed. */
 export class Rate {
   constructor() { this.bytes = 0; this.bps = 0; this.at = 0; }

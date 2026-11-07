@@ -50,6 +50,7 @@ import { Chat } from './ui/chat.js';
 import { Music } from './audio/music.js';
 import { AmbientSystem } from './audio/ambientSystem.js';
 import { Milestones } from './player/milestones.js';
+import { Quests } from './player/questSystem.js';
 import { Onboarding } from './player/onboarding.js';
 import { loadPlayerName } from './net/protocol.js';
 import { GuideTracker } from './player/fieldGuideTracker.js';
@@ -151,6 +152,7 @@ export class Game {
     this.proving = new ProvingSystem(this); // Proving Spawners and Vaults (world/provingSystem.js)
     this.fps = 0; this.frameCount = 0; this.fpsTime = 0;
     this.net = null;              // multiplayer session (src/net/session.js), null in single-player
+    this.hostSettings = null;     // the saved options of an open world: PvP, guest commands, friendly fire, player limit (net/social.js cleanHostSettings)
     this.allowCheats = true;      // commands such as /give and /gamemode (a world can be made without them; saved in meta)
     this.worldType = 'normal';    // the generator the world was made with
     this.createdAt = 0;
@@ -220,6 +222,7 @@ export class Game {
     this.spawner = new MobSpawner(this);
     this.spawnerBlocks = new SpawnerBlocks(this);
     this.milestones = new Milestones(this);
+    this.quests = new Quests(this); // bounties and tales (player/questSystem.js)
     this.guide = new GuideTracker(this); // Field Guide discoveries (player/fieldGuideTracker.js)
     this.raids = new Raids(this); // Marauder patrols and village raids
     this.player.inventory.listeners.push(() => { this.milestones.checkInventory(); this.guide.checkInventory(); if (this.onboarding) this.onboarding.inventory(); });
@@ -566,9 +569,9 @@ export class Game {
     p.stats.deaths++;
     for (let i = 0; i < p.inventory.slots.length; i++) {
       const st = p.inventory.slots[i];
-      if (st) this.entities.spawnItem(p.x, p.y + 1, p.z, st, [(Math.random() - 0.5) * 0.5, 0.2, (Math.random() - 0.5) * 0.5]);
+      if (st) { const e = this.entities.spawnItem(p.x, p.y + 1, p.z, st, [(Math.random() - 0.5) * 0.5, 0.2, (Math.random() - 0.5) * 0.5]); if (e) e.recycled = true; }
     }
-    for (const st of p.inventory.armor.concat(p.inventory.trinkets)) if (st) this.entities.spawnItem(p.x, p.y + 1, p.z, st, [(Math.random() - 0.5) * 0.5, 0.2, (Math.random() - 0.5) * 0.5]);
+    for (const st of p.inventory.armor.concat(p.inventory.trinkets)) if (st) { const e = this.entities.spawnItem(p.x, p.y + 1, p.z, st, [(Math.random() - 0.5) * 0.5, 0.2, (Math.random() - 0.5) * 0.5]); if (e) e.recycled = true; }
     this.entities.spawnXp(p.x, p.y + 0.5, p.z, deathXp(p.xp.level));
     p.xp = newXp();
     p.inventory.clear();
@@ -863,7 +866,14 @@ export class Game {
     return c;
   }
 
+  /** A container or frame broke: what it held spills out (not a find for the bounties, world/../player/quests.js). */
   onBlockBroken(x, y, z, id, meta = 0) {
+    const ents = this.entities, was = ents && ents.spilling;
+    if (ents) ents.spilling = true;
+    try { Game.prototype.spillBroken.call(this, x, y, z, id, meta); } finally { if (ents) ents.spilling = was; }
+  }
+
+  spillBroken(x, y, z, id, meta = 0) {
     if ((id === B.BEE_NEST || id === B.BEEHIVE) && (!this.net || !this.net.isClient)) Mob.angerBees(this, x, y, z); // the bees defend their home
     if (id === B.SPAWNER) this.milestones.event('spawner');
     if (id === B.ITEM_FRAME) {
@@ -1367,6 +1377,7 @@ export class Game {
     if (!this.net || this.net.isHost) this.raids.tick();
     this.tickMaps();
     this.guide.tick();
+    this.quests.tick();
     if (!this.net || this.net.isHost) { this.tickFurnaces(); this.tickBrewing(); this.tickHoppers(); this.tickCampfires(); } // guests see the host's furnaces and alembics
     this.effectParticles();
     this.particles.tick();
@@ -1424,6 +1435,10 @@ export class Game {
       if (this.ui.open === 'pause' && this.ui.inGuide) { this.ui.open = null; this.ui.clear(); this.onUIClosed(); }
       else if (!this.ui.blocking && this.running) { this.input.unlock(); this.ui.showGuide('creatures', true); }
     }
+    if (inp.wasPressed('journal')) {
+      if (this.ui.open === 'pause' && this.ui.inJournal) { this.ui.open = null; this.ui.clear(); this.onUIClosed(); }
+      else if (!this.ui.blocking && this.running) { this.input.unlock(); this.ui.showJournal(true); }
+    }
     if (inp.wasPressed('help')) {
       if (this.ui.open === 'pause' && this.ui.inHelp) {
         // (a rebound letter would be typed into the search box: only function keys and the touch button close it then)
@@ -1466,7 +1481,7 @@ export class Game {
         const st = p.inventory.removeFromSlot(p.inventory.selected, all ? 64 : 1);
         const [dx, dy, dz] = p.lookDir();
         const e = this.entities.spawnItem(p.x, p.y + p.eyeHeight - 0.3, p.z, st, [dx * 0.3, dy * 0.3 + 0.1, dz * 0.3]);
-        if (e) e.pickupDelay = 40;
+        if (e) { e.pickupDelay = 40; e.recycled = true; } // (a dropped item is not a find for the bounties)
         this.hush.emit('drop', p.x, p.y + 0.5, p.z); // tossing an item shakes the ground (world/vibrations.js)
       }
     } else inp.consumeMouse();
@@ -1712,6 +1727,7 @@ export class Game {
       `Food ${p.hunger.food} sat ${p.hunger.saturation.toFixed(1)} exh ${p.hunger.exhaustion.toFixed(2)}  air ${p.air}`,
       t ? `Target ${BLOCKS[t.id].name} @ ${t.x}, ${t.y}, ${t.z}` : 'Target -',
       `Seed ${this.seed}`,
+      ...(this.net ? this.net.debugLines() : []), // multiplayer: bandwidth and ping (net/session.js)
     ].join('\n');
   }
 }

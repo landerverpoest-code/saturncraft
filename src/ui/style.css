@@ -734,3 +734,24 @@ html.high-contrast #aimtip { background: #000; border: 1px solid #fff; }
 .set-bonuses .sb-line { color: #8a8a8a; }
 .set-bonuses .sb-line.on { color: #7fe08a; }
 .tt-set-head { color: #f2d24b; margin-top: 4px; }
+/* Bounty Board and Quest Journal (ui/questScreens.js) */
+.quest-screen .quest-sub { font-size: 13px; opacity: .8; margin: -4px 0 8px; text-align: center; }
+.quest-screen .guide-tabs, .quest-body { width: min(640px, calc(94vw / var(--tz, 1))); }
+.quest-body { max-height: 52vh; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; text-align: left; outline-offset: 3px; padding: 2px; }
+.quest-body h3 { margin: 6px 0 0; font-size: 14px; color: #f0b04a; }
+.quest-body:focus-visible, .quest-screen .btn:focus-visible { outline: 2px solid #f0b04a; }
+.quest-card { display: flex; gap: 10px; align-items: center; padding: 8px; background: rgba(255,255,255,.06); border-radius: 4px; border: 1px solid transparent; }
+.quest-card.going { border-color: rgba(240,176,74,.35); }
+.quest-card.ready { border-color: #6ad86a; background: rgba(106,216,106,.1); }
+.quest-card.done { opacity: .55; }
+.quest-card img { flex: none; width: 40px; height: 40px; image-rendering: pixelated; background: rgba(0,0,0,.25); border-radius: 4px; }
+.quest-info { flex: 1; min-width: 0; }
+.quest-info .d { font-size: 12px; opacity: .85; }
+.quest-acts { flex: none; display: flex; flex-direction: column; gap: 4px; }
+.quest-acts .btn.small { min-width: 0; padding: 4px 10px; font-size: 13px; }
+.quest-bar { height: 6px; margin-top: 4px; background: rgba(0,0,0,.4); border-radius: 3px; overflow: hidden; }
+.quest-bar > div { height: 100%; background: #f0b04a; }
+.quest-note { text-align: center; padding: 6px; }
+@media (max-width: 560px) { .quest-card { flex-wrap: wrap; } .quest-acts { flex-direction: row; } }
+html.high-contrast .quest-card { background: #000; border: 2px solid #fff; }
+html.high-contrast .quest-info .d { color: #fff; }

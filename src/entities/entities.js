@@ -570,6 +570,7 @@ export class EntityManager {
     if (!st || st.count <= 0) return null;
     if (this.netSpawn('item', { x, y, z, st, v: vel, pd: vel ? 40 : 10 })) return null;
     const e = new ItemEntity(x, y, z, st);
+    if (this.spilling) e.recycled = true; // (spilled from a broken chest or frame: not a find for the bounties)
     if (vel) { e.body.vx = vel[0]; e.body.vy = vel[1]; e.body.vz = vel[2]; }
     else { e.body.vx = (Math.random() - 0.5) * 0.2; e.body.vy = 0.2; e.body.vz = (Math.random() - 0.5) * 0.2; }
     return this.add(e);
@@ -697,8 +698,8 @@ export class EntityManager {
       if (e.kind === 'item' && !e.dead && e.pickupDelay === 0 && !p.dead) {
         const b = p.body.box();
         if (e.x > b[0] - 1 && e.x < b[3] + 1 && e.y > b[1] - 0.5 && e.y < b[4] + 0.5 && e.z > b[2] - 1 && e.z < b[5] + 1) {
-          const left = p.inventory.add(e.stack);
-          if (left < e.stack.count) g.audio.play('pop');
+          const had = e.stack.count, left = p.inventory.add(e.stack);
+          if (left < had) { g.audio.play('pop'); if (!e.recycled && g.quests) g.quests.emit('pickup', { id: e.stack.id, n: had - left }, p); }
           if (left === 0) e.dead = true; else e.stack.count = left;
         }
       }
@@ -710,7 +711,7 @@ export class EntityManager {
       for (let i = 0; i < items.length; i++) for (let j = i + 1; j < items.length; j++) {
         const a = items[i], b = items[j];
         // (the cheap distance test first: most pairs are far apart, and canStack compares enchantments and fireworks)
-        if (a.dead || b.dead || Math.abs(a.x - b.x) >= 0.5 || Math.abs(a.y - b.y) >= 0.5 || Math.abs(a.z - b.z) >= 0.5 || !canStack(a.stack, b.stack)) continue;
+        if (a.dead || b.dead || a.recycled !== b.recycled || Math.abs(a.x - b.x) >= 0.5 || Math.abs(a.y - b.y) >= 0.5 || Math.abs(a.z - b.z) >= 0.5 || !canStack(a.stack, b.stack)) continue;
         if (a.stack.count + b.stack.count <= maxStack(a.stack.id)) {
           a.stack.count += b.stack.count; b.dead = true;
         }

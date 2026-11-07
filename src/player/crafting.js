@@ -411,6 +411,8 @@ shaped(['AA', 'PP', 'PP'], { A: I.PAPER, P: 'planks' }, B.CARTOGRAPHY_DESK, 1);
 shaped(['SS', 'PP', 'PP'], { S: B.STONE, P: 'planks' }, B.MASONRY_BENCH, 1);
 shaped(['IF', 'PP', 'PP'], { I: I.IRON_INGOT, F: I.FLINT, P: 'planks' }, B.WHETSTONE_STAND, 1);
 shaped(['LL', 'PP', 'PP'], { L: I.LEATHER, P: 'planks' }, B.ARMOR_RACK, 1);
+// the Bounty Board (player/quests.js): planks and sticks around a book
+shaped(['PPP', 'PBP', 'S S'], { P: 'planks', B: I.BOOK, S: I.STICK }, B.BOUNTY_BOARD, 1);
 // cinnabar automation (world/automation.js): pressure plates of stone and weighted ones, the three special rails,
 // sticky Slime and Honey Blocks
 shaped(['SS'], { S: B.STONE }, B.STONE_PRESSURE_PLATE, 1);

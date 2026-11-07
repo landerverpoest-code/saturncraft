@@ -82,7 +82,7 @@ const ORE_XP = {
 };
 const BREAK_DELAY = 5;
 /** Blocks that right-click opens / toggles instead of using the held item. */
-const USABLE_BLOCKS = new Set([B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.CHEST, B.BARREL, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL, B.BREWING_STAND, B.GLOOMSHELL_BOX, B.HOPPER, B.COMPOSTER, B.SWEET_BERRY_BUSH, B.DEWBERRY_BRAMBLE, B.COOKING_POT, B.COOKING_POT_BREW, B.JUKEBOX, B.CAVE_VINES_LIT, B.FLOWER_POT, B.BEACON, B.DISPENSER, B.DROPPER, B.GRINDSTONE, B.STONECUTTER, B.LECTERN, B.CAKE, B.LOOM, ...BOX_COLORS, B.VAULT]);
+const USABLE_BLOCKS = new Set([B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.CHEST, B.BARREL, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL, B.BREWING_STAND, B.GLOOMSHELL_BOX, B.HOPPER, B.COMPOSTER, B.SWEET_BERRY_BUSH, B.DEWBERRY_BRAMBLE, B.COOKING_POT, B.COOKING_POT_BREW, B.JUKEBOX, B.CAVE_VINES_LIT, B.FLOWER_POT, B.BEACON, B.DISPENSER, B.DROPPER, B.GRINDSTONE, B.STONECUTTER, B.LECTERN, B.CAKE, B.LOOM, B.BOUNTY_BOARD, ...BOX_COLORS, B.VAULT]);
 const CIRCUIT_USE = new Set([B.LEVER, B.STONE_BUTTON, B.REPEATER, B.CHIME_BLOCK, B.COMPARATOR, B.DAYLIGHT_SENSOR, B.PULSE_GATE]);
 const CIRCUIT_PLACE = new Set([B.LEVER, B.STONE_BUTTON, B.CINNABAR_WIRE, B.REPEATER, B.WOODEN_PRESSURE_PLATE, B.STONE_PRESSURE_PLATE, B.LIGHT_WEIGHTED_PLATE, B.HEAVY_WEIGHTED_PLATE, B.PISTON, B.STICKY_PISTON, B.COMPARATOR, B.OBSERVER, B.DAYLIGHT_SENSOR, B.PULSE_GATE, B.SNARE_POST, B.SNARE_CORD]);
 const USE_DELAY = 4;
@@ -659,12 +659,13 @@ export class Interaction {
       if (!isReady(meta)) { toast(`Simmering... ${Math.min(99, Math.round((stageOf(meta) / BREW_STAGES) * 100))}%${hasHeat(w, t.x, t.y, t.z) ? '' : ' (it needs a fire below)'}`); return true; }
       const dish = DISHES[dishOf(meta)];
       if (dish.bowl ? !(st && st.id === I.BOWL) : !!st) { toast(dish.bowl ? `${dish.name}: ${servingsOf(meta)} left. Hold a Bowl to ladle it.` : `${dish.name}: ${servingsOf(meta)} left. Take one with an empty hand.`); return true; }
-      if (takeServing(w, t.x, t.y, t.z) < 0) return true;
+      if (takeServing(w, t.x, t.y, t.z, true) < 0) return true; // (urgent: a guest's change goes to the host)
       if (dish.bowl && !p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
       const out = { id: dish.id, count: 1, damage: 0 };
       if (p.inventory.add(out)) g.entities.spawnItem(at[0], at[1] + 0.4, at[2], out);
       p.inventory.changed();
       g.audio.play('pop', at);
+      if (g.quests) g.quests.emit('cook', { id: dish.id, n: 1 }); // a dish served (bounties and tales)
       return true;
     }
     // a filling pot
@@ -687,7 +688,7 @@ export class Interaction {
       return true;
     }
     if (st && st.id !== I.STICK) return false; // other items and blocks go where they would anyway
-    const r = startBrew(w, t.x, t.y, t.z);
+    const r = startBrew(w, t.x, t.y, t.z, true);
     if (r === 'started') { g.audio.play('ignite', at, 0.4); puff(8); toast('The pot starts to simmer.'); }
     else if (r === 'empty') toast('The pot is empty. Put in ingredients, then stir with an empty hand.');
     else if (r === 'nomatch') toast('In the pot: ' + kindsIn(meta).map((k) => KIND_NAMES[k]).join(', ') + '. That is not a dish yet; add more or tip it out (sneak with an empty hand).');
@@ -1073,6 +1074,7 @@ export class Interaction {
       if (t.id === B.GRINDSTONE) { g.ui.openGrindstone(t.x, t.y, t.z); return true; }
       if (t.id === B.STONECUTTER) { g.ui.openStonecutter(t.x, t.y, t.z); return true; }
       if (t.id === B.LOOM) { g.ui.openLoom(t.x, t.y, t.z); return true; }
+      if (t.id === B.BOUNTY_BOARD) { g.ui.openBoard(t.x, t.y, t.z); return true; }
       if (t.id === B.BREWING_STAND) { g.ui.openBrewing(t.x, t.y, t.z); return true; }
       if (CIRCUIT_USE.has(t.id)) {
         // levers flip, buttons press (the host releases them), repeaters change delay, chime blocks change pitch,
@@ -1293,6 +1295,7 @@ export class Interaction {
     if (placeId === B.SCAFFOLDING) { meta = scaffoldDistance(w, px, py, pz); if (meta > SCAFFOLD_MAX) return false; }
     if (placeId === B.GRINDSTONE) meta = Math.abs(ldx) > Math.abs(ldz) ? 1 : 0; // the wheel rolls towards the player
     if (placeId === B.STONECUTTER) meta = Math.abs(ldx) > Math.abs(ldz) ? 0 : 1; // the blade runs towards the player
+    if (placeId === B.BOUNTY_BOARD) meta = Math.abs(ldx) > Math.abs(ldz) ? 1 : 0; // its face looks back at the player
     if (placeId === B.ANVIL) meta = Math.abs(ldx) > Math.abs(ldz) ? 1 : 0; // the long side faces across the player's view
     if (placeId === B.DECORATED_POT || placeId === B.LECTERN) { const dx = p.x - (px + 0.5), dz = p.z - (pz + 0.5); meta = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 1 : 3) : (dz > 0 ? 2 : 0); } // its front (a lectern's reading side) faces the player
     if (BLOCKS[placeId].crystal || placeId === B.STORM_ROD) {
@@ -1470,7 +1473,7 @@ export class Interaction {
       if (!boat.netProxy && !boat.addFuel(ticks, p.yaw)) return true; // (full: nothing is used up)
       if (st.id === I.LAVA_BUCKET) p.inventory.slots[p.inventory.selected] = { id: I.BUCKET, count: 1, damage: 0 };
       else if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
-      if (boat.netProxy) g.net.fuelCart(boat, ticks, p.yaw); // a shared cart: the host burns it
+      if (boat.netProxy) g.net.fuelCart(boat, ticks, p.yaw, st.id); // a shared cart: the host burns it (and gives the fuel back if it cannot)
       g.audio.play('cart_fuel', [boat.x, boat.y + 0.5, boat.z]);
       this.swing = SWING_TICKS;
       return true;

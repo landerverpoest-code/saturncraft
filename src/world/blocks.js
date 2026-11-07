@@ -866,6 +866,11 @@ def(B.CIRRUSSTONE, 'Cirrusstone', { hardness: 1.2, resistance: 4, tool: TOOL.PIC
 def(B.BEANSTALK, 'Beanstalk', { hardness: 0.3, resistance: 0.3, tool: TOOL.AXE, solid: false, opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, sound: 'grass', flatIcon: true, needsSupport: true, climbable: true, drops: 'beanstalk', tex: { all: 'beanstalk' } });
 def(B.GLEAMKELP, 'Gleamkelp', { ...plant, waterlogged: true, opacity: 1, emit: 9, drops: 'self', tex: { all: 'gleamkelp' } });
 
+// Bounty Board (player/quests.js, world/villages.js): the notice board standing beside every new village's well (and craftable)
+// where the day's bounties and the Village Elder's tales are given out. Meta bit 0 = the axis (0: the board faces along z).
+ext('BOUNTY_BOARD');
+def(B.BOUNTY_BOARD, 'Bounty Board', { hardness: 2, resistance: 3, tool: TOOL.AXE, sound: 'wood', flammable: true, opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, flatIcon: true, tex: { top: 'bounty_board_top', bottom: 'bounty_board_top', side: 'bounty_board' } });
+
 export const NUM_BLOCKS = BLOCKS.length;
 
 // Flat lookup tables used by hot loops (mesher, lighting, physics) and workers.

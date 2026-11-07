@@ -56,3 +56,30 @@ export function campTick(c) {
   }
   return done;
 }
+
+/** Do two campfire states hold the same foods in the same places (cooking progress aside)? */
+export function sameCampLayout(a, b) {
+  for (let i = 0; i < CAMP_SLOTS; i++) {
+    const x = a && a.slots[i], y = b && b.slots[i];
+    if ((x ? x.id : 0) !== (y ? y.id : 0)) return false;
+  }
+  return true;
+}
+
+/**
+ * The host's campfire after a guest says the fire looks like `theirs`. A guest only ever sees the layout (cooking
+ * progress is the host's), so its message can lay food on empty places and take food off, but never changes how far
+ * something has cooked: a place the guest cleared is cleared, a place both have keeps the host's food and its progress,
+ * a place the guest filled that the host has empty gets the new food (fresh), and a place where they disagree about what
+ * lies there stays as the host has it. Returns a copy, or null when nothing is left.
+ */
+export function mergeCamp(host, theirs) {
+  const slots = [];
+  for (let i = 0; i < CAMP_SLOTS; i++) {
+    const h = host && host.slots[i], t = theirs && theirs.slots[i];
+    if (!t) slots.push(null);
+    else if (h) slots.push({ ...h });
+    else slots.push({ id: t.id, t: 0 });
+  }
+  return slots.some(Boolean) ? { slots } : null;
+}

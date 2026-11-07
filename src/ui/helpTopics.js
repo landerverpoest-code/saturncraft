@@ -38,6 +38,7 @@ import { SEA_LEVEL } from '../world/constants.js';
 import { VARIETY_STEP, VARIETY_MAX, VARIETY_WINDOW } from '../player/variety.js';
 import { SNARE_RANGE, SNARE_HOLD } from '../world/snare.js';
 import { PULSE_GATE_SETTINGS } from '../world/pulseGate.js';
+import { CHAINS, MAX_ACTIVE, BOUNTIES_PER_BOARD } from '../player/quests.js';
 import { LOOP_LIMIT, LOOP_FUSE, OBSERVE_PER_TICK, SCHEDULED_PER_TICK } from '../world/circuits.js';
 
 export const GROUP_ORDER = ['Basics', 'Controls', 'Systems', 'Reference'];
@@ -101,6 +102,20 @@ export function buildTopics({ table, touch = false, pad = false } = {}) {
       `A furnace turns ore, sand, clay and raw food into ingots, glass, bricks and cooked meals. It needs fuel and takes ${SMELT_TIME / 20} seconds per item.`,
       'Shift-click on a crafting result makes as many as you can. Shift-click a stack in the bag to send it to the open container.',
     ] },
+  ]);
+
+  add('quests', 'Bounties and tales', 'Systems', [
+    { p: `A Bounty Board stands beside the well of every new village (you can also craft one from planks, sticks and a book). Use it to read the day's ${BOUNTIES_PER_BOARD} bounties, which change every day and are the same for everyone in the world.` },
+    { list: [
+      'Kinds of bounty: gather items, slay monsters, deliver goods to the board of another village, find a structure, cook a dish in a Cooking Pot, cross a stretch of a biome, trade with settlers, craft items.',
+      `Accept a bounty and it joins your Quest Journal (${keysOf(table, 'journal', [0, 1]) || 'K'}, or pause menu > Quest Journal). You can keep ${MAX_ACTIVE} at once. Progress is counted for you and your whole team (or for everybody if you are in no team); the journal credits each player's share.`,
+      'When a bounty is finished, turn it in at the board of the village that posted it (a delivery is handed over at the board it is addressed to). Everyone who took part gets the reward: beryl, sometimes items, and reputation with that village.',
+      'Items you drop yourself or find in a broken chest do not count towards "gather" bounties; things you mine, pick up from monsters or harvest do.',
+    ] },
+    { h: "The Elder's tales" },
+    { p: "Each board also holds the Village Elder's tales: handcrafted quests of several steps that send you to far places and bosses. A tale is yours alone; claim its reward at any board when it is told." },
+    { list: CHAINS.map((c) => `${c.title}: ${c.steps.length} steps, rewards the named ${c.reward.item.label}.`) },
+    { p: 'In multiplayer the host keeps the books and every guest can use the board, accept, hand over and turn in.' },
   ]);
 
   add('trading', 'Trading and reputation', 'Systems', [

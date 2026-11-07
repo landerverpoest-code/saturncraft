@@ -61,18 +61,21 @@ export const dishOf = (m) => { const d = m & 15; return d < RECIPES.length ? d :
 export const stageOf = (m) => (m >> 4) & 3;
 export const servingsOf = (m) => (isReady(m) ? ((m >> 4) & 3) + 1 : 0);
 
+/** A player's change is `urgent` (meshed at once and, in a shared world, sent to the host); the simmer's own stages are not. */
+const put = (world, urgent, x, y, z, id, meta) => (urgent && world.setBlockUrgent ? world.setBlockUrgent(x, y, z, id, meta) : world.setBlock(x, y, z, id, meta));
+
 /**
  * Start cooking the pot at x,y,z. Returns 'started', 'empty' (nothing in it), 'nomatch' (the set is not a recipe yet),
  * 'noheat' (nothing hot below) or 'busy' (not a filling pot).
  */
-export function startBrew(world, x, y, z) {
+export function startBrew(world, x, y, z, urgent = false) {
   if (world.getBlock(x, y, z) !== B.COOKING_POT) return 'busy';
   const mask = world.getMeta(x, y, z);
   if (!mask) return 'empty';
   const dish = recipeFor(mask);
   if (dish < 0) return 'nomatch';
   if (!hasHeat(world, x, y, z)) return 'noheat';
-  world.setBlock(x, y, z, B.COOKING_POT_BREW, brewMeta(dish, 0));
+  put(world, urgent, x, y, z, B.COOKING_POT_BREW, brewMeta(dish, 0));
   world.scheduleTick(x, y, z, BREW_STAGE_TICKS);
   return 'started';
 }
@@ -92,12 +95,12 @@ export function potTick(world, x, y, z) {
  * Take one serving out of a ready pot: returns the dish index, or -1 if the pot is not ready. The pot empties
  * (back to a filling pot with nothing in it) when the last serving is taken.
  */
-export function takeServing(world, x, y, z) {
+export function takeServing(world, x, y, z, urgent = false) {
   if (world.getBlock(x, y, z) !== B.COOKING_POT_BREW) return -1;
   const m = world.getMeta(x, y, z);
   if (!isReady(m)) return -1;
   const dish = dishOf(m), left = servingsOf(m) - 1;
-  if (left <= 0) world.setBlock(x, y, z, B.COOKING_POT, 0);
-  else world.setBlock(x, y, z, B.COOKING_POT_BREW, readyMeta(dish, left));
+  if (left <= 0) put(world, urgent, x, y, z, B.COOKING_POT, 0);
+  else put(world, urgent, x, y, z, B.COOKING_POT_BREW, readyMeta(dish, left));
   return dish;
 }
