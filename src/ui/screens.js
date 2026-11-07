@@ -24,7 +24,7 @@ import { entriesOf, guideProgress, guideRows, TAB_LABELS, itemName } from '../pl
 import { creatureIcon, structureIcon } from './guideArt.js';
 import { MOBS } from '../mobs/mobTypes.js';
 import { ACTIONS, GROUPS, SLOT_KINDS, SLOT_NAMES, resolveBindings, toOverrides, setBinding, codeLabel } from './bindings.js';
-import { COLOR_BLIND_LABELS, nextColorBlind, priceCue } from './accessibility.js';
+import { COLOR_BLIND_LABELS, nextColorBlind, priceCue, cleanUiScale, UI_SCALE_MIN, UI_SCALE_MAX, UI_SCALE_STEP } from './accessibility.js';
 import { MenuNav, labelScreens, AUTOFOCUS_SCREENS } from './menuNav.js';
 import { buildTopics, searchTopics } from './helpTopics.js';
 import { TOUCH_MODE_LABELS, SIZE_RANGE, OPACITY_RANGE, nextTouchMode, normalizeTouch, detectTouch, readTouchEnv } from './touchMath.js';
@@ -1104,10 +1104,12 @@ export class UI {
     this.clear();
     this.open = 'emotes';
     this.game.input.unlock();
-    const s = el('<div class="screen emote-screen"><h2>Emote</h2><div class="emote-wheel" role="group" aria-label="Emotes"></div><p class="sub">Click one or press 1-3, or use the D-pad and A - they show on your body for the others</p></div>');
+    const slotKey = (i) => codeLabel(((this.game.input.keys || {})['slot' + (i + 1)] || [])[0] || 'Digit' + (i + 1)); // (the hotbar slot keys, as remapped)
+    const keyNames = EMOTES.map((k, i) => slotKey(i)).join(', ');
+    const s = el(`<div class="screen emote-screen"><h2>Emote</h2><div class="emote-wheel" role="group" aria-label="Emotes"></div><p class="sub">Click one or press ${keyNames}, or use the D-pad and A - they show on your body for the others</p></div>`);
     const wheel = s.querySelector('.emote-wheel');
     EMOTES.forEach((k, i) => {
-      const b = el(`<button class="btn emote-btn" style="--a:${Math.round(-90 + i * 360 / EMOTES.length)}deg"><b>${i + 1}</b> ${EMOTE_LABELS[k]}</button>`);
+      const b = el(`<button class="btn emote-btn" style="--a:${Math.round(-90 + i * 360 / EMOTES.length)}deg"><b>${slotKey(i)}</b> ${EMOTE_LABELS[k]}</button>`);
       b.onclick = () => this.pickEmote(k);
       wheel.appendChild(b);
     });
@@ -1486,12 +1488,18 @@ export class UI {
     const s = el(`<div class="screen pause-screen"><h2>Accessibility</h2>
       <button class="btn" data-k="captions">Sound captions: ${onOff('captions')}</button>
       <p class="sub">Shows what you hear, and from which side, at the bottom right.</p>
+      <button class="btn" data-k="largeCaptions">Larger subtitles: ${onOff('largeCaptions')}</button>
+      <p class="sub">Bigger sound captions on a darker strip (works with or without Sound captions turned on above).</p>
       <button class="btn" data-k="reduceMotion">Reduce motion: ${onOff('reduceMotion')}</button>
-      <p class="sub">No head bob, hurt tilt, sprint zoom or trembling apparitions; Veilfire drifts slowly, falling stars and meteorite trails are left out and fewer grains blow in a dust storm.</p>
+      <p class="sub">No head bob, hurt tilt, sprint zoom, trembling held items or apparitions, and about a third of the usual particles; Veilfire drifts slowly, falling stars and meteorite trails are left out and fewer grains blow in a dust storm.</p>
       <button class="btn" data-k="reduceFlashing">Reduce flashing: ${onOff('reduceFlashing')}</button>
       <p class="sub">Lightning only brightens the sky a little, hearts stop flashing, stars stay steady and fireworks and meteorite impacts throw fewer sparks with no white twinkles.</p>
       <button class="btn" data-a="cb">Colour-blind HUD: ${COLOR_BLIND_LABELS[g.settings.colorBlind] || 'Off'}</button>
       <p class="sub">Moves the status-bar colours apart and marks poison and hunger with a cross.</p>
+      <button class="btn" data-k="shapeCues">Shape cues: ${onOff('shapeCues')}</button>
+      <p class="sub">Patterns and symbols as well as colour: a cross on poison and hunger, a diamond on bonus hearts, hatching and words on the boss and raid bars, an arrow on each effect.</p>
+      <div class="field ui-scale-row"><label for="ui-scale">UI scale: <b id="ui-scale-v">${Math.round(cleanUiScale(g.settings.uiScale) * 100)}%</b></label><input type="range" id="ui-scale" min="${Math.round(UI_SCALE_MIN * 100)}" max="${Math.round(UI_SCALE_MAX * 100)}" step="${Math.round(UI_SCALE_STEP * 100)}" value="${Math.round(cleanUiScale(g.settings.uiScale) * 100)}" aria-valuetext="${Math.round(cleanUiScale(g.settings.uiScale) * 100)} percent" /></div>
+      <p class="sub">Makes the menus and the on-screen display smaller or larger, from 75 % to 150 %.</p>
       <button class="btn" data-k="highContrast">High contrast: ${onOff('highContrast')}</button>
       <p class="sub">Black and white menus with thick outlines, and brighter text on the screen.</p>
       <button class="btn" data-k="largeText">Large text: ${onOff('largeText')}</button>
@@ -1507,6 +1515,9 @@ export class UI {
         if (k === 'captions' && g.settings.captions) g.captions.add('click', [g.player.x + 3, g.player.y, g.player.z], 1, [g.player.x, g.player.y, g.player.z, 0], performance.now());
       };
     });
+    const scaleIn = s.querySelector('#ui-scale'), scaleV = s.querySelector('#ui-scale-v');
+    scaleIn.oninput = () => { const v = cleanUiScale(Number(scaleIn.value) / 100); scaleV.textContent = `${Math.round(v * 100)}%`; scaleIn.setAttribute('aria-valuetext', `${Math.round(v * 100)} percent`); };
+    scaleIn.onchange = () => g.setSetting('uiScale', cleanUiScale(Number(scaleIn.value) / 100)); // (applied on release, so the slider under the finger does not move)
     const cb = s.querySelector('[data-a=cb]');
     cb.onclick = () => { g.setSetting('colorBlind', nextColorBlind(g.settings.colorBlind)); cb.textContent = `Colour-blind HUD: ${COLOR_BLIND_LABELS[g.settings.colorBlind]}`; };
     s.querySelector('[data-a=back]').onclick = () => this.showPause();

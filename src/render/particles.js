@@ -19,6 +19,7 @@ export class Particles {
     this.fade = new Float32Array(MAX * 3);
     this.life0 = new Float32Array(MAX);
     this.n = 0;
+    this.density = 1; // share of emitted particles kept (Reduce motion lowers it, see ui/accessibility.js motionScales)
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(this.pos, 3));
     g.setAttribute('color', new THREE.BufferAttribute(this.col, 3));
@@ -30,6 +31,7 @@ export class Particles {
 
   /** `fade`: an optional [r, g, b] the particle turns to over its life (fireworks). */
   emit(x, y, z, vx, vy, vz, r, gcol, b, life, grav = 0.04, fade = null) {
+    if (this.density < 1 && Math.random() >= this.density) return;
     let i = this.n < MAX ? this.n++ : Math.floor(Math.random() * MAX);
     this.pos[i * 3] = x; this.pos[i * 3 + 1] = y; this.pos[i * 3 + 2] = z;
     this.vel[i * 3] = vx; this.vel[i * 3 + 1] = vy; this.vel[i * 3 + 2] = vz;

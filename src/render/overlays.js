@@ -6,6 +6,7 @@ import { BLOCKS, SHAPE } from '../world/blocks.js';
 import { ITEMS } from '../world/items.js';
 import { texturePixels } from '../world/textures.js';
 import { drawDial, itemCanvas } from '../ui/icons.js';
+import { fxOf } from '../ui/accessibility.js';
 import { blockFaceTexture, lightAt } from '../entities/entities.js';
 import { SWING_TICKS } from '../player/interaction.js';
 import { selectionBox } from '../world/shapes.js';
@@ -162,7 +163,7 @@ export class HeldItem {
     if (this.spear) {
       // charging a throw: pulled back and levelled, trembling once it is ready
       const c = g.interaction.bowDraw > 0 ? Math.min(1, (g.interaction.bowDraw + alpha) / 10) : 0;
-      const shake = c >= 1 ? Math.sin(sec * 40) * 0.006 : 0;
+      const shake = c >= 1 ? Math.sin(sec * 40) * 0.006 * fxOf(g).shake : 0; // (Reduce motion: the charged spear holds still)
       this.spear.position.set(0.45 - c * 0.1 + shake, -0.45 + c * 0.08, -0.9 + c * 0.35);
       this.spear.rotation.set(0.5 - c * 0.38, Math.PI + 0.15 - c * 0.1, 0);
       lightSpear(this.spear, 1, this.spearGlint, sec);

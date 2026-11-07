@@ -8,7 +8,7 @@ import { startTitleScene, SPLASHES } from './ui/titleScene.js';
 import { loadPlayerName, savePlayerName, normalizeRoomCode } from './net/protocol.js';
 import { takeResume, storeResume, shouldRetryJoin, RECONNECT_MAX, reconnectDelay } from './net/social.js';
 import { wantTouch, readTouchEnv } from './ui/touchMath.js';
-import { accessClasses, ACCESS_CLASSES } from './ui/accessibility.js';
+import { applyAccessToRoot } from './ui/accessibility.js';
 import { resolveBindings, codeLabel } from './ui/bindings.js';
 
 const stopTitleScene = startTitleScene(document.getElementById('title-bg'));
@@ -31,7 +31,7 @@ if (wantTouch(loadSettings(), location.search, readTouchEnv())) {
 }
 const loading = document.getElementById('loading');
 const settings = loadSettings();
-{ const on = new Set(accessClasses(settings)); for (const c of ACCESS_CLASSES) document.documentElement.classList.toggle(c, on.has(c)); } // the title screen honours the accessibility classes too
+applyAccessToRoot(document.documentElement, settings); // the title screen honours the accessibility classes too
 const rd = document.getElementById('t-rd');
 const sh = document.getElementById('t-sh');
 rd.value = settings.renderDistance; document.getElementById('t-rdv').textContent = settings.renderDistance;

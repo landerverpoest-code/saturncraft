@@ -501,7 +501,7 @@ body.touch-on #hint-card { bottom: calc(var(--slot) * 2 + 76px); font-size: 14px
 #steps.complete { border-left-color: #7ad870; }
 #steps .st-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 #steps .st-skip { pointer-events: auto; cursor: pointer; font-size: 11px; padding: 1px 8px; color: #fff; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.4); border-radius: 4px; }
-#steps .st-skip:hover, #steps .st-skip:focus-visible { background: rgba(240, 176, 74, .6); outline: none; }
+#steps .st-skip:hover, #steps .st-skip:focus-visible { background: rgba(240, 176, 74, .6); }
 #steps .st-list { list-style: none; margin: 4px 0 0; padding: 0; }
 #steps .st-list li { opacity: .75; }
 #steps .st-list li.done { opacity: .55; text-decoration: line-through; color: #9ee494; }
@@ -723,4 +723,39 @@ html.high-contrast #aimtip { background: #000; border: 1px solid #fff; }
 @media (max-width: 980px) {
   body:not(.touch-on) #raidbar, body:not(.touch-on) #bossbar { top: 76px; }
   body:not(.touch-on) #raidbar:not(.hidden) ~ #bossbar { top: 124px; }
+}
+
+/* ---- accessibility, round 3 (ui/accessibility.js: shape cues, UI scale, larger subtitles; ui/frameGraph.js) ---- */
+/* UI scale: the contents of every screen get the slider's zoom (times 1.3 with large text, see applyAccessToRoot); the HUD blocks scale too */
+html.ui-scaled .screen > * { zoom: var(--tz, 1); }
+html.ui-scaled .pause-screen > .btn { min-width: min(300px, calc((100vw - 24px) / var(--tz, 1))); }
+html.ui-scaled .pause-screen > .field, html.ui-scaled .pause-screen > .btn-row { width: min(300px, calc((100vw - 24px) / var(--tz, 1))); }
+html.ui-scaled :is(#bottom, #skyinfo, #effects, #steps, #item-name, #toast, #captions, #debug, #coords, #aimtip) { zoom: var(--ui-scale, 1); }
+html.ui-scaled #raidbar, html.ui-scaled #bossbar { zoom: var(--ui-scale, 1); width: min(480px, calc((100vw - 32px) / var(--ui-scale, 1))); }
+html.ui-scaled #chat { font-size: calc(14px * var(--ui-scale, 1)); }
+.ui-scale-row { display: flex; align-items: center; gap: 10px; justify-content: center; }
+.ui-scale-row input[type=range] { width: 200px; }
+
+/* Larger subtitles: the sound captions get bigger text on a solid, darker strip, independent of Large text */
+html.large-captions #captions { max-width: 60vw; gap: 5px; }
+html.large-captions #captions .caption { font-size: 24px; padding: 5px 12px; background: rgba(0, 0, 0, .88); }
+
+/* Shape cues: patterns and symbols that back up colour (the boss and raid bars, the effect list) */
+html.cue-shapes #bossbar .bb-fill { background-image: repeating-linear-gradient(90deg, rgba(0, 0, 0, .4) 0 2px, transparent 2px 12px), linear-gradient(#ffb43a, #c8421c); }
+html.cue-shapes #bossbar.shielded .bb-fill { background-image: repeating-linear-gradient(45deg, rgba(0, 0, 0, .5) 0 4px, transparent 4px 8px), linear-gradient(#e8e0d0, #9a8a78); }
+html.cue-shapes #bossbar .bb-track { border-style: solid; }
+html.cue-shapes #bossbar.shielded .bb-track { border-style: dashed; }
+html.cue-shapes #raidbar .rb-fill { background-image: repeating-linear-gradient(90deg, rgba(0, 0, 0, .35) 0 2px, transparent 2px 12px), linear-gradient(#e0484a, #9a1a22); }
+html.cue-shapes #raidbar.won .rb-fill { background-image: repeating-linear-gradient(135deg, rgba(0, 0, 0, .3) 0 3px, transparent 3px 7px), linear-gradient(#7ad870, #2e8a2a); }
+html.cue-shapes #effects .fx .fx-name::before { content: "\25B2  "; font-size: .8em; }
+html.cue-shapes #effects .fx.bad .fx-name::before { content: "\25BC  "; }
+html.cue-shapes #effects .fx.bad { border-left-style: dashed; }
+
+/* F3 frame-time graph (below the debug text, bottom left) */
+#framegraph { position: absolute; left: 6px; bottom: 6px; width: 240px; height: 64px; image-rendering: pixelated; border: 1px solid rgba(255, 255, 255, .4); pointer-events: none; }
+#framegraph.hidden { display: none; }
+
+/* Focus stays visible in the fields whose own rules removed the outline (chat, sign and book text) and on the First Steps Skip button */
+#chat .chat-input:focus-visible, .sign-edit input:focus-visible, .book-page:focus-visible, #steps .st-skip:focus-visible {
+  outline: 3px solid #ffd34a; outline-offset: 2px; box-shadow: 0 0 0 2px #000;
 }

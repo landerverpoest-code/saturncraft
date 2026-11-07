@@ -378,7 +378,7 @@ describe('reduced motion and flashing', () => {
     expect(motionScales(undefined).bob).toBe(1);
   });
   it('has defaults that are all off', () => {
-    expect(ACCESS_DEFAULTS).toEqual({ captions: false, reduceMotion: false, reduceFlashing: false, colorBlind: 'off', highContrast: false, largeText: false });
+    expect(ACCESS_DEFAULTS).toEqual({ captions: false, reduceMotion: false, reduceFlashing: false, colorBlind: 'off', highContrast: false, largeText: false, shapeCues: false, uiScale: 1, largeCaptions: false });
   });
 });
 

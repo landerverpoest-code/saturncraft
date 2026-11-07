@@ -12,7 +12,8 @@ import { dashGauge } from '../mobs/duneStrider.js';
 import { staminaGauge } from '../mobs/mounts.js';
 import { shieldGauge } from '../player/shield.js';
 import { paintGhostFace, ghostPose, GHOST_TICKS } from './ghostFace.js';
-import { hudPalette, motionScales } from './accessibility.js';
+import { hudPalette, motionScales, bossBarLabel, raidBarLabel } from './accessibility.js';
+import { FrameGraph } from './frameGraph.js';
 
 const svg = (inner) => `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" shape-rendering="crispEdges">${inner}</svg>`)}`;
 const heartPath = 'M9 16 L2 9 Q0 6 2 3.5 Q4.5 1 7 3 L9 5 L11 3 Q13.5 1 16 3.5 Q18 6 16 9 Z';
@@ -20,12 +21,13 @@ const heartPath = 'M9 16 L2 9 Q0 6 2 3.5 Q4.5 1 7 3 L9 5 L11 3 Q13.5 1 16 3.5 Q1
 export function buildIcons(c) {
   const cross = (col) => `<path d="M5 5 L13 13 M13 5 L5 13" stroke="${col}" stroke-width="2"/>`;
   const marks = !!c.marks;
+  const diamond = (col) => `<path d="M9 5 L13 9 L9 13 L5 9 Z" fill="${col}" stroke="#fff" stroke-width="0.8"/>`; // absorption hearts carry a diamond
   return {
     heartEmpty: svg(`<path d="${heartPath}" fill="${c.heartEmpty}" stroke="#000" stroke-width="1.2"/>`),
     heartFull: svg(`<path d="${heartPath}" fill="${c.heart}" stroke="#000" stroke-width="1.2"/><path d="M4 5 L6 4" stroke="${c.heartShine}" stroke-width="1.5"/>`),
     heartHalf: svg(`<defs><clipPath id="c"><rect x="0" y="0" width="9" height="18"/></clipPath></defs><path d="${heartPath}" fill="${c.heartEmpty}" stroke="#000" stroke-width="1.2"/><path d="${heartPath}" fill="${c.heart}" clip-path="url(#c)"/>`),
-    heartGold: svg(`<path d="${heartPath}" fill="${c.gold}" stroke="#000" stroke-width="1.2"/><path d="M4 5 L6 4" stroke="${c.goldShine}" stroke-width="1.5"/>`),
-    heartGoldHalf: svg(`<defs><clipPath id="g"><rect x="0" y="0" width="9" height="18"/></clipPath></defs><path d="${heartPath}" fill="${c.gold}" stroke="#000" stroke-width="1.2" clip-path="url(#g)"/>`),
+    heartGold: svg(`<path d="${heartPath}" fill="${c.gold}" stroke="#000" stroke-width="1.2"/><path d="M4 5 L6 4" stroke="${c.goldShine}" stroke-width="1.5"/>${marks ? diamond('#000') : ''}`),
+    heartGoldHalf: svg(`<defs><clipPath id="g"><rect x="0" y="0" width="9" height="18"/></clipPath></defs><path d="${heartPath}" fill="${c.gold}" stroke="#000" stroke-width="1.2" clip-path="url(#g)"/>${marks ? '<path d="M9 5 L9 13 L5 9 Z" fill="#000" stroke="#fff" stroke-width="0.8"/>' : ''}`),
     heartPoison: svg(`<path d="${heartPath}" fill="${c.poison}" stroke="#000" stroke-width="1.2"/>${marks ? cross('#000') : ''}`),
     foodEmpty: svg(`<rect x="3" y="5" width="12" height="10" rx="3" fill="${c.foodEmpty}" stroke="#000"/><rect x="5" y="2" width="8" height="4" fill="${c.foodEmpty}" stroke="#000"/>`),
     foodFull: svg(`<rect x="3" y="5" width="12" height="10" rx="3" fill="${c.food}" stroke="#000"/><rect x="5" y="2" width="8" height="4" fill="${c.foodTop}" stroke="#000"/><rect x="5" y="7" width="3" height="2" fill="${c.foodShine}"/>`),
@@ -55,6 +57,7 @@ export class HUD {
       <div id="skyinfo"><canvas width="192" height="96"></canvas><div><div id="phase-label">Day</div><div id="time-label" style="opacity:.7;font-size:11px"></div><div id="season-label"></div></div></div>
       <div id="effects"></div>
       <div id="debug" class="hidden"></div>
+      <canvas id="framegraph" class="hidden" width="240" height="64" role="img" aria-label="Frame time graph"></canvas>
       <div id="coords" class="hidden"></div>
       <div id="markers-root"></div>
       <div id="toast" role="status" aria-live="polite"></div>
@@ -82,7 +85,7 @@ export class HUD {
       this.hotbar.appendChild(s);
       this.slots.push(s);
     }
-    this.icons = buildIcons(hudPalette(game.settings.colorBlind));
+    this.icons = buildIcons(hudPalette(game.settings.colorBlind, !!game.settings.shapeCues));
     this.captionsEl = this.root.querySelector('#captions');
     this.captionKey = '';
     this.healthEl = this.root.querySelector('#health');
@@ -95,6 +98,8 @@ export class HUD {
     this.xpLevel = this.root.querySelector('#xplevel');
     this.makeIcons(this.healthEl, 10); this.makeIcons(this.absorbEl, 10); this.makeIcons(this.foodEl, 10); this.makeIcons(this.airEl, 10);
     this.debugEl = this.root.querySelector('#debug');
+    this.graphEl = this.root.querySelector('#framegraph');
+    this.graphCtx = null;
     this.coordsEl = this.root.querySelector('#coords');
     this.markers = new PlayerMarkers(this.root.querySelector('#markers-root'));
     this.playerList = new PlayerList(this.root); // Tab (net/social.js)
@@ -131,10 +136,23 @@ export class HUD {
   }
 
   /** Switch the status bars to a colour-blind friendly palette (or back); they redraw on the next update. */
-  setColorBlind(mode) {
-    this.icons = buildIcons(hudPalette(mode));
+  setColorBlind(mode, shapeCues = !!this.game.settings.shapeCues) {
+    this.icons = buildIcons(hudPalette(mode, shapeCues));
     for (const el of [this.healthEl, this.absorbEl, this.foodEl, this.airEl, this.armorEl]) for (const img of el.children) img._src = null;
     this.lastAbsorb = undefined;
+  }
+
+  /** F3: show or hide the debug text and the frame-time graph below it (ui/frameGraph.js). */
+  setDebug(on) {
+    this.showDebug = !!on;
+    this.debugEl.classList.toggle('hidden', !on);
+    this.graphEl.classList.toggle('hidden', !on);
+    if (on) this.debugEl.textContent = this.game.debugText();
+  }
+
+  drawFrameGraph(graph) {
+    if (!this.graphCtx) { this.graphCtx = this.graphEl.getContext('2d'); if (this.graphCtx) this.graphCtx.font = '10px monospace'; }
+    if (this.graphCtx) graph.draw(this.graphCtx, this.graphEl.width, this.graphEl.height);
   }
 
   /** Sound captions (bottom right): redrawn only when the list or the fading changes. */
@@ -243,7 +261,8 @@ export class HUD {
     el.classList.toggle('hidden', !info);
     if (!info) return;
     const name = el.firstChild, fill = el.lastChild.firstChild;
-    if (name.textContent !== info.label) name.textContent = info.label;
+    const shown = raidBarLabel(info, !!this.game.settings.shapeCues || (this.game.settings.colorBlind || 'off') !== 'off');
+    if (name.textContent !== shown) name.textContent = shown;
     fill.style.width = `${Math.round(info.progress * 1000) / 10}%`;
     el.setAttribute('aria-valuenow', String(Math.round(info.progress * 100)));
     el.setAttribute('aria-valuetext', `${info.label}${info.state === 'won' ? ', won' : ''}`);
@@ -256,7 +275,8 @@ export class HUD {
     if (!el) return;
     el.classList.toggle('hidden', !info);
     if (!info) return;
-    const label = `${info.name}, phase ${info.phase} of ${info.phases.length + 1}`;
+    const shapes = !!this.game.settings.shapeCues || (this.game.settings.colorBlind || 'off') !== 'off';
+    const label = bossBarLabel(info, shapes);
     const name = el.firstChild, fill = el.lastChild.firstChild;
     if (name.textContent !== label) name.textContent = label;
     fill.style.width = `${Math.round(info.frac * 1000) / 10}%`;
@@ -403,6 +423,7 @@ export class HUD {
     if (this.frame % 5 === 0) this.drawEffects();
     if (this.frame++ % 10 === 0) this.drawSky();
     if (this.showDebug && this.frame % 6 === 0) this.debugEl.textContent = g.debugText();
+    if (this.showDebug && this.frame % 2 === 0 && g.frameGraph) this.drawFrameGraph(g.frameGraph);
     if (g.net) this.markers.update(g);
     else this.markers.clear();
     this.playerList.update(g);
