@@ -107,6 +107,9 @@ function planVillage(gen, rx, rz) {
   return { cx, cz, y, biome, style, pieces, roads, x0: cx - REACH, x1: cx + REACH, z0: cz - REACH, z1: cz + REACH };
 }
 
+/** Where a village's Bounty Board stands: the plaza corner beside the well, clear of the four roads. */
+export const boardSpot = (v) => [v.cx + 2, v.cz + 2];
+
 /** Villages whose area overlaps the box [x0, x1] x [z0, z1]. */
 export function villagesNear(gen, x0, z0, x1, z1) {
   const out = [];
@@ -176,6 +179,14 @@ export function stampVillages(gen, blocks, meta, cx, cz) {
         for (let y = p.y; y < p.y + height; y++) set(x, y, z, B.AIR);
       }
       BUILDERS[p.type](p, st, set, mulberry32(p.seed || 7), v.style);
+    }
+    // the Bounty Board (player/quests.js) beside the well, on the corner of the plaza between two roads
+    const [bx, bz] = boardSpot(v);
+    if (inChunk(bx, bz)) {
+      let y = v.y + 5;
+      while (y > v.y - 8 && !solidGround(get(bx, y, bz))) y--;
+      const above = get(bx, y + 1, bz);
+      if (solidGround(get(bx, y, bz)) && (above === B.AIR || PLANTS.has(above))) set(bx, y + 1, bz, B.BOUNTY_BOARD, 0);
     }
   }
 }

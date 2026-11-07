@@ -367,6 +367,7 @@ export class Mob {
     this.noActionTime = 0;
     this.lastSource = source;
     if (attacker && (attacker.isPlayer || attacker.tamed)) this.lastHurtByPlayer = 100;
+    if (attacker && attacker.isPlayer) this.lastKiller = attacker; // who the bounties credit (player/questSystem.js)
     if (this.def.knockbackResist && !this.def.guard) knockback = 0; // the Hushkeeper stands its ground
     if (attacker && knockback > 0) {
       const dx = this.x - attacker.x, dz = this.z - attacker.z;
@@ -480,13 +481,13 @@ export class Mob {
         const c = g.spawner.spawnMob('wobbler', this.x + (Math.random() - 0.5) * this.size * 0.5, this.y + 0.3, this.z + (Math.random() - 0.5) * this.size * 0.5);
         if (c) { c.setSize(this.size / 2); c.yaw = Math.random() * Math.PI * 2; }
       }
-      if (this.lastHurtByPlayer > 0) recordKill(g.player.stats, this.type);
+      if (this.lastHurtByPlayer > 0) { recordKill(g.player.stats, this.type); if (g.quests) g.quests.killed(this, this.lastKiller); }
       return; // only the smallest drop slimeballs
     }
     if (!g) return;
     const killedByPlayer = this.lastHurtByPlayer > 0;
     this.killedByPlayer = killedByPlayer;
-    if (killedByPlayer) recordKill(g.player.stats, this.type);
+    if (killedByPlayer) { recordKill(g.player.stats, this.type); if (g.quests) g.quests.killed(this, this.lastKiller); }
     if (killedByPlayer && this.def.villager && this.lastPlayerHurter && !this.netProxy) settlerWronged(g, this.lastPlayerHurter, this.villageId(g), true);
     if (killedByPlayer && this.def.category === CATEGORY.MONSTER && g.milestones) g.milestones.event('kill');
     if (this.def.onDeath) this.def.onDeath(this, g, killedByPlayer);

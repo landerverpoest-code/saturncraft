@@ -114,6 +114,7 @@ export async function saveGame(game) {
     seasons: game.seasons ? game.seasons.save() : undefined, // season length and the calendar offset set by /season (world/seasons.js)
     weather: game.weather.save(),
     milestones: game.milestones.save(),
+    quests: game.quests ? game.quests.save() : undefined, // accepted bounties by group and story chains by player (player/quests.js)
     onboarding: game.onboarding ? game.onboarding.save() : undefined, // hints shown and First Steps ticked (player/onboarding.js)
     stats: saveStats(p.stats), // blocks, distances, kills, deaths, trades and play time (player/stats.js)
     raids: game.raids ? game.raids.save() : null, // patrol timer and the raid under way (mobs/raids.js)
@@ -165,6 +166,7 @@ export function applySave(game, data) {
   if (game.seasons) { game.seasons.load(data.seasons); game.seasons.enabled = game.settings.seasons !== false; }
   if (game.worldEvents) game.worldEvents.load(data.worldEvents);
   game.milestones.load(data.milestones);
+  if (game.quests) game.quests.load(data.quests);
   if (game.onboarding) game.onboarding.load(data.onboarding);
   game.player.stats = loadStats(data.stats);
   if (game.raids) game.raids.load(data.raids);

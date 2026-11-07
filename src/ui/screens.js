@@ -360,19 +360,23 @@ export class UI {
         if (!r) return;
         const inv = this.game.player.inventory;
         if (e.shiftKey) {
+          let made = 0;
           for (let n = 0; n < 64; n++) {
             const rr = result();
             if (!rr || !canStack(rr, r)) break;
             const left = inv.add({ ...rr, damage: 0 });
             consume();
+            made += rr.count;
             if (left) { this.game.entities.spawnItem(this.game.player.x, this.game.player.y + 1, this.game.player.z, { ...rr, count: left }); break; }
           }
+          if (made && this.game.quests) this.game.quests.emit('craft', { id: r.id, n: made }); // (bounties and tales, player/questSystem.js)
         } else {
           const c = this.cursor;
           if (!c) this.cursor = { ...r, damage: 0 }; // (keeps a box's contents, a pot's sherds)
           else if (canStack(c, r) && c.count + r.count <= maxStack(r.id)) c.count += r.count;
           else return;
           consume();
+          if (this.game.quests) this.game.quests.emit('craft', { id: r.id, n: r.count });
         }
         this.game.audio.play('click');
       },
@@ -1217,7 +1221,7 @@ export class UI {
             mob.traded = true;
             const up = recordTrades(mob, done); // trades count towards the settler's level
             if (key) repEvent(g, g.player, key, REP.trade * done, 'trade');
-            g.player.stats.trades += done; g.milestones.event('trade'); if (trader) g.milestones.event('peddler'); g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); g.entities.spawnXp(g.player.x, g.player.y + 1, g.player.z, 3 * done);
+            g.player.stats.trades += done; g.milestones.event('trade'); g.quests.emit('trade', { n: done }); if (trader) g.milestones.event('peddler'); g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); g.entities.spawnXp(g.player.x, g.player.y + 1, g.player.z, 3 * done);
             if (up) {
               if (g.hud) g.hud.toast(`The settler is now a ${LEVEL_NAMES[mob.level - 1]}: new offers`, 3500);
               g.audio.play('levelup', [mob.x, mob.y + 1.5, mob.z]);

@@ -457,6 +457,7 @@ export class HostSession extends Session {
         break;
       }
       case 'scmd': this.remoteSocial(c, m); break;
+      case 'q': if (g.quests) g.quests.onGuestMessage(c, m); break; // bounties and tales (player/questSystem.js)
       case 'pg': // ping + gamemode for the Tab list; answered at once so the guest can time the round trip
         c.ping = cleanPing(m.rtt);
         if (GAMEMODE_LABEL[m.gm]) c.gm = m.gm;
@@ -725,6 +726,7 @@ export class HostSession extends Session {
       if (!st || !ITEMS[st.id] || !Number.isInteger(st.count) || st.count <= 0 || st.count > 64) return;
       const e = ents.spawnItem(m.x, m.y, m.z, copyStack(st), v);
       if (e && m.pd) e.pickupDelay = Math.min(80, m.pd | 0);
+      if (e && m.pd >= 40) e.recycled = true; // thrown or dropped by the guest, not a find
     } else if (m.k === 'xp') {
       if (m.n > 0) ents.spawnXp(m.x, m.y, m.z, Math.min(100000, m.n | 0));
     } else if (m.k === 'arrow' && v) {
@@ -769,6 +771,7 @@ export class HostSession extends Session {
       if (!n) return;
       e.stack.count -= n;
       if (e.stack.count <= 0) e.dead = true;
+      if (!e.recycled && this.game.quests) this.game.quests.emit('pickup', { id: e.stack.id, n }, c.rp.target);
       c.ch.send({ t: 'got', st: { ...copyStack(e.stack), count: n } });
     } else if (e.kind === 'xp') {
       e.dead = true;
@@ -1536,6 +1539,7 @@ export class ClientSession extends Session {
       }
       case 'traded': this.onTraded(m); break;
       case 'gifted': this.onGifted(m); break;
+      case 'q': if (g.quests) g.quests.onHostMessage(m); break;
       case 'rep': if (typeof m.k === 'string' && Number.isFinite(m.v)) setRep(g.player, m.k, m.v); break;
       case 'cont': this.onContainerState(m, false); break;
       case 'cack': case 'cnak': this.onContainerReply(m); break;
@@ -1653,7 +1657,7 @@ export class ClientSession extends Session {
       done++;
     }
     inv.changed();
-    if (done) { g.player.stats.trades += done; g.milestones.event('trade'); if (mob && mob.def && mob.def.trader) g.milestones.event('peddler'); if (mob) g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); g.entities.spawnXp(g.player.x, g.player.y + 1, g.player.z, 3 * done); }
+    if (done) { g.player.stats.trades += done; g.milestones.event('trade'); g.quests.emit('trade', { n: done }); if (mob && mob.def && mob.def.trader) g.milestones.event('peddler'); if (mob) g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); g.entities.spawnXp(g.player.x, g.player.y + 1, g.player.z, 3 * done); }
     if (grew) mob.trades = m.trades;
     if (g.ui.open === 'trade') { if (grew) g.ui.openTrade(mob); else g.ui.refreshAll(); }
   }
