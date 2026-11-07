@@ -179,7 +179,7 @@ export function planChunkRetrofit(gen, cx, cz, chunk, { materialize = false } = 
       else if (under) status = 'underground';
       else status = 'apply';
       if (status !== 'apply' && status !== 'present') for (const k of group) blockedCells.add(p.idx[k]);
-      out.units.push({ pass: p.key, status, cells: group.length });
+      out.units.push({ pass: p.key, status, cells: group.length, first: p.idx[group[0]] }); // (`first`: one cell of the unit, as an index into the chunk arrays)
       if (status === 'apply') { out.placed += group.length; writes.push([p, group]); }
     }
   }
