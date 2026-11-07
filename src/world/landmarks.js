@@ -22,6 +22,9 @@ import { sporehallsNear, nearestSporehall } from './sporehall.js';
 import { lighthousesNear, nearestLighthouse } from './lighthouse.js';
 import { mireShrinesNear, nearestMireShrine } from './mireShrine.js';
 import { observatoriesNear, nearestObservatory } from './observatory.js';
+import { sandvaultsNear, nearestSandvault } from './sandvault.js';
+import { canyonsNear, nearestCanyon } from './mesaPack.js';
+import { hagHutsNear, nearestHagHut } from './hagHut.js';
 import { grottosNear, nearestGrotto } from './deepSea.js';
 import { isleNear, nearestIsle } from './skyIsles.js';
 import { forgesNear, nearestForge } from './dimensions/cinderForge.js';
@@ -48,6 +51,9 @@ const FINDERS = {
   lighthouse: { near: lighthousesNear, nearest: nearestLighthouse },
   mireshrine: { near: mireShrinesNear, nearest: nearestMireShrine },
   observatory: { near: observatoriesNear, nearest: nearestObservatory },
+  sandvault: { near: sandvaultsNear, nearest: nearestSandvault },
+  canyon: { near: canyonsNear, nearest: nearestCanyon },
+  haghut: { near: hagHutsNear, nearest: nearestHagHut },
   grotto: { near: grottosNear, nearest: nearestGrotto },
   isle: { near: isleNear, nearest: nearestIsle },
   // other dimensions (their generators have `dimension`; the overworld's does not)

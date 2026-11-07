@@ -223,7 +223,7 @@ export function meshSection(sec) {
         if (id === B.FURNACE || id === B.FURNACE_LIT) {
           if (d === FURNACE_FRONT_DIR[meta[i] & 3]) tile = texId(id === B.FURNACE ? 'furnace_front' : 'furnace_front_lit');
           else if (d !== 2 && d !== 3) tile = texId('furnace_side');
-        } else if (id === B.DISPENSER || id === B.DROPPER) {
+        } else if (id === B.DISPENSER || id === B.DROPPER || id === B.DART_TRAP) {
           if (d === FACING6_FACE[meta[i] & 7]) tile = FRONT_TILE[id]; // the face points along FACING6 (up and down too)
         } else if (FRONT_TILE[id] >= 0 && d === FURNACE_FRONT_DIR[meta[i] & 3]) {
           tile = FRONT_TILE[id];

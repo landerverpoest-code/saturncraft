@@ -871,6 +871,24 @@ def(B.GLEAMKELP, 'Gleamkelp', { ...plant, waterlogged: true, opacity: 1, emit: 9
 ext('BOUNTY_BOARD');
 def(B.BOUNTY_BOARD, 'Bounty Board', { hardness: 2, resistance: 3, tool: TOOL.AXE, sound: 'wood', flammable: true, opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, flatIcon: true, tex: { top: 'bounty_board_top', bottom: 'bounty_board_top', side: 'bounty_board' } });
 
+// Desert, badlands and swamp depth (world/mesaPack.js, world/sandvault.js, world/hagHut.js), appended so no id shifts:
+// Strata: banded clay in seven shades that paints the walls of Painted Mesas (a variant of the badlands), one for each terracotta
+// band it replaces. Sandvault Bricks and the Sun Glyph build the buried Sandvault. Dart Trap: a block like a dispenser that looks
+// along its face (meta bits 0-2 = FACING6, bit 3 = triggered) and shoots a dart whenever cinnabar power reaches it (world/dartTrap.js).
+// Bog Planks: the soaked, dark planks of bog bridges and Hag Huts. Hag's Cauldron: the brewing pot of a Hag Hut; meta = how many
+// steps of the hag's recipe have been added (world/hagCauldron.js).
+ext('STRATA_ROSE'); ext('STRATA_RUST'); ext('STRATA_CRIMSON'); ext('STRATA_SAFFRON'); ext('STRATA_BONE'); ext('STRATA_UMBER'); ext('STRATA_ASH');
+ext('SANDVAULT_BRICKS'); ext('SUN_GLYPH'); ext('DART_TRAP'); ext('BOG_PLANKS'); ext('HAG_CAULDRON');
+{
+  const strata = { hardness: 1.25, resistance: 4.2, tool: TOOL.PICKAXE, tier: TIER.WOOD, sound: 'stone' };
+  for (const k of ['ROSE', 'RUST', 'CRIMSON', 'SAFFRON', 'BONE', 'UMBER', 'ASH']) def(B['STRATA_' + k], 'Strata ' + k[0] + k.slice(1).toLowerCase(), strata);
+  def(B.SANDVAULT_BRICKS, 'Sandvault Bricks', { hardness: 2, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD, sound: 'stone' });
+  def(B.SUN_GLYPH, 'Sun Glyph', { hardness: 2, resistance: 6, tool: TOOL.PICKAXE, tier: TIER.WOOD, sound: 'stone' });
+  def(B.DART_TRAP, 'Dart Trap', { hardness: 3, resistance: 3.5, tool: TOOL.PICKAXE, tier: TIER.WOOD, tex: { top: 'dart_trap_top', bottom: 'dart_trap_top', side: 'dart_trap_side', front: 'dart_trap_front' } });
+  def(B.BOG_PLANKS, 'Bog Planks', { hardness: 2, resistance: 3, tool: TOOL.AXE, sound: 'wood', flammable: true });
+  def(B.HAG_CAULDRON, "Hag's Cauldron", { hardness: 2, resistance: 2, tool: TOOL.PICKAXE, sound: 'metal', opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, tex: { top: 'hag_cauldron_top', bottom: 'hag_cauldron_side', side: 'hag_cauldron_side' } });
+}
+
 export const NUM_BLOCKS = BLOCKS.length;
 
 // Flat lookup tables used by hot loops (mesher, lighting, physics) and workers.

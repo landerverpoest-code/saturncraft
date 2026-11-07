@@ -1260,7 +1260,7 @@ export class Interaction {
       const dx = p.x - (px + 0.5), dz = p.z - (pz + 0.5);
       meta = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 1 : 3) : (dz > 0 ? 2 : 0);
     }
-    if (placeId === B.DISPENSER || placeId === B.DROPPER) meta = dispenserPlaceMeta([ldx, ldy, ldz]); // the face looks at the player, up or down too
+    if (placeId === B.DISPENSER || placeId === B.DROPPER || placeId === B.DART_TRAP) meta = dispenserPlaceMeta([ldx, ldy, ldz]); // the face looks at the player, up or down too
     if (placeId === B.OBSERVER) meta = circuitPlaceMeta(placeId, t.face, [ldx, ldy, ldz]); // the face looks away from the player
     let chestPair = null;
     if (placeId === B.CHEST) { const pr = pairOnPlace(w, px, py, pz, meta, p.sneaking); meta = pr.meta; chestPair = pr.neighbour; } // join a lone chest beside it

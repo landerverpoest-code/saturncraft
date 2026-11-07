@@ -2,6 +2,7 @@
 import { Mob } from './mobs/mob.js';
 import { newHopper, hopperStep, HOPPER_COOLDOWN } from './world/hoppers.js';
 import { newDispenser, dispense } from './world/dispensers.js';
+import { fireDart } from './world/dartTrap.js';
 import { containerSignal } from './world/comparators.js';
 import { Fireball } from './entities/fireball.js';
 import { powerInto } from './world/circuits.js';
@@ -1238,7 +1239,7 @@ export class Game {
   // ---- Cinnabar circuitry (world/circuits.js) ------------------------------
   initCircuits() {
     const w = this.world, ci = w.circuits;
-    ci.onDispense = (x, y, z) => { if (!this.net || this.net.isHost) dispense(this, x, y, z); }; // a powered dispenser / dropper fires
+    ci.onDispense = (x, y, z) => { if (this.net && !this.net.isHost) return; if (this.world.getBlock(x, y, z) === B.DART_TRAP) fireDart(this, x, y, z); else dispense(this, x, y, z); }; // a powered dispenser / dropper fires (a Dart Trap shoots a dart)
     ci.containerSignal = (x, y, z) => containerSignal(this, x, y, z); // comparators read how full a container is
     // daylight sensors: how bright the three suns are (dimmed by rain; no suns in the Cinderdeep or the Hollow)
     ci.daylight = () => (this.world.dimension === 'overworld' ? skyState(this.time).combined * (1 - 0.3 * (this.weather ? this.weather.level : 0)) : 0);

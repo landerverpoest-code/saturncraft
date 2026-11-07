@@ -275,6 +275,9 @@ export class Audio {
       case 'plip': this.tone(t, 0.07, 520 + Math.random() * 120, 980, 0.12 * gain, out, 'sine'); this.tone(t + 0.08, 0.05, 780, 1100, 0.06 * gain, out, 'sine'); break; // a Tarnling's bloop
       case 'clack': this.noise(t, 0.04, 2600, 2, 0.12 * gain, out); this.noise(t + 0.09, 0.04, 3000, 2, 0.1 * gain, out); this.tone(t + 0.02, 0.05, 1500, 1100, 0.04 * gain, out, 'square'); break; // a Brinecrab's claws clacking
       case 'sputter': this.noise(t, 0.3, 1400, 1, 0.12 * gain, out, 'highpass'); this.tone(t, 0.25, 220 + Math.random() * 40, 140, 0.07 * gain, out, 'sawtooth'); this.noise(t + 0.2, 0.15, 2400, 2, 0.08 * gain, out); break; // a Wickling's flame guttering
+      case 'snap': this.noise(t, 0.05, 2200, 2, 0.16 * gain, out); this.tone(t + 0.02, 0.1, 260, 140, 0.1 * gain, out, 'square'); this.noise(t + 0.08, 0.25, 900, 1, 0.1 * gain, out, 'lowpass'); break; // a Sandsnapper's jaws snapping shut in a spray of sand
+      case 'gurgle': this.tone(t, 0.4, 110 + Math.random() * 20, 70, 0.14 * gain, out, 'sawtooth'); this.noise(t, 0.35, 700, 1, 0.1 * gain, out, 'lowpass'); this.tone(t + 0.12, 0.2, 180, 120, 0.05 * gain, out, 'sine'); break; // a Peat Lurker surging out of the bog
+      case 'kite': this.tone(t, 0.45, 1500, 900, 0.08 * gain, out, 'sine'); this.tone(t + 0.3, 0.35, 1250, 800, 0.06 * gain, out, 'sine'); break; // a Cliffkite's thin, falling cry
       case 'strider': this.tone(t, 0.6, 120, 85, 0.22 * gain, out, 'sawtooth'); this.noise(t + 0.1, 0.4, 300, 1, 0.12 * gain, out, 'lowpass'); break; // a Dune Strider's low grumble
       case 'hoverling': for (let k = 0; k < 3; k++) this.tone(t + k * 0.07, 0.18, 1500 + k * 260 + Math.random() * 120, 1900 + k * 260, 0.05 * gain, out, 'sine'); break; // a Hoverling's twinkle
       case 'gust': this.noise(t, 0.45, 2200, 0.7, 0.22 * gain, out, 'highpass'); this.tone(t, 0.35, 380, 760, 0.05 * gain, out, 'sine'); break; // a Gustling's rush of wind
