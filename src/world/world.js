@@ -18,7 +18,8 @@ import { RANDOM_TICKS } from './randomTicks.js';
 import { Circuits, CIRCUIT_BLOCK, CIRCUIT_REACT, CIRCUIT_SETTLE, SCHEDULED_PER_TICK, supported as circuitSupported } from './circuits.js';
 import { updateSpike, crystalSupported } from './caves.js';
 import { scaffoldTick } from './scaffolding.js';
-import { potTick } from './cookingPot.js';
+import { potTick, isReady as potReady, BREW_STAGE_TICKS } from './cookingPot.js';
+import { SETTLE_TICKS } from './composter.js';
 import { SIDE_DIRS, selectionBox, collisionBoxes, SHAPED_COLLISION, DOOR_UPPER, BED_HEAD } from './shapes.js';
 
 export function chunkKey(cx, cz) { return (cx + 32768) * 65536 + (cz + 32768); }
@@ -90,6 +91,7 @@ export class World {
     this.gen = new TerrainGenerator(seed); // main-thread copy for spawn search
     this.scheduled = new Map();  // posKey -> {x,y,z,tick}
     this.tickCount = 0;
+    this.passive = false;        // a guest's copy of a shared world: no scheduled ticks, the host's results arrive as edits
     this.listeners = { blockChanged: [], fallingBlock: [], dropItems: [], fireCrackle: [], pistonMoved: [], circuitFx: [] };
     this.circuits = new Circuits(this); // Cinnabar circuitry (host / single player only)
     this._lastKey = -1; this._lastChunk = null;
@@ -264,6 +266,10 @@ export class World {
     }
     else if (id === B.SOAKMOSS) spongeUpdate(this, x, y, z); // drinks up the water around it
     else if (id === B.WET_SOAKMOSS && this.dimension === 'cinderdeep') this.setBlock(x, y, z, B.SOAKMOSS); // dries at once in the heat
+    // blocks that move on by scheduled ticks start them when they change: a pot that begins to simmer and a composter that fills to 7 also do so
+    // when the edit comes from a guest (whose own world does not run scheduled ticks), so the host's copy is the one that cooks and settles
+    else if (id === B.COOKING_POT_BREW) { if (!potReady(this.getMeta(x, y, z))) this.scheduleTick(x, y, z, BREW_STAGE_TICKS); }
+    else if (id === B.COMPOSTER) { if ((this.getMeta(x, y, z) & 15) === 7) this.scheduleTick(x, y, z, SETTLE_TICKS); }
     if (CIRCUIT_REACT[this.getBlock(x, y, z)]) this.circuits.enqueue(x, y, z);
   }
 
@@ -353,6 +359,9 @@ export class World {
   tick() {
     this.tickCount++;
     this.circuits.poll(); // comparators re-read containers, daylight sensors the sky
+    // a guest's copy of a shared world only shows what the host simulated: fluids, fire, falling blocks, scaffolding, simmering
+    // pots and the rest of the scheduled ticks run on the host and arrive as block edits (net/session.js sets `passive`)
+    if (this.passive) { if (this.scheduled.size) this.scheduled.clear(); if (this.circuits.queue.size) this.circuits.drain(); return; }
     if (!this.scheduled.size) { if (this.circuits.queue.size) this.circuits.drain(); return; }
     const due = [];
     for (const [k, t] of this.scheduled) if (t.tick <= this.tickCount) { due.push(t); this.scheduled.delete(k); }

@@ -41,7 +41,7 @@ import { loadGuestGuide, saveGuestGuide, guideOf } from '../player/fieldGuide.js
 import { chunkKey } from '../world/world.js';
 import { B, isFurnace, isBox, BOX_COLORS } from '../world/blocks.js';
 import { I, ITEMS } from '../world/items.js';
-import { withExtras } from '../world/enchantments.js';
+import { withExtras, cleanContents } from '../world/enchantments.js';
 import { GUEST_KINDS } from '../world/vibrations.js';
 import { rayAABB } from '../entities/entities.js';
 import { canPickUpSpear } from '../entities/tidespear.js';
@@ -49,7 +49,7 @@ import { runRandomTicks } from '../world/randomTicks.js';
 import { addXp } from '../player/experience.js';
 import { MAX_USES } from '../mobs/trades.js';
 import { claimSeat } from '../mobs/duneStrider.js';
-import { FURNACE_CART, driverRefusal, cleanSteer } from '../mobs/mounts.js';
+import { FURNACE_CART, driverRefusal, cleanSteer, cartFuelTicks, fatigueState, tiredText } from '../mobs/mounts.js';
 import { releaseTarnling } from '../mobs/fauna.js';
 import { EFFECTS } from '../player/effects.js';
 import { FATIGUE_AMP, FATIGUE_TICKS, needsFatigue } from '../mobs/oceanMobs.js';
@@ -59,10 +59,12 @@ import { POTIONS } from '../world/potions.js';
 import {
   SocialState, PingBoard, routePing, runSocial, nameKey, cleanToken, loadClientToken, cleanEmote, emoteByName, EMOTE_COOLDOWN_MS,
   PM_FROM, PM_TO, PM_COLOR, TEAM_CHAT, PING_REACH, PING_FALLBACK, playerRows, cleanRoster, cleanPing, canSpectate, nextSpectateTarget,
-  makeResume, pickGuestRecord, reconnectDelay, GAMEMODE_LABEL, teamColor,
+  makeResume, pickGuestRecord, reconnectDelay, GAMEMODE_LABEL, teamColor, cleanHostSettings,
 } from './social.js';
 import { PingBeacons } from '../render/pingBeacons.js';
-import { GuestMeter, allowedEdits, updateEvery, sendsNow, Rate } from './guard.js';
+import { GuestMeter, allowedEdits, updateEvery, sendsNow, Rate, rateText } from './guard.js';
+import { GuestLedger, plausibleStack, countIn, ALLOW_PER_KIND, ALLOW_SMALL } from './ledger.js';
+import { cleanCamp, mergeCamp, sameCampLayout } from '../world/campfireCooking.js';
 
 const STATE_EVERY = 2;      // ticks between player / entity updates (10 Hz)
 const ENV_EVERY = 20;       // time + weather once a second (also the heartbeat)
@@ -84,9 +86,10 @@ const SLEEP_MS = 4500;      // a guest has to lie in bed this long before the ni
 class Channel {
   constructor(conn, onMessage, onClose) {
     this.conn = conn;
-    this.rate = new Rate(); // characters sent (bandwidth readout)
+    this.rate = new Rate();   // characters sent (bandwidth readout, F3)
+    this.rateIn = new Rate(); // characters received
     const re = new Reassembler();
-    conn.onData = (d) => { const m = re.push(d); if (m) { try { onMessage(m); } catch (e) { console.warn('net message failed', m.t, e); } } };
+    conn.onData = (d) => { if (typeof d === 'string') this.rateIn.add(d.length); const m = re.push(d); if (m) { try { onMessage(m); } catch (e) { console.warn('net message failed', m.t, e); } } };
     conn.onClose = onClose;
   }
   send(msg) { for (const s of encodeMessage(msg)) { this.rate.add(s.length); this.conn.send(s); } }
@@ -106,6 +109,8 @@ function joinLink(code) {
 const CONTAINER_BLOCKS = new Set([B.CHEST, B.BARREL, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.BREWING_STAND, B.GLOOMSHELL_BOX, ...BOX_COLORS, B.HOPPER, B.DISPENSER, B.DROPPER, B.CAMPFIRE]);
 const contKey = (k, x, y, z) => `${k}:${x},${y},${z}`;
 const finite = (...v) => v.every(Number.isFinite);
+/** A guest's drop ledger (made on first use, so a hand-built client record works too). */
+const ledgerOf = (c) => c.ledger || (c.ledger = new GuestLedger());
 /** Stand-in for a player whose pet is waiting for them while they are offline. */
 const OFFLINE = { isPlayer: true, dead: true, creative: false, x: 0, y: -1e4, z: 0, eyeHeight: 1.62, body: { height: 1.8 }, inventory: { selectedStack: null }, stats: { kills: 0 }, eyePos: () => [0, -1e4, 0], lookDir: () => [0, 0, -1], hurt: () => false };
 
@@ -319,7 +324,20 @@ class Session {
     if (typeof m.gc === 'boolean') this.guestCommands = m.gc;
     if (typeof m.ffa === 'boolean') this.friendlyFireAll = m.ffa;
     if (this.isHost && Number.isInteger(m.mp)) this.maxPlayers = Math.max(2, Math.min(MAX_PLAYERS, m.mp));
+    if (this.isHost && this.game) this.game.hostSettings = this.settingsSave(); // the world remembers them (world/save.js)
   }
+
+  /** The host's options as they are saved with the world: PvP, guest commands, team friendly fire and the player limit. */
+  settingsSave() { return { pvp: this.pvp, gc: this.guestCommands, ffa: this.friendlyFireAll, mp: this.maxPlayers || MAX_PLAYERS }; }
+
+  /** Take the options a world was saved with (anything unusual falls back to the defaults). */
+  loadSettings(d) {
+    const o = cleanHostSettings(d);
+    this.pvp = o.pvp; this.guestCommands = o.gc; this.friendlyFireAll = o.ffa; this.maxPlayers = o.mp;
+  }
+
+  /** Lines for the F3 overlay: who we talk to and how much it costs. */
+  debugLines() { return []; }
 }
 
 // ================================================================================
@@ -354,6 +372,9 @@ export class HostSession extends Session {
     game.social = game.social || new SocialState(); // teams, ops and bans live in the save (world/save.js)
     this.social = game.social;
     this.edits = new EditSync(game.world, { host: true });
+    // the options this world was last opened with (PvP, guest commands, friendly fire, player limit)
+    if (game.hostSettings) this.loadSettings(game.hostSettings);
+    game.hostSettings = this.settingsSave();
     // lightning strikes are shown (and burn / hurt) on every client too
     const strike = game.strikeLightning.bind(game);
     game.strikeLightning = (x, y, z) => { strike(x, y, z); if (!this.closed) this.broadcast({ t: 'bolt', x, y, z }); };
@@ -382,7 +403,7 @@ export class HostSession extends Session {
     // the signalling server can hand us the same peer's offer twice (after a reconnect): keep the first
     for (const o of this.clients.values()) if (o.ch.conn.peer === conn.peer && !o.ch.conn.closed) { conn.onData = null; conn.onClose = null; return; }
     if (this.closed) { conn.close(); return; }
-    const c = { id: this.nextId++, name: null, joined: false, lastSeen: performance.now(), minEp: 0, meter: new GuestMeter(performance.now()) };
+    const c = { id: this.nextId++, name: null, joined: false, lastSeen: performance.now(), minEp: 0, meter: new GuestMeter(performance.now()), ledger: new GuestLedger() };
     c.ch = new Channel(conn, (m) => this.onMessage(c, m), () => this.drop(c, 'left the game'));
     this.clients.set(c.id, c);
   }
@@ -412,6 +433,8 @@ export class HostSession extends Session {
       case 'frame': {
         if (!finite(m.x, m.y, m.z) || !this.near(c, m.x, m.y, m.z, 12)) break;
         const st = m.st && ITEMS[m.st.id] ? m.st : null;
+        const had = g.frames.get(`${m.x | 0},${m.y | 0},${m.z | 0}`);
+        if (st && !(had && had.id === st.id) && !this.ledgerAllows(c, [{ id: st.id | 0, count: 1 }], ALLOW_SMALL)) { c.ch.send({ t: 'frame', x: m.x | 0, y: m.y | 0, z: m.z | 0, st: had || null }); break; } // (a guest cannot lay what it could not hold)
         g.setFrameItem(m.x | 0, m.y | 0, m.z | 0, st, true);
         this.broadcast({ t: 'frame', x: m.x | 0, y: m.y | 0, z: m.z | 0, st }, c);
         break;
@@ -432,8 +455,15 @@ export class HostSession extends Session {
       case 'camp': {
         // a guest laid food on a campfire or took it off
         if (!finite(m.x, m.y, m.z) || !this.near(c, m.x, m.y, m.z, 12)) break;
-        g.setCampfire(m.x | 0, m.y | 0, m.z | 0, m.s || null, true);
-        this.broadcast({ t: 'camp', x: m.x | 0, y: m.y | 0, z: m.z | 0, s: g.campfires.get(`${m.x | 0},${m.y | 0},${m.z | 0}`) || null }, c);
+        const key = `${m.x | 0},${m.y | 0},${m.z | 0}`, theirs = cleanCamp(m.s), cur = g.campfires.get(key) || null;
+        if (g.world.getBlock(m.x | 0, m.y | 0, m.z | 0) !== B.CAMPFIRE) break;
+        // the guest sees only what lies on the fire; how far it has cooked is ours (it cannot rush or reset that), and food it lays on must be plausible
+        const laid = theirs ? theirs.slots.filter((e, i) => e && !(cur && cur.slots[i])).map((e) => ({ id: e.id, count: 1 })) : [];
+        if (laid.length && !this.ledgerAllows(c, laid, ALLOW_SMALL)) { c.ch.send({ t: 'camp', x: m.x | 0, y: m.y | 0, z: m.z | 0, s: cur }); break; }
+        const next = mergeCamp(cur, theirs);
+        g.setCampfire(m.x | 0, m.y | 0, m.z | 0, next, true);
+        const now = g.campfires.get(key) || null;
+        this.broadcast({ t: 'camp', x: m.x | 0, y: m.y | 0, z: m.z | 0, s: now }, sameCampLayout(now, theirs) ? c : null); // (the guest hears too when the host's picture differs from theirs)
         break;
       }
       case 'note': {
@@ -473,7 +503,12 @@ export class HostSession extends Session {
       }
       case 'hit': this.remoteHit(c, m); break;
       case 'pvp': this.remotePvp(c, m); break;
-      case 'ps': if (m.p && Array.isArray(m.p.slots)) g.netPlayers[c.name] = { ...m.p, reputation: cleanReputation(c.rp && c.rp.target.reputation), dim: g.world.dimension }; break;
+      case 'ps':
+        if (m.p && Array.isArray(m.p.slots)) {
+          g.netPlayers[c.name] = { ...m.p, reputation: cleanReputation(c.rp && c.rp.target.reputation), dim: g.world.dimension };
+          ledgerOf(c).setHeld(m.p.slots); // what they hold now: the base of what they may drop (net/ledger.js)
+        }
+        break;
       case 'spawn': this.remoteSpawn(c, m); break;
       case 'take': this.remoteTake(c, m); break;
       case 'mi': this.remoteInteract(c, m); break;
@@ -482,7 +517,12 @@ export class HostSession extends Session {
       case 'open': this.openFor(c, m); break;
       case 'close': { const v = this.viewers.get(contKey(m.k, m.x, m.y, m.z)); if (v) v.ids.delete(c.id); break; }
       case 'cset': this.containerSet(c, m); break;
-      case 'boxput': if (this.near(c, m.x + 0.5, m.y + 0.5, m.z + 0.5, 8)) g.onBoxPlaced(m.x | 0, m.y | 0, m.z | 0, { contents: m.s }, true); break;
+      case 'boxput': { // a guest set down a Gloomshell Box that carried items: they are only unpacked if the guest could have carried them
+        if (!this.near(c, m.x + 0.5, m.y + 0.5, m.z + 0.5, 8) || g.chests.get(`${m.x | 0},${m.y | 0},${m.z | 0}`)) break;
+        const contents = cleanContents(m.s);
+        if (contents && this.ledgerAllows(c, contents.filter(Boolean))) g.onBoxPlaced(m.x | 0, m.y | 0, m.z | 0, { contents }, true);
+        break;
+      }
       case 'ride': {
         const b = this.entity(m.id);
         // the seats of a mount: the back seat of a Dune Strider (mobs/duneStrider.js), or the saddle of a Galloper, Thistlehorn or Strider
@@ -512,11 +552,7 @@ export class HostSession extends Session {
         break;
       }
       case 'bhit': this.remoteBoatHit(c, m); break;
-      case 'fuel': { // a guest stoked a Minecart with Furnace (it used the fuel up on its side)
-        const b = this.entity(m.id);
-        if (b && b.kind === 'boat' && b.furnace && finite(m.y) && this.near(c, b.x, b.y, b.z, 8)) b.addFuel(Math.max(0, Math.min(FURNACE_CART.MAX_FUEL, m.n | 0)), m.y);
-        break;
-      }
+      case 'fuel': this.remoteFuel(c, m); break;
       case 'sthit': this.remoteStandHit(c, m); break;
       case 'stuse': this.remoteStandUse(c, m); break;
       case 'fence': this.remoteFence(c, m); break;
@@ -571,6 +607,7 @@ export class HostSession extends Session {
     for (const [k, d] of chunks) c.ch.send({ t: 'ck', k, c: encodePackedChunk(packChunk(d)) });
     c.ch.send({ t: 'ready' });
     c.joined = true;
+    ledgerOf(c).setHeld((g.netPlayers[name] || {}).slots); // what they carried when they left: the base of what they may drop
     c.rp = new RemotePlayer(g.scene, c.id, name, this);
     c.rp.target.reputation = cleanReputation((g.netPlayers[name] || {}).reputation); // (the host's copy is the true one)
     this.remotes.set(c.id, c.rp);
@@ -722,8 +759,10 @@ export class HostSession extends Session {
     const v = Array.isArray(m.v) && m.v.length === 3 && finite(...m.v) ? m.v.map((a) => Math.max(-4, Math.min(4, a))) : null;
     if (m.k === 'item') {
       const st = m.st;
-      if (!st || !ITEMS[st.id] || !Number.isInteger(st.count) || st.count <= 0 || st.count > 64) return;
+      if (!plausibleStack(st)) return; // an id that does not exist, a stack bigger than the item allows, a tool worn past its end
+      if (!this.ledgerAllows(c, copyStack(st))) return;
       const e = ents.spawnItem(m.x, m.y, m.z, copyStack(st), v);
+      if (e) e.droppedBy = c.id; // (the host knows which stacks on the ground a guest put there)
       if (e && m.pd) e.pickupDelay = Math.min(80, m.pd | 0);
     } else if (m.k === 'xp') {
       if (m.n > 0) ents.spawnXp(m.x, m.y, m.z, Math.min(100000, m.n | 0));
@@ -751,6 +790,18 @@ export class HostSession extends Session {
     }
   }
 
+  /** Net/ledger.js: may this guest drop this stack now? A refusal is told once, to the host and the guest. */
+  ledgerAllows(c, stacks, allow = ALLOW_PER_KIND) {
+    const s = c.rp && c.rp.state, creative = !!(s && s.creative) || c.gm === 'creative';
+    if (ledgerOf(c).allowMany([].concat(stacks), performance.now(), creative, allow)) return true;
+    if (!ledgerOf(c).warned) {
+      c.ledger.warned = true;
+      this.game.chat.add(`${c.name} dropped far more than they could hold: the extra is ignored`);
+      c.ch.send({ t: 'cmdout', lines: ['The host ignored a drop of more than you could be holding'] });
+    }
+    return false;
+  }
+
   /** A guest right-clicked a fence post: tie the animals they lead to it, or take the ones tied there. */
   remoteFence(c, m) {
     const g = this.game, s = c.rp.state, x = m.x | 0, y = m.y | 0, z = m.z | 0;
@@ -770,6 +821,7 @@ export class HostSession extends Session {
       e.stack.count -= n;
       if (e.stack.count <= 0) e.dead = true;
       c.ch.send({ t: 'got', st: { ...copyStack(e.stack), count: n } });
+      ledgerOf(c).grantStack({ ...e.stack, count: n }, performance.now());
     } else if (e.kind === 'xp') {
       e.dead = true;
       c.ch.send({ t: 'gotxp', v: e.value });
@@ -777,10 +829,11 @@ export class HostSession extends Session {
       // a stuck Tidespear: only its thrower can pull it out (with its wear and enchantments)
       if (!e.stuck || !canPickUpSpear(e, c.rp.target)) return;
       e.dead = true;
-      if (!e.creativeThrow) c.ch.send({ t: 'got', st: copyStack(e.item) });
+      if (!e.creativeThrow) { c.ch.send({ t: 'got', st: copyStack(e.item) }); ledgerOf(c).grantStack({ ...e.item, count: 1 }, performance.now()); }
     } else if (e.kind === 'arrow' && e.stuck && e.pickup) {
       e.dead = true;
       c.ch.send({ t: 'got', st: { id: e.pickupId || I.ARROW, count: 1, damage: 0 } });
+      ledgerOf(c).grant(e.pickupId || I.ARROW, 1, performance.now());
     }
   }
 
@@ -877,13 +930,27 @@ export class HostSession extends Session {
     for (const e of this.game.entities.list) {
       const r = e.kind === 'mob' ? e.rider : null;
       if (!r || !r.isRemotePlayer) continue;
-      if (r.dead || !this.remotes.has(r.remote.id) || Math.hypot(r.x - e.x, r.z - e.z) > 12 || e.dead || e.deathTime > 0) this.freeSaddle(e);
+      if (r.dead || !this.remotes.has(r.remote.id) || Math.hypot(r.x - e.x, r.z - e.z) > 12 || e.dead || e.deathTime > 0) { this.freeSaddle(e); continue; }
+      // the rider's stamina gauge (the mob snapshot has no room for it; a short message twice a second does)
+      const c = this.clients.get(r.remote.id);
+      if (c && e.def && e.def.mount) c.ch.send({ t: 'stam', id: e.id, f: Math.round((e.fatigue || 0) * 10) / 10 });
     }
   }
 
   /** Nobody steers this mount any more. */
   freeSaddle(b) {
     b.rider = null; b.remoteInput = null; b.move = null;
+  }
+
+  /**
+   * A guest stoked a Minecart with Furnace (it used the fuel up on its side). `m.it` is the fuel item: the burn time must be
+   * the item's, and when the cart is full, gone or out of reach the item goes back (`fuelno`) instead of being lost.
+   */
+  remoteFuel(c, m) {
+    const b = this.entity(m.id), item = Number.isInteger(m.it) ? m.it : null;
+    const ticks = item === null ? Math.max(0, Math.min(FURNACE_CART.MAX_FUEL, m.n | 0)) : cartFuelTicks(item); // (older guests do not say which item)
+    const ok = !!b && b.kind === 'boat' && b.furnace && finite(m.y) && this.near(c, b.x, b.y, b.z, 8) && ticks > 0 && (item === null || (m.n | 0) === ticks) && b.addFuel(ticks, m.y);
+    if (!ok && item !== null) c.ch.send({ t: 'fuelno', it: item });
   }
 
   remoteBoatHit(c, m) {
@@ -995,7 +1062,11 @@ export class HostSession extends Session {
     const obj = this.container(m.k, m.x, m.y, m.z);
     const reply = (ok) => c.ch.send({ t: ok ? 'cack' : 'cnak', seq: m.seq, ep: m.ep, k: m.k, x: m.x, y: m.y, z: m.z, s: obj ? containerState(m.k, obj) : null });
     if ((m.ep | 0) < c.minEp) return; // the guest already rolled this back
+    const before = obj ? containerSlots(m.k, obj).map(copyStack) : null;
     if (!obj || !this.near(c, ...this.contPos(m), 10) || !applySlotChanges(m.k, obj, m.ch)) { c.minEp = (m.ep | 0) + 1; reply(false); return; }
+    // what left the container is in the guest's hands now: it may drop that much more
+    const after = containerSlots(m.k, obj), now = performance.now();
+    for (const id of new Set(before.filter(Boolean).map((x) => x.id))) { const gone = countIn(before, id) - countIn(after, id); if (gone > 0) ledgerOf(c).grant(id, gone, now); }
     reply(true);
   }
 
@@ -1274,12 +1345,22 @@ export class HostSession extends Session {
         if (now - c.lastSeen > TIMEOUT_MS) { this.drop(c, 'timed out'); continue; }
         if (!c.joined) continue;
         if (c.ch.rate) c.ch.rate.tick(now);
+        if (c.ch.rateIn) c.ch.rateIn.tick(now);
         // a guest that went quiet: say so (once), and when it is back
         const quiet = now - c.lastSeen > LAG_WARN_MS;
         if (quiet && !c.lagging) { c.lagging = true; this.game.chat.add(`${c.name}'s connection is unstable`); }
         else if (!quiet && c.lagging) { c.lagging = false; this.game.chat.add(`${c.name}'s connection recovered`); }
       }
     }
+  }
+
+  debugLines() {
+    const rows = this.joined();
+    const out = rows.reduce((n, c) => n + (c.ch.rate ? c.ch.rate.bps : 0), 0), inn = rows.reduce((n, c) => n + (c.ch.rateIn ? c.ch.rateIn.bps : 0), 0);
+    return [
+      `Net host ${this.code}  ${rows.length + 1}/${this.maxPlayers} players  out ${rateText(out)}  in ${rateText(inn)}`,
+      ...rows.map((c) => `  ${c.name}  ${c.ping >= 0 && c.ping != null ? c.ping + ' ms' : '- ms'}  out ${rateText(c.ch.rate ? c.ch.rate.bps : 0)}  in ${rateText(c.ch.rateIn ? c.ch.rateIn.bps : 0)}  backlog ${Math.round(c.ch.backlog() / 1024)} KB  skipped ${c.skipped | 0}${c.ledger && c.ledger.denied ? '  drops refused ' + c.ledger.denied : ''}`),
+    ];
   }
 
   close() {
@@ -1423,6 +1504,7 @@ export class ClientSession extends Session {
       p.yaw = w.pos.yaw;
     }
     this.edits = new EditSync(game.world, { host: false });
+    game.world.passive = true; // fluids, fire, falling blocks, simmering pots... run on the host and arrive as edits
     // no mob generation here: every entity comes from the host
     game.chunks.onChunkLoaded = (cx, cz) => this.edits.onChunkLoaded(cx, cz);
     this.ents = new EntityMirror(game, this);
@@ -1551,6 +1633,16 @@ export class ClientSession extends Session {
         break;
       }
       case 'rno': if (p.riding && p.riding.netId === m.id) g.dismount(); break; // the host refused the seat
+      case 'stam': { // the stamina of the mount we ride (shown by the HUD like the host's own)
+        const mob = this.ents.byNetId(m.id);
+        if (!mob || p.riding !== mob || !Number.isFinite(m.f)) break;
+        const before = fatigueState(mob.fatigue || 0);
+        mob.fatigue = Math.max(0, Math.min(1e6, m.f));
+        const after = fatigueState(mob.fatigue);
+        if (after !== before && tiredText(after) && g.hud) g.hud.toast(tiredText(after), 3500);
+        break;
+      }
+      case 'fuelno': this.onFuelRefused(m); break;
       case 'bye': this.lost(m.reason || 'The host closed the world'); break;
       default: break;
     }
@@ -1601,6 +1693,20 @@ export class ClientSession extends Session {
     return true;
   }
 
+  /** The host would not take the fuel we put in a cart (full, gone, out of reach): it comes back to us. */
+  onFuelRefused(m) {
+    const g = this.game, p = g.player, it = m.it | 0;
+    if (!ITEMS[it] || p.creative || !cartFuelTicks(it)) return;
+    const sel = p.inventory.selectedStack;
+    if (it === I.LAVA_BUCKET && sel && sel.id === I.BUCKET && sel.count === 1) p.inventory.slots[p.inventory.selected] = { id: I.LAVA_BUCKET, count: 1, damage: 0 };
+    else {
+      const left = p.inventory.add({ id: it, count: 1, damage: 0 });
+      if (left) this.requestSpawn('item', { x: p.x, y: p.y + 1, z: p.z, st: { id: it, count: left, damage: 0 }, pd: 40 });
+    }
+    p.inventory.changed();
+    if (g.hud) g.hud.toast('The cart cannot take any more fuel', 2000);
+  }
+
   /** The host's raid status (once a second): the raid bar while we are near the village, toasts when it ends. */
   onRaidStatus(rb) {
     const g = this.game, p = g.player;
@@ -1615,7 +1721,7 @@ export class ClientSession extends Session {
   }
   ride(boat, on, seat = 0) { this.send({ t: 'ride', id: boat.netId, on: on ? 1 : 0, seat }); }
   /** A guest stoked a shared Minecart with Furnace with `ticks` of fuel, pushing off the way `yaw` looks. */
-  fuelCart(boat, ticks, yaw) { this.send({ t: 'fuel', id: boat.netId, n: ticks | 0, y: Math.round(yaw * 100) / 100 }); }
+  fuelCart(boat, ticks, yaw, item = null) { this.send({ t: 'fuel', id: boat.netId, n: ticks | 0, y: Math.round(yaw * 100) / 100, it: item == null ? undefined : item }); }
 
   /** Another player hit by us (PvP). */
   targetHurt(rp, amount, source, attacker) {
@@ -1815,7 +1921,15 @@ export class ClientSession extends Session {
     if (this.ticks % 40 === 0 && this.hostSocial) this.send({ t: 'pg', ts: performance.now(), rtt: this.rtt, gm: this.game.player.gamemode });
     if (this.ticks % STATE_EVERY === 0 && this.ch.backlog() < BACKLOG_LIMIT) this.send({ t: 'st', s: this.ownState() }); // skip while our upload is behind
     if (this.ticks % PSAVE_EVERY === 0) { this.send({ t: 'ps', p: playerSaveData(this.game.player) }); this.stands.expire(performance.now()); }
-    if (this.ticks % ENV_EVERY === 0 && performance.now() - this.lastSeen > TIMEOUT_MS) this.lost('Lost connection to the host (timed out)', true);
+    if (this.ticks % ENV_EVERY === 0) {
+      const now = performance.now();
+      this.ch.rate.tick(now); this.ch.rateIn.tick(now);
+      if (now - this.lastSeen > TIMEOUT_MS) this.lost('Lost connection to the host (timed out)', true);
+    }
+  }
+
+  debugLines() {
+    return [`Net guest of ${this.hostName()}  ping ${this.rtt >= 0 ? this.rtt + ' ms' : '-'}  in ${rateText(this.ch.rateIn.bps)}  out ${rateText(this.ch.rate.bps)}  ${this.remotes.size + 1} players`];
   }
 
   /**
@@ -1861,6 +1975,7 @@ export class ClientSession extends Session {
     try { this.send({ t: 'ps', p: playerSaveData(this.game.player) }); this.send({ t: 'bye' }); } catch { /* gone */ }
     this.closed = true;
     clearInterval(this.bgTimer); if (this.bgWorker) { this.bgWorker.terminate(); this.bgWorker = null; }
+    if (this.game && this.game.world) this.game.world.passive = false;
     if (this.edits) this.edits.detach();
     if (this.ents) this.ents.clear();
     this.disposeRemotes();
