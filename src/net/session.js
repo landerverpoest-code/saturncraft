@@ -1657,7 +1657,7 @@ export class ClientSession extends Session {
       done++;
     }
     inv.changed();
-    if (done) { g.player.stats.trades += done; g.milestones.event('trade'); g.quests.emit('trade', { n: done }); if (mob && mob.def && mob.def.trader) g.milestones.event('peddler'); if (mob) g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); g.entities.spawnXp(g.player.x, g.player.y + 1, g.player.z, 3 * done); }
+    if (done) { g.player.stats.trades += done; g.milestones.event('trade'); if (g.quests) g.quests.emit('trade', { n: done }); if (mob && mob.def && mob.def.trader) g.milestones.event('peddler'); if (mob) g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); g.entities.spawnXp(g.player.x, g.player.y + 1, g.player.z, 3 * done); }
     if (grew) mob.trades = m.trades;
     if (g.ui.open === 'trade') { if (grew) g.ui.openTrade(mob); else g.ui.refreshAll(); }
   }

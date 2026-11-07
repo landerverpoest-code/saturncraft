@@ -148,7 +148,7 @@ function biomeEntries() {
 }
 
 const STRUCTURE_NOTES = {
-  village: 'Settlers live and trade here; farms, paths and a bell.',
+  village: 'Settlers live and trade here; farms, paths and a well, with a Bounty Board beside it where the day\'s bounties and the Elder\'s tales are given out.',
   temple: 'A trapped desert or jungle temple with hidden loot.',
   igloo: 'A snow hut with a hidden basement.',
   outpost: 'A Raider Outpost: Marauders keep watch from its tower.',
@@ -189,6 +189,7 @@ function itemEntries() {
   for (const def of Object.values(MOBS)) for (const id of dropIds(def)) add(id, def.name);
   for (const id of Object.values(CHARTS)) add(id, 'Cartographers and wreck chests');
   for (const k of EXTRA_NOTABLE) if (I[k] !== undefined) add(I[k], null);
+  if (B.BOUNTY_BOARD !== undefined) add(B.BOUNTY_BOARD, 'Villages and crafting (bounties and tales)');
   for (const k of CONTRAPTION_PARTS) if (B[k] !== undefined) add(B[k], 'Cinnabar and machines (crafted)'); // (world/circuits.js: the parts of cinnabar contraptions)
   for (const d of DISHES) add(d.id, 'Cooking Pot'); // every dish the Cooking Pot can make (world/cookingPot.js), so a new recipe joins the guide by itself
   return [...sources.entries()].sort((a, b) => a[0] - b[0]).map(([id, from]) => ({ key: String(id), id, name: itemName(id), from }));

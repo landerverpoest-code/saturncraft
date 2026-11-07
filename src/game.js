@@ -866,9 +866,9 @@ export class Game {
 
   /** A container or frame broke: what it held spills out (not a find for the bounties, world/../player/quests.js). */
   onBlockBroken(x, y, z, id, meta = 0) {
-    const ents = this.entities, was = ents.spilling;
-    ents.spilling = true;
-    try { this.spillBroken(x, y, z, id, meta); } finally { ents.spilling = was; }
+    const ents = this.entities, was = ents && ents.spilling;
+    if (ents) ents.spilling = true;
+    try { Game.prototype.spillBroken.call(this, x, y, z, id, meta); } finally { if (ents) ents.spilling = was; }
   }
 
   spillBroken(x, y, z, id, meta = 0) {
@@ -1432,6 +1432,10 @@ export class Game {
     if (inp.wasPressed('guide')) {
       if (this.ui.open === 'pause' && this.ui.inGuide) { this.ui.open = null; this.ui.clear(); this.onUIClosed(); }
       else if (!this.ui.blocking && this.running) { this.input.unlock(); this.ui.showGuide('creatures', true); }
+    }
+    if (inp.wasPressed('journal')) {
+      if (this.ui.open === 'pause' && this.ui.inJournal) { this.ui.open = null; this.ui.clear(); this.onUIClosed(); }
+      else if (!this.ui.blocking && this.running) { this.input.unlock(); this.ui.showJournal(true); }
     }
     if (inp.wasPressed('help')) {
       if (this.ui.open === 'pause' && this.ui.inHelp) {

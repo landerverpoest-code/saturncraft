@@ -18,6 +18,7 @@ import { tradeMarket } from '../world/events.js';
 import { repEvent } from '../mobs/villageRep.js';
 import { championDiscount } from '../mobs/raids.js';
 import { MILESTONES } from '../player/milestones.js';
+import { openBoard, showJournal } from './questScreens.js';
 import { statRows, killRows, formatTime } from '../player/stats.js';
 import { guideOf, recordOf, LEVEL, TABS } from '../player/fieldGuide.js';
 import { entriesOf, guideProgress, guideRows, TAB_LABELS, itemName } from '../player/fieldGuideEntries.js';
@@ -112,7 +113,7 @@ export class UI {
   /** Is the slot cursor on a slot of the open screen? (Y then quick-moves instead of closing the inventory.) */
   slotCursorActive() { return this.nav.onSlot(); }
 
-  clear() { if (this.game.input) this.game.input.capture = null; /* a controls screen waiting for a key */ if (this.lazy) { this.lazy.dispose(); this.lazy = null; } this.layer.innerHTML = ''; this.padBack = null; this.padScroll = null; this.padTab = null; this.inGuide = false; this.inHelp = false; this.touchPreview = false; this.tooltipEl.classList.add('hidden'); }
+  clear() { if (this.game.input) this.game.input.capture = null; /* a controls screen waiting for a key */ if (this.lazy) { this.lazy.dispose(); this.lazy = null; } this.layer.innerHTML = ''; this.padBack = null; this.padScroll = null; this.padTab = null; this.inGuide = false; this.inJournal = false; this.questRefresh = null; this.inHelp = false; this.touchPreview = false; this.tooltipEl.classList.add('hidden'); }
 
   /** Gamepad on a sub-screen of the pause menu: B or Back returns to it, the left stick or D-pad scrolls. */
   padNav(pressed, ly) {
@@ -1221,7 +1222,7 @@ export class UI {
             mob.traded = true;
             const up = recordTrades(mob, done); // trades count towards the settler's level
             if (key) repEvent(g, g.player, key, REP.trade * done, 'trade');
-            g.player.stats.trades += done; g.milestones.event('trade'); g.quests.emit('trade', { n: done }); if (trader) g.milestones.event('peddler'); g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); g.entities.spawnXp(g.player.x, g.player.y + 1, g.player.z, 3 * done);
+            g.player.stats.trades += done; g.milestones.event('trade'); if (g.quests) g.quests.emit('trade', { n: done }); if (trader) g.milestones.event('peddler'); g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); g.entities.spawnXp(g.player.x, g.player.y + 1, g.player.z, 3 * done);
             if (up) {
               if (g.hud) g.hud.toast(`The settler is now a ${LEVEL_NAMES[mob.level - 1]}: new offers`, 3500);
               g.audio.play('levelup', [mob.x, mob.y + 1.5, mob.z]);
@@ -1333,6 +1334,7 @@ export class UI {
       <div class="btn-row"><button class="btn" data-a="ms">Milestones</button>
       <button class="btn" data-a="stats">Statistics</button></div>
       <button class="btn" data-a="guide">Field Guide (${codeLabel(resolveBindings(g.settings.keys).guide[0])})</button>
+      <button class="btn" data-a="journal">Quest Journal (${codeLabel(resolveBindings(g.settings.keys).journal[0])})</button>
       <button class="btn" data-a="touch">Touch controls: ${g.touch ? 'On' : 'Off'}</button>
       <div class="net-box"></div>
       <button class="btn" data-a="title">${g.net && g.net.isClient ? 'Disconnect' : 'Save &amp; Quit to Title'}</button>
@@ -1378,6 +1380,7 @@ export class UI {
     s.querySelector('[data-a=ms]').onclick = () => this.showMilestones();
     s.querySelector('[data-a=stats]').onclick = () => this.showStats();
     s.querySelector('[data-a=guide]').onclick = () => this.showGuide();
+    s.querySelector('[data-a=journal]').onclick = () => this.showJournal();
     s.querySelector('[data-a=help]').onclick = () => this.showHelp();
     s.querySelector('[data-a=controls]').onclick = () => this.showControls();
     s.querySelector('[data-a=access]').onclick = () => this.showAccessibility();
@@ -1789,6 +1792,11 @@ export class UI {
     this.layer.appendChild(s);
     refresh();
   }
+
+  /** The Bounty Board screen and the Quest Journal (ui/questScreens.js); refreshQuests redraws whichever is open. */
+  openBoard(x, y, z) { openBoard(this, x, y, z); }
+  showJournal(fromKey = false) { showJournal(this, fromKey); }
+  refreshQuests() { if (this.questRefresh && this.layer.firstChild) this.questRefresh(); }
 
   showMilestones() {
     this.clear();

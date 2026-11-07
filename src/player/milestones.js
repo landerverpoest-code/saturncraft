@@ -90,6 +90,11 @@ export const MILESTONES = [
   { id: 'guide_biomes', title: 'Wanderer', desc: 'Fill the Biomes tab of the Field Guide', icon: B.GRASS, tick: (g) => tabComplete((g.player.stats || {}).guide, 'biomes') },
   { id: 'guide_structures', title: 'Surveyor', desc: 'Fill the Structures tab of the Field Guide', icon: B.STONE_BRICKS, tick: (g) => tabComplete((g.player.stats || {}).guide, 'structures') },
   { id: 'guide_items', title: 'Collector', desc: 'Fill the Items of note tab of the Field Guide', icon: I.DIAMOND, tick: (g) => tabComplete((g.player.stats || {}).guide, 'items') },
+  // bounties and tales (player/quests.js)
+  { id: 'bounty', title: 'Odd Jobs', desc: 'Finish a bounty from a Bounty Board', icon: B.BOUNTY_BOARD, event: 'bounty' },
+  { id: 'bounty_ten', title: 'Notice Board Regular', desc: 'Finish ten bounties', icon: I.BERYL, tick: (g) => !!g.quests && g.quests.mine().player.bounties >= 10 },
+  { id: 'tale', title: 'Told by the Elder', desc: "Finish one of the Village Elder's tales", icon: I.BOOK, event: 'tale' },
+  { id: 'tale_all', title: 'Keeper of Tales', desc: "Finish all three of the Village Elders' tales", icon: I.ENCHANTED_BOOK, tick: (g) => !!g.quests && Object.keys(g.quests.mine().player.claimed).length >= 3 },
   // world events (world/events.js)
   { id: 'meteor', title: 'Wish Granted', desc: 'Watch a meteorite crash to the ground', icon: B.COAL_BLOCK, event: 'meteor' },
   { id: 'meteor_core', title: 'Heart of a Star', desc: 'Mine a Starfall Core from a meteorite crater', icon: B.STARFALL_CORE, inv: (g) => has(g, B.STARFALL_CORE) },
