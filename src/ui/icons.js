@@ -11,6 +11,9 @@ import { SHERDS } from '../world/sherds.js';
 import { fwLines } from '../world/fireworks.js';
 import { BOOK_GENERATIONS, bookGeneration } from '../world/books.js';
 import { EFFECTS, effectLabel, formatTicks, LINGER_DURATION_FACTOR } from '../player/effects.js';
+import * as W from '../world/weaponStats.js';
+import { trinketLines } from '../player/trinkets.js';
+import { setLines } from '../player/setBonuses.js';
 import { TOOL_TEMPLATES, GEAR_TEMPLATES, paintTemplate, materialRamp, ramp, WOOD_HANDLE } from './toolArt.js';
 
 const cache = new Map();
@@ -394,6 +397,26 @@ export function stackHTML(st) {
   return h;
 }
 
+/** Armour worn by the player, read for set-bonus tooltips (screens.js sets it; tests may leave it). */
+let wornArmor = () => [];
+export function setWornArmor(fn) { wornArmor = fn; }
+function gearLinesHTML(st) {
+  const d = ITEMS[st.id];
+  let h = '';
+  if (d.weapon && WEAPON_TEXT[d.weapon.type]) {
+    const w = d.weapon, line = d.disc ? `Thrown ${w.throwDamage} damage, reach ${W.DISC_RANGE} blocks` : `${w.damage} damage, ${w.attackSpeed} swings a second, reach ${w.reach}`;
+    h += `<div class="tt-dura">${esc(line)}</div><div class="tt-good">${esc(WEAPON_TEXT[w.type])}</div>`;
+  }
+  if (d.trinket) for (const l of trinketLines(st)) h += `<div class="tt-good">${esc(l)}</div>`;
+  if (d.armor) for (const l of setLines(st.id, wornArmor())) h += `<div class="${l.head ? 'tt-set-head' : l.active ? 'tt-good' : 'tt-dura'}">${esc(l.text)}</div>`;
+  return h;
+}
+const WEAPON_TEXT = {
+  warhammer: 'A full swing staggers a mob and splinters a raised shield.',
+  dagger: `Hits from behind land ${W.BACKSTAB_MULT} times as hard.`,
+  glaive: 'Long reach; the blow sweeps up to 3 more mobs in the arc.',
+  disc: 'Right-click to throw. It returns: a clean catch adds a point to the next throw.',
+};
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 /** Tooltip HTML: the item name (aqua when enchanted) and one line per enchantment. */
 export function tooltipHTML(st, extra = '') {
@@ -438,6 +461,7 @@ export function tooltipHTML(st, extra = '') {
     if (d.potion.lingering) h += '<div class="tt-dura">Thrown: leaves a lingering cloud for 30 s</div>';
     else if (d.potion.splash) h += '<div class="tt-dura">Thrown: affects all within 4 blocks</div>';
   }
+  h += gearLinesHTML(st); // weapon style, trinket effect, armour set bonuses (player/weapons.js, trinkets.js, setBonuses.js)
   for (const l of fwLines(st)) h += `<div class="tt-dura">${esc(l)}</div>`; // a Firework Star's or Star Rocket's payload
   if (Array.isArray(st.sherds)) {
     // a Decorated Pot names the sherds on its sides

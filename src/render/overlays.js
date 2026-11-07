@@ -10,6 +10,7 @@ import { blockFaceTexture, lightAt } from '../entities/entities.js';
 import { SWING_TICKS } from '../player/interaction.js';
 import { selectionBox } from '../world/shapes.js';
 import { buildSpearModel, lightSpear } from './spearModel.js';
+import { buildWeaponModel, hasWeaponModel } from './weaponModel.js';
 
 export class BlockOverlay {
   constructor(scene) {
@@ -87,6 +88,7 @@ export class HeldItem {
   build(id, glint = false) {
     this.group.clear();
     if (this.spear) { this.spear.userData.dispose(); this.spear = null; }
+    if (this.weaponModel) { this.weaponModel.userData.dispose(); this.weaponModel = null; }
     this.mesh = null;
     this.glintMat = null;
     if (id == null) { this.group.add(this.hand); this.hand.position.set(0.52, -0.48, -0.8); this.hand.rotation.set(-0.55, 0.2, 0.32); return; }
@@ -110,6 +112,15 @@ export class HeldItem {
       this.spearGlint = glint;
       this.mesh.position.set(0.45, -0.45, -0.9);
       this.mesh.rotation.set(0.5, Math.PI + 0.15, 0);
+      this.group.add(this.mesh);
+      return;
+    }
+    if (hasWeaponModel(id)) {
+      // Warhammer, Dagger, Glaive, Returning Disc: the icon pushed out into a slab (render/weaponModel.js)
+      this.mesh = this.weaponModel = buildWeaponModel(id, 0.6);
+      this.mesh.position.set(0.55, -0.35, -0.75);
+      this.mesh.rotation.set(0, -1.2, 0.35);
+      if (glint) this.glintMat = this.weaponModel.userData.mat;
       this.group.add(this.mesh);
       return;
     }

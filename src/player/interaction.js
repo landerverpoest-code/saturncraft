@@ -527,9 +527,11 @@ export class Interaction {
     const g = this.game, p = g.player, at = [mob.x, mob.y + 1, mob.z];
     if (w.type === 'warhammer') {
       g.audio.play('warhammer_slam', at, 0.5 + cd * 0.5);
+      if (mob.stunTicks > 0 && g.milestones) g.milestones.event('stagger');
       if (cd > 0.85 && g.particles) g.particles.smoke(mob.x, mob.y + 0.2, mob.z, 6, 0.5);
     } else if (w.type === 'dagger') {
       g.audio.play('dagger_stab', at);
+      if (backstab && g.milestones) g.milestones.event('backstab');
       if (backstab && g.particles && g.particles.crit) { g.particles.crit(mob.x, mob.y + mob.height * 0.6, mob.z); g.hud && g.hud.toast && g.hud.toast('Backstab!', 700); }
     } else if (w.type === 'glaive') {
       const held = p.inventory.selectedStack;

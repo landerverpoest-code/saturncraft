@@ -724,3 +724,13 @@ html.high-contrast #aimtip { background: #000; border: 1px solid #fff; }
   body:not(.touch-on) #raidbar, body:not(.touch-on) #bossbar { top: 76px; }
   body:not(.touch-on) #raidbar:not(.hidden) ~ #bossbar { top: 124px; }
 }
+
+/* trinket slots and armour set bonuses (gear round) */
+.trinket-slot:empty::after { border-radius: 50%; opacity: .18; }
+.trinket-slot { outline: 1px dashed rgba(220, 190, 110, .45); outline-offset: -3px; }
+.set-bonuses { font-size: 12px; line-height: 1.35; margin: 0 auto 8px; max-width: 360px; text-align: left; }
+.set-bonuses .sb-head { color: #f2d24b; font-weight: bold; margin-top: 3px; }
+.set-bonuses .sb-head span { color: #bbb; font-weight: normal; }
+.set-bonuses .sb-line { color: #8a8a8a; }
+.set-bonuses .sb-line.on { color: #7fe08a; }
+.tt-set-head { color: #f2d24b; margin-top: 4px; }

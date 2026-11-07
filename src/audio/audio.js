@@ -243,6 +243,14 @@ export class Audio {
       case 'spear_throw': this.noise(t, 0.2, 900, 2, 0.3 * gain, out); this.tone(t, 0.18, 520, 160, 0.22 * gain, out, 'triangle'); break;
       case 'spear_stick': this.noise(t, 0.06, 1400, 4, 0.3 * gain, out); this.tone(t, 0.25, 180, 110, 0.25 * gain, out, 'triangle'); break;
       case 'spear_return': this.tone(t, 0.35, 300, 1100, 0.2 * gain, out, 'sine'); this.noise(t, 0.3, 2400, 1.5, 0.12 * gain, out, 'highpass'); break;
+      case 'warhammer_slam': this.noise(t, 0.25, 260, 0.8, 0.5 * gain, out, 'lowpass'); this.tone(t, 0.3, 110, 40, 0.45 * gain, out, 'sine'); this.noise(t, 0.05, 2200, 3, 0.25 * gain, out); break;
+      case 'dagger_stab': this.noise(t, 0.07, 3200, 3, 0.28 * gain, out, 'highpass'); this.tone(t, 0.08, 900, 420, 0.16 * gain, out, 'triangle'); break;
+      case 'glaive_sweep': this.noise(t, 0.28, 1500, 1.2, 0.34 * gain, out); this.tone(t, 0.22, 700, 260, 0.14 * gain, out, 'sawtooth'); break;
+      case 'disc_throw': this.noise(t, 0.18, 1800, 2, 0.28 * gain, out); this.tone(t, 0.2, 420, 900, 0.16 * gain, out, 'triangle'); break;
+      case 'disc_whirr': this.tone(t, 0.12, 640, 600, 0.1 * gain, out, 'sawtooth'); this.noise(t, 0.1, 2600, 2, 0.06 * gain, out, 'highpass'); break;
+      case 'disc_catch': this.noise(t, 0.05, 1400, 3, 0.3 * gain, out); this.tone(t, 0.18, 520, 880, 0.2 * gain, out, 'sine'); break;
+      case 'disc_clack': this.noise(t, 0.05, 2000, 4, 0.3 * gain, out); this.tone(t, 0.12, 300, 140, 0.18 * gain, out, 'triangle'); break;
+      case 'trinket_equip': this.tone(t, 0.12, 880, 1320, 0.16 * gain, out, 'sine'); this.tone(t + 0.07, 0.2, 1320, 1760, 0.12 * gain, out, 'sine'); break;
       case 'spear_surge': this.noise(t, 0.6, 800, 0.8, 0.4 * gain, out); this.tone(t, 0.5, 200, 700, 0.2 * gain, out, 'sine'); break;
       case 'stormcall': this.noise(t, 0.2, 7000, 0.3, 0.5 * gain, out, 'highpass'); this.tone(t, 0.3, 1400, 200, 0.2 * gain, out, 'sawtooth'); break;
       case 'arrow_hit': this.noise(t, 0.08, 1200, 4, 0.3 * gain, out); break;

@@ -1,7 +1,7 @@
 // Menus and container screens (inventory, workbench, furnace).
 import { doubleChestHalves, doubleChestView } from '../world/chests.js';
 import { createLazyRenderer } from './lazyIcons.js';
-import { iconURL, stackHTML, stackIconURL, tooltipHTML, effectIconURL } from './icons.js';
+import { iconURL, stackHTML, stackIconURL, tooltipHTML, effectIconURL, setWornArmor } from './icons.js';
 import { EFFECTS, effectLabel, formatTicks } from '../player/effects.js';
 import { isIngredient, isVial, VIAL_SLOTS, INGREDIENT_SLOT, FUEL_SLOT, BREW_TICKS, BREWS_PER_POWDER } from '../world/brewing.js';
 import { ITEMS, I, maxStack } from '../world/items.js';
@@ -27,6 +27,9 @@ import { ACTIONS, GROUPS, SLOT_KINDS, SLOT_NAMES, resolveBindings, toOverrides, 
 import { COLOR_BLIND_LABELS, nextColorBlind, priceCue } from './accessibility.js';
 import { MenuNav, labelScreens, AUTOFOCUS_SCREENS } from './menuNav.js';
 import { buildTopics, searchTopics } from './helpTopics.js';
+import { isTrinket, TRINKET_SLOTS } from '../player/trinkets.js';
+import { wornSets, SET_PIECES } from '../player/setBonuses.js';
+import { gearBonuses } from '../player/gear.js';
 import { TOUCH_MODE_LABELS, SIZE_RANGE, OPACITY_RANGE, nextTouchMode, normalizeTouch, detectTouch, readTouchEnv } from './touchMath.js';
 import { loadPlayerName, MAX_PLAYERS } from '../net/protocol.js';
 import { EMOTES, EMOTE_LABELS } from '../net/social.js';
@@ -69,6 +72,7 @@ export class UI {
     this.craftW = 2;
     this.cursorEl = el('<div class="cursor-stack hidden"></div>');
     this.tooltipEl = el('<div class="tooltip hidden"></div>');
+    setWornArmor(() => this.game.player.inventory.armor); // (set-bonus tooltips read what is worn)
     document.body.appendChild(this.cursorEl);
     document.body.appendChild(this.tooltipEl);
     // Enter, Space and the gamepad's A press a button with a click that has no mouse position (detail 0); many screens act on
@@ -315,6 +319,11 @@ export class UI {
       // armour goes straight to its (empty) armour slot
       const ad = ITEMS[st.id].armor;
       if (!container && ad && !inv.armor[ad.slot]) { inv.armor[ad.slot] = st; inv.slots[i] = null; this.game.audio.play('equip'); return; }
+      // a trinket goes to a free trinket slot (not one of the same kind already worn)
+      if (!container && isTrinket(st)) {
+        const free = inv.trinkets.findIndex((t) => !t);
+        if (free >= 0 && !inv.trinkets.some((t) => t && t.id === st.id)) { inv.trinkets[free] = { ...st, count: 1 }; if (--st.count <= 0) inv.slots[i] = null; this.game.audio.play('trinket_equip'); return; }
+      }
       if (container && container.accept) {
         const r = container.accept(st); // true: all taken, 'partial': some taken (st.count reduced)
         if (r === true) { inv.slots[i] = null; return; }
@@ -473,12 +482,50 @@ export class UI {
     return col;
   }
 
+  /** Two trinket slots (player/trinkets.js): they only take trinkets. */
+  trinketColumn() {
+    const inv = this.game.player.inventory;
+    if (!inv.trinkets) inv.trinkets = new Array(TRINKET_SLOTS).fill(null);
+    const col = el('<div class="grid trinket-slots" style="grid-template-columns:var(--slot)"></div>');
+    for (let i = 0; i < TRINKET_SLOTS; i++) {
+      const s = this.makeSlot(() => inv.trinkets[i], (v) => { inv.trinkets[i] = v; if (v) this.game.audio.play('trinket_equip'); inv.changed(); }, {
+        filter: (st) => isTrinket(st) && !inv.trinkets.some((t, j) => t && j !== i && t.id === st.id), // (a kind works once: no use wearing two)
+        quickMove: () => { const st = inv.trinkets[i]; if (st && !inv.add(st)) inv.trinkets[i] = null; },
+      });
+      s.title = 'Trinket';
+      s.classList.add('armor-slot', 'trinket-slot');
+      col.appendChild(s);
+    }
+    return col;
+  }
+
+  /** The armour sets worn and the bonuses they have reached, and what the trinkets add. */
+  setBonusPanel() {
+    const inv = this.game.player.inventory;
+    const box = el('<div class="set-bonuses"></div>');
+    const render = () => {
+      const sets = wornSets(inv.armor);
+      let h = '';
+      for (const set of sets) {
+        h += `<div class="sb-head">${set.name} <span>${set.count}/${SET_PIECES}</span></div>`;
+        for (const t of set.tiers) h += `<div class="sb-line${t.active ? ' on' : ''}">(${t.n}) ${t.text}</div>`;
+      }
+      box.innerHTML = h;
+      box.style.display = h ? '' : 'none';
+    };
+    render();
+    (this.refreshers = this.refreshers || []).push(render);
+    return box;
+  }
+
   openInventory() {
     this.showContainer('inventory', 'Inventory', (panel) => {
       const top = el('<div class="inv-top-row"></div>');
       top.appendChild(this.armorColumn());
+      top.appendChild(this.trinketColumn());
       top.appendChild(this.craftingSection(2));
       panel.appendChild(top);
+      panel.appendChild(this.setBonusPanel());
       panel.appendChild(this.inventoryGrid());
       panel.appendChild(el('<div class="recipes-hint">Tip: logs → planks → sticks / workbench. Shift-click moves stacks, right-click splits.</div>'));
       this.sideRight = this.effectPanel();

@@ -1,10 +1,10 @@
-// Balance report: node scripts/balance/report.mjs [section...]   (sections: trade loot craft combat misc; default all)
+// Balance report: node scripts/balance/report.mjs [section...]   (sections: trade loot craft combat weapons misc; default all)
 // Prints the numbers that tests/balance.test.js keeps within bounds.
 import { I, ITEMS } from '../../src/world/items.js';
 import { MARKETS, arbitrageLoops, pricedOffers, PROFESSIONS, nameOf } from './trade.mjs';
 import { CHEST_KINDS, chestStats, valueTable, fishingStats } from './loot.mjs';
 import { naturalSources, deadRecipes, resourceLoops } from './craft.mjs';
-import { armorSets, damageAfter, meleeMobs, bossTable } from './combat.mjs';
+import { armorSets, damageAfter, meleeMobs, bossTable, weaponProfile, timeToKill, dpsAgainst, tierWeapons, TTK_TARGETS, DISC_CYCLE_TICKS } from './combat.mjs';
 import { foods, xpTotal, yearlyGrowth, seasonalChances, maxProtection } from './misc.mjs';
 
 const want = new Set(process.argv.slice(2));
@@ -60,6 +60,16 @@ if (on('combat')) {
   head('Combat: hits to kill the bosses');
   console.log('weapon'.padEnd(22) + 'Warden (90 hp, diamond)'.padEnd(26) + 'Hushkeeper (500 hp)'.padEnd(26) + 'Slag Colossus (400 hp, armour 6)');
   for (const r of bossTable()) console.log(r.weapon.padEnd(22) + String(r.warden).padEnd(26) + String(r.hushkeeper).padEnd(26) + r.colossus);
+}
+
+if (on('weapons')) {
+  head(`Weapons: time to kill (s; first blow on contact), dps and trick, by tier (a disc cycle is ${DISC_CYCLE_TICKS} ticks, 2 blows)`);
+  console.log('weapon'.padEnd(26) + 'dmg'.padStart(5) + 'swing/s'.padStart(9) + 'reach'.padStart(7) + '20hp'.padStart(8) + 'armoured'.padStart(10) + 'Warden'.padStart(8) + 'dps'.padStart(7) + 'vs dia'.padStart(8) + 'group'.padStart(7) + '  trick');
+  for (const tier of ['stone', 'iron', 'diamond']) for (const id of tierWeapons(tier)) {
+    const p = weaponProfile(id), t = (k, sp) => timeToKill(id, TTK_TARGETS[k], sp);
+    const trick = p.type === 'dagger' ? `backstab ${f(t('open20', 'backstab'), 1)} s` : p.type === 'warhammer' ? 'stagger 1.2 s, breaks shields' : p.type === 'glaive' ? 'sweeps 3 more at 60%' : p.type === 'disc' ? 'ranged, returns' : p.type === 'axe' ? 'breaks shields' : '';
+    console.log(p.name.padEnd(26) + f(p.damage, 1).padStart(5) + f(p.blowsPerSec).padStart(9) + f(p.reach, 1).padStart(7) + f(t('open20'), 1).padStart(8) + f(t('armoured20'), 1).padStart(10) + f(t('warden'), 1).padStart(8) + f(p.damage * p.blowsPerSec, 1).padStart(7) + f(dpsAgainst(id, 'diamond'), 1).padStart(8) + f(p.group, 1).padStart(7) + '  ' + trick);
+  }
 }
 
 if (on('misc')) {

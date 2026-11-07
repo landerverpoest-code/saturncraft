@@ -7,6 +7,7 @@ import { lightAt } from '../entities/entities.js';
 import { entityGlow } from './entityLight.js';
 import { SWING_TICKS } from '../player/interaction.js';
 import { wearArmor, lightArmor } from './armorModel.js';
+import { buildWeaponModel, hasWeaponModel } from './weaponModel.js';
 import { heldSpearModel, lightSpear } from './spearModel.js';
 import { ITEMS } from '../world/items.js';
 import { applyEmote } from './emotes.js';
@@ -33,6 +34,7 @@ export class PlayerModel {
     if (this.item) { arm.remove(this.item); if (this.item.userData.dispose) this.item.userData.dispose(); else { this.item.material.map.dispose(); this.item.material.dispose(); } this.item = null; }
     if (id == null) return;
     if (ITEMS[id] && ITEMS[id].spear) { this.item = heldSpearModel(); arm.add(this.item); return; } // a 3D Tidespear
+    if (hasWeaponModel(id)) { this.item = buildWeaponModel(id, 0.45); this.item.position.set(0, -0.62, -0.18); this.item.rotation.set(0, Math.PI / 2, 0.6); arm.add(this.item); return; } // a 3D Warhammer, Dagger, Glaive or Disc (render/weaponModel.js)
     const tex = new THREE.CanvasTexture(itemCanvas(id));
     tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter; tex.colorSpace = THREE.SRGBColorSpace;
     this.item = new THREE.Mesh(new THREE.PlaneGeometry(0.45, 0.45), new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.3, side: THREE.DoubleSide }));

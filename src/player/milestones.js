@@ -2,7 +2,8 @@
 // names): checked when the inventory changes, on game events and every few
 // seconds; each pops a toast once and is saved with the world.
 import { B } from '../world/blocks.js';
-import { I, CHARTS } from '../world/items.js';
+import { I, ITEMS, CHARTS } from '../world/items.js';
+import { wornSets } from './setBonuses.js';
 import { BIOME } from '../world/biomes.js';
 import { villagesNear } from '../world/villages.js';
 import { sunkenRuinsNear } from '../world/sunkenRuins.js';
@@ -85,6 +86,13 @@ export const MILESTONES = [
   { id: 'year', title: 'The Wheel Turns', desc: 'Live through a full year of the four seasons', icon: B.OAK_LEAVES, tick: (g) => !!g.seasons && g.seasonsOn && g.seasons.at(g.time).year >= 1 },
   { id: 'spear_throw', title: 'Tide Caller', desc: 'Hurl a Tidespear, or ride a Tidal Surge', icon: I.TIDESPEAR, event: 'spear_throw' },
   { id: 'veilfire', title: 'Curtains of Light', desc: 'See Veilfire in the night sky', icon: B.BEACON, tick: (g) => g.world.dimension === 'overworld' && g.sky.aurora > AURORA_SEEN },
+  // gear and combat depth (player/weapons.js, trinkets.js, setBonuses.js)
+  { id: 'new_weapon', title: 'Armed to the Teeth', desc: 'Make a Warhammer, Dagger, Glaive or Returning Disc', icon: I.IRON_GLAIVE, inv: (g) => g.player.inventory.slots.some((s) => s && ITEMS[s.id] && ITEMS[s.id].weapon && ITEMS[s.id].weapon.material) },
+  { id: 'stagger', title: 'Seeing Stars', desc: 'Stagger a mob with a full Warhammer swing', icon: I.IRON_WARHAMMER, event: 'stagger' },
+  { id: 'backstab', title: 'In the Back', desc: 'Land a Dagger blow from behind a mob', icon: I.IRON_DAGGER, event: 'backstab' },
+  { id: 'disc_catch', title: 'Good Catch', desc: 'Catch a Returning Disc on its way back', icon: I.IRON_DISC, event: 'disc_catch' },
+  { id: 'trinket', title: 'Lucky Charm', desc: 'Wear a trinket', icon: I.WARDING_AMULET, tick: (g) => !!(g.player.inventory.trinkets || []).some(Boolean) },
+  { id: 'full_set', title: 'Matching Set', desc: 'Wear four pieces of one armour set', icon: I.SLAGSTEEL_CHESTPLATE, tick: (g) => wornSets(g.player.inventory.armor).some((s) => s.count >= 4) },
   // the Field Guide (player/fieldGuide.js): every entry of a tab discovered
   { id: 'guide_creatures', title: 'Naturalist', desc: 'Fill the Creatures tab of the Field Guide', icon: I.BOOK, tick: (g) => tabComplete((g.player.stats || {}).guide, 'creatures') },
   { id: 'guide_biomes', title: 'Wanderer', desc: 'Fill the Biomes tab of the Field Guide', icon: B.GRASS, tick: (g) => tabComplete((g.player.stats || {}).guide, 'biomes') },

@@ -13,7 +13,10 @@ import { xpToNextLevel } from '../src/player/experience.js';
 import { MARKETS, arbitrageLoops, pricedOffers, PROFESSIONS, nameOf } from '../scripts/balance/trade.mjs';
 import { naturalSources, deadRecipes, resourceLoops } from '../scripts/balance/craft.mjs';
 import { CHEST_KINDS, chestStats, valueTable, fishingStats } from '../scripts/balance/loot.mjs';
-import { armorSets, damageAfter, hitsToKill, arrowHitsToKill, bossTable } from '../scripts/balance/combat.mjs';
+import { armorSets, damageAfter, hitsToKill, arrowHitsToKill, bossTable, weaponProfile, timeToKill, dpsAgainst, tierWeapons, weaponVector, dominates, TTK_TARGETS } from '../scripts/balance/combat.mjs';
+import { setBonusProtect } from '../scripts/balance/setcheck.mjs';
+import { SETS } from '../src/player/setBonuses.js';
+import { WEAPONS } from '../src/world/items.js';
 import { foods, xpTotal, yearlyGrowth, seasonalChances, maxProtection } from '../scripts/balance/misc.mjs';
 import { HUSHKEEPER } from '../src/mobs/hushkeeper.js';
 import { RIMEKEEP_WARDEN } from '../src/world/rimekeep.js';
@@ -225,6 +228,52 @@ describe('combat', () => {
     expect(RIMEKEEP_WARDEN.hp).toBeLessThan(HUSHKEEPER.HEALTH);
     expect(hitsToKill(RIMEKEEP_WARDEN.hp, 'diamond', I.DIAMOND_SWORD, 0)).toBe(rows['diamond sword'].warden);
     expect(arrowHitsToKill(RIMEKEEP_WARDEN.hp, 'diamond', 0)).toBeGreaterThan(arrowHitsToKill(RIMEKEEP_WARDEN.hp, 'diamond', 5));
+  });
+});
+
+describe('weapons (gear round)', () => {
+  const NEW = ['warhammer', 'dagger', 'glaive', 'disc'];
+  const tiers = ['stone', 'iron', 'diamond'];
+
+  it('every new weapon kills a 20 hp monster in the open in 1 to 5 seconds (documented range), and the armoured and Warden fights stay long but finite', () => {
+    for (const k of NEW) for (const tier of tiers) {
+      const id = WEAPONS[k][tier], name = weaponProfile(id).name;
+      const open = timeToKill(id, TTK_TARGETS.open20);
+      expect(open, `${name} on 20 hp`).toBeGreaterThanOrEqual(1);
+      expect(open, `${name} on 20 hp`).toBeLessThanOrEqual(5);
+      expect(timeToKill(id, TTK_TARGETS.armoured20), `${name} armoured`).toBeLessThanOrEqual(25);
+      expect(timeToKill(id, TTK_TARGETS.warden), `${name} Warden`).toBeLessThanOrEqual(110);
+      expect(timeToKill(id, TTK_TARGETS.warden), `${name} Warden`).toBeGreaterThanOrEqual(25);
+    }
+  });
+
+  it('within a tier no weapon is at least as good as another on every axis (dps, dps against armour, biggest blow, reach, crowd dps, control)', () => {
+    for (const tier of tiers) {
+      const ids = tierWeapons(tier);
+      for (const a of ids) for (const b of ids) if (a !== b) expect(dominates(weaponVector(a), weaponVector(b)), `${weaponProfile(a).name} over ${weaponProfile(b).name}`).toBe(false);
+    }
+  });
+
+  it('nothing beats the sword of its tier on plain dps, and the tiers climb', () => {
+    for (const tier of tiers) {
+      const sword = weaponProfile(ITEMS[I[`${tier}_SWORD`.toUpperCase()]] && I[`${tier}_SWORD`.toUpperCase()]);
+      for (const k of NEW) { const p = weaponProfile(WEAPONS[k][tier]); expect(p.damage * p.blowsPerSec, `${p.name}`).toBeLessThan(sword.damage * sword.blowsPerSec); }
+    }
+    for (const k of NEW) for (let i = 1; i < tiers.length; i++) expect(dpsAgainst(WEAPONS[k][tiers[i]], 'none')).toBeGreaterThan(dpsAgainst(WEAPONS[k][tiers[i - 1]], 'none'));
+  });
+
+  it('each weapon\'s trick is worth something but bounded: a backstab never one-shots a full-health 20 hp mob with a stone dagger, and the diamond dagger from behind kills in under a second', () => {
+    expect(timeToKill(WEAPONS.dagger.stone, TTK_TARGETS.open20, 'backstab')).toBeGreaterThan(0);
+    expect(timeToKill(WEAPONS.dagger.diamond, TTK_TARGETS.open20, 'backstab')).toBeLessThan(1);
+    expect(weaponProfile(WEAPONS.warhammer.diamond).damage).toBeLessThanOrEqual(12);
+    expect(weaponProfile(WEAPONS.glaive.diamond).group).toBeGreaterThan(weaponProfile(WEAPONS.glaive.diamond).damage * weaponProfile(WEAPONS.glaive.diamond).blowsPerSec * 2);
+  });
+
+  it('armour set bonuses and trinkets never make the player invulnerable', () => {
+    for (const set of Object.keys(SETS)) {
+      expect(setBonusProtect(set, 16)).toBeGreaterThanOrEqual(0.2 - 1e-9); // Bulwark IV x4 plus the set: at most 80 % off
+    }
+    expect(setBonusProtect('diamond', 0)).toBeGreaterThan(0.8);
   });
 });
 

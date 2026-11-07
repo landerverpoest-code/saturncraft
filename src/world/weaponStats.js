@@ -13,7 +13,7 @@ export const WEAPON_KINDS = {
   },
   dagger: {
     name: 'Dagger', reach: 2.5, wear: 1,
-    tiers: { stone: { damage: 2.5, attackSpeed: 2.6, durability: 110 }, iron: { damage: 3, attackSpeed: 3.0, durability: 220 }, diamond: { damage: 3.5, attackSpeed: 3.0, durability: 1300 } },
+    tiers: { stone: { damage: 2.8, attackSpeed: 2.8, durability: 110 }, iron: { damage: 3, attackSpeed: 3.0, durability: 220 }, diamond: { damage: 3.5, attackSpeed: 3.0, durability: 1300 } },
   },
   glaive: {
     name: 'Glaive', reach: 4.5, wear: 1,

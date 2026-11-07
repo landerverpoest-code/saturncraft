@@ -27,6 +27,9 @@ import { CAMP_SLOTS, CAMP_COOK_TICKS, campCooked } from '../world/campfireCookin
 import { SMELTING } from '../player/crafting.js';
 import { TEMPER_STEPS } from '../world/enchantments.js';
 import { COLOSSUS } from '../mobs/slagColossus.js';
+import { WEAPON_KINDS, STUN_TICKS, BACKSTAB_MULT, SWEEP_FRACTION, SWEEP_MAX, DISC_RANGE, DISC_RANGE_PER_FARFLIGHT } from '../world/weaponStats.js';
+import { TRINKETS, TRINKET_SLOTS } from '../player/trinkets.js';
+import { SETS } from '../player/setBonuses.js';
 import { DEEP_TOP, TRENCH_MAX } from '../world/deepSea.js';
 import { BEANSTALK_MAX } from '../world/randomTicks.js';
 import { HELM_WEAR_TICKS, HELM_LIGHT } from '../player/diving.js';
@@ -237,6 +240,22 @@ export function buildTopics({ table, touch = false, pad = false } = {}) {
     ] },
     { h: 'More elixirs' },
     { list: ['Glowcap Spores brew Haste, Dirge Crystals brew Ironskin (Resistance) and a Gilded Apple brews Warding (Absorption) on a Murky Elixir, as other ingredients do; Cinnabar Dust lengthens them and Glowshard Dust strengthens them.'] },
+  ]);
+
+  add('gear', 'Weapons, trinkets and armour sets', 'Systems', [
+    { p: 'Four new weapons play differently from the sword. Stone, iron and diamond versions of each are crafted at a workbench and can take the sword enchantments (Keen, Shove, Emberbrand, Plunder, Steadfast, Sunmend and the tempering ones).' },
+    { list: [
+      `Warhammer: slow (${WEAPON_KINDS.warhammer.tiers.iron.attackSpeed} swings a second) and heavy (${WEAPON_KINDS.warhammer.tiers.stone.damage}-${WEAPON_KINDS.warhammer.tiers.diamond.damage} damage). A full swing staggers a mob for ${STUN_TICKS / 20} s, and it splinters a raised shield like an axe. It wears twice as fast.`,
+      `Dagger: fast (${WEAPON_KINDS.dagger.tiers.iron.attackSpeed} swings a second) with a short reach (${WEAPON_KINDS.dagger.reach} blocks). A blow from behind a mob does ${BACKSTAB_MULT} times the damage. Creep up on the ones that look away.`,
+      `Glaive: a reach of ${WEAPON_KINDS.glaive.reach} blocks. The blow also sweeps up to ${SWEEP_MAX} more mobs in front of you for ${Math.round(SWEEP_FRACTION * 100)}% of its damage: made for crowds.`,
+      `Returning Disc: right-click to throw it. It flies ${DISC_RANGE} blocks (${DISC_RANGE_PER_FARFLIGHT} more a level of Farflight), hitting what it passes, then comes back to you and is caught. A clean catch adds a point to the next throw (up to 3); a fumbled one costs a moment. Only one is in the air at a time.`,
+    ] },
+    { h: 'Trinkets' },
+    { p: `The inventory screen has ${TRINKET_SLOTS} trinket slots beside the armour. A trinket works only while worn there, and two of the same kind count once. Find them in chests or craft them:` },
+    { list: Object.values(TRINKETS).map((t) => `${t.name}: ${t.desc}`) },
+    { h: 'Armour sets' },
+    { p: 'Wear two, three or four pieces of one material for a bonus; the tooltip of every piece and the inventory screen show what you have reached. The Dirgestep Boots are the fourth piece of the Slagsteel set (Slagsteel Ingots make a helmet, chestplate and leggings).' },
+    { list: Object.values(SETS).map((set) => `${set.name}: ${set.tiers.map((t) => `(${t.n}) ${t.text}`).join('; ')}.`) },
   ]);
 
   add('guide', 'Field Guide and Milestones', 'Systems', [

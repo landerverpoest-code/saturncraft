@@ -178,7 +178,7 @@ function structureEntries() {
 }
 
 /** Finds worth a mention besides what mobs drop and the charts (by `I` key; ones that do not exist are skipped). */
-const EXTRA_NOTABLE = ['DIAMOND', 'BERYL', 'VOID_PEARL', 'CHARM_OF_UNDYING', 'TIDESPEAR', 'ENCHANTED_BOOK', 'SADDLE', 'FROSTROOT', 'DEWBERRIES', 'SUNGOURD_SEEDS', 'GOURD_WEDGE', 'SLAG_SIGIL', 'COLOSSUS_CORE', 'SLAGSTEEL_INGOT', 'DIRGE_CRYSTAL'];
+const EXTRA_NOTABLE = ['DIAMOND', 'BERYL', 'VOID_PEARL', 'CHARM_OF_UNDYING', 'TIDESPEAR', 'ENCHANTED_BOOK', 'SADDLE', 'FROSTROOT', 'DEWBERRIES', 'SUNGOURD_SEEDS', 'GOURD_WEDGE', 'SLAG_SIGIL', 'COLOSSUS_CORE', 'SLAGSTEEL_INGOT', 'DIRGE_CRYSTAL', 'IRON_WARHAMMER', 'IRON_DAGGER', 'IRON_GLAIVE', 'IRON_DISC', 'SLAGSTEEL_CHESTPLATE', 'FLEET_ANKLET', 'LODESTONE_CHARM', 'WARDING_AMULET', 'MINERS_LOUPE', 'LANTERN_CHARM', 'EMBER_BAND'];
 
 /** Cinnabar contraption parts (block keys): sensors and timers a builder makes, listed so the guide notes the first one you hold. */
 const CONTRAPTION_PARTS = ['COMPARATOR', 'OBSERVER', 'DAYLIGHT_SENSOR', 'SNARE_POST', 'SNARE_CORD', 'PULSE_GATE'];

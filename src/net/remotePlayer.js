@@ -9,6 +9,7 @@ import { lightAt } from '../entities/entities.js';
 import { entityGlow } from '../render/entityLight.js';
 import { PHYS } from '../physics/constants.js';
 import { heldLightLevel, ITEMS } from '../world/items.js';
+import { buildWeaponModel, hasWeaponModel } from '../render/weaponModel.js';
 import { heldSpearModel, lightSpear } from '../render/spearModel.js';
 import { REMOTE_LIGHTS } from '../render/terrainMaterial.js';
 import { colorFromInt, effectSwirl } from '../player/effects.js';
@@ -124,6 +125,7 @@ export class RemotePlayer {
     if (this.item) { arm.remove(this.item); if (this.item.userData.dispose) this.item.userData.dispose(); else { this.item.material.map.dispose(); this.item.material.dispose(); this.item.geometry.dispose(); } this.item = null; }
     if (id == null) return;
     if (ITEMS[id] && ITEMS[id].spear) { this.item = heldSpearModel(); arm.add(this.item); return; } // a 3D Tidespear
+    if (hasWeaponModel(id)) { this.item = buildWeaponModel(id, 0.45); this.item.position.set(0, -0.62, -0.18); this.item.rotation.set(0, Math.PI / 2, 0.6); arm.add(this.item); return; } // a 3D Warhammer, Dagger, Glaive or Disc (render/weaponModel.js)
     let canvas;
     try { canvas = itemCanvas(id); } catch { return; }
     const tex = new THREE.CanvasTexture(canvas);

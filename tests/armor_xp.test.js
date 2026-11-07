@@ -44,10 +44,10 @@ describe('armour', () => {
     const p = new Player();
     p.inventory.armor = [st(I.IRON_HELMET), st(I.IRON_CHESTPLATE), st(I.IRON_LEGGINGS), st(I.IRON_BOOTS)];
     p.hurt(10, 'mob:Shambler');
-    expect(p.health).toBeCloseTo(14);
+    expect(p.health).toBeCloseTo(14.48); // 6 off for the armour, then the Ironclad set's +2 protection (player/setBonuses.js) takes 8 % of the rest
     p.invulnerable = 0;
     p.hurt(4, 'fall');
-    expect(p.health).toBeCloseTo(10);
+    expect(p.health).toBeCloseTo(10.8); // (armour does not count; the set's protection does: 4 -> 3.68)
   });
 
   it('recipes', () => {

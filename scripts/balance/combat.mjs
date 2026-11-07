@@ -70,3 +70,61 @@ export function bossTable() {
 }
 
 export { meleeBonus };
+
+// ---- Weapons (gear round) -------------------------------------------------------------------------------------
+import * as W from '../../src/world/weaponStats.js';
+import { setBonusProtect } from './setcheck.mjs';
+
+/** Targets for time-to-kill: a 20 hp monster in the open, and the Rimekeep Warden's armour class (diamond) at its health. */
+export const TTK_TARGETS = { open20: { hp: 20, armor: 'none' }, armoured20: { hp: 20, armor: 'diamond' }, warden: { hp: RIMEKEEP_WARDEN.hp, armor: 'diamond' } };
+/** A thrown disc's cycle: out, back and the rest after a catch (ticks), and the blows it lands on a target standing in its path. */
+export const DISC_CYCLE_TICKS = Math.ceil(W.DISC_RANGE / W.DISC_SPEED) + Math.ceil(W.DISC_RANGE / (W.DISC_SPEED * 1.15)) + 12 + 4;
+export const DISC_BLOWS = 2;
+
+/** Everything the balance checks want to know about one melee or thrown weapon item. */
+export function weaponProfile(id) {
+  const d = ITEMS[id], t = d.tool || d.weapon;
+  const disc = !!d.disc;
+  const damage = disc ? t.throwDamage : t.damage;
+  const blowsPerSec = disc ? DISC_BLOWS / (DISC_CYCLE_TICKS / 20) : t.attackSpeed;
+  const dagger = t.type === 'dagger', glaive = t.type === 'glaive';
+  const burst = damage * (dagger ? W.BACKSTAB_MULT : 1);                 // the biggest single blow with its trick
+  const reach = disc ? W.DISC_RANGE : (t.reach || 3.0);
+  const group = damage * blowsPerSec * (glaive ? 1 + W.SWEEP_MAX * W.SWEEP_FRACTION : 1); // dps on three mobs bunched in front of you
+  const control = t.type === 'warhammer' ? 2 : t.type === 'axe' ? 1 : 0;  // stagger + shield break, or shield break alone
+  return { id, key: d.key, name: d.name, type: t.type, damage, blowsPerSec, burst, reach, group, control, durability: d.durability };
+}
+
+/** Seconds to kill a target with a weapon id (first blow on contact, the rest at the weapon's pace), or Infinity. `special`: 'backstab'. */
+export function timeToKill(id, target, special = null) {
+  const p = weaponProfile(id), set = target.armor === 'none' ? [] : armorPieces(target.armor);
+  const raw = p.damage * (special === 'backstab' && p.type === 'dagger' ? W.BACKSTAB_MULT : 1);
+  const taken = mobDamageTaken(raw, 0, { armor: set }, 'player');
+  if (!(taken > 0)) return Infinity;
+  return (Math.ceil(target.hp / taken) - 1) / p.blowsPerSec;
+}
+
+/** Damage per second of a weapon against a target's armour (full swings). */
+export function dpsAgainst(id, armor) {
+  const p = weaponProfile(id), set = armor === 'none' ? [] : armorPieces(armor);
+  return mobDamageTaken(p.damage, 0, { armor: set }, 'player') * p.blowsPerSec;
+}
+
+/** The weapons compared in one tier: the vanilla-style sword and axe next to the new four. */
+export function tierWeapons(tier) {
+  const ids = [I[`${tier}_SWORD`.toUpperCase()], I[`${tier}_AXE`.toUpperCase()], ...['warhammer', 'dagger', 'glaive', 'disc'].map((k) => I[`${tier}_${k}`.toUpperCase()])];
+  return ids.filter((x) => x !== undefined);
+}
+/** The axes the dominance check compares: [dps, dps against armour, biggest blow, reach, dps on a group, control]. */
+export function weaponVector(id) {
+  const p = weaponProfile(id);
+  return [p.damage * p.blowsPerSec, dpsAgainst(id, 'diamond'), p.burst, p.reach, p.group, p.control];
+}
+/** Does a beat b: at least as good on every axis and better on one? */
+export function dominates(a, b) {
+  let better = false;
+  for (let i = 0; i < a.length; i++) { if (a[i] < b[i] - 1e-9) return false; if (a[i] > b[i] + 1e-9) better = true; }
+  return better;
+}
+
+export { setBonusProtect };
