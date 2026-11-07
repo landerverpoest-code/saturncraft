@@ -192,7 +192,7 @@ describe('high contrast and large text', () => {
     expect(ACCESS_DEFAULTS.largeText).toBe(false);
     expect(accessClasses({})).toEqual([]);
     expect(accessClasses({ highContrast: true, largeText: true })).toEqual(['high-contrast', 'large-text']);
-    expect(accessClasses({ reduceMotion: true, reduceFlashing: true, colorBlind: 'redgreen' })).toEqual(['reduce-motion', 'reduce-flash', 'cb-redgreen']);
+    expect(accessClasses({ reduceMotion: true, reduceFlashing: true, colorBlind: 'redgreen' })).toEqual(['reduce-motion', 'reduce-flash', 'cb-redgreen', 'cue-shapes']); // (a colour-blind mode always brings the shape cues)
     expect(accessClasses({}, true)).toEqual(['reduce-motion']); // the system asks for less motion
     for (const c of accessClasses({ reduceMotion: true, reduceFlashing: true, highContrast: true, largeText: true, colorBlind: 'blueyellow' })) expect(ACCESS_CLASSES).toContain(c);
   });

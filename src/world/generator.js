@@ -357,6 +357,18 @@ export class TerrainGenerator {
   }
 
   /**
+   * Run one of the feature passes that came after the original terrain (world/retrofit.js lists them). Without a `passHook`
+   * this is just the call; the retrofit planner sets one to see exactly which cells each pass changes.
+   */
+  pass(name, blocks, meta, biomes, fn) {
+    const h = this.passHook;
+    if (!h) { fn(); return; }
+    h.before(name, blocks, meta, biomes);
+    fn();
+    h.after(name, blocks, meta, biomes);
+  }
+
+  /**
    * Generate a full chunk.
    * @returns {{blocks: Uint8Array, meta: Uint8Array, biomes: Uint8Array, colors: Uint8Array, heightmap: Int16Array}}
    */
@@ -494,9 +506,9 @@ export class TerrainGenerator {
 
     // 8. Decoration
     this.decorate(blocks, meta, biomes, heightmap, cx, cz, cols);
-    stampWildCrops(this, blocks, meta, cx, cz, heightmap, biomes); // Frostroots, Dewberry Brambles, Sungourds (world/wildCrops.js): own hash salts, nothing before changes
+    this.pass('wildCrops', blocks, meta, biomes, () => stampWildCrops(this, blocks, meta, cx, cz, heightmap, biomes)); // Frostroots, Dewberry Brambles, Sungourds (world/wildCrops.js): own hash salts, nothing before changes
 
-    stampDeepSea(this, blocks, meta, cx, cz, heightmap, biomes); // Deep Ocean and Kelp Forest biomes, trenches, Gleamkelp, Abyssal Grottos (world/deepSea.js): a separate pass, the terrain noise is untouched
+    this.pass('deepSea', blocks, meta, biomes, () => stampDeepSea(this, blocks, meta, cx, cz, heightmap, biomes)); // Deep Ocean and Kelp Forest biomes, trenches, Gleamkelp, Abyssal Grottos (world/deepSea.js): a separate pass, the terrain noise is untouched
 
     // 9. Villages
     stampVillages(this, blocks, meta, cx, cz);
@@ -510,15 +522,15 @@ export class TerrainGenerator {
     stampSmallFeatures(this, blocks, meta, cx, cz, heightmap, biomes); // desert wells, fossils
     stampBuriedRuins(this, blocks, meta, cx, cz); // Buried Ruins for brushing (world/buriedRuins.js)
     stampSanctums(this, blocks, meta, cx, cz); // Hollow Sanctums (world/dimensions/sanctum.js)
-    stampSunkenRuins(this, blocks, meta, cx, cz); // Sunken Ruins on deep ocean floors (world/sunkenRuins.js)
-    stampSunTombs(this, blocks, meta, cx, cz);    // Sun Tombs in deserts and badlands (world/sunTombs.js)
-    stampSkywatches(this, blocks, meta, cx, cz);  // Skywatch Towers on mountain summits (world/skywatch.js)
-    stampRimekeeps(this, blocks, meta, cx, cz);   // Rimekeeps on snowy plains and taiga (world/rimekeep.js)
-    stampSporehalls(this, blocks, meta, cx, cz);  // Sporehalls in jungles and Highland Meadows (world/sporehall.js)
-    stampLighthouses(this, blocks, meta, cx, cz); // Hermit's Lighthouses on beaches (world/lighthouse.js)
-    stampMireShrines(this, blocks, meta, cx, cz); // Mire Shrines in swamps (world/mireShrine.js)
-    stampObservatories(this, blocks, meta, cx, cz); // Stargazer's Observatories on open hills (world/observatory.js)
-    stampSkyIsles(this, blocks, meta, cx, cz);    // Cloud Isles and their wild Beanstalks (world/skyIsles.js): high above everything else, a pass of its own
+    this.pass('sunkenRuins', blocks, meta, biomes, () => stampSunkenRuins(this, blocks, meta, cx, cz)); // Sunken Ruins on deep ocean floors (world/sunkenRuins.js)
+    this.pass('sunTombs', blocks, meta, biomes, () => stampSunTombs(this, blocks, meta, cx, cz));    // Sun Tombs in deserts and badlands (world/sunTombs.js)
+    this.pass('skywatch', blocks, meta, biomes, () => stampSkywatches(this, blocks, meta, cx, cz));  // Skywatch Towers on mountain summits (world/skywatch.js)
+    this.pass('rimekeep', blocks, meta, biomes, () => stampRimekeeps(this, blocks, meta, cx, cz));   // Rimekeeps on snowy plains and taiga (world/rimekeep.js)
+    this.pass('sporehall', blocks, meta, biomes, () => stampSporehalls(this, blocks, meta, cx, cz));  // Sporehalls in jungles and Highland Meadows (world/sporehall.js)
+    this.pass('lighthouse', blocks, meta, biomes, () => stampLighthouses(this, blocks, meta, cx, cz)); // Hermit's Lighthouses on beaches (world/lighthouse.js)
+    this.pass('mireShrine', blocks, meta, biomes, () => stampMireShrines(this, blocks, meta, cx, cz)); // Mire Shrines in swamps (world/mireShrine.js)
+    this.pass('observatory', blocks, meta, biomes, () => stampObservatories(this, blocks, meta, cx, cz)); // Stargazer's Observatories on open hills (world/observatory.js)
+    this.pass('skyIsles', blocks, meta, biomes, () => stampSkyIsles(this, blocks, meta, cx, cz));    // Cloud Isles and their wild Beanstalks (world/skyIsles.js): high above everything else, a pass of its own
 
     // Final heightmap: highest non-air block
     for (let z = 0; z < 16; z++) for (let x = 0; x < 16; x++) {

@@ -2,7 +2,24 @@
 // palettes. Everything here is pure (no DOM), so game.js, hud.js and the tests share it.
 import { chimeCaption } from '../world/chimes.js';
 
-export const ACCESS_DEFAULTS = { captions: false, reduceMotion: false, reduceFlashing: false, colorBlind: 'off', highContrast: false, largeText: false };
+export const ACCESS_DEFAULTS = { captions: false, reduceMotion: false, reduceFlashing: false, colorBlind: 'off', highContrast: false, largeText: false, shapeCues: false, uiScale: 1, largeCaptions: false };
+
+// ---------------------------------------------------------------------------------------------
+// UI scale
+
+export const UI_SCALE_MIN = 0.75, UI_SCALE_MAX = 1.5, UI_SCALE_STEP = 0.05;
+/** A UI scale from stored or typed data: a number from 0.75 to 1.5 in steps of 0.05 (anything else is 1). */
+export function cleanUiScale(v) {
+  const n = typeof v === 'string' && v.trim() !== '' ? Number(v) : v;
+  if (typeof n !== 'number' || !Number.isFinite(n)) return 1;
+  const steps = Math.round(Math.min(UI_SCALE_MAX, Math.max(UI_SCALE_MIN, n)) / UI_SCALE_STEP);
+  return Math.round(steps * UI_SCALE_STEP * 100) / 100;
+}
+/** The zoom the screens' contents get: the UI scale times the large-text factor (1.3). */
+export function screenZoom(settings) {
+  const s = settings || {};
+  return Math.round(cleanUiScale(s.uiScale) * (s.largeText ? 1.3 : 1) * 1000) / 1000;
+}
 export const COLOR_BLIND_MODES = ['off', 'redgreen', 'blueyellow'];
 export const COLOR_BLIND_LABELS = { off: 'Off', redgreen: 'Red-green friendly', blueyellow: 'Blue-yellow friendly' };
 
@@ -21,7 +38,8 @@ export function nextColorBlind(mode) { return COLOR_BLIND_MODES[(Math.max(0, COL
  * Veilfire curtains move), streaks (falling stars and meteorite trails), sparks (how many sparks a
  * firework burst or meteorite impact throws, so fewer bright points appear in one frame), critters (how many butterflies, fireflies, leaves,
  * skimmers and birds are drawn, render/critters.js) and critterSpeed (how fast they move), sand (the
- * streaming grains of a dust storm).
+ * streaming grains of a dust storm), particles (how many of the ordinary block, smoke and spark particles are kept, see
+ * render/particles.js) and shake (the held item's trembling and the hurt flinch of the camera).
  */
 export function motionScales(settings) {
   const calm = !!(settings && settings.reduceMotion);
@@ -29,7 +47,7 @@ export function motionScales(settings) {
   return {
     bob: calm ? 0 : 1, tilt: calm ? 0 : 1, sprintFov: calm ? 0 : 1, apparitionShake: calm ? 0 : 1, flash: dim ? 0.2 : 1,
     twinkle: calm || dim ? 0 : 1, skyDrift: calm ? 0.1 : 1, streaks: calm ? 0 : dim ? 0.4 : 1, sparks: dim ? 0.4 : 1, sand: calm ? 0.25 : 1,
-    critters: calm ? 0.25 : 1, critterSpeed: calm ? 0.35 : 1,
+    critters: calm ? 0.25 : 1, critterSpeed: calm ? 0.35 : 1, particles: calm ? 0.3 : 1, shake: calm ? 0 : 1,
   };
 }
 
@@ -44,9 +62,11 @@ export function scaledCount(n, scale) { return scale <= 0 ? 0 : Math.max(1, Math
 /**
  * The classes the page root carries for the settings (ui/style.css keys off these): `reduce-motion` stops
  * the CSS animations, `reduce-flash` calms the pulsing overlays, `high-contrast` and `large-text` restyle
- * the screens, `cb-redgreen` / `cb-blueyellow` mark the colour-blind mode. `osReduce`: the system asks for less motion.
+ * the screens, `cb-redgreen` / `cb-blueyellow` mark the colour-blind mode, `cue-shapes` turns on the patterns and symbols that back up
+ * colour (bars, effects), `large-captions` enlarges the sound captions and `ui-scaled` applies the UI scale slider (the
+ * factor itself is the --ui-scale / --tz variables, see applyScaleVars). `osReduce`: the system asks for less motion.
  */
-export const ACCESS_CLASSES = ['reduce-motion', 'reduce-flash', 'high-contrast', 'large-text', 'cb-redgreen', 'cb-blueyellow'];
+export const ACCESS_CLASSES = ['reduce-motion', 'reduce-flash', 'high-contrast', 'large-text', 'cb-redgreen', 'cb-blueyellow', 'cue-shapes', 'large-captions', 'ui-scaled'];
 export function accessClasses(settings, osReduce = false) {
   const s = settings || {};
   const out = [];
@@ -55,7 +75,20 @@ export function accessClasses(settings, osReduce = false) {
   if (s.highContrast) out.push('high-contrast');
   if (s.largeText) out.push('large-text');
   if (s.colorBlind && s.colorBlind !== 'off') out.push('cb-' + s.colorBlind);
+  if (s.shapeCues || (s.colorBlind && s.colorBlind !== 'off')) out.push('cue-shapes'); // (the colour-blind modes always add the shapes)
+  if (s.largeCaptions) out.push('large-captions');
+  if (cleanUiScale(s.uiScale) !== 1) out.push('ui-scaled');
   return out;
+}
+
+/** Put the accessibility classes and the --ui-scale / --tz variables on the page root (the game and the title screen both call this). */
+export function applyAccessToRoot(root, settings, osReduce = false) {
+  const on = new Set(accessClasses(settings, osReduce));
+  for (const c of ACCESS_CLASSES) root.classList.toggle(c, on.has(c));
+  if (!root.style) return;
+  root.style.setProperty('--ui-scale', String(cleanUiScale(settings && settings.uiScale)));
+  const z = screenZoom(settings);
+  if (z !== 1) root.style.setProperty('--tz', String(z)); else root.style.removeProperty('--tz');
 }
 
 /**
@@ -231,4 +264,23 @@ export const HUD_PALETTES = {
   },
 };
 
-export function hudPalette(mode) { return HUD_PALETTES[mode] || HUD_PALETTES.off; }
+/** The palette for a colour-blind mode; `shapeCues` (the Shape cues setting) adds the symbols on its own, without changing the colours. */
+export function hudPalette(mode, shapeCues = false) {
+  const p = HUD_PALETTES[mode] || HUD_PALETTES.off;
+  return shapeCues && !p.marks ? { ...p, marks: true } : p;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Bars that do not depend on colour
+
+/** Text for the boss bar: with shape cues it also says the percentage and, in words and a mark, that the boss is shielded. */
+export function bossBarLabel(info, shapes = false) {
+  const base = `${info.name}, phase ${info.phase} of ${info.phases.length + 1}`;
+  if (!shapes) return base;
+  return `${base} \u00b7 ${Math.round(info.frac * 100)}%${info.shielded ? ' \u00b7 \u25c6 SHIELDED' : ''}`;
+}
+
+/** Text for the raid bar: with shape cues a won raid carries a tick as well as the green. */
+export function raidBarLabel(info, shapes = false) {
+  return shapes && info.state === 'won' ? `\u2713 ${info.label}` : info.label;
+}

@@ -35,6 +35,7 @@ import { SEASON_KEYS, SEASON_NAMES, MIN_DAYS, MAX_DAYS, DAY_TICKS } from '../wor
 import { EMOTES, emoteByName, gamemodeLabel } from '../net/social.js';
 import { BUILD_COMMANDS, runBuildCommand } from './buildCommands.js';
 import { DEFAULT_MAX_VOLUME, MAX_VOLUME_CAP } from '../world/buildTools.js';
+import { runRetrofitCommand } from '../world/retrofitCommand.js';
 
 /** item lookup by key ("diamond_sword", "oak_planks", "grass_block") and by display name */
 let ITEM_KEYS = null;
@@ -106,6 +107,7 @@ export const HELP = [
   '/xp <amount> [levels]',
   '/locate <village|temple|igloo|outpost|shipwreck|monument|mineshaft|sanctum|bastion|hut|ruin|buried|vaults|sunken|tomb|skywatch|rimekeep|sporehall|grotto|isle|lighthouse|mire|observatory|city|gate|forge|ribs> or /locate biome <name>',
   '/dimension <overworld|cinderdeep|hollow>',
+  '/retrofit  (status),  /retrofit dry [chunks],  /retrofit apply [chunks]  (host: add features newer than a saved world to its edited chunks without touching anything you built; see the README)',
   '/effect give <effect> [seconds] [level],  /effect clear  (effects: ' + EFFECT_KEYS.join(', ') + ')',
   '/raid <patrol|start [level]|stop|status>',
   '/caravan  (a Roving Peddler and its Packhorns camp nearby)',
@@ -117,7 +119,7 @@ export const HELP = [
 ];
 
 /** Commands that change the world or the player; a world made with cheats off (world creation options) refuses them. */
-export const CHEAT_COMMANDS = new Set(['gamemode', 'gm', 'time', 'season', 'event', 'events', 'difficulty', 'gamerule', 'weather', 'tp', 'teleport', 'give', 'enchant', 'summon', 'xp', 'experience', 'kill', 'effect', 'raid', 'caravan', 'heal', 'clear', 'spawnpoint', 'dimension', 'dim', ...BUILD_COMMANDS]);
+export const CHEAT_COMMANDS = new Set(['gamemode', 'gm', 'time', 'season', 'event', 'events', 'difficulty', 'gamerule', 'weather', 'tp', 'teleport', 'give', 'enchant', 'summon', 'xp', 'experience', 'kill', 'effect', 'raid', 'caravan', 'heal', 'clear', 'spawnpoint', 'dimension', 'dim', 'retrofit', ...BUILD_COMMANDS]);
 
 export function runCommand(game, text) {
   const p = game.player;
@@ -318,6 +320,7 @@ export function runCommand(game, text) {
     case 'clear': p.inventory.clear(); return 'Cleared the inventory';
     case 'spawnpoint': p.spawn = { x: p.x, y: p.y, z: p.z }; p.bed = null; return `Set spawn point to ${Math.floor(p.x)}, ${Math.floor(p.y)}, ${Math.floor(p.z)}`;
     case 'seed': return `Seed: [${game.seed}]`;
+    case 'retrofit': return runRetrofitCommand(game, args);
     case 'dimension': case 'dim': return game.dims ? game.dims.command(args[0]) : 'Dimensions unavailable';
     // ---- multiplayer social layer (net/social.js); the host runs the ones that change shared state
     case 'wp': case 'waypoint':

@@ -6,6 +6,7 @@ import { containerSignal } from './world/comparators.js';
 import { Fireball } from './entities/fireball.js';
 import { powerInto } from './world/circuits.js';
 import { newMap, updateMap, MAP_SIZE } from './world/maps.js';
+import { CURRENT_FEATURE_VERSION } from './world/retrofit.js';
 import { noteLandmarks, chartMap, mapTitle } from './world/landmarks.js';
 import { KEEP_BITS, unpairAfterBreak } from './world/chests.js';
 import * as THREE from 'three';
@@ -73,7 +74,8 @@ import { UI } from './ui/screens.js';
 import { Input } from './ui/input.js';
 import { inventoryKeyIsSlotAction } from './ui/menuNav.js';
 import { resolveBindings } from './ui/bindings.js';
-import { ACCESS_DEFAULTS, ACCESS_CLASSES, CaptionLog, motionScales, accessClasses } from './ui/accessibility.js';
+import { FrameGraph } from './ui/frameGraph.js';
+import { ACCESS_DEFAULTS, CaptionLog, motionScales, applyAccessToRoot, cleanUiScale } from './ui/accessibility.js';
 import { TOUCH_DEFAULTS, normalizeTouch, wantTouch, readTouchEnv } from './ui/touchMath.js';
 import { Audio } from './audio/audio.js';
 import { explode } from './entities/explosion.js';
@@ -118,7 +120,7 @@ const DARK_FOG = new THREE.Color(0, 0, 0);
 const EVENT_FOG = new THREE.Color(); // scratch colour for the dust storm / ground fog tint
 export const DIFFICULTIES = ['peaceful', 'easy', 'normal', 'hard'];
 
-const ACCESS_KEYS = new Set(['reduceMotion', 'reduceFlashing', 'highContrast', 'largeText', 'colorBlind']);
+const ACCESS_KEYS = new Set(['reduceMotion', 'reduceFlashing', 'highContrast', 'largeText', 'colorBlind', 'shapeCues', 'uiScale', 'largeCaptions']);
 
 export const DEFAULT_SETTINGS = { renderDistance: 8, fov: 75, sensitivity: 100, volume: 0.5, music: 0.5, shadows: true, shaders: true, shadowMapSize: 1024, pixelRatioCap: 1.25, daylightCycle: true, seasons: true, worldEvents: true, hostileMobs: true, fireworksHurtPlayers: false, difficulty: 'normal', showCoords: false, hints: true, firstSteps: true, keys: {}, ...ACCESS_DEFAULTS, ...TOUCH_DEFAULTS };
 
@@ -127,8 +129,10 @@ export class Game {
     this.canvas = canvas;
     this.saveData = saveData;
     this.seed = seed;
+    this.featureVersion = CURRENT_FEATURE_VERSION; // see world/retrofit.js; a loaded older save lowers it (applySave)
     this.settings = { ...DEFAULT_SETTINGS, ...settings };
     Object.assign(this.settings, normalizeTouch(this.settings)); // (saved touch settings may be anything)
+    this.settings.uiScale = cleanUiScale(this.settings.uiScale);
     this.fx = motionScales(this.settings); // how much of each motion / flash effect to show (ui/accessibility.js)
     this.applyAccessClasses();
     this.hooks = hooks;
@@ -151,6 +155,7 @@ export class Game {
     this.dispensers = new Map();  // "x,y,z" -> dispenser / dropper slots (see world/dispensers.js)
     this.proving = new ProvingSystem(this); // Proving Spawners and Vaults (world/provingSystem.js)
     this.fps = 0; this.frameCount = 0; this.fpsTime = 0;
+    this.frameGraph = new FrameGraph(); // the F3 frame-time graph (ui/frameGraph.js)
     this.net = null;              // multiplayer session (src/net/session.js), null in single-player
     this.hostSettings = null;     // the saved options of an open world: PvP, guest commands, friendly fire, player limit (net/social.js cleanHostSettings)
     this.allowCheats = true;      // commands such as /give and /gamemode (a world can be made without them; saved in meta)
@@ -209,6 +214,7 @@ export class Game {
     this.critters = new Critters(this.scene); // butterflies, fireflies, falling leaves, skimmers and bird flocks (cosmetic only, render/critters.js)
     this.lightning = new Lightning(this.scene);
     this.particles = new Particles(this.scene);
+    this.particles.density = this.fx.particles; // Reduce motion keeps fewer particles
     this.signRenderer = new SignRenderer(this);
     this.frameRenderer = new FrameRenderer(this);
     this.potRenderer = new PotRenderer(this);
@@ -411,9 +417,7 @@ export class Game {
 
   /** The page root carries a class per accessibility setting (ui/style.css): reduced motion, high contrast, large text. */
   applyAccessClasses() {
-    const root = document.documentElement;
-    const on = new Set(accessClasses(this.settings, false));
-    for (const c of ACCESS_CLASSES) root.classList.toggle(c, on.has(c));
+    applyAccessToRoot(document.documentElement, this.settings, false);
   }
 
   setSetting(k, v) {
@@ -425,7 +429,8 @@ export class Game {
     if (k === 'fov') { this.camera.fov = v; this.camera.updateProjectionMatrix(); }
     if (k === 'sensitivity') this.input.sensitivity = 0.0022 * v / 100;
     if (k === 'keys') this.input.setBindings(resolveBindings(v));
-    if (k === 'colorBlind') this.hud.setColorBlind(v);
+    if (k === 'colorBlind' || k === 'shapeCues') this.hud.setColorBlind(this.settings.colorBlind, !!this.settings.shapeCues);
+    if (ACCESS_KEYS.has(k) && this.particles) this.particles.density = this.fx.particles;
     if (k === 'hints' && !v && this.onboarding) this.onboarding.dismiss();
     if (k === 'firstSteps' && this.onboarding) this.onboarding.renderSteps();
     if (k === 'volume') this.audio.setVolume(v);
@@ -1455,14 +1460,14 @@ export class Game {
     }
     if (this.ui.open === 'emotes') {
       if (inp.wasPressed('emote')) this.ui.close();
-      else EMOTES.forEach((k, i) => { if (inp.codePressed('Digit' + (i + 1))) this.ui.pickEmote(k); });
+      else EMOTES.forEach((k, i) => { if (inp.wasPressed('slot' + (i + 1))) this.ui.pickEmote(k); }); // the wheel's numbers follow the hotbar slot keys, so a remap applies here too
     }
     if (this.ui.blocking && !inp.capture) this.ui.padMenu(inp.pressed, inp.pad); // gamepad on every screen: focus, A, X, B (Statistics, Milestones and the Field Guide scroll with it too)
     if (inp.wasPressed('pause') && this.ui.blocking) {
       if (this.ui.open === 'pause') { this.ui.open = null; this.ui.clear(); this.onUIClosed(); }
       else this.ui.close();
     } else if (inp.wasPressed('pause') && this.running) { this.input.unlock(); this.ui.showPause(); } // a gamepad's Start button
-    if (inp.wasPressed('debug')) { this.hud.showDebug = !this.hud.showDebug; this.hud.debugEl.classList.toggle('hidden', !this.hud.showDebug); }
+    if (inp.wasPressed('debug')) this.hud.setDebug(!this.hud.showDebug);
     if (inp.wasPressed('hud')) this.hud.setVisible(!this.hud.visible);
     if (inp.wasPressed('shaders')) { const on = this.settings.shaders === false; this.setSetting('shaders', on); this.hud.toast(`Shaders ${on ? 'on' : 'off'} (F7)`); }
     if (inp.wasPressed('perspective')) { this.perspective = (this.perspective + 1) % 3; document.getElementById('crosshair').style.visibility = this.perspective === 2 ? 'hidden' : ''; }
@@ -1497,6 +1502,7 @@ export class Game {
     if (dt > 250) dt = 250;
     if (this.touch) this.touch.sync();
     this.handleFrameInput(dt);
+    const t0 = performance.now();
     const pauseSim = this.ui.open === 'pause' && !this.net; // a shared world keeps running
     if (!pauseSim) {
       this.acc += dt;
@@ -1504,9 +1510,11 @@ export class Game {
       if (this.acc > TICK_MS * 4) this.acc = TICK_MS * 4;
       while (this.acc >= TICK_MS) { this.tick(); this.acc -= TICK_MS; }
     }
+    const t1 = performance.now();
     const alpha = pauseSim ? 1 : this.acc / TICK_MS;
     this.render(alpha, now / 1000);
     this.frameCount++;
+    this.frameGraph.push(dt, t1 - t0, performance.now() - t1); // F3 graph (ui/frameGraph.js)
     if (now - this.fpsTime > 1000) { this.fps = this.frameCount; this.frameCount = 0; this.fpsTime = now; }
   }
 
@@ -1546,7 +1554,7 @@ export class Game {
     const eye = Math.abs(eyeTarget - this.eyeShown) < 0.005 ? eyeTarget : this.eyeShown;
     // view bobbing while walking
     const speed = Math.hypot(b.vx, b.vz);
-    const fxScale = motionScales(this.settings); // reduced motion / flashing (ui/accessibility.js)
+    const fxScale = this.fx; // reduced motion / flashing (ui/accessibility.js; kept current by setSetting)
     const bob = b.onGround ? Math.sin(sec * 9) * Math.min(0.06, speed * 0.25) * fxScale.bob : 0;
     this.camera.position.set(x, y + eye + Math.abs(bob) * 0.6, z);
     this.camera.rotation.set(p.pitch, p.yaw, 0, 'YXZ');
@@ -1716,6 +1724,7 @@ export class Game {
     const t = this.interaction.target;
     return [
       `Saturncraft  ${this.fps} fps  draw calls ${ri.calls}  tris ${(ri.triangles / 1000).toFixed(0)}k`,
+      this.frameGraph.line(),
       `XYZ ${p.x.toFixed(2)} / ${p.y.toFixed(2)} / ${p.z.toFixed(2)}   chunk ${bx >> 4}, ${bz >> 4}`,
       `Facing yaw ${(((p.yaw * 180 / Math.PI) % 360 + 360) % 360).toFixed(0)}°  pitch ${(p.pitch * 180 / Math.PI).toFixed(0)}°`,
       `${w.dimension === 'overworld' ? `Biome ${biomeName(w.biomeAt(bx, bz))}` : `Dimension ${DIMENSIONS[w.dimension].name}`}   chunks ${w.chunks.size}`,

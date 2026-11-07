@@ -77,12 +77,19 @@ export class ItemEntity {
     this.dead = false;
     this.prev = [x, y, z];
     this.bob = Math.random() * Math.PI * 2;
+    this.rest = 0; // consecutive ticks spent lying still on the ground (a resting item only runs its physics every 4th tick)
   }
   get x() { return this.body.x; } get y() { return this.body.y; } get z() { return this.body.z; }
 
   tick(game) {
     const b = this.body;
-    this.prev = [b.x, b.y, b.z];
+    if (this.rest >= ITEM_SLEEP_AFTER && this.pickupDelay === 0 && (this.age & 3) !== 3) {
+      // asleep: nothing moves, so only count the age (the 4th tick below looks at the floor again, so a mined block still drops it)
+      const sv = this.prev; sv[0] = b.x; sv[1] = b.y; sv[2] = b.z;
+      if (++this.age >= 6000) this.dead = true;
+      return;
+    }
+    const pv = this.prev; pv[0] = b.x; pv[1] = b.y; pv[2] = b.z;
     if (this.pickupDelay > 0) this.pickupDelay--;
     b.updateFluidState(game.world, 0.1);
     if (b.inWater) { b.vy += 0.0005; b.vy = Math.min(b.vy * 0.95 + 0.01, 0.06); }
@@ -94,8 +101,14 @@ export class ItemEntity {
     if (b.onGround) b.vy *= -0.5;
     if (b.inLava) { this.dead = true; return; }
     if (++this.age >= 6000 || b.y < MIN_Y - 64) this.dead = true;
+    // lying still on a floor (not in a fluid): after a few such ticks the item goes to sleep
+    this.rest = b.onGround && !b.inWater && Math.abs(b.vx) < 0.004 && Math.abs(b.vz) < 0.004 && Math.abs(b.vy) < 0.06 ? this.rest + 1 : 0;
   }
 }
+
+/** Ticks an item lies still before it sleeps, and the most loose items kept in loaded chunks (the oldest ones vanish beyond it). */
+export const ITEM_SLEEP_AFTER = 8;
+export const MAX_LOOSE_ITEMS = 800;
 
 // Experience orb: drifts towards a player within 8 blocks and is absorbed on contact.
 let orbTexture = null;
@@ -552,6 +565,51 @@ function addCargoBox(g, variant, w, h, d, x, y, z) {
   if (variant === 'furnace') g.userData.front = front;
 }
 
+/**
+ * Merge item stacks lying within half a block of each other (the same pairs, in the same order, as comparing every item with
+ * every other one, but only items in neighbouring 1-block cells are compared, so a big pile costs about its size and not its
+ * square), then, if more than `cap` items remain, let the oldest vanish. `items` are live ItemEntities in list order.
+ * Returns the number removed by the cap.
+ */
+export function mergeItems(items, cap = MAX_LOOSE_ITEMS) {
+  const n = items.length;
+  if (n > 1) {
+    const cells = new Map();
+    const cellKey = (cx, cy, cz) => (cx + 2048) * 4194304 + (cz + 2048) * 1024 + ((cy + 512) & 1023);
+    for (let i = 0; i < n; i++) {
+      const a = items[i], k = cellKey(Math.floor(a.x), Math.floor(a.y), Math.floor(a.z));
+      const c = cells.get(k);
+      if (c) c.push(i); else cells.set(k, [i]);
+    }
+    const cand = [];
+    for (let i = 0; i < n; i++) {
+      const a = items[i];
+      if (a.dead) continue;
+      const fx = Math.floor(a.x), fy = Math.floor(a.y), fz = Math.floor(a.z);
+      cand.length = 0;
+      for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) for (let dy = -1; dy <= 1; dy++) {
+        const c = cells.get(cellKey(fx + dx, fy + dy, fz + dz));
+        if (c) for (const j of c) if (j > i) cand.push(j);
+      }
+      if (!cand.length) continue;
+      cand.sort((p, q) => p - q);
+      for (const j of cand) {
+        const b = items[j];
+        // (the cheap distance test first: canStack compares enchantments and fireworks)
+        if (a.dead || b.dead || a.recycled !== b.recycled || Math.abs(a.x - b.x) >= 0.5 || Math.abs(a.y - b.y) >= 0.5 || Math.abs(a.z - b.z) >= 0.5 || !canStack(a.stack, b.stack)) continue;
+        if (a.stack.count + b.stack.count <= maxStack(a.stack.id)) { a.stack.count += b.stack.count; b.dead = true; }
+      }
+    }
+  }
+  let alive = 0;
+  for (const e of items) if (!e.dead) alive++;
+  if (alive <= cap) return 0;
+  const old = items.filter((e) => !e.dead).sort((p, q) => q.age - p.age);
+  let cut = 0;
+  for (let i = 0; i < alive - cap; i++) { old[i].dead = true; cut++; }
+  return cut;
+}
+
 export class EntityManager {
   constructor(game) {
     this.game = game;
@@ -705,18 +763,8 @@ export class EntityManager {
       }
     }
     if (g.ticks % 200 === 0) this.trimFrozen();
-    // merge nearby identical item stacks
-    if (g.ticks % 10 === 0) {
-      const items = this.list.filter((e) => e.kind === 'item' && !e.dead);
-      for (let i = 0; i < items.length; i++) for (let j = i + 1; j < items.length; j++) {
-        const a = items[i], b = items[j];
-        // (the cheap distance test first: most pairs are far apart, and canStack compares enchantments and fireworks)
-        if (a.dead || b.dead || a.recycled !== b.recycled || Math.abs(a.x - b.x) >= 0.5 || Math.abs(a.y - b.y) >= 0.5 || Math.abs(a.z - b.z) >= 0.5 || !canStack(a.stack, b.stack)) continue;
-        if (a.stack.count + b.stack.count <= maxStack(a.stack.id)) {
-          a.stack.count += b.stack.count; b.dead = true;
-        }
-      }
-    }
+    // merge nearby identical item stacks, and keep the pile within MAX_LOOSE_ITEMS
+    if (g.ticks % 10 === 0) mergeItems(this.list.filter((e) => e.kind === 'item' && !e.dead));
     // remove dead
     // (in place: no new arrays every tick) dead non-mobs and removed mobs leave the list; a dead mob stays for its death animation
     const list = this.list;

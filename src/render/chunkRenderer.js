@@ -13,6 +13,7 @@ const LAYER_NAMES = ['opaque', 'cutout', 'trans'];
 const _frustum = new THREE.Frustum(), _m4 = new THREE.Matrix4(), _box = new THREE.Box3();
 const PAD_AREA = 18 * 18; // one step in y in a padded section (mesher.js pidx)
 const _near = new Array(9).fill(null);
+export const URGENT_BUDGET_MS = 8, URGENT_MIN = 4; // main-thread meshing per frame (see flushUrgent)
 /** Shadow pass: draw only the visible surface-layer sections inside the light's frustum. */
 function shadowRange(r, o, c, sc, g) {
   const s = o.userData.shadow;
@@ -130,25 +131,46 @@ export class ChunkRenderer {
     return true;
   }
 
-  /** Mesh dirty sections synchronously (used right after player edits). */
-  flushUrgent() {
+  /**
+   * Mesh dirty sections synchronously (used right after player edits). A big edit (an explosion, a fill) can dirty dozens of sections,
+   * and meshing a dense one takes up to ~15 ms, so after URGENT_MIN sections the rest wait for the next frame once `budgetMs` is spent
+   * (they stay dirty and urgent; the first few, which include the section the player edited, are always done at once).
+   */
+  flushUrgent(budgetMs = URGENT_BUDGET_MS) {
+    const t0 = performance.now();
+    let done = 0;
     for (const c of this.world.chunks.values()) {
       if (!c.urgent || !c.urgent.size) continue;
       // chunks only kept for simulation (beyond the view) are meshed when the player comes near
       if (Math.max(Math.abs(c.cx - this.center[0]), Math.abs(c.cz - this.center[1])) > this.renderDistance) { c.urgent.clear(); continue; }
       if (!this.neighboursLoaded(c)) { c.urgent.clear(); continue; }
+      let here = 0;
       for (const sy of c.urgent) {
+        if (done >= URGENT_MIN && performance.now() - t0 > budgetMs) break; // (the rest next frame)
+        c.urgent.delete(sy);
         c.dirty.delete(sy);
-        if (c.sectionNonAir[sy]) {
-          const sec = this.extractSection(c, sy);
-          this.applySection(c, sy, { ...meshSection(sec), vis: sectionVisibility(sec.blocks), sky: sectionHasSky(sec.light) });
-        } else this.applySection(c, sy, { opaque: null, cutout: null, trans: null });
+        this.meshUrgent(c, sy);
         this.pendingMesh.delete(chunkKey(c.cx, c.cz) * 32 + sy);
+        done++; here++;
       }
-      c.urgent.clear();
-      this.buildChunkGeometry(c);
-      this.edited = true;
+      if (here) { this.buildChunkGeometry(c); this.edited = true; }
     }
+    this.urgentLeft = this.countUrgent();
+    return done;
+  }
+
+  /** Sections still waiting to be meshed on the main thread. */
+  countUrgent() {
+    let n = 0;
+    for (const c of this.world.chunks.values()) if (c.urgent) n += c.urgent.size;
+    return n;
+  }
+
+  meshUrgent(c, sy) {
+    if (c.sectionNonAir[sy]) {
+      const sec = this.extractSection(c, sy);
+      this.applySection(c, sy, { ...meshSection(sec), vis: sectionVisibility(sec.blocks), sky: sectionHasSky(sec.light) });
+    } else this.applySection(c, sy, { opaque: null, cutout: null, trans: null });
   }
 
   applySection(c, sy, r) {
