@@ -95,6 +95,7 @@ export function lighthouseBlock(s, u, h, v) {
     if (h === ROOF + 3) return d < 1.2 ? [B.RED_CONCRETE, 0] : AIR;
     if (h === ROOF + 4) return u === 0 && v === 0 ? [B.CHAIN, 0] : AIR;
     if (h === ROOF + 5) return u === 0 && v === 0 ? [B.LANTERN, 1] : AIR;
+    if (h > ROOF + 5) return AIR; // the cleared air above the lantern: no second ring of glass floating over the roof
     if (wall) {
       if (h === 13) return [B.WHITE_CONCRETE, 0];
       return Math.abs(u) === 3 && Math.abs(v) === 3 ? [B.RED_CONCRETE, 0] : [B.LEADED_GLASS, 0];

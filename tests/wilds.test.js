@@ -31,7 +31,7 @@ const count = (chunk, id, meta) => { let n = 0; for (let i = 0; i < CHUNK_VOLUME
 describe('Highland Meadow biome', () => {
   it('is appended to the biome table with its own spawn table and tints', () => {
     expect(BIOME.HIGHLAND_MEADOW).toBe(23);
-    expect(BIOMES.length).toBe(24);
+    expect(BIOMES.length).toBeGreaterThanOrEqual(24); // (the ocean depths append Deep Ocean and Kelp Forest after it)
     BIOMES.forEach((b, i) => expect(b.id).toBe(i)); // ids are never renumbered
     expect(BIOMES[23].key).toBe('highland_meadow');
     expect(BIOMES[23].temp).toBeGreaterThan(0.15); // no snow

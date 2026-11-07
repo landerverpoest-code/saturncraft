@@ -742,6 +742,6 @@ describe('Field Guide, Help, README and balance hooks', () => {
     expect(I.COOKED_CRAB).toBe(I.RAW_CRAB + 1);
     expect(I.TALLOW).toBe(I.RAW_CRAB + 2);
     expect(I.THISTLE_HARNESS).toBeLessThan(I.RAW_CRAB);
-    expect(BIOMES.length).toBe(24); // no biome was added
+    expect(BIOMES.length).toBeGreaterThanOrEqual(24); // (this pack added no biome; the ocean depths round appends Deep Ocean and Kelp Forest after it)
   });
 });

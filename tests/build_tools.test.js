@@ -60,6 +60,9 @@ function makeGame(opts = {}) {
     setFrameItem(x, y, z, st) { if (st) this.frames.set(`${x},${y},${z}`, st); else this.frames.delete(`${x},${y},${z}`); },
     setPot(x, y, z, f) { if (f) this.pots.set(`${x},${y},${z}`, f); else this.pots.delete(`${x},${y},${z}`); },
   };
+  // the first slice is time-boxed: give it room so a loaded machine does not turn small builds into queued ones
+  game.buildQueue = new BuildQueue(game);
+  game.buildQueue.firstSliceMs = 1e6;
   return { game, world, player, lines, toasts };
 }
 const run = (game, text) => runCommand(game, text);

@@ -13,6 +13,7 @@ import { protectionFactor, protectionReduce } from '../world/enchantments.js';
 import { crawlNext } from './crawl.js';
 import { newShield, shieldTick } from './shield.js';
 import { newStats, recordMove, moveMode } from './stats.js';
+import { helmUsable, helmWears } from './diving.js';
 import { gliderUsable, canStartGliding, glideStep, rocketBoost, wallDamage, wearsThisTick } from './glider.js';
 import { EFFECTS, addEffect as stackEffect, tickEffects, effectLevel, speedFactor, jumpBonus, fallDamageWithEffects, periodicActions, instantAmount, resistanceFactor } from './effects.js';
 
@@ -323,6 +324,11 @@ export class Player {
     // a Shellback Helmet gives 10 s of Water Breathing, kept full while the head is above water
     const helm = this.inventory.armor[0];
     if (helm && helm.id === I.TURTLE_SHELL && !b.eyeInWater && (!fx.water_breathing || fx.water_breathing.ticks < 100)) this.addEffect('water_breathing', 200);
+    // a Diver's Helm breathes for its wearer under water, wearing a point every 3 seconds (player/diving.js)
+    if (b.eyeInWater && helmUsable(helm)) {
+      if (!fx.water_breathing || fx.water_breathing.ticks < 40) this.addEffect('water_breathing', 100);
+      if (!this.creative && helmWears(this.diveTicks = (this.diveTicks | 0) + 1)) { helm.damage = (helm.damage | 0) + 1; this.inventory.changed(); }
+    }
     if (b.eyeInWater && !fx.water_breathing) {
       this.air--;
       if (this.air <= -20) { this.air = 0; this.hurt(2, 'drown'); }
