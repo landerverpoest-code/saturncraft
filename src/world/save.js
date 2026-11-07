@@ -7,6 +7,7 @@ import { cleanCamp } from './campfireCooking.js';
 import { encodeMap, decodeMap } from './maps.js';
 import { chunkKey } from './world.js';
 import { cleanEffects } from '../player/effects.js';
+import { cleanTrinkets } from '../player/trinkets.js';
 import { liveStands, loadStands } from '../entities/armorStand.js';
 import { saveState as saveCaravanState, loadState as loadCaravanState } from '../mobs/peddler.js';
 import { saveStats, loadStats } from '../player/stats.js';
@@ -69,7 +70,7 @@ export function playerSaveData(p) {
   return {
     x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch, health: p.health,
     food: p.hunger.food, saturation: p.hunger.saturation, exhaustion: p.hunger.exhaustion,
-    air: p.air, spawn: p.spawn, bed: p.bed || null, slots: p.inventory.slots, armor: p.inventory.armor, xp: p.xp, gamemode: p.gamemode, flying: p.flying, selected: p.inventory.selected, enchSeed: p.enchSeed,
+    air: p.air, spawn: p.spawn, bed: p.bed || null, slots: p.inventory.slots, armor: p.inventory.armor, trinkets: p.inventory.trinkets, xp: p.xp, gamemode: p.gamemode, flying: p.flying, selected: p.inventory.selected, enchSeed: p.enchSeed,
     effects: p.effects,
     reputation: cleanReputation(p.reputation), // what villages think of the player (mobs/reputation.js)
     blueprints: cleanBlueprints(p.blueprints), // named building blueprints (world/buildTools.js, ui/buildCommands.js)
@@ -208,6 +209,7 @@ export function applyPlayerSave(game, d) {
   p.air = d.air; p.spawn = d.spawn; p.bed = d.bed || null;
   p.inventory.slots = d.slots.map((s) => (s ? { ...s } : null));
   if (d.armor) p.inventory.armor = d.armor.map((s) => (s ? { ...s } : null));
+  p.inventory.trinkets = cleanTrinkets(d.trinkets); // (older saves and guests without them have none)
   if (d.xp) p.xp = { ...d.xp };
   if (Number.isInteger(d.enchSeed)) p.enchSeed = d.enchSeed;
   p.effects = cleanEffects(d.effects);

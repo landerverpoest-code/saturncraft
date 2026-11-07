@@ -37,6 +37,7 @@ import './oceanSky.js'; // registers the Lanternfin, Trenchmaw and Skyray
 import { moraleAI, soundAlarm } from './morale.js';
 import './peddler.js'; // registers the Roving Peddler and its Packhorns
 import { gazeProvokes } from './pumpkins.js';
+import { onPlayerHit } from '../player/weapons.js';
 import { isShield, isCharm, shieldBlocks, disablesShield, wearShield, charmHealth, charmIgnores, offhandDrops, offhandFromSave, OFFHAND_KINDS } from './offhand.js';
 import { companionAI, companionSave, companionLoad } from './companions.js'; // tame Vixlings, Cragbucks, Hoppers, Bristlebacks and Frostbears
 import { breedCooldownTicks } from '../world/seasons.js'; // parents wait less in spring, longer in winter
@@ -348,6 +349,7 @@ export class Mob {
 
   hurt(dmg, source, attacker = null, knockback = 0.4, projectile = null) {
     if (this.deathTime > 0 || this.removed) return false;
+    const rawDmg = dmg; // (before armour: a Warhammer's stagger asks whether the swing was a full one)
     if ((this.def.fireImmune || this.effects.fire_resistance) && (source === 'fire' || source === 'lava' || source === 'fireball')) return false;
     if (this.def.onHurt) { dmg = this.def.onHurt(this, dmg, source, attacker); if (dmg <= 0) return false; }
     if (this.type === 'voidwalker' && projectile) {
@@ -367,6 +369,7 @@ export class Mob {
     this.health -= dmg;
     this.noActionTime = 0;
     this.lastSource = source;
+    if (source === 'player' && !projectile && attacker && attacker.isPlayer && this.health > 0) onPlayerHit(this, attacker, rawDmg); // Warhammer stagger (player/weapons.js)
     if (attacker && (attacker.isPlayer || attacker.tamed)) this.lastHurtByPlayer = 100;
     if (this.def.knockbackResist && !this.def.guard) knockback = 0; // the Hushkeeper stands its ground
     if (attacker && knockback > 0) {

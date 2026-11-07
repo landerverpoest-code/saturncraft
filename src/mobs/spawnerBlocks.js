@@ -61,7 +61,7 @@ export class SpawnerBlocks {
 // Dungeon chest loot: a few valuable rolls and three rolls of mob junk.
 export const LOOT_A = [
   [I.IRON_INGOT, 1, 4, 10], [I.GOLD_INGOT, 1, 4, 5], [I.BREAD, 1, 1, 20], [I.WHEAT, 1, 4, 20], [I.COAL, 1, 4, 15],
-  [I.CINNABAR, 1, 4, 15], [I.BUCKET, 1, 1, 10], [I.CARROT, 1, 3, 10], [I.DIAMOND, 1, 2, 3], [I.IRON_CHESTPLATE, 1, 1, 2], [I.GILDED_APPLE, 1, 1, 15], [I.NAME_TAG, 1, 1, 20], [I.LEAD, 1, 1, 10], ...DISCS.map((id) => [id, 1, 1, 2]),
+  [I.CINNABAR, 1, 4, 15], [I.BUCKET, 1, 1, 10], [I.CARROT, 1, 3, 10], [I.DIAMOND, 1, 2, 3], [I.IRON_CHESTPLATE, 1, 1, 2], [I.GILDED_APPLE, 1, 1, 15], [I.NAME_TAG, 1, 1, 20], [I.LEAD, 1, 1, 10], [I.WARDING_AMULET, 1, 1, 2], [I.IRON_DAGGER, 1, 1, 2], ...DISCS.map((id) => [id, 1, 1, 2]),
 ];
 export const LOOT_B = [[I.BONE, 1, 8, 10], [I.GUNPOWDER, 1, 8, 10], [I.ROTTEN_FLESH, 1, 8, 10], [I.STRING, 1, 8, 10]];
 
@@ -78,12 +78,12 @@ function pick(table, rng) {
 // (`always`: [id, min, max] stacks every such chest holds besides its rolls)
 export const LOOT = { DEEP_HUSH: 12, DUNGEON: 0, MINESHAFT: 1, DESERT: 2, JUNGLE: 3, IGLOO: 4, WRECK: 5, OUTPOST: 6, RUIN: 7, WRECK_TREASURE: 8, WRECK_MAP: 9, HOLLOW_CITY: LOOT_CITY, HOLLOW_SHIP: LOOT_SHIP };
 export const STRUCTURE_LOOT = {
-  [LOOT.MINESHAFT]: [[[I.GILDED_APPLE, 1, 1, 20], [I.IRON_INGOT, 1, 5, 10], [I.GOLD_INGOT, 1, 3, 5], [I.CINNABAR, 4, 9, 5], [I.AZURITE, 4, 9, 5], [I.DIAMOND, 1, 2, 3], [I.COAL, 3, 8, 10], [I.BREAD, 1, 3, 15], [B.RAIL, 4, 8, 20], [I.MELON_SLICE, 2, 4, 10], [I.PUMPKIN_PIE, 1, 2, 5], [I.IRON_PICKAXE, 1, 1, 2]], 3, 6],
-  [LOOT.DESERT]: [[[I.GILDED_APPLE, 1, 1, 20], [I.DIAMOND, 1, 3, 5], [I.IRON_INGOT, 1, 5, 15], [I.GOLD_INGOT, 2, 7, 15], [I.BERYL, 1, 3, 15], [I.BONE, 4, 6, 25], [I.SPIDER_EYE, 1, 3, 25], [I.ROTTEN_FLESH, 3, 7, 25], [I.SADDLE, 1, 1, 20], [I.GOLD_CHESTPLATE, 1, 1, 3]], 2, 5],
-  [LOOT.JUNGLE]: [[[I.DIAMOND, 1, 3, 3], [I.IRON_INGOT, 1, 5, 10], [I.GOLD_INGOT, 2, 7, 15], [I.BERYL, 1, 3, 2], [I.BONE, 4, 6, 20], [I.ROTTEN_FLESH, 3, 7, 16], [I.SADDLE, 1, 1, 3], [I.COCOA_BEANS, 2, 5, 10]], 2, 6],
+  [LOOT.MINESHAFT]: [[[I.GILDED_APPLE, 1, 1, 20], [I.IRON_INGOT, 1, 5, 10], [I.GOLD_INGOT, 1, 3, 5], [I.CINNABAR, 4, 9, 5], [I.AZURITE, 4, 9, 5], [I.DIAMOND, 1, 2, 3], [I.COAL, 3, 8, 10], [I.BREAD, 1, 3, 15], [B.RAIL, 4, 8, 20], [I.MELON_SLICE, 2, 4, 10], [I.PUMPKIN_PIE, 1, 2, 5], [I.IRON_PICKAXE, 1, 1, 2], [I.MINERS_LOUPE, 1, 1, 2], [I.LANTERN_CHARM, 1, 1, 2], [I.LODESTONE_CHARM, 1, 1, 1]], 3, 6],
+  [LOOT.DESERT]: [[[I.GILDED_APPLE, 1, 1, 20], [I.DIAMOND, 1, 3, 5], [I.IRON_INGOT, 1, 5, 15], [I.GOLD_INGOT, 2, 7, 15], [I.BERYL, 1, 3, 15], [I.BONE, 4, 6, 25], [I.SPIDER_EYE, 1, 3, 25], [I.ROTTEN_FLESH, 3, 7, 25], [I.SADDLE, 1, 1, 20], [I.GOLD_CHESTPLATE, 1, 1, 3], [I.FLEET_ANKLET, 1, 1, 3], [I.STONE_GLAIVE, 1, 1, 2]], 2, 5],
+  [LOOT.JUNGLE]: [[[I.DIAMOND, 1, 3, 3], [I.IRON_INGOT, 1, 5, 10], [I.GOLD_INGOT, 2, 7, 15], [I.BERYL, 1, 3, 2], [I.BONE, 4, 6, 20], [I.ROTTEN_FLESH, 3, 7, 16], [I.SADDLE, 1, 1, 3], [I.COCOA_BEANS, 2, 5, 10], [I.FLEET_ANKLET, 1, 1, 2]], 2, 6],
   [LOOT.IGLOO]: [[[I.GILDED_APPLE, 1, 1, 1], [I.APPLE, 1, 3, 15], [I.COAL, 1, 4, 15], [I.GOLD_INGOT, 1, 1, 1], [I.STONE_AXE, 1, 1, 2], [I.ROTTEN_FLESH, 1, 1, 10], [I.WHEAT, 2, 3, 10], [I.BERYL, 1, 1, 1], [I.GLASS_VIAL, 1, 2, 4]], 2, 8, [[I.GILDED_APPLE, 1, 1]]],
-  [LOOT.OUTPOST]: [[[I.WHEAT, 3, 5, 7], [I.POTATO, 2, 5, 5], [I.CARROT, 3, 5, 5], [I.ARROW, 2, 7, 4], [I.IRON_INGOT, 1, 3, 3], [I.STRING, 1, 6, 4], [I.BOW, 1, 1, 2], [I.CROSSBOW, 1, 1, 2], [B.DARK_OAK_LOG, 2, 3, 10]], 2, 4],
-  [LOOT.RUIN]: [[[I.GILDED_APPLE, 1, 1, 15], [B.OBSIDIAN, 1, 2, 40], [I.FLINT, 1, 4, 40], [I.GOLD_NUGGET, 4, 24, 15], [I.FLINT_AND_STEEL, 1, 1, 40], [I.GOLD_INGOT, 2, 8, 15], [I.GILDED_CARROT, 4, 12, 15], [I.GILDED_MELON_SLICE, 4, 12, 5], [I.GOLD_SWORD, 1, 1, 15], [I.GOLD_PICKAXE, 1, 1, 15], [I.GOLD_HELMET, 1, 1, 15], [I.GOLD_CHESTPLATE, 1, 1, 15], [I.GOLD_BOOTS, 1, 1, 15], [B.GOLD_BLOCK, 1, 2, 1]], 4, 8],
+  [LOOT.OUTPOST]: [[[I.WHEAT, 3, 5, 7], [I.POTATO, 2, 5, 5], [I.CARROT, 3, 5, 5], [I.ARROW, 2, 7, 4], [I.IRON_INGOT, 1, 3, 3], [I.STRING, 1, 6, 4], [I.BOW, 1, 1, 2], [I.CROSSBOW, 1, 1, 2], [I.IRON_GLAIVE, 1, 1, 2], [I.STONE_WARHAMMER, 1, 1, 2], [I.IRON_DISC, 1, 1, 1], [B.DARK_OAK_LOG, 2, 3, 10]], 2, 4],
+  [LOOT.RUIN]: [[[I.GILDED_APPLE, 1, 1, 15], [B.OBSIDIAN, 1, 2, 40], [I.FLINT, 1, 4, 40], [I.GOLD_NUGGET, 4, 24, 15], [I.FLINT_AND_STEEL, 1, 1, 40], [I.GOLD_INGOT, 2, 8, 15], [I.GILDED_CARROT, 4, 12, 15], [I.IRON_WARHAMMER, 1, 1, 1], [I.LODESTONE_CHARM, 1, 1, 2], [I.GILDED_MELON_SLICE, 4, 12, 5], [I.GOLD_SWORD, 1, 1, 15], [I.GOLD_PICKAXE, 1, 1, 15], [I.GOLD_HELMET, 1, 1, 15], [I.GOLD_CHESTPLATE, 1, 1, 15], [I.GOLD_BOOTS, 1, 1, 15], [B.GOLD_BLOCK, 1, 2, 1]], 4, 8],
   // shipwreck holds: supplies in the bow, treasure under the stern, charts in the stern cabin
   [LOOT.WRECK]: [[[I.PAPER, 1, 12, 8], [I.COAL, 2, 8, 6], [I.WHEAT, 8, 21, 7], [I.CARROT, 4, 8, 7], [I.POTATO, 2, 6, 7], [I.BREAD, 1, 4, 7], [I.DRIED_KELP, 2, 8, 5], [I.PUMPKIN_PIE, 1, 2, 3], [I.ROTTEN_FLESH, 5, 24, 5], [I.LEATHER_HELMET, 1, 1, 3], [I.LEATHER_CHESTPLATE, 1, 1, 3], [B.TNT, 1, 2, 1], [I.NAME_TAG, 1, 1, 3]], 3, 8],
   [LOOT.WRECK_TREASURE]: [[[I.IRON_INGOT, 1, 5, 90], [I.GOLD_INGOT, 1, 5, 10], [I.IRON_NUGGET, 1, 10, 50], [I.GOLD_NUGGET, 1, 10, 50], [I.BERYL, 1, 5, 40], [I.DIAMOND, 1, 1, 5], [I.AZURITE, 1, 10, 20]], 3, 6, [[I.BERYL, 1, 3]]],
@@ -95,8 +95,8 @@ export const STRUCTURE_LOOT = {
 // Sun Tomb chambers and Sunken Ruin chests (the free chest-meta kinds 10 and 15, world/sunTombs.js, world/sunkenRuins.js)
 LOOT.TOMB = 10;
 LOOT.SUNKEN = 15;
-STRUCTURE_LOOT[LOOT.TOMB] = [[[I.GOLD_INGOT, 2, 8, 20], [I.GOLD_NUGGET, 3, 12, 15], [I.BERYL, 1, 4, 15], [I.DIAMOND, 1, 2, 4], [I.GILDED_APPLE, 1, 1, 6], [I.IRON_INGOT, 1, 5, 12], [I.BONE, 3, 8, 25], [I.ROTTEN_FLESH, 3, 8, 20], [I.SPIDER_EYE, 1, 3, 12], [I.SADDLE, 1, 1, 5], [I.GOLD_CHESTPLATE, 1, 1, 3], [SHERD_ITEMS[0], 1, 1, 3], [SHERD_ITEMS[1], 1, 1, 3], [I.GUNPOWDER, 2, 5, 12]], 3, 6, [[I.GOLD_INGOT, 1, 3]]];
-STRUCTURE_LOOT[LOOT.SUNKEN] = [[[I.TIDE_CRYSTAL, 1, 4, 20], [I.TIDE_SHARD, 2, 6, 20], [I.BERYL, 1, 4, 12], [I.AZURITE, 2, 8, 12], [I.DIAMOND, 1, 2, 5], [I.GOLD_INGOT, 1, 4, 10], [I.IRON_NUGGET, 2, 8, 15], [I.SCUTE, 1, 2, 5], [I.TIDESPEAR, 1, 1, 2], [I.DRIED_KELP, 2, 8, 12], [I.INK_SAC, 1, 3, 10], [I.GILDED_APPLE, 1, 1, 3], [I.BOOK, 1, 2, 6]], 3, 6, [[I.TIDE_CRYSTAL, 1, 2]]];
+STRUCTURE_LOOT[LOOT.TOMB] = [[[I.GOLD_INGOT, 2, 8, 20], [I.GOLD_NUGGET, 3, 12, 15], [I.BERYL, 1, 4, 15], [I.DIAMOND, 1, 2, 4], [I.GILDED_APPLE, 1, 1, 6], [I.IRON_INGOT, 1, 5, 12], [I.BONE, 3, 8, 25], [I.ROTTEN_FLESH, 3, 8, 20], [I.SPIDER_EYE, 1, 3, 12], [I.SADDLE, 1, 1, 5], [I.GOLD_CHESTPLATE, 1, 1, 3], [SHERD_ITEMS[0], 1, 1, 3], [SHERD_ITEMS[1], 1, 1, 3], [I.GUNPOWDER, 2, 5, 12], [I.WARDING_AMULET, 1, 1, 3], [I.EMBER_BAND, 1, 1, 2]], 3, 6, [[I.GOLD_INGOT, 1, 3]]];
+STRUCTURE_LOOT[LOOT.SUNKEN] = [[[I.TIDE_CRYSTAL, 1, 4, 20], [I.TIDE_SHARD, 2, 6, 20], [I.BERYL, 1, 4, 12], [I.AZURITE, 2, 8, 12], [I.DIAMOND, 1, 2, 5], [I.GOLD_INGOT, 1, 4, 10], [I.IRON_NUGGET, 2, 8, 15], [I.SCUTE, 1, 2, 5], [I.TIDESPEAR, 1, 1, 2], [I.DRIED_KELP, 2, 8, 12], [I.INK_SAC, 1, 3, 10], [I.GILDED_APPLE, 1, 1, 3], [I.BOOK, 1, 2, 6], [I.STONE_DISC, 1, 1, 3], [I.LODESTONE_CHARM, 1, 1, 2]], 3, 6, [[I.TIDE_CRYSTAL, 1, 2]]];
 
 // the store rooms and galleries of the Proving Vaults (world/provingVaults.js)
 LOOT.PROVING_VAULTS = VAULTS_LOOT;

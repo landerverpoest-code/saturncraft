@@ -12,6 +12,7 @@ import * as THREE from 'three';
 import { World } from './world/world.js';
 import { B, BLOCKS, SOLID, SHAPE, isFurnace, FURNACE_KIND, isBox } from './world/blocks.js';
 import { ITEMS, I, toolOf, heldLightLevel, DISCS } from './world/items.js';
+import { gearBonuses } from './player/gear.js';
 import { lampLevel, underwaterView } from './player/diving.js';
 import { heldLights } from './net/remotePlayer.js';
 import { EMOTES } from './net/social.js';
@@ -567,7 +568,7 @@ export class Game {
       const st = p.inventory.slots[i];
       if (st) this.entities.spawnItem(p.x, p.y + 1, p.z, st, [(Math.random() - 0.5) * 0.5, 0.2, (Math.random() - 0.5) * 0.5]);
     }
-    for (const st of p.inventory.armor) if (st) this.entities.spawnItem(p.x, p.y + 1, p.z, st, [(Math.random() - 0.5) * 0.5, 0.2, (Math.random() - 0.5) * 0.5]);
+    for (const st of p.inventory.armor.concat(p.inventory.trinkets)) if (st) this.entities.spawnItem(p.x, p.y + 1, p.z, st, [(Math.random() - 0.5) * 0.5, 0.2, (Math.random() - 0.5) * 0.5]);
     this.entities.spawnXp(p.x, p.y + 0.5, p.z, deathXp(p.xp.level));
     p.xp = newXp();
     p.inventory.clear();
@@ -1575,7 +1576,7 @@ export class Game {
     if (this.darkness > 0) terrainUniforms.uMinLight.value *= 1 - this.darkness;
     // a torch (or any light-giving block) in the hand lights up the area around the player
     const held = p.dead ? null : p.inventory.selectedStack;
-    this.handLight = p.dead ? 0 : Math.max(held ? heldLightLevel(held.id) : 0, b.eyeInWater ? lampLevel(p.inventory) : 0); // (a Diver's Helm lights the way under water)
+    this.handLight = p.dead ? 0 : Math.max(held ? heldLightLevel(held.id) : 0, b.eyeInWater ? lampLevel(p.inventory) : 0, gearBonuses(p.inventory).light); // (a Diver's Helm lights the way under water)
     terrainUniforms.uHand.value = this.handLight;
     const ss = this.shaftSun(st, 0);
     if (ss) { terrainUniforms.uSunDir.value.set(ss.dir[0], ss.dir[1], ss.dir[2]); terrainUniforms.uSunCol.value.copy(ss.color).multiplyScalar(Math.min(1, ss.strength * 1.6)); }

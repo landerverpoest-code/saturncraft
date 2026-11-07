@@ -255,13 +255,14 @@ const GEAR = {
 };
 
 const toolGridCache = new Map();
-function toolGrid(t) {
+/** The 16x16 colour grid of a tool or weapon icon (also the model of the extruded held weapon, render/weaponModel.js). */
+export function toolGrid(t) {
   const key = t.type + ':' + t.material;
   if (!toolGridCache.has(key)) {
     const head = materialRamp(t.material, MATERIALS[t.material].color);
     // sword guard/pommel and tool bindings use a darker take on the material
     const acc = { ...head, hi: head.mid, mid: head.lo, lo: head.out, glint: head.hi };
-    toolGridCache.set(key, paintTemplate(TOOL_TEMPLATES[t.type], { head, acc, wood: WOOD_HANDLE }));
+    toolGridCache.set(key, paintTemplate(TOOL_TEMPLATES[t.type] || GEAR_TEMPLATES[t.type], { head, acc, wood: WOOD_HANDLE }));
   }
   return toolGridCache.get(key);
 }
@@ -292,6 +293,7 @@ function itemIcon(d) {
   let tpl, colors;
   if (d.dial) { const c = document.createElement('canvas'); c.width = c.height = 32; drawDial(c, d.dial, 0, 1, 2); return c; }
   if (d.tool) return gridCanvas(toolGrid(d.tool));
+  if (d.weapon && d.weapon.material) return gridCanvas(toolGrid(d.weapon)); // Warhammer, Dagger, Glaive, Returning Disc
   if (GEAR[d.key]) return gridCanvas(paintTemplate(GEAR_TEMPLATES[GEAR[d.key][0]], GEAR[d.key][1]));
   if (d.tipped) { const a = GEAR.arrow[1]; return gridCanvas(paintTemplate(GEAR_TEMPLATES.arrow, { ...a, head: ramp(d.gear[1].tip, { hiMix: 0.5 }) })); }
   if (d.woolColor) {

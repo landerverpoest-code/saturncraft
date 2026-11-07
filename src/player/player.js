@@ -15,9 +15,12 @@ import { newShield, shieldTick } from './shield.js';
 import { newStats, recordMove, moveMode } from './stats.js';
 import { helmUsable, helmWears } from './diving.js';
 import { gliderUsable, canStartGliding, glideStep, rocketBoost, wallDamage, wearsThisTick } from './glider.js';
+import { gearBonuses } from './gear.js';
 import { EFFECTS, addEffect as stackEffect, tickEffects, effectLevel, speedFactor, jumpBonus, fallDamageWithEffects, periodicActions, instantAmount, resistanceFactor } from './effects.js';
 
 const FIRE_SOURCES = new Set(['fire', 'lava', 'fireball']);
+const WARDED_SOURCES = new Set(['arrow', 'explosion', 'fireball', 'magic', 'thrown', 'sonic']); // (a Warding Amulet also stops what creatures deal: player/trinkets.js)
+const NO_PROTECT = new Set(['void', 'kill', 'starve', 'generic']);
 
 export class Player {
   constructor() {
@@ -119,8 +122,11 @@ export class Player {
       }
     }
     // Bulwark (all damage but the void / starving) and Featherstep (falls) on worn armour
-    const epf = protectionFactor(this.inventory.armor, source);
+    const gear = gearBonuses(this.inventory); // armour set bonuses and trinkets (player/gear.js)
+    const epf = protectionFactor(this.inventory.armor, source) + (NO_PROTECT.has(source) ? 0 : gear.protect);
     if (epf > 0) amount = protectionReduce(amount, epf);
+    if (gear.fireResist && (FIRE_SOURCES.has(source) || source === 'burn')) amount *= 1 - gear.fireResist;
+    if (gear.ward && (WARDED_SOURCES.has(source) || source.startsWith('mob:') || (attacker && attacker.kind === 'mob'))) amount *= 1 - gear.ward;
     // Resistance: a fifth less damage per level (all of it from level V); not the void
     amount *= resistanceFactor(this.effects, source);
     // Absorption's golden hearts take the damage first
@@ -132,9 +138,10 @@ export class Player {
       // knockback away from attacker
       const dx = this.x - attacker.x, dz = this.z - attacker.z;
       const d = Math.hypot(dx, dz) || 1;
-      this.body.vx = this.body.vx / 2 + (dx / d) * 0.4;
-      this.body.vz = this.body.vz / 2 + (dz / d) * 0.4;
-      if (this.body.onGround) this.body.vy = Math.min(0.4, this.body.vy / 2 + 0.4);
+      const kb = 0.4 * (1 - gear.knockResist); // Ironclad set
+      this.body.vx = this.body.vx / 2 + (dx / d) * kb;
+      this.body.vz = this.body.vz / 2 + (dz / d) * kb;
+      if (this.body.onGround) this.body.vy = Math.min(0.4, this.body.vy / 2 + kb);
     }
     for (const f of this.listeners.hurt) f(amount, source);
     if (this.health <= 0 && source !== 'void' && source !== 'kill' && this.useCharm()) return true;
@@ -267,7 +274,7 @@ export class Player {
       jump: input.jump && !this.crawling && (this.jumpCooldown === 0 || b.inWater || b.inLava),
       sprint: this.sprinting, sneak: this.sneaking, crawl: this.crawling, swim: this.swimming, pitch: this.pitch,
       flying: this.flying, descend: this.flying && !!input.sneak,
-      speed: PHYS.WALK_SPEED * speedFactor(fx) * (this.eventSlow || 1), // a dust storm slows travellers (world/events.js)
+      speed: PHYS.WALK_SPEED * speedFactor(fx) * (1 + gearBonuses(this.inventory).speed) * (this.eventSlow || 1), // a dust storm slows travellers (world/events.js)
       jumpFactor: 1 + jumpBonus(fx) / PHYS.JUMP_VELOCITY,
       slowFall: !!fx.slow_falling,
       levitation: effectLevel(fx, 'levitation'),
@@ -282,7 +289,7 @@ export class Player {
     if (this.creative) this.hunger.exhaustion = 0;
     const dist = Math.hypot(b.x - x0, b.z - z0);
     if (b.inWater) this.hunger.addExhaustion(EXHAUSTION.SWIM_PER_M * Math.hypot(dist, b.y - y0));
-    else if (this.sprinting && wasOnGround) this.hunger.addExhaustion(EXHAUSTION.SPRINT_PER_M * dist);
+    else if (this.sprinting && wasOnGround) this.hunger.addExhaustion(EXHAUSTION.SPRINT_PER_M * dist * (1 - gearBonuses(this.inventory).sprintSave));
     if (b.jumped) this.hunger.addExhaustion(this.sprinting ? EXHAUSTION.SPRINT_JUMP : EXHAUSTION.JUMP);
 
     // Fall damage on landing

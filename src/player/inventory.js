@@ -1,6 +1,7 @@
 // Slot-based inventory. Stacks are {id, count, damage?, ench?, rw?} (see world/enchantments.js).
 import { maxStack, ITEMS } from '../world/items.js';
 import { canStack, durabilityLoss } from '../world/enchantments.js';
+import { gearBonuses } from './gear.js';
 
 export function stack(id, count = 1, damage = 0) { return { id, count, damage }; }
 /** Can these two stacks merge? (same item, no durability, same enchantments) */
@@ -10,6 +11,7 @@ export class Inventory {
   constructor(size = 36) {
     this.slots = new Array(size).fill(null);
     this.armor = [null, null, null, null]; // helmet, chestplate, leggings, boots
+    this.trinkets = [null, null];          // two charm slots (player/trinkets.js)
     this.creative = false;                 // creative: using items never consumes or wears them
     this.selected = 0;
     this.listeners = [];
@@ -64,6 +66,7 @@ export class Inventory {
     const d = ITEMS[s.id];
     if (!d || !d.durability) return false;
     amount = durabilityLoss(s, amount, rng); // Steadfast may spare it
+    if (amount && rng() < gearBonuses(this).wearSave) amount = 0; // the Gilded armour set spares some wear
     if (!amount) return false;
     s.damage = (s.damage || 0) + amount;
     if (s.damage >= d.durability) { this.slots[this.selected] = null; this.changed(); for (const f of this.breakListeners) f(d); return true; }
@@ -71,5 +74,5 @@ export class Inventory {
     return false;
   }
 
-  clear() { this.slots.fill(null); this.armor.fill(null); this.changed(); }
+  clear() { this.slots.fill(null); this.armor.fill(null); this.trinkets.fill(null); this.changed(); }
 }

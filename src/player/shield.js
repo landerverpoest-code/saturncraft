@@ -43,8 +43,8 @@ export function attackerDisablesShield(attacker) {
   const hand = attacker.equip && attacker.equip.hand
     ? attacker.equip.hand
     : attacker.inventory && attacker.inventory.selectedStack ? attacker.inventory.selectedStack : null;
-  const t = hand && ITEMS[hand.id] && ITEMS[hand.id].tool;
-  return !!t && t.type === 'axe';
+  const d = hand && ITEMS[hand.id];
+  return !!d && ((!!d.tool && d.tool.type === 'axe') || !!(d.weapon && d.weapon.breaksShield)); // an axe or a Warhammer
 }
 
 /** Durability the shield loses for a blocked hit of `amount` damage (a parry costs nothing). */

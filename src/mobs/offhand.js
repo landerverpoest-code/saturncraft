@@ -70,7 +70,7 @@ export function shieldBlocks(st, mob, from, source, roll = Math.random()) {
 }
 
 /** Does this held stack splinter a shield at one blow (an axe)? */
-export const disablesShield = (st) => !!st && !!ITEMS[st.id] && !!ITEMS[st.id].tool && ITEMS[st.id].tool.type === 'axe';
+export const disablesShield = (st) => !!st && !!ITEMS[st.id] && ((!!ITEMS[st.id].tool && ITEMS[st.id].tool.type === 'axe') || !!(ITEMS[st.id].weapon && ITEMS[st.id].weapon.breaksShield)); // an axe or a Warhammer
 
 /** Wear the shield by the damage it stopped; returns true when it broke (damage is added to the stack). */
 export function wearShield(st, amount) {

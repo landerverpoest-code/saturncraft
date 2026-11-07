@@ -44,6 +44,8 @@ export const ENCHANTS = {
   forgebite:   { name: 'Forgebite',   max: 3, weight: 1,  table: [], anvil: ['sword', 'axe', 'spear'], min: lin(30, 5), cap: 50, treasure: true, temper: true },  // +1 melee damage a level
   forgeward:   { name: 'Forgeward',   max: 3, weight: 1,  table: [], anvil: ['armor'], min: lin(30, 5), cap: 50, treasure: true, temper: true },                 // +1 protection a level against fire, lava and blasts
   forgegrip:   { name: 'Forgegrip',   max: 3, weight: 1,  table: [], anvil: ['tool'], min: lin(30, 5), cap: 50, treasure: true, temper: true },                  // +1.5 mining speed a level
+  // Farflight: a Returning Disc flies three blocks further a level before it turns (entities/disc.js)
+  farflight:   { name: 'Farflight',   max: 3, weight: 5,  table: ['disc'], min: lin(5, 10), span: 25 },
   // Sunmend (reference: mending): gear it is on is repaired by the experience you pick up, two points of wear for each point
   sunmend:     { name: 'Sunmend',     max: 1, weight: 1,  table: [], anvil: ['sword', 'tool', 'armor', 'bow', 'spear', 'shears', 'gear'], min: () => 30, cap: 50, treasure: true, excludes: ['endless'] },
 };
@@ -58,7 +60,7 @@ for (const k of ENCH_KEYS) {
 
 // Enchantability per material (higher = better bonus rolls). 0 = cannot be enchanted at a table.
 export const TOOL_ENCHANTABILITY = { wood: 15, stone: 5, iron: 14, gold: 22, diamond: 10, slagsteel: 12 };
-export const ARMOR_ENCHANTABILITY = { leather: 15, gold: 25, iron: 9, diamond: 10, dirge: 14 };
+export const ARMOR_ENCHANTABILITY = { leather: 15, gold: 25, iron: 9, diamond: 10, dirge: 14, slagsteel: 12 };
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 export const roman = (n) => ROMAN[n] || String(n);
@@ -74,6 +76,8 @@ export function categories(id) {
   if (!d) return [];
   if (id === I.BOOK || id === I.ENCHANTED_BOOK) return ['book'];
   if (d.tool) return d.tool.type === 'sword' ? ['sword'] : d.tool.type === 'axe' ? ['tool', 'axe'] : ['tool'];
+  if (d.weapon && d.weapon.melee) return ['sword', 'gear']; // Warhammer, Dagger, Glaive: the sword enchantments
+  if (d.disc) return ['disc', 'gear'];
   if (d.armor && d.armor.pumpkin) return []; // a Carved Pumpkin takes no enchantments
   if (d.armor) return d.armor.slot === 3 ? ['armor', 'boots'] : ['armor'];
   if (d.bow || d.crossbow) return ['bow'];
@@ -88,6 +92,7 @@ export function enchantability(id) {
   if (!d) return 0;
   if (id === I.BOOK) return 1;
   if (d.tool) return TOOL_ENCHANTABILITY[d.tool.material] || 0;
+  if (d.weapon && d.weapon.material) return TOOL_ENCHANTABILITY[d.weapon.material] || 0;
   if (d.armor) return ARMOR_ENCHANTABILITY[d.armor.material] || 0;
   if (d.bow || d.crossbow || d.spear) return 1;
   return 0;
@@ -336,7 +341,7 @@ export function repairMaterial(id) {
   const d = ITEMS[id];
   if (!d) return null;
   if (d.repairWith) return I[d.repairWith]; // e.g. a Voidwing mends with Drift Membrane
-  const mat = (d.tool && d.tool.material) || (d.armor && d.armor.material);
+  const mat = (d.tool && d.tool.material) || (d.weapon && d.weapon.material) || (d.armor && d.armor.material);
   return { wood: 'planks', stone: B.COBBLESTONE, iron: I.IRON_INGOT, gold: I.GOLD_INGOT, diamond: I.DIAMOND, leather: I.LEATHER }[mat] || null;
 }
 const PLANKS = [B.OAK_PLANKS, B.SPRUCE_PLANKS, B.BIRCH_PLANKS, B.JUNGLE_PLANKS, B.ACACIA_PLANKS, B.DARK_OAK_PLANKS, B.BLOSSOM_PLANKS, B.MANGROVE_PLANKS];
@@ -417,7 +422,7 @@ export function temperKey(id) {
   if (!d || id === I.BOOK || id === I.ENCHANTED_BOOK) return null;
   if (d.armor && !d.armor.pumpkin && d.durability) return 'forgeward';
   if (d.tool) return d.tool.type === 'sword' || d.tool.type === 'axe' ? 'forgebite' : 'forgegrip';
-  if (d.spear) return 'forgebite';
+  if (d.spear || (d.weapon && d.weapon.melee)) return 'forgebite';
   return null;
 }
 /** The tempering step this material (item id) performs, or null. */

@@ -437,6 +437,27 @@ shaped(['  X', 'XLX', 'XXX'], { X: I.GOLD_INGOT, L: I.LEATHER }, I.GOLD_HORSE_AR
 shaped(['  X', 'XLX', 'XXX'], { X: I.DIAMOND, L: I.LEATHER }, I.DIAMOND_HORSE_ARMOR, 1);
 shaped(['LSL', 'LGL', 'L L'], { L: I.LEATHER, S: I.STRING, G: I.GOLD_NUGGET }, I.THISTLE_HARNESS, 1);
 
+// Gear and combat depth (player/weapons.js, player/trinkets.js, player/setBonuses.js)
+{
+  const MAT = { stone: 'stone_mat', iron: I.IRON_INGOT, diamond: I.DIAMOND };
+  for (const [tier, ing] of Object.entries(MAT)) {
+    shaped(['XXX', 'XSX', ' S '], { X: ing, S: I.STICK }, I[`${tier}_warhammer`.toUpperCase()]);
+    shaped(['X', 'S'], { X: ing, S: I.STICK }, I[`${tier}_dagger`.toUpperCase()]);
+    shaped([' XX', ' SX', 'S  '], { X: ing, S: I.STICK }, I[`${tier}_glaive`.toUpperCase()]);
+    shaped([' X ', 'XFX', ' X '], { X: ing, F: I.FLINT }, I[`${tier}_disc`.toUpperCase()]);
+  }
+  shaped(['XXX', 'X X'], { X: I.SLAGSTEEL_INGOT }, I.SLAGSTEEL_HELMET);
+  shaped(['X X', 'XXX', 'XXX'], { X: I.SLAGSTEEL_INGOT }, I.SLAGSTEEL_CHESTPLATE);
+  shaped(['XXX', 'X X', 'X X'], { X: I.SLAGSTEEL_INGOT }, I.SLAGSTEEL_LEGGINGS);
+  // trinkets
+  shaped(['SLS', 'F F'], { S: I.STRING, L: I.LEATHER, F: I.FEATHER }, I.FLEET_ANKLET);
+  shaped([' S ', 'ICI', ' I '], { S: I.STRING, I: I.IRON_INGOT, C: I.CINNABAR }, I.LODESTONE_CHARM);
+  shaped([' S ', 'GDG', ' G '], { S: I.STRING, G: I.GOLD_INGOT, D: I.DIAMOND }, I.WARDING_AMULET);
+  shaped([' I ', 'IPI', ' S '], { I: I.IRON_INGOT, P: B.GLASS_PANE, S: I.STICK }, I.MINERS_LOUPE);
+  shaped([' S ', 'GTG', ' G '], { S: I.STRING, G: I.GOLD_NUGGET, T: B.TORCH }, I.LANTERN_CHARM);
+  shaped([' G ', 'GEG', ' G '], { G: I.GOLD_INGOT, E: I.EMBER_ROD }, I.EMBER_BAND);
+}
+
 // Smelting: input -> output; 200 ticks per item (10 s)
 export const SMELT_TIME = 200;
 const ORE_INPUTS = new Set([I.RAW_IRON, I.RAW_GOLD, I.RAW_COPPER, B.IRON_ORE, B.GOLD_ORE, B.COPPER_ORE, B.DEEP_COPPER_ORE, B.DEEP_IRON_ORE, B.DEEP_GOLD_ORE]);

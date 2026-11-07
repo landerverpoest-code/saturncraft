@@ -5,6 +5,7 @@ import { BLOCKS, B, TOOL, TIER, isBlockId, EXT_BASE, DOOR_SETS, BOX_COLORS } fro
 import { COLORS } from './colors.js';
 import { POTIONS, POTION_KEYS, potionColor } from './potions.js';
 import { SHERDS, POT_CLAY } from './sherds.js';
+import { WEAPON_KINDS, WEAPON_TIERS, TIER_NAMES } from './weaponStats.js';
 
 export const ITEMS = [];
 export const I = {};
@@ -541,3 +542,37 @@ item('divers_lamp', "Diver's Lamp", { stack: 1, holdLight: 13, iconStyle: [ICON_
 ARMOR_MATERIALS.diver = { defense: [1, 0, 0, 0], durability: 15, toughness: 0, color: '#c8a050', name: "Diver's" };
 item('divers_helm', "Diver's Helm", { stack: 1, durability: 240, repairWith: 'LANTERN_GLAND', armor: { slot: 0, piece: 'helmet', material: 'diver', defense: 1, toughness: 0, diver: true } });
 item('skybean', 'Skybean', { places: B.BEANSTALK, iconStyle: ['egg', { h: '#6ab83a', H: '#b8e870' }] });
+
+// ---- Gear and combat depth round (player/weapons.js, player/trinkets.js, player/setBonuses.js), appended so no item id shifts ----
+// Warhammers, Daggers and Glaives (world/weaponStats.js) are `weapon` items: toolOf() reads their damage and swing speed, `type` names
+// the play style. The Returning Discs are thrown (entities/disc.js); in the hand they only bat for 2.
+export const WEAPONS = { warhammer: {}, dagger: {}, glaive: {}, disc: {} };
+for (const kind of ['warhammer', 'dagger', 'glaive', 'disc']) {
+  const K = WEAPON_KINDS[kind];
+  for (const tier of WEAPON_TIERS) {
+    const T = K.tiers[tier];
+    const key = `${tier}_${kind}`, name = kind === 'disc' ? `${TIER_NAMES[tier]} Returning Disc` : `${TIER_NAMES[tier]} ${K.name}`;
+    const weapon = kind === 'disc'
+      ? { type: 'disc', material: tier, speed: 1, tier: -1, damage: 2, attackSpeed: 1.5, throwDamage: T.damage, reach: K.reach, wear: K.wear }
+      : { type: kind, material: tier, speed: 1, tier: -1, damage: T.damage, attackSpeed: T.attackSpeed, reach: K.reach, wear: K.wear, melee: true, breaksShield: !!K.breaksShield };
+    WEAPONS[kind][tier] = item(key, name, { stack: 1, durability: T.durability, weapon, ...(kind === 'disc' ? { disc: true } : {}) }).id;
+  }
+}
+// Slagsteel armour (reference: none): the set with the Dirgestep Boots as its fourth piece (player/setBonuses.js)
+ARMOR_MATERIALS.slagsteel = { defense: [2, 6, 5, 3], durability: 19, toughness: 0, color: '#8a7a86', name: 'Slagsteel' };
+[['helmet', 'Helmet', 11], ['chestplate', 'Chestplate', 16], ['leggings', 'Leggings', 15]].forEach(([piece, pname, base], slot) => {
+  item(`slagsteel_${piece}`, `Slagsteel ${pname}`, { stack: 1, durability: base * 19, repairWith: 'SLAGSTEEL_INGOT', armor: { slot, piece, material: 'slagsteel', defense: ARMOR_MATERIALS.slagsteel.defense[slot], toughness: 0 } });
+});
+// Trinkets (player/trinkets.js): two slots beside the armour; each kind works once, and only while worn there
+const ICON_ANKLET = ['................', '...........ww...', '..........wwW...', '.........wwW....', '....hhhh.wW.....', '...hHHHHh.......', '..hH....Hh......', '..hh....hh......', '..hH....Hh......', '...hHHHHh.......', '....hhhh........', '................', '................', '................', '................', '................'];
+const ICON_LODESTONE = ['................', '..rr........rr..', '..rr........rr..', '..hh........hh..', '..hH........Hh..', '..hh........hh..', '..hH........Hh..', '..hhh......hhh..', '...hhh....hhh...', '....hhhhhhhh....', '.....hHHHHh.....', '......hhhh......', '................', '................', '................', '................'];
+const ICON_AMULET = ['................', '....s......s....', '.....s....s.....', '......s..s......', '.......ss.......', '......hhhh......', '.....hHHHHh.....', '....hHggggHh....', '....hHggggHh....', '.....hHggHh.....', '......hHHh......', '.......hh.......', '................', '................', '................', '................'];
+const ICON_LOUPE = ['................', '......hhhhh.....', '.....hHHHHHh....', '....hHggggHh....', '....hHgwggHh....', '....hHggggHh....', '.....hHHHHhh....', '......hhhhhs....', '.............s...', '..............s..', '...............s.', '................', '................', '................', '................', '................'];
+const ICON_LANTERN_CHARM = ['................', '.......ss.......', '......s..s......', '.....hhhhhh.....', '....hHffffHh....', '....hfFFFFfh....', '....hfFFFFfh....', '....hHffffHh....', '.....hhhhhh.....', '......hhhh......', '.......hh.......', '................', '................', '................', '................', '................'];
+const ICON_EMBER_BAND = ['................', '................', '....hhhhhhhh....', '...hHHHHHHHHh...', '..hH.......fHh..', '..hh......fFh...', '..hH.......fHh..', '..hh........hh..', '..hH........Hh..', '...hHHHHHHHHh...', '....hhhhhhhh....', '................', '................', '................', '................', '................'];
+item('fleet_anklet', 'Fleet Anklet', { stack: 1, trinket: 'fleet_anklet', iconStyle: [ICON_ANKLET, { h: '#b88a4a', H: '#e0b878', w: '#f4f4ee', W: '#cfd4d8' }] });
+item('lodestone_charm', 'Lodestone Charm', { stack: 1, trinket: 'lodestone_charm', iconStyle: [ICON_LODESTONE, { h: '#7a7a86', H: '#b4b4c0', r: '#c8303a' }] });
+item('warding_amulet', 'Warding Amulet', { stack: 1, trinket: 'warding_amulet', iconStyle: [ICON_AMULET, { h: '#d8b040', H: '#fff0a0', s: '#8a8a92', g: '#3ac8b0' }] });
+item('miners_loupe', "Miner's Loupe", { stack: 1, trinket: 'miners_loupe', iconStyle: [ICON_LOUPE, { h: '#b8b8c0', H: '#e8e8f0', g: '#a8dcf0', w: '#ffffff', s: '#8a6034' }] });
+item('lantern_charm', 'Lantern Charm', { stack: 1, trinket: 'lantern_charm', iconStyle: [ICON_LANTERN_CHARM, { h: '#6a6a72', H: '#9a9aa4', s: '#8a8a92', f: '#e8a020', F: '#fff0a0' }] });
+item('ember_band', 'Ember Band', { stack: 1, trinket: 'ember_band', iconStyle: [ICON_EMBER_BAND, { h: '#a8602a', H: '#d8904a', f: '#e8501a', F: '#ffb040' }] });

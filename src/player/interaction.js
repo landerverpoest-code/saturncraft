@@ -19,6 +19,10 @@ import { breathCloudNear } from '../entities/areaCloud.js';
 import { breakProgressPerTick, blockDrops, canHarvest } from '../world/mining.js';
 import { enchLevel, meleeBonus, silkDropsSelf, canSurge, surgeVelocity } from '../world/enchantments.js';
 import { spearDamage } from '../entities/tidespear.js';
+import { ReturningDisc } from '../entities/disc.js';
+import { weaponOf, isDisc, reachOf, backstabFactor, sweepTargets, sweepDamage, wearPerBlow, wearPerBlock } from './weapons.js';
+import { gearBonuses } from './gear.js';
+import { lodestonePull } from './magnet.js';
 import { PHYS } from '../physics/constants.js';
 import { Body } from '../physics/body.js';
 import { EXHAUSTION } from './survival.js';
@@ -62,6 +66,12 @@ function particleLight(g, x, y, z) {
 }
 
 export const EAT_TICKS = 32;
+let oreIds = null;
+/** Is this block an ore (its name ends in "Ore")? Miner's Loupe speeds those up. */
+function isOre(id) {
+  if (!oreIds) { oreIds = new Set(); for (const b of BLOCKS) if (b && / Ore$/.test(b.name)) oreIds.add(b.id); }
+  return oreIds.has(id);
+}
 export const SWING_TICKS = 6;
 // Experience from ores whose drop is not the block itself: [min, max]
 const ORE_XP = {
@@ -106,7 +116,7 @@ export class Interaction {
     const [ex, ey, ez] = p.eyePos();
     const [dx, dy, dz] = p.lookDir();
     this.target = g.world.raycast(ex, ey, ez, dx, dy, dz, PHYS.REACH);
-    this.mobTarget = g.entities ? g.entities.raycastMob(ex, ey, ez, dx, dy, dz, 3.0) : null;
+    this.mobTarget = g.entities ? g.entities.raycastMob(ex, ey, ez, dx, dy, dz, reachOf(p.inventory.selectedStack)) : null; // (a Glaive reaches 4.5, a Dagger 2.5)
     if (this.mobTarget && this.target && this.target.dist < this.mobTarget.dist) this.mobTarget = null;
     if (g.net) {
       // multiplayer: other players can be hit too (PvP)
@@ -132,6 +142,7 @@ export class Interaction {
     if (this.useDelay > 0) this.useDelay--;
     if (this.swing > 0) this.swing--;
     if (this.surgeTicks > 0) this.tickSurge();
+    if (g.ticks % 2 === 0 && !p.dead) lodestonePull(g, gearBonuses(p.inventory).pull); // Lodestone Charm (player/magnet.js)
 
     // Surveyor Wand (ui/buildCommands.js): left click marks corner 1, right click corner 2; it never mines or places
     const held = p.inventory.selectedStack, heldDef = held && ITEMS[held.id];
@@ -205,6 +216,7 @@ export class Interaction {
     // Farglass: hold right mouse to look through it (game.render narrows the view)
     p.zooming = !!(d && d.spyglass && input.right);
     if (p.zooming) return;
+    if (d && d.disc && input.rightPressed && !(this.target && USABLE_BLOCKS.has(this.target.id) && !p.sneaking)) { this.throwDisc(); return; }
     if (d && d.crossbow) {
       if (d.loaded) { if (input.rightPressed) this.fireCrossbow(); }
       else if (input.right) { if (++this.bowDraw >= 25) { this.loadCrossbow(); this.bowDraw = 0; } }
@@ -429,7 +441,7 @@ export class Interaction {
     }
     const tool = toolOf(p.inventory.selectedStack);
     const per = breakProgressPerTick(t.id, tool, { onGround: p.body.onGround || p.body.inWater, inWater: p.body.eyeInWater, swiftdig: enchLevel(p.inventory.selectedStack, 'swiftdig'), forgegrip: enchLevel(p.inventory.selectedStack, 'forgegrip'), haste: p.effectLevel ? p.effectLevel('haste') : 0, fatigue: p.effectLevel ? p.effectLevel('mining_fatigue') : 0 });
-    this.breaking.progress += per;
+    this.breaking.progress += per * (isOre(t.id) ? 1 + gearBonuses(p.inventory).mineOre : 1); // Miner's Loupe
     // holding the button chains full swings into a continuous chopping motion
     if (this.swing <= 0) this.swing = SWING_TICKS;
     if (g.ticks % 4 === 0) {
@@ -456,7 +468,8 @@ export class Interaction {
     const held = p.inventory.selectedStack, ench = tool.type && held && held.ench ? held.ench : null;
     const silk = !!(ench && ench.gentle_hand && silkDropsSelf(id));
     const xp = p.creative || silk ? null : ORE_XP[id];
-    if (xp && canHarvest(id, tool)) g.entities.spawnXp(x + 0.5, y + 0.5, z + 0.5, xp[0] + Math.floor(Math.random() * (xp[1] - xp[0] + 1)));
+    const gearNow = gearBonuses(p.inventory);
+    if (xp && canHarvest(id, tool)) g.entities.spawnXp(x + 0.5, y + 0.5, z + 0.5, Math.round((xp[0] + Math.floor(Math.random() * (xp[1] - xp[0] + 1))) * (1 + gearNow.oreXp)));
     if (!p.creative) {
       let drops = blockDrops(id, tool, Math.random, meta, ench);
       // ripe crops take from the soil: the same crop again from the same farmland yields a little less (world/farming.js)
@@ -476,7 +489,7 @@ export class Interaction {
     }
     p.hunger.addExhaustion(EXHAUSTION.BREAK_BLOCK);
     p.stats.blocksMined++;
-    if (BLOCKS[id].hardness > 0 && tool.type) p.inventory.damageSelected(tool.type === 'sword' ? 2 : 1);
+    if (BLOCKS[id].hardness > 0 && tool.type) p.inventory.damageSelected(wearPerBlock(held, tool));
     // an ice block broken with Gentle Hand drops itself and leaves no water
     if (silk && id === B.ICE && g.world.getBlock(x, y, z) === B.WATER) g.world.setBlockUrgent(x, y, z, B.AIR);
   }
@@ -490,19 +503,54 @@ export class Interaction {
     const crit = cd > 0.9 && p.body.fallDistance > 0 && !p.body.onGround && !p.body.inWater && !p.sprinting;
     if (crit) dmg *= 1.5;
     dmg += meleeBonus(held, mob) * cd; // Keen / Hallowed, scaled by the cooldown like the reference
+    const back = backstabFactor(held, mob, p.x, p.z); // a Dagger from behind (player/weapons.js)
+    if (back > 1) dmg *= back;
+    const kindW = weaponOf(held);
     const knock = 0.4 + ((p.sprinting && cd > 0.9 ? 1 : 0) + enchLevel(held, 'shove')) * 0.5;
     p.lastAttacked = mob; // tamed Howlers join in
-    if (mob.kind === 'mob') mob.plunder = enchLevel(held, 'plunder'); // looting for its drops
+    if (mob.kind === 'mob') mob.plunder = enchLevel(held, 'plunder') + gearBonuses(p.inventory).plunder; // looting for its drops (the Gilded set adds one)
     if (mob.hurt(dmg, 'player', p, knock)) {
       const fire = enchLevel(held, 'emberbrand');
       if (fire && mob.kind === 'mob' && !(mob.def && mob.def.fireImmune)) mob.fireTicks = Math.max(mob.fireTicks || 0, fire * 80);
       if (crit) g.particles && g.particles.crit(mob.x, mob.y + mob.height * 0.6, mob.z);
       if (p.sprinting && cd > 0.9) p.sprinting = false;
-      if (tool.type) p.inventory.damageSelected(tool.type === 'sword' || tool.type === 'spear' ? 1 : 2);
+      if (tool.type) p.inventory.damageSelected(wearPerBlow(held, tool));
+      if (kindW) this.weaponHit(kindW, mob, dmg, back > 1, cd);
     }
     p.hunger.addExhaustion(EXHAUSTION.ATTACK);
     p.attackTicks = 0;
     this.swing = SWING_TICKS;
+  }
+
+  /** The sounds and sweep of the gear round's weapons after a blow that landed (player/weapons.js). */
+  weaponHit(w, mob, dmg, backstab, cd) {
+    const g = this.game, p = g.player, at = [mob.x, mob.y + 1, mob.z];
+    if (w.type === 'warhammer') {
+      g.audio.play('warhammer_slam', at, 0.5 + cd * 0.5);
+      if (cd > 0.85 && g.particles) g.particles.smoke(mob.x, mob.y + 0.2, mob.z, 6, 0.5);
+    } else if (w.type === 'dagger') {
+      g.audio.play('dagger_stab', at);
+      if (backstab && g.particles && g.particles.crit) { g.particles.crit(mob.x, mob.y + mob.height * 0.6, mob.z); g.hud && g.hud.toast && g.hud.toast('Backstab!', 700); }
+    } else if (w.type === 'glaive') {
+      const held = p.inventory.selectedStack;
+      const others = sweepTargets(p.eyePos(), p.lookDir(), mob, g.entities.list, reachOf(held) + 0.5);
+      for (const m of others) {
+        if (m.hurt(sweepDamage(dmg), 'player', p, 0.3) && g.particles && g.particles.crit) g.particles.crit(m.x, m.y + m.height * 0.6, m.z);
+      }
+      g.audio.play('glaive_sweep', at, others.length ? 1 : 0.7);
+    }
+  }
+
+  /** Throw the held Returning Disc (entities/disc.js): one in the air at a time, a short rest after a catch. */
+  throwDisc() {
+    const g = this.game, p = g.player, st = p.inventory.selectedStack;
+    if (!isDisc(st) || (this.disc && !this.disc.dead) || g.ticks < (this.discReady | 0)) return false;
+    this.disc = g.entities.add(new ReturningDisc(g, p, st, this.discStreak | 0));
+    g.audio.play('disc_throw', p.eyePos());
+    if (!p.creative) p.hunger.addExhaustion(EXHAUSTION.ATTACK);
+    this.swing = SWING_TICKS;
+    if (g.milestones) g.milestones.event('disc_throw');
+    return true;
   }
 
   /** A vibration the Deep Hush's sensors can hear, from the block (cell corner) at x, y, z (world/vibrations.js). */
