@@ -117,8 +117,8 @@ export class HeldItem {
     }
     if (hasWeaponModel(id)) {
       // Warhammer, Dagger, Glaive, Returning Disc: the icon pushed out into a slab (render/weaponModel.js)
-      this.mesh = this.weaponModel = buildWeaponModel(id, 0.6);
-      this.mesh.position.set(0.55, -0.35, -0.75);
+      this.mesh = this.weaponModel = buildWeaponModel(id, 0.5);
+      this.mesh.position.set(0.5, -0.33, -0.75);
       this.mesh.rotation.set(0, -1.2, 0.35);
       if (glint) this.glintMat = this.weaponModel.userData.mat;
       this.group.add(this.mesh);

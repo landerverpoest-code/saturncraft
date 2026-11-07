@@ -29,7 +29,6 @@ import { MenuNav, labelScreens, AUTOFOCUS_SCREENS } from './menuNav.js';
 import { buildTopics, searchTopics } from './helpTopics.js';
 import { isTrinket, TRINKET_SLOTS } from '../player/trinkets.js';
 import { wornSets, SET_PIECES } from '../player/setBonuses.js';
-import { gearBonuses } from '../player/gear.js';
 import { TOUCH_MODE_LABELS, SIZE_RANGE, OPACITY_RANGE, nextTouchMode, normalizeTouch, detectTouch, readTouchEnv } from './touchMath.js';
 import { loadPlayerName, MAX_PLAYERS } from '../net/protocol.js';
 import { EMOTES, EMOTE_LABELS } from '../net/social.js';
