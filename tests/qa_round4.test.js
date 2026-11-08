@@ -1,6 +1,8 @@
 // Regression tests for the fourth QA pass (adversarial run over quests, gear, trinkets, retrofit, the Slag Colossus and the
 // content added since the third pass: browser fuzzing of random blocks, items and commands, save round trips, long walks).
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { ITEMS, I, DISCS } from '../src/world/items.js';
 import { canApply, categories } from '../src/world/enchantments.js';
 import { isDisc } from '../src/player/weapons.js';
@@ -132,5 +134,24 @@ describe('the Lodestone Charm and resting items', () => {
     const x0 = e.x;
     for (let t = 0; t < 40; t++) { game.ticks = t; if (t % 2 === 0) lodestonePull(game, 6); e.tick(game); }
     expect(e.x).toBeLessThan(x0);
+  });
+});
+
+describe('scaled interface and the light inventory panel (style.css)', () => {
+  const css = readFileSync(resolve(__dirname, '..', 'src/ui/style.css'), 'utf8');
+  it('drops the raid and boss bars below the sky clock once the interface is scaled up', () => {
+    expect(css).toMatch(/html\.ui-scaled #raidbar, html\.ui-scaled #bossbar \{ top: clamp\(10px, calc\(\(var\(--ui-scale, 1\) - 1\) \* 100000px \+ 10px\), 76px\); \}/);
+    expect(css).toMatch(/html\.ui-scaled #raidbar:not\(\.hidden\) ~ #bossbar \{ top: clamp\(58px/);
+    expect(css).toMatch(/@media \(max-width: 980px\) \{\s*html\.ui-scaled body:not\(\.touch-on\) #raidbar, html\.ui-scaled body:not\(\.touch-on\) #bossbar \{ top: 76px; \}/);
+  });
+  it('gives the armour set lines dark colours on the light panel', () => {
+    const rule = (sel) => (css.match(new RegExp('\\.panel \\.set-bonuses ' + sel + ' \\{ color: (#[0-9a-f]{6})')) || [])[1];
+    const lum = (hex) => { const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+    const panel = lum('#c9c3b4'); // the panel's beige
+    for (const sel of ['\\.sb-head', '\\.sb-line', '\\.sb-line\\.on']) {
+      const col = rule(sel);
+      expect(col).toBeTruthy();
+      expect((panel + 0.05) / (lum(col) + 0.05)).toBeGreaterThan(4.5);
+    }
   });
 });
