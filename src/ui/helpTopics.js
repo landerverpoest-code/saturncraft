@@ -301,7 +301,7 @@ export function buildTopics({ table, touch = false, pad = false } = {}) {
 
   add('gamepad', 'Controls: gamepad', 'Controls', [
     { p: `${pad ? 'A gamepad is connected. ' : ''}Plug in a gamepad and press any button to use it. The left stick moves, the right stick looks and Start pauses.` },
-    { list: ['Click the left stick to sprint, and keep pushing forward to keep sprinting.', 'On the pause screens, B or Back goes back and the D-pad scrolls; the bumpers change tabs.', 'In the bag, chests, crafting, furnace and brewing screens the D-pad moves a gold cursor over the slots: A picks up or puts down a stack, X splits it, Y moves it to the other side, B closes.', 'Every button already has a job, so pinging a spot for your team in a shared world is a chord: hold Back and press the right bumper.'] },
+    { list: ['Click the left stick to sprint, and keep pushing forward to keep sprinting.', 'On the pause screens, B or Back goes back and the D-pad scrolls; the bumpers change tabs.', 'In the bag, chests, crafting, furnace and brewing screens the D-pad moves a gold cursor over the slots: A picks up or puts down a stack, X splits it, Y moves it to the other side, B closes.', 'Every button already has a job, so pinging a spot for your team in a shared world is a chord: hold Back and press the right bumper. The Quest Journal is Back + X and marking a waypoint where you stand is Back + the left bumper.'] },
     ...controlRows(table, [2], { attack: 'Right trigger', use: 'Left trigger' }),
   ]);
 
@@ -310,7 +310,7 @@ export function buildTopics({ table, touch = false, pad = false } = {}) {
     { list: [
       'Left thumb moves; push the stick far to sprint.',
       'Drag anywhere else to look around; hold to mine; tap to place or use.',
-      'The Jump, Use, Mine and Sneak buttons are at the corners; Menu, Bag, Chat and Guide are along the top.',
+      'The Jump, Use, Mine and Sneak buttons are at the corners; Menu, Bag, Chat, Guide, Quests (the Quest Journal) and Mark (a waypoint where you stand) are along the top.',
       'Double-tap Jump to fly in creative mode. In bag screens, the Split and Quick tools change what the next tap does.',
       'Menu > Help opens this screen.',
     ] },

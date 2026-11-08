@@ -20,6 +20,8 @@ const TOP = [
   { id: 'inventory', label: 'Bag', mode: 'tap', action: 'inventory', hint: 'Inventory' },
   { id: 'chat', label: 'Chat', mode: 'tap', chat: true },
   { id: 'guide', label: 'Guide', mode: 'tap', action: 'guide', hint: 'Field Guide' },
+  { id: 'journal', label: 'Quests', mode: 'tap', action: 'journal', hint: 'Quest Journal' },
+  { id: 'waypoint', label: 'Mark', mode: 'tap', action: 'waypoint', hint: 'Mark a waypoint here' },
   { id: 'full', label: 'Full', mode: 'tap', fullscreen: true, hint: 'Full screen' },
 ];
 const LONG_PRESS_MS = 450;

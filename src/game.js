@@ -51,6 +51,7 @@ import { snowfall } from './world/randomTicks.js';
 import { igniteTNT, PrimedTNT } from './entities/tnt.js';
 import { canLight, FIRE_DELAY } from './world/fire.js';
 import { Chat } from './ui/chat.js';
+import { runCommand } from './ui/commands.js';
 import { Music } from './audio/music.js';
 import { AmbientSystem } from './audio/ambientSystem.js';
 import { Milestones } from './player/milestones.js';
@@ -1447,6 +1448,7 @@ export class Game {
       if (this.ui.open === 'pause' && this.ui.inJournal) { this.ui.open = null; this.ui.clear(); this.onUIClosed(); }
       else if (!this.ui.blocking && this.running) { this.input.unlock(); this.ui.showJournal(true); }
     }
+    if (inp.wasPressed('waypoint') && !this.ui.blocking && this.running) this.markWaypoint();
     if (inp.wasPressed('help')) {
       if (this.ui.open === 'pause' && this.ui.inHelp) {
         // (a rebound letter would be typed into the search box: only function keys and the touch button close it then)
@@ -1719,6 +1721,20 @@ export class Game {
       this._scopeText = readoutText(id, p.scopeLevel, a.what, a.dist);
     }
     return this._scopeText;
+  }
+
+  /**
+   * Mark a waypoint where the player stands (the N key, the touch Mark button, Back + LB on a pad): alone it sets the Waymark Compass's
+   * target (player/waymark.js) like /waymark here; in a shared world it is a named waypoint everybody (or the team) sees, like /wp add.
+   */
+  markWaypoint() {
+    const p = this.player;
+    if (!p || p.dead) return null;
+    this.waypointNo = (this.waypointNo || 0) + 1;
+    const name = `Mark${this.waypointNo}`;
+    const out = runCommand(this, this.net ? `/wp add ${name}` : `/waymark here ${name}`);
+    this.hud.toast(this.net ? out : `Waymark set here: ${name}`, 2200);
+    return out;
   }
 
   /** Set the Waymark Compass's target ({ x, z, kind, label }): the last Bounty Board opened or place marked. */

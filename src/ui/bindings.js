@@ -34,7 +34,8 @@ export const ACTIONS = [
   { id: 'hud', label: 'Hide / show HUD', group: 'Interface', def: ['F2', null, null] },
   { id: 'debug', label: 'Debug screen', group: 'Interface', def: ['F3', null, null] },
   { id: 'guide', label: 'Field Guide', group: 'Interface', def: ['KeyJ', null, 'PadX'] },
-  { id: 'journal', label: 'Quest Journal', group: 'Interface', def: ['KeyK', null, null] },
+  { id: 'journal', label: 'Quest Journal', group: 'Interface', def: ['KeyK', null, 'PadBack+PadX'] }, // (a chord: hold Back, press X, as the pad has no spare button)
+  { id: 'waypoint', label: 'Mark a waypoint here', group: 'Interface', def: ['KeyN', null, 'PadBack+PadLB'] }, // (alone: the Waymark Compass's target; in a shared world a named waypoint for the team)
   { id: 'shaders', label: 'Shaders on / off', group: 'Interface', def: ['F7', null, null] },
   { id: 'help', label: 'Help and how-to topics', group: 'Interface', def: ['F1', null, null] },
   { id: 'dismissHint', label: 'Dismiss the hint on screen', group: 'Interface', def: ['KeyH', null, 'PadBack'] },
