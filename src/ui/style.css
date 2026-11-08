@@ -746,3 +746,6 @@ html.high-contrast #aimtip { background: #000; border: 1px solid #fff; }
 @media (max-width: 560px) { .quest-card { flex-wrap: wrap; } .quest-acts { flex-direction: row; } }
 html.high-contrast .quest-card { background: #000; border: 2px solid #fff; }
 html.high-contrast .quest-info .d { color: #fff; }
+
+/* Farscope read-out (player/farscope.js) */
+#overlay-scope .scope-text { position: absolute; left: 50%; top: calc(50% + 38vmin); transform: translateX(-50%); color: #ffe9b0; font: 600 14px/1.2 ui-monospace, monospace; letter-spacing: .04em; text-shadow: 0 1px 3px #000; background: rgba(0,0,0,.45); padding: 3px 10px; border-radius: 10px; white-space: nowrap; }

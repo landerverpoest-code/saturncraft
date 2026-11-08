@@ -4,14 +4,29 @@
 // split (85 % fish, 10 % junk, 5 % treasure) and 1-6 XP.
 import * as THREE from 'three';
 import { B, SOLID } from '../world/blocks.js';
-import { I } from '../world/items.js';
+import { I, ITEMS } from '../world/items.js';
 import { BIOMES } from '../world/biomes.js';
 import { luckOf } from '../player/effects.js';
+import { enchLevel } from '../world/enchantments.js';
 
 let nextId = 7_000_000;
 
 /** Share of each catch group that is replaced by a local one, by biome key (the depths of the sea). */
 export const DEEP_CATCH = { deep_ocean: { fish: 0.45, junk: 0.4, treasure: 0.5 }, kelp_forest: { fish: 0.1, junk: 0.5, treasure: 0.2 } };
+
+/** Biomes with a fish of their own: the Bogcarp lives in the bogs, the Dunefin in the water holes of dry lands (share of the fish catches). */
+export const LOCAL_FISH = { swamp: 'RAW_BOGCARP', mangrove_swamp: 'RAW_BOGCARP', desert: 'RAW_DUNEFIN', badlands: 'RAW_DUNEFIN', savanna: 'RAW_DUNEFIN', beach: 'RAW_DUNEFIN' };
+export const LOCAL_FISH_SHARE = 0.4;
+/** A Gilded Perch comes up with a Haul-enchanted rod: this share of the fish for each level. */
+export const PERCH_PER_HAUL = 0.05;
+/** Rod enchantments (the held rod's stack): { lure, haul }. */
+export const rodEnchants = (st) => ({ lure: enchLevel(st, 'lure'), haul: enchLevel(st, 'haul') });
+/** The wait for a bite in ticks (5 to 30 s, a fifth less in rain), shortened by 5 s for each level of Lure (never under 2 s). */
+export function biteWait(rng = Math.random, rain = false, lure = 0) {
+  return Math.max(40, Math.floor((100 + rng() * 500) * (rain ? 0.8 : 1)) - lure * 100);
+}
+/** Do fish-bearing catches double? Each level of Haul gives a fifth of a chance of one more of the same fish. */
+export const haulExtra = (rng, haul) => haul > 0 && rng() < 0.2 * haul;
 
 /**
  * Weights of the three catch groups at a luck (reference: fish 85 - luck, junk 10 - 2 luck,
@@ -21,14 +36,20 @@ export function catchWeights(luck = 0) {
   return { fish: Math.max(0, 85 - luck), junk: Math.max(0, 10 - 2 * luck), treasure: Math.max(0, 5 + 2 * luck) };
 }
 
-/** Weighted loot: fish (silverfin 60, redfin 25, spinefish 13, glimmerfin 2), junk and treasure. */
-export function rollCatch(rng = Math.random, luck = 0, biomeKey = '') {
+/**
+ * Weighted loot: fish (silverfin 60, redfin 25, spinefish 13, glimmerfin 2; in a bog, in dry lands and on a beach 40 % are the local fish; with
+ * Haul a few are Gilded Perch), junk and treasure. `haul` is the rod's Haul level: one level of luck each, and the Gilded Perch.
+ */
+export function rollCatch(rng = Math.random, luck = 0, biomeKey = '', haul = 0) {
+  luck += haul;
   const w = catchWeights(luck), total = w.fish + w.junk + w.treasure;
   const r = rng();
   const fishCut = w.fish / total, junkCut = (w.fish + w.junk) / total;
   const deep = DEEP_CATCH[biomeKey]; // the ocean depths add their own catches (Lanternfins, Gleamkelp, Lantern Glands, Tide Shards)
   if (r < fishCut) {
     if (deep && rng() < deep.fish) return { id: I.RAW_LANTERNFIN, count: 1 };
+    if (LOCAL_FISH[biomeKey] && rng() < LOCAL_FISH_SHARE) return { id: I[LOCAL_FISH[biomeKey]], count: 1 };
+    if (haul > 0 && rng() < PERCH_PER_HAUL * haul) return { id: I.GILDED_PERCH, count: 1 };
     const f = rng() * 100;
     return { id: f < 60 ? I.RAW_SILVERFIN : f < 85 ? I.RAW_REDFIN : f < 98 ? I.SPINEFISH : I.GLIMMERFIN, count: 1 };
   }
@@ -57,11 +78,14 @@ export class Bobber {
     this.bite = 0;      // ticks the fish stays hooked
     this.age = 0;
     this.dead = false;
+    const st = owner && owner.inventory ? owner.inventory.selectedStack : null;
+    const en = rodEnchants(st);
+    this.lure = en.lure; this.haul = en.haul; // the rod's enchantments, as it was when cast
   }
 
   resetWait(game) {
     const rain = game.weather && game.weather.rainingAt(game.world, this.x, this.y + 1, this.z);
-    this.wait = Math.floor((100 + Math.random() * 500) * (rain ? 0.8 : 1));
+    this.wait = biteWait(Math.random, !!rain, this.lure | 0);
   }
 
   tick(game) {
@@ -82,7 +106,7 @@ export class Bobber {
       if (this.bite > 0) {
         if (--this.bite === 0) this.resetWait(game); // got away
       } else if (--this.wait <= 0) {
-        this.bite = 20 + Math.floor(Math.random() * 20);
+        this.bite = 20 + Math.floor(Math.random() * 20) + (this.lure | 0) * 6; // (a lured fish bites a little longer)
         game.audio.play('splash', [this.x, this.y, this.z], 0.8);
         for (let k = 0; k < 10; k++) game.particles.emit(this.x + (Math.random() - 0.5) * 0.6, this.y + 0.1, this.z + (Math.random() - 0.5) * 0.6, (Math.random() - 0.5) * 0.08, 0.12, (Math.random() - 0.5) * 0.08, 0.6, 0.75, 1, 12, 0.03);
       } else if (this.wait < 40 && Math.random() < 0.3) {
@@ -108,7 +132,8 @@ export class Bobber {
     const p = game.player;
     let dmg = 0;
     if (this.bite > 0) {
-      const bk = BIOMES[game.world.biomeAt(Math.floor(this.x), Math.floor(this.z))]; const st = rollCatch(Math.random, luckOf(p.effects), bk ? bk.key : '');
+      const bk = BIOMES[game.world.biomeAt(Math.floor(this.x), Math.floor(this.z))]; const st = rollCatch(Math.random, luckOf(p.effects), bk ? bk.key : '', this.haul | 0);
+      if (ITEMS[st.id] && ITEMS[st.id].food && haulExtra(Math.random, this.haul | 0)) st.count += 1; // Haul: a second fish on the line
       const dx = p.x - this.x, dy = p.y + 1 - this.y, dz = p.z - this.z;
       const d = Math.hypot(dx, dy, dz) || 1;
       game.entities.spawnItem(this.x, this.y + 0.3, this.z, st, [dx * 0.1, dy * 0.1 + Math.sqrt(d) * 0.08, dz * 0.1]);

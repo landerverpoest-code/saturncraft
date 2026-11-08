@@ -3,6 +3,8 @@ import { Mob } from './mobs/mob.js';
 import { newHopper, hopperStep, HOPPER_COOLDOWN } from './world/hoppers.js';
 import { newDispenser, dispense } from './world/dispensers.js';
 import { fireDart } from './world/dartTrap.js';
+import { zoomFactor, scopeSensitivity, stepLevel, isFarscope, readoutText, aimedAt } from './player/farscope.js';
+import { cleanWaymark, describeWaymark } from './player/waymark.js';
 import { containerSignal } from './world/comparators.js';
 import { Fireball } from './entities/fireball.js';
 import { powerInto } from './world/circuits.js';
@@ -1468,14 +1470,18 @@ export class Game {
     if (inp.wasPressed('perspective')) { this.perspective = (this.perspective + 1) % 3; document.getElementById('crosshair').style.visibility = this.perspective === 2 ? 'hidden' : ''; }
     if (!this.ui.blocking && !menuAtStart) {
       const m = inp.consumeMouse();
-      const sens = inp.sensitivity * (p.zooming && this.perspective === 0 ? 0.15 : 1); // steadier aim through a Farglass
+      const heldId = p.inventory.selectedStack ? p.inventory.selectedStack.id : 0;
+      const scoping = p.zooming && this.perspective === 0 && isFarscope(heldId);
+      if (heldId !== this._heldSeen) { this._heldSeen = heldId; if (heldId === I.WAYMARK_COMPASS) this.hud.toast(describeWaymark(p.waymark, p.x, p.z, this.world.dimension), 2600); } // the Waymark Compass names its target when taken in hand
+      const sens = inp.sensitivity * (p.zooming && this.perspective === 0 ? scopeSensitivity(heldId, p.scopeLevel) : 1); // steadier aim through a Farglass (and the more a Farscope magnifies)
       p.yaw -= m.dx * sens;
       p.pitch = Math.max(-Math.PI / 2 + 0.001, Math.min(Math.PI / 2 - 0.001, p.pitch - m.dy * sens));
       if (m.wheel && this.net && this.net.spectate) this.net.cycleSpectate(m.wheel); // the wheel picks the next friend to follow
+      else if (m.wheel && scoping) p.scopeLevel = stepLevel(p.scopeLevel, m.wheel); // the Farscope's steps of zoom
       else if (m.wheel) p.inventory.selected = (p.inventory.selected + m.wheel + 9) % 9;
       for (let i = 1; i <= 9; i++) if (inp.wasPressed('slot' + i)) p.inventory.selected = i - 1;
-      if (inp.wasPressed('hotbarNext')) p.inventory.selected = (p.inventory.selected + 1) % 9;
-      if (inp.wasPressed('hotbarPrev')) p.inventory.selected = (p.inventory.selected + 8) % 9;
+      if (inp.wasPressed('hotbarNext')) { if (scoping) p.scopeLevel = stepLevel(p.scopeLevel, -1); else p.inventory.selected = (p.inventory.selected + 1) % 9; }
+      if (inp.wasPressed('hotbarPrev')) { if (scoping) p.scopeLevel = stepLevel(p.scopeLevel, 1); else p.inventory.selected = (p.inventory.selected + 8) % 9; }
       if (inp.wasPressed('drop') && p.inventory.selectedStack && !p.dead) {
         const all = inp.down.has('ControlLeft');
         const st = p.inventory.removeFromSlot(p.inventory.selected, all ? 64 : 1);
@@ -1563,7 +1569,8 @@ export class Game {
     if (p.hurtTime > 0) this.camera.rotation.z = Math.sin(p.hurtTime * 0.6) * 0.04 * fxScale.tilt;
     // looking through a Farglass narrows the view to a tenth (at once, like the reference); the arm and item are hidden
     const zoom = p.zooming && this.perspective === 0 && !p.dead;
-    const targetFov = this.settings.fov * (zoom ? 0.1 : p.sprinting ? 1 + 0.1 * fxScale.sprintFov : 1);
+    const scopeId = p.inventory.selectedStack ? p.inventory.selectedStack.id : 0;
+    const targetFov = this.settings.fov * (zoom ? zoomFactor(scopeId, p.scopeLevel) : p.sprinting ? 1 + 0.1 * fxScale.sprintFov : 1);
     this.camera.fov = zoom || this.camera.fov < this.settings.fov * 0.5 ? targetFov : this.camera.fov + (targetFov - this.camera.fov) * 0.2;
     this.camera.updateProjectionMatrix();
 
@@ -1689,10 +1696,28 @@ export class Game {
     }
     if (fx) this.postfx.end(this.camera, sec, this.shaftSun(st, cd), b.eyeInWater);
     if (this._thumbWaiters && this._thumbWaiters.length) this._grabThumbnail(); // (right after drawing, see captureThumbnail)
-    this.hud.setScope(zoom);
+    this.hud.setScope(zoom, zoom && isFarscope(scopeId) ? this.scopeReadout(scopeId, p) : '');
     this.hud.update();
     this.ui.tickOpen();
     this.lastSkyState = st;
+  }
+
+  /** The Farscope's read-out (a few times a second): the magnification, and what the cross-hairs rest on and how far off it is. */
+  scopeReadout(id, p) {
+    if (!this._scopeAt || this.ticks - this._scopeAt > 3 || this._scopeLevel !== p.scopeLevel) {
+      this._scopeAt = this.ticks; this._scopeLevel = p.scopeLevel;
+      const a = aimedAt(this.world, p.eyePos(), p.lookDir(), this.entities.list, (hit) => (BLOCKS[hit.id] ? BLOCKS[hit.id].name : 'Terrain'));
+      this._scopeText = readoutText(id, p.scopeLevel, a.what, a.dist);
+    }
+    return this._scopeText;
+  }
+
+  /** Set the Waymark Compass's target ({ x, z, kind, label }): the last Bounty Board opened or place marked. */
+  setWaymark(wm) {
+    const w = cleanWaymark({ dim: this.world.dimension, ...wm });
+    if (!w) return;
+    this.player.waymark = w;
+    if (this.player.inventory.count(I.WAYMARK_COMPASS) > 0) this.hud.toast(`Waymark set: ${w.label}`, 2200);
   }
 
   /** The sun the light shafts stream from: the brightest one up, fading in rain and underground. */

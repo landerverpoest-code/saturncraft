@@ -5,6 +5,9 @@ import { I } from './items.js';
 import { lighthousesNear, lighthouseChests } from './lighthouse.js';
 import { mireShrinesNear, mireChests } from './mireShrine.js';
 import { observatoriesNear, observatoryChests } from './observatory.js';
+import { hagHutsNear, hagChests } from './hagHut.js';
+import { sandvaultsNear, sandvaultChests } from './sandvault.js';
+import { recipePages } from './hagCauldron.js';
 
 /** Titles, authors and pages (256 characters at most each) of the three books. */
 export const LORE = {
@@ -33,18 +36,31 @@ export const LORE = {
       'The dome was glass once. The wind took the east side first. I left the chart on the pedestal; the stars will want it back.',
     ],
   },
+  // the Sandvault's burial hall: the ledger of the vault's keeper (a plain log)
+  sandvault: {
+    title: "The Sun-Warden's Ledger", author: 'The Sun-Warden',
+    pages: [
+      'Entered in the third year of the long noon. The vault is sealed under the sand and the sun is its only door. Let no one dig where the golden disc lies.',
+      'Three rows of darts guard the road to the hall. Where the plate sits in the middle, keep to the sides. Where the plates sit at the sides, keep to the middle. Better: cut the red lines and the slits fall quiet.',
+      'The two who keep the hall were once my guard. They are tired now, and angry. Their master sleeps below the gold.',
+    ],
+  },
+  // a Hag Hut's chest: the recipe of Bog Essence in riddles; its pages depend on the world's seed (world/hagCauldron.js)
+  hag: { title: "The Hag's Receipt", author: 'The Hag', pages: null },
 };
 
-/** A fresh Written Book stack for a lore key (null for an unknown one). */
-export function loreBook(key) {
+/** A fresh Written Book stack for a lore key (null for an unknown one). `seed` is the world's: the Hag's recipe depends on it. */
+export function loreBook(key, seed = 0) {
   const l = LORE[key];
-  return l ? { id: I.WRITTEN_BOOK, count: 1, damage: 0, title: l.title, author: l.author, pages: l.pages.slice() } : null;
+  if (!l) return null;
+  const pages = l.pages ? l.pages.slice() : recipePages(seed);
+  return { id: I.WRITTEN_BOOK, count: 1, damage: 0, title: l.title, author: l.author, pages };
 }
 
 /** The lore key of the chest at (x, y, z), or null when it is not one of a site's lore chests. */
 export function loreKeyAt(gen, x, y, z) {
   if (!gen || !gen.column) return null;
-  for (const [near, chests] of [[lighthousesNear, lighthouseChests], [mireShrinesNear, mireChests], [observatoriesNear, observatoryChests]]) {
+  for (const [near, chests] of [[lighthousesNear, lighthouseChests], [mireShrinesNear, mireChests], [observatoriesNear, observatoryChests], [hagHutsNear, hagChests], [sandvaultsNear, sandvaultChests]]) {
     for (const s of near(gen, x, z, x, z)) for (const c of chests(s)) if (c.lore && c.x === x && c.y === y && c.z === z) return c.lore;
   }
   return null;
@@ -56,6 +72,6 @@ export function addLore(gen, x, y, z, slots) {
   if (!key) return null;
   const i = slots.findIndex((s) => !s);
   if (i < 0) return null;
-  slots[i] = loreBook(key);
+  slots[i] = loreBook(key, gen.seed);
   return key;
 }

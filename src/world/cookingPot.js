@@ -29,6 +29,7 @@ export const RECIPES = [
   { key: 'gourd_soup', kinds: ['gourd', 'root'], servings: 2, bowl: true },
   { key: 'berry_tart', kinds: ['berry', 'grain'], servings: 3, bowl: false },
   { key: 'gourd_pie', kinds: ['gourd', 'grain'], servings: 3, bowl: false },
+  { key: 'fish_pie', kinds: ['fish', 'grain'], servings: 3, bowl: false }, // (any fish from the rod: Bogcarp, Dunefin, Gilded Perch...)
 ];
 for (const r of RECIPES) r.mask = r.kinds.reduce((m, k) => m | KIND_BIT[k], 0);
 

@@ -460,7 +460,7 @@ export function drawDial(c, kind, a, light, suns) {
   const ctx = c.getContext('2d');
   ctx.clearRect(0, 0, 32, 32);
   ctx.imageSmoothingEnabled = false;
-  const rim = kind === 'clock' ? ['#c8a020', '#f2d24b'] : ['#6a6a72', '#b8b8c0'];
+  const rim = kind === 'clock' ? ['#c8a020', '#f2d24b'] : kind === 'waymark' ? ['#2f7f86', '#6fd2c4'] : ['#6a6a72', '#b8b8c0'];
   const P = (x, y, col) => { ctx.fillStyle = col; ctx.fillRect(x * 2, y * 2, 2, 2); };
   for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
     const r = Math.hypot(x - 7.5, y - 7.5);
@@ -479,7 +479,7 @@ export function drawDial(c, kind, a, light, suns) {
   // compass needle: red half points at the spawn
   for (let t = -5; t <= 5; t += 0.5) {
     const x = 7.5 + Math.sin(a) * t, y = 7.5 - Math.cos(a) * t;
-    P(Math.round(x - 0.5), Math.round(y - 0.5), t > 0 ? '#d02a2a' : '#4a4a52');
+    P(Math.round(x - 0.5), Math.round(y - 0.5), t > 0 ? (kind === 'waymark' ? '#e0a020' : '#d02a2a') : '#4a4a52');
   }
   P(7, 7, '#2a2a2a');
 }

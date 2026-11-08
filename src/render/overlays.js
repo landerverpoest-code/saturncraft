@@ -1,4 +1,5 @@
 // Block selection outline, break-progress cracks and the first-person held item.
+import { waymarkNeedle } from '../player/waymark.js';
 import { MAP_SIZE, mapPos } from '../world/maps.js';
 import { LANDMARK_BY_KEY } from '../world/landmarkKinds.js';
 import * as THREE from 'three';
@@ -155,6 +156,9 @@ export class HeldItem {
         const s = g.worldSpawn || { x: 0, z: 0 };
         a = g.world.dimension === 'overworld' ? Math.atan2(-(s.x - p.x), -(s.z - p.z)) - p.yaw : sec * 7;
         a = -a;
+      } else if (this.dial.kind === 'waymark') { // the Waymark Compass points at the last Bounty Board / waypoint (player/waymark.js); with none it turns slowly
+        const n = waymarkNeedle(p.waymark, p.x, p.z, p.yaw, g.world.dimension);
+        a = n === null ? (p.waymark && p.waymark.dim === g.world.dimension ? 0 : sec * 3) : n;
       } else { const st = g.sky.state; light = Math.min(1, st.combined); suns = st.aboveCount; }
       const sig = `${Math.round(a * 20)},${Math.round(light * 20)},${suns}`;
       if (sig !== this.dial.last) { this.dial.last = sig; drawDial(this.dial.canvas, this.dial.kind, a, light, suns); this.dial.tex.needsUpdate = true; }
