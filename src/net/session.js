@@ -65,6 +65,9 @@ import { PingBeacons } from '../render/pingBeacons.js';
 import { GuestMeter, allowedEdits, updateEvery, sendsNow, Rate, rateText } from './guard.js';
 import { GuestLedger, plausibleStack, countIn, ALLOW_PER_KIND, ALLOW_SMALL } from './ledger.js';
 import { cleanCamp, mergeCamp, sameCampLayout } from '../world/campfireCooking.js';
+import { PositionHistory, rewindMs, meleeHitOk } from './lagcomp.js';
+import { GhostBook, GHOST_TTL_MS } from './ghosts.js';
+import { reachOf } from '../player/weapons.js';
 
 const STATE_EVERY = 2;      // ticks between player / entity updates (10 Hz)
 const ENV_EVERY = 20;       // time + weather once a second (also the heartbeat)
@@ -336,6 +339,9 @@ class Session {
     this.pvp = o.pvp; this.guestCommands = o.gc; this.friendlyFireAll = o.ffa; this.maxPlayers = o.mp;
   }
 
+  /** Lag compensation (host only): where a mob was for this attacker. */
+  rewoundPos() { return null; }
+
   /** Lines for the F3 overlay: who we talk to and how much it costs. */
   debugLines() { return []; }
 }
@@ -350,6 +356,8 @@ export class HostSession extends Session {
     this.nextId = 1;
     this.maxPlayers = MAX_PLAYERS; // the host can lower it (pause menu)
     this.viewers = new Map(); // container key -> { kind, x, y, z, ids: Set, sig }
+    this.ghosts = new GhostBook(); // guests whose link dropped, kept for 60 s (net/ghosts.js)
+    this.history = new PositionHistory(); // recent mob positions, rewound for a guest's blows and arrows (net/lagcomp.js)
   }
 
   get link() { return joinLink(this.code); }
@@ -571,7 +579,7 @@ export class HostSession extends Session {
         if (g.hush && GUEST_KINDS.has(m.k) && this.near(c, m.x, m.y, m.z, 8)) g.hush.vibrate(m.x, m.y, m.z, m.k, c.rp.target);
         break;
       case 'boom': if (this.near(c, m.x, m.y, m.z, 8) && m.power > 0 && m.power <= 6) g.explode(m.x, m.y, m.z, m.power, null); break;
-      case 'bye': this.drop(c, 'left the game'); break;
+      case 'bye': this.drop(c, 'left the game', true); break;
       default: break;
     }
   }
@@ -584,13 +592,15 @@ export class HostSession extends Session {
     if (ban) { c.ch.send({ t: 'reject', reason: `You are banned from this world${ban.reason ? ': ' + ban.reason : ''}` }); setTimeout(() => this.drop(c), 500); return; }
     // the same guest coming back before the old link timed out: the old link goes, the name stays theirs
     if (tok) for (const o of this.joined()) if (o !== c && o.tok === tok && nameKey(o.name) === nameKey(base)) this.drop(o);
-    if (this.joined().length >= this.maxPlayers - 1) { c.ch.send({ t: 'reject', reason: `This world is full (${this.maxPlayers} players)` }); setTimeout(() => this.drop(c), 500); return; }
+    // (a guest whose link dropped keeps its seat for 60 s: only they can take it, net/ghosts.js)
+    if (!this.ghosts.canJoin(base, tok, this.joined().length + 1, this.maxPlayers, performance.now())) { c.ch.send({ t: 'reject', reason: `This world is full (${this.maxPlayers} players)` }); setTimeout(() => this.drop(c), 500); return; }
     let name = base;
     const taken = new Set(this.playerNames().map(nameKey));
     // a name belongs to the browser that first used it (ops, teams and saved belongings go by name)
     for (let n = 2; taken.has(nameKey(name)) || !soc.identityFree(name, tok); n++) name = base.slice(0, 13) + '-' + n;
     soc.bindIdentity(name, tok);
     c.name = name; c.tok = tok;
+    const ghost = this.ghosts.claim(name, tok, performance.now()); // back within a minute: exactly where they were
     const p = g.player;
     const chunks = this.editedChunks();
     c.ch.send({
@@ -599,7 +609,7 @@ export class HostSession extends Session {
       dl: g.daylightCycle, df: g.difficulty, pvp: this.pvp, gc: this.guestCommands, ffa: this.friendlyFireAll, mp: this.maxPlayers, se: g.seasons.save(), ev: g.worldEvents ? g.worldEvents.syncOut() : undefined,
       soc: 1, teams: soc.teamsToWire(), wps: soc.waypointsToWire(name), // optional: the social layer (net/social.js); older guests ignore both
       worldSpawn: g.worldSpawn, pos: { x: p.x, y: p.y, z: p.z, yaw: p.yaw },
-      player: g.netPlayers[name] || null,
+      player: (ghost && ghost.rec) || g.netPlayers[name] || null, back: ghost ? 1 : undefined,
       signs: [...g.signs], frames: [...g.frames], pots: [...g.pots], lecterns: [...g.lecterns], campfires: [...(g.campfires || [])],
       vaults: g.proving ? g.proving.vaults.save() : [], // who opened which Vault (world/provingSystem.js)
       players: [{ id: 0, name: this.name }, ...this.joined().map((o) => ({ id: o.id, name: o.name }))],
@@ -613,7 +623,7 @@ export class HostSession extends Session {
     c.rp.target.reputation = cleanReputation((g.netPlayers[name] || {}).reputation); // (the host's copy is the true one)
     this.remotes.set(c.id, c.rp);
     this.broadcast({ t: 'join', id: c.id, name }, c);
-    g.chat.add(`${name} joined the game`);
+    g.chat.add(ghost ? `${name} is back` : `${name} joined the game`);
     this.sendRoster();
   }
 
@@ -625,7 +635,8 @@ export class HostSession extends Session {
     return out;
   }
 
-  drop(c, why = null) {
+  /** `graceful`: they left on purpose (or were kicked): no ghost, the seat is free at once. */
+  drop(c, why = null, graceful = false) {
     if (!this.clients.has(c.id)) return;
     this.clients.delete(c.id);
     console.warn('net: dropped', c.name, why || '(closed)');
@@ -639,12 +650,14 @@ export class HostSession extends Session {
     if (rec && c.raw && finite(c.raw[0], c.raw[1], c.raw[2]) && !((c.raw[6] | 0) & 2)) { // (a dead guest's belongings lie on the ground: keep the older record)
       rec.x = c.raw[0]; rec.y = c.raw[1]; rec.z = c.raw[2]; rec.yaw = c.raw[3]; rec.pitch = c.raw[4]; rec.dim = this.game.world.dimension;
     }
+    let ghosted = false;
+    if (!graceful && c.name) { this.ghosts.add(c.name, c.tok, rec ? { ...rec } : null, performance.now()); ghosted = true; }
     if (this.spectate && nameKey(this.spectate.target) === nameKey(c.name)) this.cycleSpectate(1);
     c.rp.dispose();
     this.remotes.delete(c.id);
     this.broadcast({ t: 'leave', id: c.id, name: c.name });
     this.sendRoster();
-    if (why && this.game) this.game.chat.add(`${c.name} ${why}`);
+    if (why && this.game) this.game.chat.add(`${c.name} ${why}${ghosted ? ` (their place is kept for ${GHOST_TTL_MS / 1000} s)` : ''}`);
   }
 
   // ---- blocks ---------------------------------------------------------------------
@@ -688,11 +701,21 @@ export class HostSession extends Session {
   }
 
   // ---- entities ---------------------------------------------------------------------
+  /** Ping of the guest `who` (its stand-in) in ms, or -1. */
+  pingOf(who) { const c = who && who.remote ? this.clients.get(who.remote.id) : null; return c && c.ping != null ? c.ping : -1; }
+
+  /** Where `mob` was when the guest `who` saw it: its position rewound by that guest's ping, at most 200 ms (net/lagcomp.js). Null for no rewind. */
+  rewoundPos(mob, who) {
+    const ms = rewindMs(this.pingOf(who));
+    return ms > 0 ? this.history.at(mob.id, performance.now(), ms) : null;
+  }
+
   /** A guest hit one of our mobs (melee or its arrow). */
   remoteHit(c, m) {
     const s = c.rp.state, mob = this.entity(m.id);
     if (!mob || mob.kind !== 'mob' || mob.deathTime > 0 || !s) return;
-    if (Math.hypot(mob.x - s.x, mob.y - s.y, mob.z - s.z) > (m.p ? 120 : 8)) return;
+    if (m.p) { if (Math.hypot(mob.x - s.x, mob.y - s.y, mob.z - s.z) > 120) return; } // (a thrown Returning Disc: flown on the guest's side)
+    else if (!meleeHitOk(c.rp.target.eyePos(), mob, this.rewoundPos(mob, c.rp.target), reachOf(s.held == null ? null : { id: s.held }))) return; // the mob where the guest saw it (net/lagcomp.js)
     const dmg = Math.max(0, Math.min(40, +m.d || 0)), knock = Math.max(0, Math.min(1.5, +m.k || 0));
     c.rp.target.lastAttacked = mob; // the guest's tamed Howlers join in
     mob.hurt(dmg, m.p ? 'arrow' : 'player', c.rp.target, knock, m.p ? { remote: true } : null);
@@ -1248,7 +1271,7 @@ export class HostSession extends Session {
     if (!c) return false;
     c.ch.send({ t: 'bye', reason: `You were kicked from the world${reason ? ': ' + reason : ''}`, kick: 1 });
     this.game.chat.add(`${c.name} was kicked${reason ? ' (' + reason + ')' : ''}`);
-    setTimeout(() => this.drop(c), 400); // (lets the message out first)
+    setTimeout(() => this.drop(c, null, true), 400); // (lets the message out first)
     return true;
   }
 
@@ -1290,6 +1313,7 @@ export class HostSession extends Session {
     const g = this.game;
     this.ticks++;
     this.tickSpectate();
+    if (this.clients.size) this.history.record(performance.now(), g.entities.list.filter((x) => x.kind === 'mob' && !x.dead && !x.removed).map((x) => ({ id: x.id, x: x.x, y: x.y, z: x.z }))); else if (this.history.size) this.history.clear();
     if (this.ticks % 40 === 0) this.sendRoster();
     if (this.stalled()) for (const c of this.clients.values()) c.lastSeen = performance.now();
     const e = this.edits.take();
@@ -1344,6 +1368,9 @@ export class HostSession extends Session {
     if (this.ticks % ENV_EVERY === 0) {
       this.sendEnv();
       const now = performance.now();
+      const held = this.ghosts.map.size ? this.ghosts.seats(now).map((x) => x.name) : [];
+      if (this.ghostNames && this.ghostNames.length) for (const n of this.ghostNames) if (!held.includes(n) && !this.clientByName(n)) g.chat.add(`${n}'s place was given up`);
+      this.ghostNames = held;
       for (const c of [...this.clients.values()]) {
         if (now - c.lastSeen > TIMEOUT_MS) { this.drop(c, 'timed out'); continue; }
         if (!c.joined) continue;
@@ -1506,6 +1533,7 @@ export class ClientSession extends Session {
       p.setPosition(w.pos.x, w.pos.y, w.pos.z);
       p.yaw = w.pos.yaw;
     }
+    if (w.back && game.chat) game.chat.add('Welcome back - your place was kept');
     this.edits = new EditSync(game.world, { host: false });
     game.world.passive = true; // fluids, fire, falling blocks, simmering pots... run on the host and arrive as edits
     // no mob generation here: every entity comes from the host
