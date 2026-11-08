@@ -11,6 +11,7 @@ export const BIOME = {
   RIVER: 21, FROZEN_RIVER: 22,
   HIGHLAND_MEADOW: 23,
   DEEP_OCEAN: 24, KELP_FOREST: 25, // the ocean depths (world/deepSea.js paints them over the ocean afterwards; the terrain is untouched)
+  FROZEN_DEEP: 26, // the deep floors under a Frozen Ocean's ice (world/frozenDeep.js paints it afterwards, like the Deep Ocean)
 };
 
 export const BIOMES = [
@@ -43,6 +44,8 @@ export const BIOMES = [
   // deep sea floors and the kelp forests of the mid-depths: the same sea, darker and greener
   { id: 24, key: 'deep_ocean', name: 'Deep Ocean', temp: 0.5, humid: 0.5, water: [150, 190, 235] },
   { id: 25, key: 'kelp_forest', name: 'Kelp Forest', temp: 0.5, humid: 0.5, water: [170, 235, 205] },
+  // the deep part of a Frozen Ocean: ice floes, icebergs and icebound hulks over cold, dark water
+  { id: 26, key: 'frozen_deep', name: 'Frozen Deep', temp: 0.0, humid: 0.5, water: [150, 195, 245] },
 ];
 
 export function biomeName(id) { return BIOMES[id] ? BIOMES[id].name : '?'; }

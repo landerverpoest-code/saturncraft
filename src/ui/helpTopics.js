@@ -188,6 +188,7 @@ export function buildTopics({ table, touch = false, pad = false } = {}) {
       `Trenches wind across the deep floor, up to ${TRENCH_MAX} blocks deeper than the floor beside them. Gleamkelp glows on their floors, and Lanternfins school over them: their lures are the only light for a long way. Catch one for a Raw Lanternfin (a little Night Vision when eaten) and sometimes a Lantern Gland.`,
       `The Diver's Lamp (a Lantern Gland, a glass pane and iron) is a light you hold, lit under water. The Diver's Helm (iron, glass pane and a Lantern Gland) lets you breathe under water, wears one point every ${HELM_WEAR_TICKS / 20} seconds you are submerged and has a brow lamp (light ${HELM_LIGHT}). Repair it with a Lantern Gland at an anvil.`,
       `Abyssal Grottos are sea caves in rock domes on the deep floor (/locate grotto): Gleamkelp among the rocks, a tidestone dais with two chests and the wreck of a diving skiff with a third. Trenchmaws lurk in the dark: they lunge at swimmers, but keep ${lampScareRange(13)} blocks from a held Diver's Lamp and ${lampScareRange(HELM_LIGHT)} from a Diver's Helm.`,
+      'Under the ice of a cold sea the deep part is the Frozen Deep: the sheet breaks into floes of Packed Ice with dark leads of open water between them. Icebergs rise there (/locate iceberg), hollow inside: swim in through the tunnel under the waterline to a dry ledge, a pool and a chest. Icebound Hulks (/locate hulk) are spruce ships frozen stern-down into the sheet: dive through the hatch in the ice for the flooded hold.',
       'Fishing in the Deep Ocean turns up Lanternfins, Gleamkelp, Lantern Glands, Tide Shards and the odd Skybean.',
     ] },
     { h: 'Going up' },
@@ -288,6 +289,10 @@ export function buildTopics({ table, touch = false, pad = false } = {}) {
     { list: Object.values(SETS).map((set) => `${set.name}: ${set.tiers.map((t) => `(${t.n}) ${t.text}`).join('; ')}.`) },
   ]);
 
+  add('maps', "Maps and the Cartographer's Table", 'Systems', [
+    { p: "An Empty Map (eight Paper round a Compass) fills in as you walk. A Cartographer's Table (a Compass, a Paper and four planks) is quicker for ground you have already been over: the game remembers every chunk you come within three of, and the table draws a map of the 128-block square it stands in, inking in only those chunks (a Paper and a Compass in your bag; the Compass is kept). Chunks you have left behind are charted from the lay of the land, structures in them are marked, and what you never visited stays blank. Holding a map and a Paper at the table makes a copy that shares the same picture." },
+  ]);
+
   add('guide', 'Field Guide and Milestones', 'Systems', [
     { p: `Press ${key('guide')} for the Field Guide: creatures, biomes, structures and items you have found fill in as you play. Milestones (pause menu) are goals that pop up when reached; Statistics shows what you have done.` },
   ]);
@@ -300,7 +305,7 @@ export function buildTopics({ table, touch = false, pad = false } = {}) {
 
   add('gamepad', 'Controls: gamepad', 'Controls', [
     { p: `${pad ? 'A gamepad is connected. ' : ''}Plug in a gamepad and press any button to use it. The left stick moves, the right stick looks and Start pauses.` },
-    { list: ['Click the left stick to sprint, and keep pushing forward to keep sprinting.', 'On the pause screens, B or Back goes back and the D-pad scrolls; the bumpers change tabs.', 'In the bag, chests, crafting, furnace and brewing screens the D-pad moves a gold cursor over the slots: A picks up or puts down a stack, X splits it, Y moves it to the other side, B closes.', 'Every button already has a job, so pinging a spot for your team in a shared world is a chord: hold Back and press the right bumper.'] },
+    { list: ['Click the left stick to sprint, and keep pushing forward to keep sprinting.', 'On the pause screens, B or Back goes back and the D-pad scrolls; the bumpers change tabs.', 'In the bag, chests, crafting, furnace and brewing screens the D-pad moves a gold cursor over the slots: A picks up or puts down a stack, X splits it, Y moves it to the other side, B closes.', 'Every button already has a job, so pinging a spot for your team in a shared world is a chord: hold Back and press the right bumper. The Quest Journal is Back + X and marking a waypoint where you stand is Back + the left bumper.'] },
     ...controlRows(table, [2], { attack: 'Right trigger', use: 'Left trigger' }),
   ]);
 
@@ -309,7 +314,7 @@ export function buildTopics({ table, touch = false, pad = false } = {}) {
     { list: [
       'Left thumb moves; push the stick far to sprint.',
       'Drag anywhere else to look around; hold to mine; tap to place or use.',
-      'The Jump, Use, Mine and Sneak buttons are at the corners; Menu, Bag, Chat and Guide are along the top.',
+      'The Jump, Use, Mine and Sneak buttons are at the corners; Menu, Bag, Chat, Guide, Quests (the Quest Journal) and Mark (a waypoint where you stand) are along the top.',
       'Double-tap Jump to fly in creative mode. In bag screens, the Split and Quick tools change what the next tap does.',
       'Menu > Help opens this screen.',
     ] },

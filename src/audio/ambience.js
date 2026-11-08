@@ -47,7 +47,7 @@ export function musicProfileFor(scape) { return SOUNDSCAPES[scape] ? MUSIC_PROFI
 const SURFACE = {
   highland_meadow: 'meadow',
   plains: 'plains', flower_forest: 'forest', forest: 'forest', birch_forest: 'forest', dark_forest: 'forest', blossom_grove: 'meadow',
-  taiga: 'cold', snowy_taiga: 'cold', snowy_plains: 'cold', snowy_peaks: 'cold', frozen_ocean: 'cold', frozen_river: 'cold',
+  taiga: 'cold', snowy_taiga: 'cold', snowy_plains: 'cold', snowy_peaks: 'cold', frozen_ocean: 'cold', frozen_deep: 'cold', frozen_river: 'cold',
   swamp: 'swamp', mangrove_swamp: 'swamp', jungle: 'jungle', mushroom_fields: 'swamp',
   desert: 'desert', badlands: 'desert', savanna: 'desert',
   ocean: 'shore', deep_ocean: 'shore', kelp_forest: 'shore', beach: 'shore', river: 'shore', stony_peaks: 'peaks',

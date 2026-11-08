@@ -19,6 +19,7 @@ import { canyonsNear } from '../world/mesaPack.js';
 import { hagHutsNear } from '../world/hagHut.js';
 import { grottosNear } from '../world/deepSea.js';
 import { isleNear } from '../world/skyIsles.js';
+import { icebergsNear, hulksNear } from '../world/frozenDeep.js';
 import { inGreatRift } from '../world/carvers.js';
 import { inMagmaLake } from '../world/magmaLakes.js';
 import { tabComplete } from './fieldGuideEntries.js';
@@ -77,6 +78,8 @@ export const MILESTONES = [
   { id: 'canyon', title: 'The Painted Cut', desc: 'Find a Slot Canyon', icon: B.STRATA_RUST, tick: near(canyonsNear) },
   { id: 'haghut', title: 'Over the Bog', desc: 'Find a Hag Hut', icon: B.BOG_PLANKS, tick: near(hagHutsNear) },
   { id: 'grotto', title: 'Down in the Dark', desc: 'Find an Abyssal Grotto on the deep sea floor', icon: B.TIDESTONE_BRICKS, tick: near(grottosNear) },
+  { id: 'iceberg', title: 'Tip of the Iceberg', desc: 'Find an Iceberg on the Frozen Deep', icon: B.PACKED_ICE, tick: near(icebergsNear) },
+  { id: 'hulk', title: 'Frozen in Time', desc: 'Find an Icebound Hulk', icon: B.SPRUCE_PLANKS, tick: near(hulksNear) },
   { id: 'diver', title: 'Light for the Deep', desc: "Make a Diver's Lamp or a Diver's Helm", icon: I.DIVERS_LAMP, inv: (g) => has(g, I.DIVERS_LAMP, I.DIVERS_HELM) },
   { id: 'kelp_forest', title: 'Among the Fronds', desc: 'Swim through a Kelp Forest', icon: B.KELP, tick: (g) => overworld(g) && g.world.biomeAt(Math.floor(g.player.x), Math.floor(g.player.z)) === BIOME.KELP_FOREST && g.player.body.inWater },
   { id: 'isle', title: 'Head in the Clouds', desc: 'Reach a Cloud Isle', icon: B.CIRRUSSTONE, tick: (g) => g.player.y > 110 && near(isleNear)(g) },

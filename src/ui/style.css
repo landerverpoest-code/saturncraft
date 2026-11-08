@@ -445,7 +445,7 @@ body.touch-on #chat .chat-input { font-size: 16px; padding: 10px; } /* 16px stop
 .tc-sneak { --k: .9; --bx: 2; --by: .05; }
 body.tc-left #tc-ui > .tc-btn { right: auto; left: calc(var(--bx) * var(--u) + env(safe-area-inset-left)); }
 @media (orientation: portrait) { #tc-ui { --lift: calc(var(--slot) * 2 + 40px); } body.touch-on #skyinfo { top: calc(54px + env(safe-area-inset-top)); } body.touch-on #raidbar, body.touch-on #bossbar { top: calc(100px + env(safe-area-inset-top)); } body.touch-on #raidbar:not(.hidden) ~ #bossbar { top: calc(148px + env(safe-area-inset-top)); } }
-.tc-top { position: absolute; left: 50%; top: calc(6px + env(safe-area-inset-top)); transform: translateX(-50%); display: flex; gap: 6px; pointer-events: none; }
+.tc-top { position: absolute; left: 50%; top: calc(6px + env(safe-area-inset-top)); transform: translateX(-50%); display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-width: calc(100vw - 16px); pointer-events: none; }
 .tc-top .tc-btn { width: calc(46px * var(--tc-scale, 1)); height: calc(36px * var(--tc-scale, 1)); border-radius: 8px; font-size: calc(11px * var(--tc-scale, 1)); }
 .tc-tool { min-width: 64px; height: 44px; padding: 0 14px; border-radius: 8px; font-size: 15px; opacity: .9; }
 .tc-stick { position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none; opacity: calc(var(--tc-opacity, .65) * .6); }
@@ -813,3 +813,7 @@ html.high-contrast .panel .set-bonuses .sb-head, html.high-contrast .panel .set-
 .death-cam .tiny { padding: 4px 10px; font-size: 13px; }
 #netlost .btn { margin: 4px 0; }
 .btn:disabled { opacity: .55; cursor: default; }
+
+/* Cartographer's Table (ui/tableScreens.js) */
+.table-chart { display: block; width: 192px; height: 192px; margin: 0 auto 8px; image-rendering: pixelated; border: 2px solid #5a3a22; border-radius: 4px; background: #e6d8a8; }
+.table-body { max-height: 34vh; }

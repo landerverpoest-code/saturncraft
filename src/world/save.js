@@ -121,6 +121,7 @@ export function buildSaveData(game) {
     campfires: [...(game.campfires || new Map())], // the foods cooking on Campfires (world/campfireCooking.js)
     proving: game.proving ? game.proving.save() : null, // Proving Spawner rests and who opened which Vault (world/provingSystem.js)
     maps: [...game.maps.values()].map(encodeMap),
+    explored: game.explored ? game.explored.save() : undefined, // the chunks the player has been near (player/cartographer.js)
     brewingStands: [...(game.brewingStands || new Map()).values()],
     hoppers: [...(game.hoppers || new Map()).values()].map((h) => ({ x: h.x, y: h.y, z: h.z, slots: h.slots })),
     dispensers: [...(game.dispensers || new Map()).values()].map((d) => ({ x: d.x, y: d.y, z: d.z, slots: d.slots })),
@@ -221,6 +222,7 @@ export function applySave(game, data) {
   for (const [k, c] of data.campfires || []) { const s = cleanCamp(c); if (s && game.campfires) game.campfires.set(String(k), s); }
   if (game.proving) game.proving.load(data.proving);
   for (const d of data.maps || []) { const m = decodeMap(d); if (m) game.maps.set(m.id, m); }
+  if (game.explored) game.explored.load(data.explored);
   for (const s of data.brewingStands || []) if (s && Array.isArray(s.slots)) game.brewingStands.set(`${s.x},${s.y},${s.z}`, s);
   for (const h of data.hoppers || []) if (h && Array.isArray(h.slots)) game.hoppers.set(`${h.x},${h.y},${h.z}`, { ...h, cooldown: 0 });
   for (const d of data.dispensers || []) if (d && Array.isArray(d.slots)) game.dispensers.set(`${d.x},${d.y},${d.z}`, { x: d.x, y: d.y, z: d.z, slots: d.slots });

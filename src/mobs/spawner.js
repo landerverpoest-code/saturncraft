@@ -447,7 +447,7 @@ export class MobSpawner {
     if (Math.random() < 0.15) {
       const bx = cx * 16 + 2 + Math.floor(Math.random() * 12), bz = cz * 16 + 2 + Math.floor(Math.random() * 12);
       const key = BIOMES[w.biomeAt(bx, bz)] && BIOMES[w.biomeAt(bx, bz)].key;
-      if (key === 'ocean' || key === 'frozen_ocean' || key === 'deep_ocean') {
+      if (key === 'ocean' || key === 'frozen_ocean' || key === 'deep_ocean' || key === 'frozen_deep') {
         for (let i = 0, n = 2 + Math.floor(Math.random() * 3); i < n; i++) {
           const x = bx + Math.floor(Math.random() * 3) - 1, z = bz + Math.floor(Math.random() * 3) - 1, y = 56 + Math.floor(Math.random() * 5);
           if (w.getBlock(x, y, z) === B.WATER && w.getBlock(x, y + 1, z) === B.WATER) this.spawnMob('inkling', x + 0.5, y, z + 0.5);

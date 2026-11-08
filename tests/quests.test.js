@@ -11,7 +11,7 @@ import { I } from '../src/world/items.js';
 import { blockBoxes } from '../src/world/shapes.js';
 import { craft } from '../src/player/crafting.js';
 import { TerrainGenerator } from '../src/world/generator.js';
-import { villageInRegion, stampVillages, boardSpot } from '../src/world/villages.js';
+import { villageInRegion, stampVillages, stampVillageBoards, boardSpot } from '../src/world/villages.js';
 import { cidx } from '../src/world/constants.js';
 import { ACTIONS, resolveBindings, findBinding } from '../src/ui/bindings.js';
 import { MILESTONES } from '../src/player/milestones.js';
@@ -400,6 +400,7 @@ describe('the Bounty Board block', () => {
     const cx = Math.floor(bx / 16), cz = Math.floor(bz / 16);
     const c = gen.generate(cx, cz);
     stampVillages(gen, c.blocks, c.meta, cx, cz);
+    stampVillageBoards(gen, c.blocks, c.meta, cx, cz); // (the board is a pass of its own after the other structures; stamping the village again cleared it)
     let found = false;
     for (let y = v.y - 8; y <= v.y + 6; y++) if (c.blocks[cidx(bx - cx * 16, y, bz - cz * 16)] === B.BOUNTY_BOARD) found = true;
     expect(found).toBe(true);

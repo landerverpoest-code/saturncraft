@@ -22,6 +22,7 @@ import { nearestSandvault } from '../world/sandvault.js';
 import { nearestCanyon } from '../world/mesaPack.js';
 import { nearestHagHut } from '../world/hagHut.js';
 import { nearestGrotto } from '../world/deepSea.js';
+import { nearestIceberg, nearestHulk, deepBiomeFor } from '../world/frozenDeep.js';
 import { nearestIsle } from '../world/skyIsles.js';
 import { nearestForge } from '../world/dimensions/cinderForge.js';
 import { nearestWyrmRibs } from '../world/dimensions/wyrmRibs.js';
@@ -110,7 +111,7 @@ export const HELP = [
   '/summon <mob> [x y z]',
   '/waymark [here [name]|clear]  (where a Waymark Compass points)',
   '/xp <amount> [levels]',
-  '/locate <village|temple|igloo|outpost|shipwreck|monument|mineshaft|sanctum|bastion|hut|ruin|buried|vaults|sunken|tomb|skywatch|rimekeep|sporehall|grotto|isle|lighthouse|mire|observatory|sandvault|canyon|haghut|city|gate|forge|ribs> or /locate biome <name>',
+  '/locate <village|temple|igloo|outpost|shipwreck|monument|mineshaft|sanctum|bastion|hut|ruin|buried|vaults|sunken|tomb|skywatch|rimekeep|sporehall|grotto|isle|lighthouse|mire|observatory|sandvault|canyon|haghut|iceberg|hulk|city|gate|forge|ribs> or /locate biome <name>',
   '/dimension <overworld|cinderdeep|hollow>',
   '/retrofit  (status),  /retrofit dry [chunks],  /retrofit apply [chunks]  (host: add features newer than a saved world to its edited chunks without touching anything you built; see the README)',
   '/effect give <effect> [seconds] [level],  /effect clear  (effects: ' + EFFECT_KEYS.join(', ') + ')',
@@ -391,8 +392,8 @@ export function runCommand(game, text) {
           const n = Math.max(1, Math.round(r * Math.PI * 2 / 32));
           for (let k = 0; k < n; k++) {
             const x = Math.round(p.x + Math.cos(k / n * Math.PI * 2) * r), z = Math.round(p.z + Math.sin(k / n * Math.PI * 2) * r);
-            const col = gen.column(x, z);
-            if (gen.biomeFor(col, gen.surfaceAt(x, z, col)) === b.id) return `The nearest ${b.name} is at ${x}, ~, ${z} (${r} blocks away)`;
+            const col = gen.column(x, z), top = gen.surfaceAt(x, z, col);
+            if (deepBiomeFor(gen, gen.biomeFor(col, top), top, x, z) === b.id) return `The nearest ${b.name} is at ${x}, ~, ${z} (${r} blocks away)`;
           }
         }
         return `No ${b.name} within 3000 blocks`;
@@ -438,6 +439,8 @@ export function runCommand(game, text) {
         [['canyon', 'slot', 'mesa'], 'Slot Canyon', null, nearestCanyon],
         [['haghut', 'hag', 'bogbridge', 'cauldron'], 'Hag Hut', null, nearestHagHut],
         [['grotto', 'sea_cave', 'seacave', 'abyss', 'abyssal'], 'Abyssal Grotto', null, nearestGrotto],
+        [['iceberg', 'berg', 'floe', 'glacier'], 'Iceberg', null, nearestIceberg],
+        [['hulk', 'icehulk', 'icebound', 'frozenwreck', 'frozen_hulk'], 'Icebound Hulk', null, nearestHulk],
         [['isle', 'cloud_isle', 'cloudisle', 'island_in_the_sky', 'sky'], 'Cloud Isle', null, nearestIsle, (t) => `, its Beanstalk rises from ${t.ax}, ${t.ground + 1}, ${t.az}`],
       ]) {
         if (!names.includes(what)) continue;
