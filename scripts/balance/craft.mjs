@@ -29,6 +29,7 @@ import '../../src/mobs/fauna.js';
 import '../../src/mobs/oceanSky.js';
 import '../../src/mobs/slagColossus.js';
 import '../../src/mobs/shoreMobs.js';
+import '../../src/mobs/duneMobs.js';
 import { MOBS } from '../../src/mobs/mobTypes.js';
 
 const TOOLS = ['DIAMOND_PICKAXE', 'DIAMOND_AXE', 'DIAMOND_SHOVEL', 'DIAMOND_SWORD', 'DIAMOND_HOE', 'SHEARS'].map((k) => (ITEMS[I[k]] || {}).tool || (ITEMS[I[k]] || {}).shears && { shears: true, type: 'shears', tier: 9 }).filter(Boolean);
@@ -57,6 +58,7 @@ export function naturalSources() {
   for (const [name, kind] of Object.entries(LOOT)) for (let k = 0; k < 3000; k++) for (const st of dungeonLoot(rng, kind)) if (st) add(st.id, 'chest:' + name);
   // fishing, archaeology, proving rewards, trading, composting
   for (let k = 0; k < 20000; k++) add(rollCatch(rng, k % 5).id, 'fishing');
+  for (const biome of ['swamp', 'desert']) for (let k = 0; k < 4000; k++) add(rollCatch(rng, k % 5, biome, 1 + (k % 3)).id, 'fishing'); // local fish and the Gilded Perch (Haul)
   for (const t of Object.values(SITE_LOOT)) for (const e of t) add(e[0], 'archaeology');
   for (const t of [SPAWNER_REWARDS, OMINOUS_REWARDS, VAULT_LOOT]) for (const e of t) add(e[0], 'proving');
   for (const p of PROFESSIONS) for (const o of offerPool(p)) if (o[0] === 'sell') add(o[3], 'trade:' + p);

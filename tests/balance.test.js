@@ -100,6 +100,7 @@ describe('crafting graph', () => {
     TARNLING_BUCKET: 'scooping a Tarnling with an empty Bucket (mobs/fauna.js)',
     SLAGSTEEL_INGOT: 'smelting Slag Chunks (world/dimensions/register.js)', SLAGSTEEL_PICKAXE: 'Slagsteel Ingots (world/dimensions/register.js)', DIRGESTEP_BOOTS: 'Dirge Crystals (world/dimensions/register.js)',
     SLAG_SIGIL: 'Slagsteel Ingots, Ember Rods, a Dirge Crystal and Obsidian (world/dimensions/register.js)',
+    BOG_ESSENCE: "boiled in a Hag's Cauldron (player/interaction.js, world/hagCauldron.js)",
     SURVEYOR_WAND: '/wand or the creative inventory (ui/buildCommands.js)',
   };
   const extra = new Set([

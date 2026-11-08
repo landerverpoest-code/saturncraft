@@ -91,6 +91,7 @@ export const EFFECT_INGREDIENTS = {
   glowcap_spores: 'haste',         // the Glowcap Thicket's spores quicken the hands
   dirge_crystal: 'ironskin',       // a Dirgevale crystal hardens the skin (reference: no equivalent; Resistance is otherwise only a Turtle Master side effect)
   gilded_apple: 'warding',         // reference: the golden apple's Absorption, bottled
+  bog_essence: 'marsh',            // boiled in a Hag's Cauldron (world/hagCauldron.js); the marsh elixirs are registered at the end of items.js
 };
 
 const CORRUPT = {

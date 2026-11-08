@@ -576,3 +576,44 @@ item('warding_amulet', 'Warding Amulet', { stack: 1, trinket: 'warding_amulet', 
 item('miners_loupe', "Miner's Loupe", { stack: 1, trinket: 'miners_loupe', iconStyle: [ICON_LOUPE, { h: '#b8b8c0', H: '#e8e8f0', g: '#a8dcf0', w: '#ffffff', s: '#8a6034' }] });
 item('lantern_charm', 'Lantern Charm', { stack: 1, trinket: 'lantern_charm', iconStyle: [ICON_LANTERN_CHARM, { h: '#6a6a72', H: '#9a9aa4', s: '#8a8a92', f: '#e8a020', F: '#fff0a0' }] });
 item('ember_band', 'Ember Band', { stack: 1, trinket: 'ember_band', iconStyle: [ICON_EMBER_BAND, { h: '#a8602a', H: '#d8904a', f: '#e8501a', F: '#ffb040' }] });
+// Desert, badlands and swamp depth, and tools (world/hagCauldron.js, mobs/duneMobs.js, player/farscope.js, player/waymark.js, entities/bobber.js),
+// appended so no item id shifts. Peat Clot (a Peat Lurker's), Snapper Fang (a Sandsnapper's), Tallow, Slimeball and a Skitterer Eye are what a Hag's
+// Cauldron can be fed; the right three in the right order boil down to Bog Essence, which makes Elixirs of the Marsh in the Brewing Alembic.
+// The Farscope is a Farglass with steps of zoom (mouse wheel while looking through it) and a range read-out; the Waymark Compass points at the last
+// Bounty Board or waypoint you visited. New fish for the rod (a Bogcarp in the bogs, a Dunefin in dry lands, a rare Gilded Perch) with their roasts,
+// and the Fish Pie of the Cooking Pot.
+item('peat_clot', 'Peat Clot', { fuel: 800, iconStyle: ['lump', { h: '#3e3224', H: '#6a5a40', s: '#241c12' }] });
+item('snapper_fang', 'Snapper Fang', { iconStyle: ['shard', { h: '#e8dcc0', H: '#fffaf0', s: '#a89870' }] });
+item('bog_essence', 'Bog Essence', { iconStyle: ['vial', { g: '#c8dcf0', h: '#6a8a2a', H: '#b8d860' }] });
+function scopeIcon() {
+  const g = Array.from({ length: 16 }, () => Array(16).fill('.'));
+  const put = (x, y, ch) => { if (x >= 0 && x < 16 && y >= 0 && y < 16) g[y][x] = ch; };
+  for (let t = 0; t <= 11; t++) {
+    const x = 2 + t, y = 13 - t, w = t >= 8 ? 2 : t >= 4 ? 1 : 0;
+    for (let k = -w; k <= w; k++) { put(x + k, y, k === -w ? 'H' : k === w ? 's' : 'h'); put(x + k, y + 1, k === w ? 's' : 'h'); }
+    if (t === 4 || t === 8) for (let k = -w - 1; k <= w + 1; k++) put(x + k, y, 'g');
+  }
+  for (let k = -2; k <= 2; k++) put(13 + k, 2, 'l');
+  put(15, 1, 'l'); put(14, 1, 'L'); put(15, 2, 'L');
+  return g.map((r) => r.join(''));
+}
+item('farscope', 'Farscope', { stack: 1, spyglass: true, scope: true, iconStyle: [scopeIcon(), { h: '#8a5a2e', H: '#c08a50', s: '#4a2e16', g: '#e8c040', l: '#7ad8f0', L: '#e0faff' }] });
+item('waymark_compass', 'Waymark Compass', { stack: 1, dial: 'waymark' });
+item('raw_bogcarp', 'Raw Bogcarp', { food: { hunger: 2, saturation: 0.4 }, iconStyle: ['fish', { h: '#6a7a3a', H: '#a8b860', s: '#3a4a1e' }] });
+item('cooked_bogcarp', 'Roast Bogcarp', { food: { hunger: 5, saturation: 6 }, iconStyle: ['fish', { h: '#9a6a30', H: '#d8a860', s: '#5a3a18' }] });
+item('raw_dunefin', 'Raw Dunefin', { food: { hunger: 2, saturation: 0.4 }, iconStyle: ['fish', { h: '#d8b068', H: '#f4dc98', s: '#9a7a3a' }] });
+item('cooked_dunefin', 'Roast Dunefin', { food: { hunger: 6, saturation: 7.2 }, iconStyle: ['fish', { h: '#b87a3a', H: '#e8b068', s: '#6a4420' }] });
+item('gilded_perch', 'Gilded Perch', { food: { hunger: 2, saturation: 0.6 }, iconStyle: ['fish', { h: '#e8b820', H: '#fff0a0', s: '#a8761a' }] });
+item('cooked_gilded_perch', 'Roast Gilded Perch', { food: { hunger: 7, saturation: 12, effects: [['regeneration', 60, 0]] }, iconStyle: ['fish', { h: '#c88a18', H: '#f8d860', s: '#7a4e10' }] });
+dish('fish_pie', 'Fish Pie', 8, 7.2, [['water_breathing', 1200, 0]], false, '#c8a070');
+// Elixirs of the Marsh (brewed from Bog Essence on a Murky Elixir; Cinnabar Dust lengthens it): registered here, after every other elixir, so no item id shifts
+for (const [kind, p] of Object.entries({
+  marsh: { name: 'Elixir of the Marsh', effects: [['water_breathing', 2 * 1200, 0], ['regeneration', 100, 0]], color: '#6a8a2a', late: true },
+  long_marsh: { name: 'Elixir of the Marsh', effects: [['water_breathing', 5 * 1200, 0], ['regeneration', 200, 0]], color: '#6a8a2a', late: true },
+})) {
+  POTIONS[kind] = p; POTION_KEYS.push(kind);
+  POTION_ITEM[kind] = item('elixir_' + kind, p.name, { stack: 1, potion: { kind, splash: false }, drink: true, iconStyle: ['vial', { g: '#c8dcf0', h: p.color }] }).id;
+  SPLASH_ITEM[kind] = item('splash_elixir_' + kind, 'Splash ' + p.name, { stack: 1, potion: { kind, splash: true }, throwable: 'potion', iconStyle: ['splash', { g: '#c8dcf0', h: p.color }] }).id;
+  TIPPED_ARROW[kind] = item('tipped_arrow_' + kind, p.name.replace('Elixir of', 'Arrow of'), { tipped: kind, gear: ['arrow', { tip: p.color }] }).id;
+  LINGERING_ITEM[kind] = item('lingering_elixir_' + kind, 'Lingering ' + p.name, { stack: 1, potion: { kind, splash: true, lingering: true }, throwable: 'potion', iconStyle: ['lingering', { g: '#c8dcf0', h: p.color }] }).id;
+}

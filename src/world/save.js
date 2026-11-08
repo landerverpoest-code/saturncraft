@@ -1,6 +1,7 @@
 // World persistence: modified chunks (run-length encoded), player state, world time, furnaces and persistent passive
 // mobs. Where and how records are stored (IndexedDB, the world list, backups, repair, export / import) lives in
 // worldManager.js and storage.js; the shape of a record, its version and migrations in saveFormat.js.
+import { cleanWaymark } from '../player/waymark.js';
 import { cleanPotFaces } from './archaeology.js';
 import { cleanLectern } from './books.js';
 import { cleanCamp } from './campfireCooking.js';
@@ -77,6 +78,7 @@ export function playerSaveData(p) {
     effects: p.effects,
     reputation: cleanReputation(p.reputation), // what villages think of the player (mobs/reputation.js)
     blueprints: cleanBlueprints(p.blueprints), // named building blueprints (world/buildTools.js, ui/buildCommands.js)
+    waymark: cleanWaymark(p.waymark), // the Waymark Compass's target (player/waymark.js)
   };
 }
 
@@ -224,6 +226,7 @@ export function applyPlayerSave(game, d) {
   p.effects = cleanEffects(d.effects);
   p.reputation = cleanReputation(d.reputation); // (older saves have none)
   p.blueprints = cleanBlueprints(d.blueprints); // (older saves have none)
+  p.waymark = cleanWaymark(d.waymark); // (older saves have none)
   if (d.gamemode) p.setGamemode(d.gamemode);
   p.flying = !!d.flying && p.creative;
   p.inventory.selected = d.selected;

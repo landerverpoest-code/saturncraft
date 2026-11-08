@@ -9,6 +9,7 @@ import { compost, READY, SETTLE_TICKS } from '../world/composter.js';
 import { harvestOnSoil, boneMealSoil } from '../world/farming.js';
 import { isPot, canAdd, startBrew, takeServing, kindsIn, KIND_NAMES, hasHeat, isReady, dishOf, servingsOf, stageOf, BREW_STAGES } from '../world/cookingPot.js';
 import { bitOfItem, kindStandIn, DISHES } from '../world/cooking.js';
+import { cauldronFeed, CAULDRON_STEPS, CAULDRON_YIELD } from '../world/hagCauldron.js';
 import { varietyBonus, recordMeal, countsForVariety } from './variety.js';
 import { aimTip } from '../world/aimTips.js';
 import { campAdd, canCampCook, campCount, CAMP_SLOTS } from '../world/campfireCooking.js';
@@ -82,7 +83,7 @@ const ORE_XP = {
 };
 const BREAK_DELAY = 5;
 /** Blocks that right-click opens / toggles instead of using the held item. */
-const USABLE_BLOCKS = new Set([B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.CHEST, B.BARREL, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL, B.BREWING_STAND, B.GLOOMSHELL_BOX, B.HOPPER, B.COMPOSTER, B.SWEET_BERRY_BUSH, B.DEWBERRY_BRAMBLE, B.COOKING_POT, B.COOKING_POT_BREW, B.JUKEBOX, B.CAVE_VINES_LIT, B.FLOWER_POT, B.BEACON, B.DISPENSER, B.DROPPER, B.GRINDSTONE, B.STONECUTTER, B.LECTERN, B.CAKE, B.LOOM, B.BOUNTY_BOARD, ...BOX_COLORS, B.VAULT]);
+const USABLE_BLOCKS = new Set([B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.CHEST, B.BARREL, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL, B.BREWING_STAND, B.GLOOMSHELL_BOX, B.HOPPER, B.COMPOSTER, B.SWEET_BERRY_BUSH, B.DEWBERRY_BRAMBLE, B.COOKING_POT, B.COOKING_POT_BREW, B.JUKEBOX, B.CAVE_VINES_LIT, B.FLOWER_POT, B.BEACON, B.DISPENSER, B.DROPPER, B.GRINDSTONE, B.STONECUTTER, B.LECTERN, B.CAKE, B.LOOM, B.BOUNTY_BOARD, B.HAG_CAULDRON, ...BOX_COLORS, B.VAULT]);
 const CIRCUIT_USE = new Set([B.LEVER, B.STONE_BUTTON, B.REPEATER, B.CHIME_BLOCK, B.COMPARATOR, B.DAYLIGHT_SENSOR, B.PULSE_GATE]);
 const CIRCUIT_PLACE = new Set([B.LEVER, B.STONE_BUTTON, B.CINNABAR_WIRE, B.REPEATER, B.WOODEN_PRESSURE_PLATE, B.STONE_PRESSURE_PLATE, B.LIGHT_WEIGHTED_PLATE, B.HEAVY_WEIGHTED_PLATE, B.PISTON, B.STICKY_PISTON, B.COMPARATOR, B.OBSERVER, B.DAYLIGHT_SENSOR, B.PULSE_GATE, B.SNARE_POST, B.SNARE_CORD]);
 const USE_DELAY = 4;
@@ -697,6 +698,40 @@ export class Interaction {
   }
 
   /**
+   * Hag's Cauldron (world/hagCauldron.js): feed it a Peat Clot, Tallow, a Slimeball or a Snapper Fang. The recipe (three of them in the right order,
+   * told in riddles in a Hag Hut's book) depends on the world's seed; the block's meta counts the steps done. A wrong thing at any step curdles the
+   * brew (it is lost); the third right one gives Bog Essence. An empty hand looks at the brew.
+   */
+  useHagCauldron(t, st) {
+    const g = this.game, p = g.player, w = g.world, toast = (m) => g.hud.toast(m, 2600);
+    const at = [t.x + 0.5, t.y + 0.9, t.z + 0.5], progress = w.getMeta(t.x, t.y, t.z) & 3;
+    if (p.sneaking && !st) return false;
+    if (!st) { toast(progress ? `The brew shivers: ${progress} of ${CAULDRON_STEPS} steps stirred in.` : 'A green brew bubbles in the iron pot. A hag keeps her recipe in riddles; the things it wants are a Peat Clot, Tallow, a Slimeball and a Snapper Fang.'); return true; }
+    const r = cauldronFeed(w.seed, progress, st.id);
+    if (r.result === 'ignore') return false; // (other items go where they would anyway)
+    if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
+    const puff = (rgb, n = 8) => { for (let k = 0; k < n; k++) g.particles.emit(at[0] + (Math.random() - 0.5) * 0.6, at[1], at[2] + (Math.random() - 0.5) * 0.6, 0, 0.05 + Math.random() * 0.05, 0, rgb[0], rgb[1], rgb[2], 18, -0.001); };
+    if (r.result === 'curdle') {
+      w.setBlockUrgent(t.x, t.y, t.z, B.HAG_CAULDRON, 0);
+      puff([0.25, 0.22, 0.15], 10); g.audio.play('fizz', at, 0.7);
+      toast('The brew curdles and sinks into black sludge. Start again.');
+    } else if (r.result === 'step') {
+      w.setBlockUrgent(t.x, t.y, t.z, B.HAG_CAULDRON, r.progress);
+      puff([0.5, 0.85, 0.3]); g.audio.play('splash', at, 0.5);
+      toast(`The brew takes it and brightens: ${r.progress} of ${CAULDRON_STEPS}.`);
+    } else {
+      w.setBlockUrgent(t.x, t.y, t.z, B.HAG_CAULDRON, 0);
+      puff([0.7, 1, 0.4], 16); g.audio.play('ignite', at, 0.6);
+      const out = { id: I[CAULDRON_YIELD.key], count: CAULDRON_YIELD.count, damage: 0 };
+      const left = p.inventory.add(out);
+      if (left) g.entities.spawnItem(at[0], at[1] + 0.3, at[2], { ...out, count: typeof left === 'number' ? left : out.count });
+      p.inventory.changed();
+      toast('The brew settles into Bog Essence. Mix it into a Murky Elixir in an Alembic.');
+    }
+    return true;
+  }
+
+  /**
    * Campfire (world/campfireCooking.js): right-click with a raw food (meat, fish, a potato, a Frostroot...) lays it on the fire
    * (up to four, each cooks for 30 s and pops out when done); an empty hand takes back everything that lies there.
    * Anything else (blocks, tools) is used as usual.
@@ -1123,6 +1158,7 @@ export class Interaction {
     if (t && (t.id === B.SWEET_BERRY_BUSH || t.id === B.DEWBERRY_BRAMBLE) && this.useBerryBush(t, st, d)) { this.swing = SWING_TICKS; return true; }
     if (t && t.id === B.CAMPFIRE && this.useCampfire(t, st)) { this.swing = SWING_TICKS; return true; }
     if (t && isPot(t.id) && this.useCookingPot(t, st, d)) { this.swing = SWING_TICKS; return true; }
+    if (t && t.id === B.HAG_CAULDRON && this.useHagCauldron(t, st)) { this.swing = SWING_TICKS; return true; }
     if (t && t.id === B.CAVE_VINES_LIT) {
       // pick the glow berries
       g.entities.spawnItem(t.x + 0.5, t.y + 0.3, t.z + 0.5, { id: I.GLOW_BERRIES, count: 1 });
@@ -1310,7 +1346,7 @@ export class Interaction {
       const dx = p.x - (px + 0.5), dz = p.z - (pz + 0.5);
       meta = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 1 : 3) : (dz > 0 ? 2 : 0);
     }
-    if (placeId === B.DISPENSER || placeId === B.DROPPER) meta = dispenserPlaceMeta([ldx, ldy, ldz]); // the face looks at the player, up or down too
+    if (placeId === B.DISPENSER || placeId === B.DROPPER || placeId === B.DART_TRAP) meta = dispenserPlaceMeta([ldx, ldy, ldz]); // the face looks at the player, up or down too
     if (placeId === B.OBSERVER) meta = circuitPlaceMeta(placeId, t.face, [ldx, ldy, ldz]); // the face looks away from the player
     let chestPair = null;
     if (placeId === B.CHEST) { const pr = pairOnPlace(w, px, py, pz, meta, p.sneaking); meta = pr.meta; chestPair = pr.neighbour; } // join a lone chest beside it

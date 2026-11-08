@@ -1,4 +1,5 @@
 // Chat commands (T or / opens the chat). Each returns a message to print.
+import { describeWaymark } from '../player/waymark.js';
 import { BIOMES } from '../world/biomes.js';
 import { ITEMS, I, maxStack } from '../world/items.js';
 import { mineshaftsNear } from '../world/mineshafts.js';
@@ -17,6 +18,9 @@ import { nearestSporehall } from '../world/sporehall.js';
 import { nearestLighthouse } from '../world/lighthouse.js';
 import { nearestMireShrine } from '../world/mireShrine.js';
 import { nearestObservatory } from '../world/observatory.js';
+import { nearestSandvault } from '../world/sandvault.js';
+import { nearestCanyon } from '../world/mesaPack.js';
+import { nearestHagHut } from '../world/hagHut.js';
 import { nearestGrotto } from '../world/deepSea.js';
 import { nearestIsle } from '../world/skyIsles.js';
 import { nearestForge } from '../world/dimensions/cinderForge.js';
@@ -104,8 +108,9 @@ export const HELP = [
   '/give <item> [count]',
   '/enchant <name> [level]  (the held item; names: ' + ENCH_KEYS.join(', ') + ')',
   '/summon <mob> [x y z]',
+  '/waymark [here [name]|clear]  (where a Waymark Compass points)',
   '/xp <amount> [levels]',
-  '/locate <village|temple|igloo|outpost|shipwreck|monument|mineshaft|sanctum|bastion|hut|ruin|buried|vaults|sunken|tomb|skywatch|rimekeep|sporehall|grotto|isle|lighthouse|mire|observatory|city|gate|forge|ribs> or /locate biome <name>',
+  '/locate <village|temple|igloo|outpost|shipwreck|monument|mineshaft|sanctum|bastion|hut|ruin|buried|vaults|sunken|tomb|skywatch|rimekeep|sporehall|grotto|isle|lighthouse|mire|observatory|sandvault|canyon|haghut|city|gate|forge|ribs> or /locate biome <name>',
   '/dimension <overworld|cinderdeep|hollow>',
   '/retrofit  (status),  /retrofit dry [chunks],  /retrofit apply [chunks]  (host: add features newer than a saved world to its edited chunks without touching anything you built; see the README)',
   '/effect give <effect> [seconds] [level],  /effect clear  (effects: ' + EFFECT_KEYS.join(', ') + ')',
@@ -316,6 +321,13 @@ export function runCommand(game, text) {
       const x = Math.floor(p.x + dx * 8), z = Math.floor(p.z + dz * 8), y = game.world.heightAt(x, z) + 1;
       return spawnCaravan(game.spawner, x, y, z) ? 'A Roving Peddler has set up camp' : 'No room for a camp there';
     }
+    case 'waymark': {
+      // /waymark [here [name]|clear]: where the Waymark Compass points (player/waymark.js)
+      const sub = (args[0] || '').toLowerCase();
+      if (sub === 'clear') { p.waymark = null; return 'Waymark cleared'; }
+      if (sub === 'here') { game.setWaymark({ x: p.x, z: p.z, kind: 'place', label: args.slice(1).join(' ') || 'Marked place' }); return `Waymark set: ${p.waymark ? p.waymark.label : 'here'}`; }
+      return describeWaymark(p.waymark, p.x, p.z, game.world.dimension);
+    }
     case 'heal': p.health = 20; p.hunger.food = 20; p.hunger.saturation = 5; return 'Healed';
     case 'clear': p.inventory.clear(); return 'Cleared the inventory';
     case 'spawnpoint': p.spawn = { x: p.x, y: p.y, z: p.z }; p.bed = null; return `Set spawn point to ${Math.floor(p.x)}, ${Math.floor(p.y)}, ${Math.floor(p.z)}`;
@@ -327,6 +339,11 @@ export function runCommand(game, text) {
     case 'msg': case 'w': case 'tell': case 'm': case 'r': case 'team': case 'tc':
     case 'kick': case 'ban': case 'pardon': case 'banlist': case 'op': case 'deop': case 'oplist':
       if (!game.net) return 'This is for shared worlds: press Esc and choose Open to Friends first';
+      if (cmd === 'wp' || cmd === 'waypoint') { // a waypoint you mark is the Waymark Compass's target too (player/waymark.js)
+        const out = game.net.socialCommand(text);
+        if (/^add$/i.test(args[0] || '') && args[1] && game.setWaymark) game.setWaymark({ x: p.x, z: p.z, kind: 'waypoint', label: String(args[1]).slice(0, 16) });
+        return out;
+      }
       return game.net.socialCommand(text);
     case 'list': case 'players': {
       if (!game.net) return 'Just you - nobody else is here';
@@ -417,6 +434,9 @@ export function runCommand(game, text) {
         [['lighthouse', 'hermit', 'beacon_tower', 'light'], "Hermit's Lighthouse", null, nearestLighthouse],
         [['mire', 'mireshrine', 'mire_shrine', 'shrine', 'bog'], 'Mire Shrine', null, nearestMireShrine],
         [['observatory', 'stargazer', 'star', 'dome'], "Stargazer's Observatory", null, nearestObservatory],
+        [['sandvault', 'pharaoh', 'dartvault'], 'Sandvault', null, nearestSandvault],
+        [['canyon', 'slot', 'mesa'], 'Slot Canyon', null, nearestCanyon],
+        [['haghut', 'hag', 'bogbridge', 'cauldron'], 'Hag Hut', null, nearestHagHut],
         [['grotto', 'sea_cave', 'seacave', 'abyss', 'abyssal'], 'Abyssal Grotto', null, nearestGrotto],
         [['isle', 'cloud_isle', 'cloudisle', 'island_in_the_sky', 'sky'], 'Cloud Isle', null, nearestIsle, (t) => `, its Beanstalk rises from ${t.ax}, ${t.ground + 1}, ${t.az}`],
       ]) {

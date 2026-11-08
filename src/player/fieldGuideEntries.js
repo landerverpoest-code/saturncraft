@@ -11,6 +11,7 @@ import { SPAWN_TABLES } from '../mobs/spawnRules.js';
 import { DIM_SPAWN_TABLES } from '../mobs/dimensionMobs.js';
 import { SPECIAL_HABITATS } from '../mobs/fauna.js';
 import { OCEAN_SKY_HABITATS } from '../mobs/oceanSky.js';
+import { DUNE_HABITATS } from '../mobs/duneMobs.js';
 import { BIOMES } from '../world/biomes.js';
 import { LANDMARK_KINDS } from '../world/landmarkKinds.js';
 import { ITEMS, I, CHARTS } from '../world/items.js';
@@ -54,7 +55,10 @@ const HABITAT_NOTES = {
   tarnling: 'Quiet ponds, tarns and waterholes',
   gloamlynx: 'Only at dusk and by night',
   brinecrab: 'Sand, mud and gravel along the shore',
-  wickling: 'Swamps and dark forests by night; the Mire Shrine, Observatory and Lighthouse',
+  wickling: 'Swamps and dark forests by night; the Mire Shrine, Hag Huts, Observatory and Lighthouse',
+  sandsnapper: 'Buried in desert and badlands sand; the first you know of one is its jaws',
+  peat_lurker: 'Still bog water in swamps, lying submerged with only its eyes showing',
+  cliffkite: 'High over the badlands and the Slot Canyons, riding the updrafts',
   lanternfin: 'The Deep Ocean floor and trenches, in schools; its lure is the only light down there',
   trenchmaw: 'Trenches and Abyssal Grottos; hates a bright lamp',
   skyray: 'Gliding round Cloud Isles high above the land',
@@ -86,7 +90,7 @@ function habitatOf(key, def) {
       if (b) where.push(b.name);
     }
   }
-  for (const bk of SPECIAL_HABITATS[key] || OCEAN_SKY_HABITATS[key] || []) { // placed by faunaTick rather than the tables (Dustmoles in the sand, Tarnlings in ponds)
+  for (const bk of SPECIAL_HABITATS[key] || OCEAN_SKY_HABITATS[key] || DUNE_HABITATS[key] || []) { // placed by faunaTick rather than the tables (Dustmoles in the sand, Tarnlings in ponds)
     const b = BIOMES.find((x) => x.key === bk);
     if (b) where.push(b.name);
   }
@@ -163,6 +167,9 @@ const STRUCTURE_NOTES = {
   lighthouse: 'A red-and-white tower on a beach point, its lens still waiting for a keeper.',
   mireshrine: 'A shrine sunk knee-deep in the bog, with a rose window and a flooded crypt.',
   observatory: 'A domed star-watching house on the hills, its glass mostly fallen.',
+  sandvault: 'A trapped temple buried under the dunes: only a golden Sun Glyph shows. Dart Traps, pressure plates and a burial hall.',
+  canyon: 'A sheer Slot Canyon cut into a Painted Mesa, with a pool on its floor, a chest at the far tip and plank bridges across.',
+  haghut: 'A stilted cabin of Bog Planks reached by bog bridges, with a Hag\'s Cauldron and a recipe in riddles.',
   grotto: 'A sea cave in a rock dome on the deep floor: Gleamkelp, a tidestone dais with two chests and a wrecked diving skiff. Trenchmaws lurk inside; bring a lamp.',
   isle: 'A grassy island in the sky over pale Cirrusstone, with an Aerie of two chests, a bean plot and ore. A wild Beanstalk climbs to it from the ground below; Skyrays glide round it.',
   cinderforge: 'An abandoned smithy of Scorched Bricks in the Cinderdeep, with a lava pit and a Cinder Brute spawner. A Slagheart Sigil used in its courtyard wakes the Slag Colossus.',
@@ -178,10 +185,13 @@ function structureEntries() {
 }
 
 /** Finds worth a mention besides what mobs drop and the charts (by `I` key; ones that do not exist are skipped). */
-const EXTRA_NOTABLE = ['DIAMOND', 'BERYL', 'VOID_PEARL', 'CHARM_OF_UNDYING', 'TIDESPEAR', 'ENCHANTED_BOOK', 'SADDLE', 'FROSTROOT', 'DEWBERRIES', 'SUNGOURD_SEEDS', 'GOURD_WEDGE', 'SLAG_SIGIL', 'COLOSSUS_CORE', 'SLAGSTEEL_INGOT', 'DIRGE_CRYSTAL', 'IRON_WARHAMMER', 'IRON_DAGGER', 'IRON_GLAIVE', 'IRON_DISC', 'SLAGSTEEL_CHESTPLATE', 'FLEET_ANKLET', 'LODESTONE_CHARM', 'WARDING_AMULET', 'MINERS_LOUPE', 'LANTERN_CHARM', 'EMBER_BAND'];
+const EXTRA_NOTABLE = ['DIAMOND', 'BERYL', 'VOID_PEARL', 'CHARM_OF_UNDYING', 'TIDESPEAR', 'ENCHANTED_BOOK', 'SADDLE', 'FROSTROOT', 'DEWBERRIES', 'SUNGOURD_SEEDS', 'GOURD_WEDGE', 'SLAG_SIGIL', 'COLOSSUS_CORE', 'SLAGSTEEL_INGOT', 'DIRGE_CRYSTAL', 'IRON_WARHAMMER', 'IRON_DAGGER', 'IRON_GLAIVE', 'IRON_DISC', 'SLAGSTEEL_CHESTPLATE', 'FLEET_ANKLET', 'LODESTONE_CHARM', 'WARDING_AMULET', 'MINERS_LOUPE', 'LANTERN_CHARM', 'EMBER_BAND', 'FARSCOPE', 'WAYMARK_COMPASS', 'BOG_ESSENCE', 'RAW_BOGCARP', 'RAW_DUNEFIN', 'GILDED_PERCH'];
 
 /** Cinnabar contraption parts (block keys): sensors and timers a builder makes, listed so the guide notes the first one you hold. */
 const CONTRAPTION_PARTS = ['COMPARATOR', 'OBSERVER', 'DAYLIGHT_SENSOR', 'SNARE_POST', 'SNARE_CORD', 'PULSE_GATE'];
+
+const PACK5_BLOCKS = ['STRATA_RUST', 'SUN_GLYPH', 'DART_TRAP', 'BOG_PLANKS', 'HAG_CAULDRON'];
+const PACK5_WHY = { STRATA_RUST: 'Painted Mesas', SUN_GLYPH: 'Sandvaults', DART_TRAP: 'Sandvaults (and crafted)', BOG_PLANKS: 'Hag Huts and bog bridges', HAG_CAULDRON: 'Hag Huts' };
 
 function itemEntries() {
   const sources = new Map();
@@ -191,6 +201,7 @@ function itemEntries() {
   for (const k of EXTRA_NOTABLE) if (I[k] !== undefined) add(I[k], null);
   if (B.BOUNTY_BOARD !== undefined) add(B.BOUNTY_BOARD, 'Villages and crafting (bounties and tales)');
   for (const k of CONTRAPTION_PARTS) if (B[k] !== undefined) add(B[k], 'Cinnabar and machines (crafted)'); // (world/circuits.js: the parts of cinnabar contraptions)
+  for (const k of PACK5_BLOCKS) if (B[k] !== undefined) add(B[k], PACK5_WHY[k]); // the desert / bog pack's finds and traps
   for (const d of DISHES) add(d.id, 'Cooking Pot'); // every dish the Cooking Pot can make (world/cookingPot.js), so a new recipe joins the guide by itself
   return [...sources.entries()].sort((a, b) => a[0] - b[0]).map(([id, from]) => ({ key: String(id), id, name: itemName(id), from }));
 }

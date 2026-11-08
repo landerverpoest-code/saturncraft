@@ -29,6 +29,9 @@ import { rimekeepsNear, rimekeepGuards, RIMEKEEP_WARDEN } from '../world/rimekee
 import { sporehallsNear, sporehallGuards } from '../world/sporehall.js';
 import { lighthousesNear, lighthouseGuards } from '../world/lighthouse.js';
 import { mireShrinesNear, mireGuards } from '../world/mireShrine.js';
+import { hagHutsNear, hagGuards } from '../world/hagHut.js';
+import { sandvaultsNear, sandvaultGuards } from '../world/sandvault.js';
+import { duneTick, duneChunkSpawn } from './duneMobs.js';
 import { observatoriesNear, observatoryGuards } from '../world/observatory.js';
 import { HUT_MONSTERS, isNewtPoolFloor } from './spawnRules.js';
 import { soddenSpawnChance } from './hostileVariants.js';
@@ -251,7 +254,7 @@ export class MobSpawner {
     let monsters = 0, creatures = 0, surface = 0, ambient = 0, fish = 0;
     for (const e of g.entities.list) {
       if (e.kind !== 'mob' || e.dead) continue;
-      if (e.def.deepSea || e.def.glider) continue; // Lanternfins, Trenchmaws and Skyrays have caps of their own (mobs/oceanSky.js)
+      if (e.def.deepSea || e.def.glider || e.def.ownCap) continue; // Lanternfins, Trenchmaws and Skyrays have caps of their own (mobs/oceanSky.js)
       if (e.def.fish) { if (!e.def.newt) fish++; continue; }
       if (e.def.category === CATEGORY.AMBIENT) { ambient++; continue; }
       if (e.def.burrower || e.def.bucketable) continue; // Dustmoles and Tarnlings have a cap of their own (mobs/fauna.js)
@@ -318,6 +321,7 @@ export class MobSpawner {
     hollowSpawnTick(this); // Hoverlings drifting through Hollow Cities
     caravanTick(this); // a Roving Peddler with Packhorns now and then (mobs/peddler.js)
     faunaTick(this); // Dustmoles under desert sand, Tarnlings in ponds (mobs/fauna.js)
+    duneTick(this); // Sandsnappers under desert sand, Peat Lurkers in bog water, Cliffkites over badlands (mobs/duneMobs.js)
     oceanSkyTick(this); // Lanternfins over the deep floor, Trenchmaws in dark trenches, Skyrays near Cloud Isles (mobs/oceanSky.js)
     if (g.ticks % CREATURE_SPAWN_INTERVAL === 0 && creatures < seasonalCreatureCap(scaledCap(CATEGORY.CREATURE, chunks.length))) { // (more animals in spring, fewer in winter)
       for (const [cx, cz] of chunks) creatures += this.attempt(cx, cz, CATEGORY.CREATURE);
@@ -400,9 +404,12 @@ export class MobSpawner {
       for (const t of sporehallsNear(gen, X0, Z0, X0 + 15, Z0 + 15)) for (const g of sporehallGuards(t)) guard(g.type, g.x, g.y, g.z);
       for (const t of lighthousesNear(gen, X0, Z0, X0 + 15, Z0 + 15)) for (const g of lighthouseGuards(t)) guard(g.type, g.x, g.y, g.z);
       for (const t of mireShrinesNear(gen, X0, Z0, X0 + 15, Z0 + 15)) for (const g of mireGuards(t)) guard(g.type, g.x, g.y, g.z);
+      for (const t of hagHutsNear(gen, X0, Z0, X0 + 15, Z0 + 15)) for (const g of hagGuards(t)) guard(g.type, g.x, g.y, g.z);
+      for (const t of sandvaultsNear(gen, X0, Z0, X0 + 15, Z0 + 15)) for (const g of sandvaultGuards(t)) guard(g.type, g.x, g.y, g.z);
       for (const t of observatoriesNear(gen, X0, Z0, X0 + 15, Z0 + 15)) for (const g of observatoryGuards(t)) guard(g.type, g.x, g.y, g.z);
     }
     oceanSkyChunkSpawn(this, cx, cz); // Trenchmaws in Abyssal Grottos, Skyrays over Cloud Isles (mobs/oceanSky.js)
+    duneChunkSpawn(this, cx, cz); // Cliffkites over Slot Canyons (mobs/duneMobs.js)
     // three Elder Deepeyes in every Tide Citadel
     if (this.hostileEnabled()) spawnElders(this, cx, cz);
     // one Ironguard keeps watch by each village well

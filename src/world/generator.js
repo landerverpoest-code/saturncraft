@@ -30,6 +30,9 @@ import { stampSporehalls } from './sporehall.js';
 import { stampLighthouses } from './lighthouse.js';
 import { stampMireShrines } from './mireShrine.js';
 import { stampObservatories } from './observatory.js';
+import { stampStrata, stampCanyons } from './mesaPack.js';
+import { stampSandvaults } from './sandvault.js';
+import { stampHagHuts } from './hagHut.js';
 import { BIOME, BIOMES } from './biomes.js';
 import { MIN_Y, WORLD_HEIGHT, SEA_LEVEL, CHUNK_VOLUME, cidx } from './constants.js';
 import { grassColor, foliageColor } from './textures.js';
@@ -508,6 +511,8 @@ export class TerrainGenerator {
     this.decorate(blocks, meta, biomes, heightmap, cx, cz, cols);
     this.pass('wildCrops', blocks, meta, biomes, () => stampWildCrops(this, blocks, meta, cx, cz, heightmap, biomes)); // Frostroots, Dewberry Brambles, Sungourds (world/wildCrops.js): own hash salts, nothing before changes
 
+    this.pass('strata', blocks, meta, biomes, () => stampStrata(this, blocks, meta, cx, cz, heightmap, biomes)); // Painted Mesas: banded Strata over the badlands' terracotta (world/mesaPack.js), a pass of its own
+
     this.pass('deepSea', blocks, meta, biomes, () => stampDeepSea(this, blocks, meta, cx, cz, heightmap, biomes)); // Deep Ocean and Kelp Forest biomes, trenches, Gleamkelp, Abyssal Grottos (world/deepSea.js): a separate pass, the terrain noise is untouched
 
     // 9. Villages
@@ -530,6 +535,9 @@ export class TerrainGenerator {
     this.pass('lighthouse', blocks, meta, biomes, () => stampLighthouses(this, blocks, meta, cx, cz)); // Hermit's Lighthouses on beaches (world/lighthouse.js)
     this.pass('mireShrine', blocks, meta, biomes, () => stampMireShrines(this, blocks, meta, cx, cz)); // Mire Shrines in swamps (world/mireShrine.js)
     this.pass('observatory', blocks, meta, biomes, () => stampObservatories(this, blocks, meta, cx, cz)); // Stargazer's Observatories on open hills (world/observatory.js)
+    this.pass('sandvault', blocks, meta, biomes, () => stampSandvaults(this, blocks, meta, cx, cz)); // buried Sandvaults under desert and badlands sand (world/sandvault.js)
+    this.pass('canyons', blocks, meta, biomes, () => stampCanyons(this, blocks, meta, cx, cz));      // Slot Canyons cut into badlands mesas (world/mesaPack.js)
+    this.pass('hagHut', blocks, meta, biomes, () => stampHagHuts(this, blocks, meta, cx, cz));       // Hag Huts and bog bridges in swamps (world/hagHut.js)
     this.pass('skyIsles', blocks, meta, biomes, () => stampSkyIsles(this, blocks, meta, cx, cz));    // Cloud Isles and their wild Beanstalks (world/skyIsles.js): high above everything else, a pass of its own
 
     // Final heightmap: highest non-air block

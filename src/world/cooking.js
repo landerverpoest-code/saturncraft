@@ -7,7 +7,7 @@ import { KINDS, KIND_BIT, RECIPES } from './cookingPot.js';
 /** Ingredient kind -> the item (or block item) ids that count as it. Raw meat, not cooked: the pot cooks it. */
 export const KIND_ITEMS = {
   meat: [I.RAW_VENISON, I.RAW_PORK, I.RAW_BEEF, I.RAW_MUTTON, I.RAW_RABBIT, I.RAW_CHICKEN],
-  fish: [I.RAW_SILVERFIN, I.RAW_REDFIN, I.RAW_LANTERNFIN],
+  fish: [I.RAW_SILVERFIN, I.RAW_REDFIN, I.RAW_LANTERNFIN, I.RAW_BOGCARP, I.RAW_DUNEFIN, I.GILDED_PERCH],
   mushroom: [B.BROWN_MUSHROOM, B.RED_MUSHROOM],
   berry: [I.SWEET_BERRIES, I.DEWBERRIES, I.GLOW_BERRIES],
   beet: [I.BEETROOT],

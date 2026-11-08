@@ -459,6 +459,12 @@ shaped(['LSL', 'LGL', 'L L'], { L: I.LEATHER, S: I.STRING, G: I.GOLD_NUGGET }, I
   shaped([' S ', 'GTG', ' G '], { S: I.STRING, G: I.GOLD_NUGGET, T: B.TORCH }, I.LANTERN_CHARM);
   shaped([' G ', 'GEG', ' G '], { G: I.GOLD_INGOT, E: I.EMBER_ROD }, I.EMBER_BAND);
 }
+// Desert, badlands and swamp depth, and tools (world/dartTrap.js, world/hagCauldron.js, player/farscope.js, player/waymark.js)
+shapeless([I.FARGLASS, I.GOLD_INGOT, B.GLASS], I.FARSCOPE, 1);                       // a Farglass with a gold ring and a second lens
+shapeless([I.COMPASS, I.PAPER, I.GOLD_NUGGET], I.WAYMARK_COMPASS, 1);                // a compass re-set to a place you chose
+shaped(['CCC', 'CAC', 'CRC'], { C: B.COBBLESTONE, A: I.ARROW, R: I.CINNABAR }, B.DART_TRAP, 1);
+shapeless([B.OAK_PLANKS, B.OAK_PLANKS, B.MUD], B.BOG_PLANKS, 2);
+shaped(['I I', 'ISI', 'III'], { I: I.IRON_INGOT, S: I.SLIMEBALL }, B.HAG_CAULDRON, 1);
 
 // Smelting: input -> output; 200 ticks per item (10 s)
 export const SMELT_TIME = 200;
@@ -478,4 +484,5 @@ export const SMELTING = {
   [B.JUNGLE_LOG]: I.COAL, [B.ACACIA_LOG]: I.COAL, [B.DARK_OAK_LOG]: I.COAL, [B.BLOSSOM_LOG]: I.COAL, [B.MANGROVE_LOG]: I.COAL, [B.RED_SAND]: B.GLASS,
   [B.WET_SOAKMOSS]: B.SOAKMOSS, [B.KELP]: I.DRIED_KELP, [B.STONE]: B.SMOOTH_STONE, [B.STONE_BRICKS]: B.CRACKED_STONE_BRICKS,
   [I.FROSTROOT]: I.ROASTED_FROSTROOT,
+  [I.RAW_BOGCARP]: I.COOKED_BOGCARP, [I.RAW_DUNEFIN]: I.COOKED_DUNEFIN, [I.GILDED_PERCH]: I.COOKED_GILDED_PERCH,
 };

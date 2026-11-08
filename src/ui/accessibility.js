@@ -129,7 +129,7 @@ export const CAPTION_TEXT = {
   spore_puff: 'Spores puff', ash_hiss: 'Ash hisses', dirge_wail: 'Dirge wails',
   colossus_roar: 'Colossus roars', colossus_slam: 'Ground slams', colossus_erupt: 'Slag erupts',
   paddle: 'Boat paddles', mount_pant: 'Mount pants, tired', harness: 'Harness buckles', cart_fuel: 'Furnace cart roars',
-  thistle: 'Thistlehorn lows', clack: 'Brinecrab clacks its claws', sputter: 'Wickling sputters', burrow: 'Dustmole scuffles in the sand', yowl: 'Gloamlynx yowls', plip: 'Tarnling plips', lumen: 'Lanternfin pings', maw: 'Trenchmaw growls', skyray: 'Skyray calls',
+  thistle: 'Thistlehorn lows', clack: 'Brinecrab clacks its claws', sputter: 'Wickling sputters', snap: 'Sandsnapper snaps from the sand', gurgle: 'Peat Lurker gurgles', kite: 'Cliffkite cries', burrow: 'Dustmole scuffles in the sand', yowl: 'Gloamlynx yowls', plip: 'Tarnling plips', lumen: 'Lanternfin pings', maw: 'Trenchmaw growls', skyray: 'Skyray calls',
 };
 
 /** Sounds that are only interface feedback when they have no place in the world. */

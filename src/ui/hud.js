@@ -205,7 +205,13 @@ export class HUD {
     el.style.transform = `translate(calc(-50% + ${pose.dx * 100}vh), calc(-50% + ${pose.dy * 100}vh))`;
   }
 
-  setScope(on) {
+  setScope(on, text = '') {
+    if (on && text !== this._scopeText) { // a Farscope's read-out (player/farscope.js) under the ring
+      this._scopeText = text;
+      if (!this.scopeTextEl) { this.scopeTextEl = document.createElement('div'); this.scopeTextEl.className = 'scope-text'; this.scopeEl.appendChild(this.scopeTextEl); }
+      this.scopeTextEl.textContent = text;
+      this.scopeTextEl.style.display = text ? '' : 'none';
+    }
     if (on === this.scoped) return;
     this.scoped = on;
     this.scopeEl.classList.toggle('hidden', !on);

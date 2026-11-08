@@ -789,3 +789,6 @@ html.cue-shapes #effects .fx.bad { border-left-style: dashed; }
 #chat .chat-input:focus-visible, .sign-edit input:focus-visible, .book-page:focus-visible, #steps .st-skip:focus-visible {
   outline: 3px solid #ffd34a; outline-offset: 2px; box-shadow: 0 0 0 2px #000;
 }
+
+/* Farscope read-out (player/farscope.js) */
+#overlay-scope .scope-text { position: absolute; left: 50%; top: calc(50% + 38vmin); transform: translateX(-50%); color: #ffe9b0; font: 600 14px/1.2 ui-monospace, monospace; letter-spacing: .04em; text-shadow: 0 1px 3px #000; background: rgba(0,0,0,.45); padding: 3px 10px; border-radius: 10px; white-space: nowrap; }

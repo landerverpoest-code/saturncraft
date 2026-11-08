@@ -88,8 +88,10 @@ export function openBoard(ui, x, y, z) {
     b.onclick = () => { tab = k; render(); };
     tabBtns[k] = b; tabs.appendChild(b);
   }
+  let marked = false;
   const render = () => {
     const v = q.boardView(x + 0.5, z + 0.5), m = q.mine();
+    if (!marked) { marked = true; if (g.setWaymark) g.setWaymark({ x: x + 0.5, z: z + 0.5, kind: 'board', label: `${v.site.name} Bounty Board` }); } // the Waymark Compass points here from now on (player/waymark.js)
     s.querySelector('.qt').textContent = `${v.site.name} Bounty Board`;
     s.querySelector('.quest-sub').textContent = `Day ${v.day + 1} · ${v.site.wild ? 'A wayside board' : 'Elder ' + v.elder} · Standing: ${v.standing}${m.key !== '*' ? ' · Team: ' + m.key : ''}`;
     for (const [k, b] of Object.entries(tabBtns)) { b.classList.toggle('on', k === tab); b.setAttribute('aria-selected', String(k === tab)); }

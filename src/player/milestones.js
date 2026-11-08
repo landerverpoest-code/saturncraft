@@ -14,6 +14,9 @@ import { sporehallsNear } from '../world/sporehall.js';
 import { lighthousesNear } from '../world/lighthouse.js';
 import { mireShrinesNear } from '../world/mireShrine.js';
 import { observatoriesNear } from '../world/observatory.js';
+import { sandvaultsNear } from '../world/sandvault.js';
+import { canyonsNear } from '../world/mesaPack.js';
+import { hagHutsNear } from '../world/hagHut.js';
 import { grottosNear } from '../world/deepSea.js';
 import { isleNear } from '../world/skyIsles.js';
 import { inGreatRift } from '../world/carvers.js';
@@ -70,6 +73,9 @@ export const MILESTONES = [
   { id: 'lighthouse', title: 'Keeper of the Light', desc: "Find a Hermit's Lighthouse", icon: B.LIGHTHOUSE_LENS, tick: near(lighthousesNear) },
   { id: 'mireshrine', title: 'Sunken Devotion', desc: 'Find a Mire Shrine', icon: B.AZURE_MOSAIC, tick: near(mireShrinesNear) },
   { id: 'observatory', title: 'Reading the Stars', desc: "Find a Stargazer's Observatory", icon: B.ROSE_WINDOW, tick: near(observatoriesNear) },
+  { id: 'sandvault', title: 'Under the Dunes', desc: 'Find a Sandvault', icon: B.SUN_GLYPH, tick: near(sandvaultsNear) },
+  { id: 'canyon', title: 'The Painted Cut', desc: 'Find a Slot Canyon', icon: B.STRATA_RUST, tick: near(canyonsNear) },
+  { id: 'haghut', title: 'Over the Bog', desc: 'Find a Hag Hut', icon: B.BOG_PLANKS, tick: near(hagHutsNear) },
   { id: 'grotto', title: 'Down in the Dark', desc: 'Find an Abyssal Grotto on the deep sea floor', icon: B.TIDESTONE_BRICKS, tick: near(grottosNear) },
   { id: 'diver', title: 'Light for the Deep', desc: "Make a Diver's Lamp or a Diver's Helm", icon: I.DIVERS_LAMP, inv: (g) => has(g, I.DIVERS_LAMP, I.DIVERS_HELM) },
   { id: 'kelp_forest', title: 'Among the Fronds', desc: 'Swim through a Kelp Forest', icon: B.KELP, tick: (g) => overworld(g) && g.world.biomeAt(Math.floor(g.player.x), Math.floor(g.player.z)) === BIOME.KELP_FOREST && g.player.body.inWater },

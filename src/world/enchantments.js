@@ -33,6 +33,10 @@ export const ENCHANTS = {
   featherstep: { name: 'Featherstep', max: 4, weight: 5,  table: ['boots'], min: lin(5, 6), span: 6 },
   strongdraw:  { name: 'Strongdraw',  max: 5, weight: 10, table: ['bow'], min: lin(1, 10), span: 15 },
   endless:     { name: 'Endless',     max: 1, weight: 1,  table: ['bow'], min: () => 20, span: 30 },
+  // Fishing rod enchantments (entities/bobber.js): Lure shortens the wait for a bite by five seconds a level; Haul tips the catch towards
+  // better finds (one level of luck each) and gives each fish a chance (one in five a level) to bring a second one up with it.
+  lure:        { name: 'Lure',        max: 3, weight: 5,  table: ['rod'], min: lin(15, 9), span: 50 },
+  haul:        { name: 'Haul',        max: 3, weight: 2,  table: ['rod'], min: lin(15, 9), span: 50 },
   // Tidespear (reference: trident) enchantments. `cap` is a fixed top of the level window;
   // `excludes` lists enchantments it cannot share an item with (Tidal Surge excludes both others).
   homing_tide: { name: 'Homing Tide', max: 3, weight: 5,  table: ['spear'], min: lin(12, 7), cap: 50 },             // loyalty
@@ -81,6 +85,7 @@ export function categories(id) {
   if (d.armor && d.armor.pumpkin) return []; // a Carved Pumpkin takes no enchantments
   if (d.armor) return d.armor.slot === 3 ? ['armor', 'boots'] : ['armor'];
   if (d.bow || d.crossbow) return ['bow'];
+  if (d.rod) return ['rod', 'gear'];
   if (d.spear) return ['spear'];
   if (d.shears) return ['shears'];
   if (d.durability) return ['gear'];
@@ -94,7 +99,7 @@ export function enchantability(id) {
   if (d.tool) return TOOL_ENCHANTABILITY[d.tool.material] || 0;
   if (d.weapon && d.weapon.material) return TOOL_ENCHANTABILITY[d.weapon.material] || 0;
   if (d.armor) return ARMOR_ENCHANTABILITY[d.armor.material] || 0;
-  if (d.bow || d.crossbow || d.spear) return 1;
+  if (d.bow || d.crossbow || d.spear || d.rod) return 1;
   return 0;
 }
 

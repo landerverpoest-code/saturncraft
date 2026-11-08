@@ -19,6 +19,7 @@ import { COOKING_TEX } from './cookingTextures.js';
 import { PACK_TEX } from './packTextures.js';
 import { BOARD_TEX } from './boardTextures.js';
 import { OCEANSKY_TEX } from './oceanSkyTextures.js';
+import { PACK5_TEX } from './pack5Textures.js';
 
 export const TEX_SIZE = 16;
 
@@ -61,6 +62,7 @@ for (const n of Object.keys(COOKING_TEX)) addTex(n); // the Cooking Pot, new cro
 for (const n of Object.keys(PACK_TEX)) addTex(n); // mosaics, leaded glass, lens, chandelier, brazier, rope ladder (world/packTextures.js)
 for (const n of Object.keys(BOARD_TEX)) addTex(n); // the Bounty Board (world/boardTextures.js)
 for (const n of Object.keys(OCEANSKY_TEX)) addTex(n); // Cirrusstone, the Beanstalk, Gleamkelp (world/oceanSkyTextures.js)
+for (const n of Object.keys(PACK5_TEX)) addTex(n); // Strata, Sandvault Bricks, the Dart Trap, Bog Planks, the Hag's Cauldron (world/pack5Textures.js)
 ARTS.forEach(([, w, h], art) => { for (let p = 0; p < w * h; p++) addTex(`painting_${art}_${p}`); });
 for (let i = 0; i < 8; i++) addTex('fire_' + i);
 addTex('lava_flow');
@@ -1317,6 +1319,7 @@ function paint(c, name) {
   else if (PACK_TEX[name]) PACK_TEX[name](c, { hex, mix, shade });
   else if (BOARD_TEX[name]) BOARD_TEX[name](c, { hex, mix, shade });
   else if (OCEANSKY_TEX[name]) OCEANSKY_TEX[name](c, { hex, mix, shade });
+  else if (PACK5_TEX[name]) PACK5_TEX[name](c, { hex, mix, shade });
   else c.noiseFill(P.stone);
 }
 

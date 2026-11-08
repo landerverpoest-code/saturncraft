@@ -198,6 +198,21 @@ export function buildTopics({ table, touch = false, pad = false } = {}) {
     ] },
   ]);
 
+  add('dunebog', 'Dunes, canyons and bogs', 'Systems', [
+    { p: 'The dry and the wet corners of the map hide more (find them with /locate sandvault, /locate canyon or /locate haghut). In patches of the badlands the cliff bands are painted in bright Strata, and a sheer Slot Canyon is cut into some mesas: a pool at the bottom, a chest at the far tip, bridges across the top and Cliffkites riding the updrafts above.' },
+    { h: 'The Sandvault' },
+    { p: 'Only a Sun Glyph shows above the sand. Break it and climb down the rope ladder. The corridor to the burial hall is lined with Dart Traps fed by pressure plates and little lines of Cinnabar Wire: keep off the plates, or cut the wire to disarm a row. Two Dune Shamblers and three chests wait in the hall.' },
+    { h: 'The Hag Hut' },
+    { p: 'A cabin of Bog Planks on stilts, reached over bog bridges. Its chest holds the hag\'s recipe in riddles, and the Hag\'s Cauldron wants three things in the right order (a Peat Clot from a Peat Lurker, Tallow from a Wickling, a Slimeball, a Snapper Fang from a Sandsnapper). A wrong one curdles the brew; the right three give Bog Essence, which turns a Murky Elixir into an Elixir of the Marsh in the Alembic.' },
+    { h: 'Tools and fishing' },
+    { list: [
+      'Farscope: a Farglass with a gold ring. Hold right mouse to look through it, scroll (or use the hotbar keys) to step the zoom, and read the range under the ring.',
+      'Waymark Compass: points at the last Bounty Board you opened or the last place you marked (/waymark here, /wp add).',
+      'Fishing rods can carry Lure (a quicker bite) and Haul (better finds and a second fish). Bogs give Bogcarp, dry lands Dunefin, and a Gilded Perch is rare. Cook them on a fire, or put any fish and wheat in the Cooking Pot for a Fish Pie.',
+      'Sandsnappers wait buried in sand (sneak to pass nearer); Peat Lurkers lie in bog water with only their eyes showing; a struck Cliffkite stoops on whoever hit it.',
+    ] },
+  ]);
+
   add('events', 'World events', 'Systems', [
     { p: 'Now and then the world does something special. Each event lasts a few minutes and can be switched off with /gamerule doWorldEvents false.' },
     { list: EVENT_ORDER.map((k) => `${EVENT_KINDS[k].name}: ${EVENT_KINDS[k].desc}.`) },
