@@ -381,7 +381,8 @@ describe('the Bounty Board block', () => {
   it('is appended at the end of the extension ids, drawn as boxes, crafted and usable', () => {
     expect(B.BOUNTY_BOARD).toBeGreaterThanOrEqual(EXT_BASE);
     const extIds = Object.values(B).filter((v) => v >= EXT_BASE);
-    expect(B.BOUNTY_BOARD).toBe(Math.max(...extIds));
+    expect(B.BOUNTY_BOARD).toBe(1356); // (later packs append after it)
+    expect(Math.max(...extIds)).toBeGreaterThanOrEqual(B.BOUNTY_BOARD);
     expect(BLOCKS[B.BOUNTY_BOARD].shape).toBe(SHAPE.BOXES);
     expect(blockBoxes(B.BOUNTY_BOARD, 0)).not.toEqual(blockBoxes(B.BOUNTY_BOARD, 1));
     const st = (id) => (id == null ? null : { id, count: 1, damage: 0 });

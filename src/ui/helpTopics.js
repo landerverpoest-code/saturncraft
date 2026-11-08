@@ -196,7 +196,7 @@ export function buildTopics({ table, touch = false, pad = false } = {}) {
   ]);
 
   add('dunebog', 'Dunes, canyons and bogs', 'Systems', [
-    { p: 'The dry and the wet corners of the map hide more (find them with /locate sandvault, /locate canyon or /locate haghut). In patches of the badlands the cliff bands are painted in bright Strata, and a sheer Slot Canyon is cut into some mesas: a pool at the bottom, a chest at one end, bridges across the top and Cliffkites riding the updrafts above.' },
+    { p: 'The dry and the wet corners of the map hide more (find them with /locate sandvault, /locate canyon or /locate haghut). In patches of the badlands the cliff bands are painted in bright Strata, and a sheer Slot Canyon is cut into some mesas: a pool at the bottom, a chest at the far tip, bridges across the top and Cliffkites riding the updrafts above.' },
     { h: 'The Sandvault' },
     { p: 'Only a Sun Glyph shows above the sand. Break it and climb down the rope ladder. The corridor to the burial hall is lined with Dart Traps fed by pressure plates and little lines of Cinnabar Wire: keep off the plates, or cut the wire to disarm a row. Two Dune Shamblers and three chests wait in the hall.' },
     { h: 'The Hag Hut' },

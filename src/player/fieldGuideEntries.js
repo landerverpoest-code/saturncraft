@@ -168,7 +168,7 @@ const STRUCTURE_NOTES = {
   mireshrine: 'A shrine sunk knee-deep in the bog, with a rose window and a flooded crypt.',
   observatory: 'A domed star-watching house on the hills, its glass mostly fallen.',
   sandvault: 'A trapped temple buried under the dunes: only a golden Sun Glyph shows. Dart Traps, pressure plates and a burial hall.',
-  canyon: 'A sheer Slot Canyon cut into a Painted Mesa, with a pool on its floor, a chest at one end and plank bridges across.',
+  canyon: 'A sheer Slot Canyon cut into a Painted Mesa, with a pool on its floor, a chest at the far tip and plank bridges across.',
   haghut: 'A stilted cabin of Bog Planks reached by bog bridges, with a Hag\'s Cauldron and a recipe in riddles.',
   grotto: 'A sea cave in a rock dome on the deep floor: Gleamkelp, a tidestone dais with two chests and a wrecked diving skiff. Trenchmaws lurk inside; bring a lamp.',
   isle: 'A grassy island in the sky over pale Cirrusstone, with an Aerie of two chests, a bean plot and ore. A wild Beanstalk climbs to it from the ground below; Skyrays glide round it.',

@@ -49,7 +49,7 @@ export function hagCauldronPos(s) {
 /** Guards as { type, x, y, z }: two Wicklings in the hut's room. */
 export function hagGuards(s) {
   const at = (type, u, h, v) => { const [dx, dz] = toWorld(s.dir, u, v); return { type, x: s.cx + dx, y: s.y + h, z: s.cz + dz }; };
-  return [at('wickling', 2, FLOOR + 1, 1), at('wickling', -2, FLOOR + 1, 2)];
+  return [at('wickling', 1, FLOOR + 1, 1), at('wickling', -1, FLOOR + 1, 2)];
 }
 
 // ---- the blocks ------------------------------------------------------------------------
