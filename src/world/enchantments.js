@@ -77,7 +77,7 @@ export function categories(id) {
   if (id === I.BOOK || id === I.ENCHANTED_BOOK) return ['book'];
   if (d.tool) return d.tool.type === 'sword' ? ['sword'] : d.tool.type === 'axe' ? ['tool', 'axe'] : ['tool'];
   if (d.weapon && d.weapon.melee) return ['sword', 'gear']; // Warhammer, Dagger, Glaive: the sword enchantments
-  if (d.disc) return ['disc', 'gear'];
+  if (d.weapon && d.weapon.type === 'disc') return ['disc', 'gear']; // the thrown Returning Disc (a Music Disc has `disc` too: its tune)
   if (d.armor && d.armor.pumpkin) return []; // a Carved Pumpkin takes no enchantments
   if (d.armor) return d.armor.slot === 3 ? ['armor', 'boots'] : ['armor'];
   if (d.bow || d.crossbow) return ['bow'];

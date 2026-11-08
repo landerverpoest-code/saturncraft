@@ -404,7 +404,7 @@ function gearLinesHTML(st) {
   const d = ITEMS[st.id];
   let h = '';
   if (d.weapon && WEAPON_TEXT[d.weapon.type]) {
-    const w = d.weapon, line = d.disc ? `Thrown ${w.throwDamage} damage, reach ${W.DISC_RANGE} blocks` : `${w.damage} damage, ${w.attackSpeed} swings a second, reach ${w.reach}`;
+    const w = d.weapon, line = w.type === 'disc' ? `Thrown ${w.throwDamage} damage, reach ${W.DISC_RANGE} blocks` : `${w.damage} damage, ${w.attackSpeed} swings a second, reach ${w.reach}`;
     h += `<div class="tt-dura">${esc(line)}</div><div class="tt-good">${esc(WEAPON_TEXT[w.type])}</div>`;
   }
   if (d.trinket) for (const l of trinketLines(st)) h += `<div class="tt-good">${esc(l)}</div>`;

@@ -216,7 +216,7 @@ export class Interaction {
     // Farglass: hold right mouse to look through it (game.render narrows the view)
     p.zooming = !!(d && d.spyglass && input.right);
     if (p.zooming) return;
-    if (d && d.disc && input.rightPressed && !(this.target && USABLE_BLOCKS.has(this.target.id) && !p.sneaking)) { this.throwDisc(); return; }
+    if (isDisc(st) && input.rightPressed && !(this.target && USABLE_BLOCKS.has(this.target.id) && !p.sneaking)) { this.throwDisc(); return; }
     if (d && d.crossbow) {
       if (d.loaded) { if (input.rightPressed) this.fireCrossbow(); }
       else if (input.right) { if (++this.bowDraw >= 25) { this.loadCrossbow(); this.bowDraw = 0; } }

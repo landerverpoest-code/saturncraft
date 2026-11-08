@@ -555,7 +555,7 @@ for (const kind of ['warhammer', 'dagger', 'glaive', 'disc']) {
     const weapon = kind === 'disc'
       ? { type: 'disc', material: tier, speed: 1, tier: -1, damage: 2, attackSpeed: 1.5, throwDamage: T.damage, reach: K.reach, wear: K.wear }
       : { type: kind, material: tier, speed: 1, tier: -1, damage: T.damage, attackSpeed: T.attackSpeed, reach: K.reach, wear: K.wear, melee: true, breaksShield: !!K.breaksShield };
-    WEAPONS[kind][tier] = item(key, name, { stack: 1, durability: T.durability, weapon, ...(kind === 'disc' ? { disc: true } : {}) }).id;
+    WEAPONS[kind][tier] = item(key, name, { stack: 1, durability: T.durability, weapon }).id; // (a Returning Disc is told by weapon.type; `disc` on an item is a Music Disc's tune)
   }
 }
 // Slagsteel armour (reference: none): the set with the Dirgestep Boots as its fourth piece (player/setBonuses.js)
