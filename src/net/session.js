@@ -2083,7 +2083,8 @@ export class ClientSession extends Session {
       (opts.kick ? '' : '<button class="btn" data-a="save">Save a copy of this world</button>') +
       '<button class="btn" data-a="title">Back to Title Screen</button>';
     const head = s.querySelector('h2'), line = s.querySelector('.net-msg'), note = s.querySelector('.net-retry'), now = s.querySelector('[data-a=now]');
-    const setHostLeft = (text) => { head.textContent = 'The host left'; line.textContent = text; note.textContent = 'What you built and found here is still on your screen: keep a copy of it as a world of your own.'; now.classList.add('hidden'); };
+    let saved = false;
+    const setHostLeft = (text) => { head.textContent = 'The host left'; line.textContent = text; if (!saved) note.textContent = 'What you built and found here is still on your screen: keep a copy of it as a world of your own.'; now.classList.add('hidden'); };
     head.textContent = opts.hostLeft ? 'The host left' : canRetry ? 'Connection lost' : 'Disconnected';
     line.textContent = msg;
     if (opts.hostLeft) setHostLeft(msg);
@@ -2093,6 +2094,7 @@ export class ClientSession extends Session {
       saveBtn.disabled = true;
       try {
         const r = await saveGuestCopy(g, this.hostName());
+        saved = !!r;
         note.textContent = r ? `Saved as "${r.name}" - open it from the title screen.` : 'All world slots are in use: delete a world on the title screen first.';
         if (!r) saveBtn.disabled = false;
       } catch (e) { note.textContent = 'Could not save: ' + (e && e.message ? e.message : e); saveBtn.disabled = false; }
