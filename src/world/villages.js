@@ -180,14 +180,25 @@ export function stampVillages(gen, blocks, meta, cx, cz) {
       }
       BUILDERS[p.type](p, st, set, mulberry32(p.seed || 7), v.style);
     }
-    // the Bounty Board (player/quests.js) beside the well, on the corner of the plaza between two roads
+  }
+}
+
+/**
+ * The Bounty Board (player/quests.js) beside each village's well, on the corner of the plaza between two roads: a pass of its own
+ * (generator.js 'villageBoards', run after everything else) so a village generated before the board existed can be given one by
+ * the retrofit. It goes on the ground-level cell above the plaza (air or a plant), and nowhere else.
+ */
+export function stampVillageBoards(gen, blocks, meta, cx, cz) {
+  const X0 = cx * 16, Z0 = cz * 16;
+  for (const v of villagesNear(gen, X0, Z0, X0 + 15, Z0 + 15)) {
     const [bx, bz] = boardSpot(v);
-    if (inChunk(bx, bz)) {
-      let y = v.y + 5;
-      while (y > v.y - 8 && !solidGround(get(bx, y, bz))) y--;
-      const above = get(bx, y + 1, bz);
-      if (solidGround(get(bx, y, bz)) && (above === B.AIR || PLANTS.has(above))) set(bx, y + 1, bz, B.BOUNTY_BOARD, 0);
-    }
+    if (bx < X0 || bx >= X0 + 16 || bz < Z0 || bz >= Z0 + 16) continue;
+    const at = (y) => (y >= MIN_Y && y < MIN_Y + WORLD_HEIGHT ? blocks[cidx(bx - X0, y, bz - Z0)] : 0);
+    const solid = (id) => id && id !== B.WATER && !LEAVES.has(id) && !LOGS.has(id) && !PLANTS.has(id);
+    let y = v.y + 5;
+    while (y > v.y - 8 && !solid(at(y))) y--;
+    const above = at(y + 1);
+    if (solid(at(y)) && (above === B.AIR || PLANTS.has(above))) { const i = cidx(bx - X0, y + 1, bz - Z0); blocks[i] = B.BOUNTY_BOARD; meta[i] = 0; }
   }
 }
 

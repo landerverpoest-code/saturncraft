@@ -889,6 +889,12 @@ ext('SANDVAULT_BRICKS'); ext('SUN_GLYPH'); ext('DART_TRAP'); ext('BOG_PLANKS'); 
   def(B.HAG_CAULDRON, "Hag's Cauldron", { hardness: 2, resistance: 2, tool: TOOL.PICKAXE, sound: 'metal', opaque: false, shape: SHAPE.BOXES, layer: LAYER.CUTOUT, tex: { top: 'hag_cauldron_top', bottom: 'hag_cauldron_side', side: 'hag_cauldron_side' } });
 }
 
+// Content pack 6 (appended, no id shifts): Packed Ice builds the floes and icebergs of the Frozen Deep (world/frozenDeep.js); the
+// Cartographer's Table (player/cartographer.js) surveys the ground its owner has explored onto a map.
+ext('PACKED_ICE'); ext('CARTOGRAPHERS_TABLE');
+def(B.PACKED_ICE, 'Packed Ice', { hardness: 0.7, resistance: 0.7, tool: TOOL.PICKAXE, sound: 'glass', slipperiness: 0.98 });
+def(B.CARTOGRAPHERS_TABLE, "Cartographer's Table", { hardness: 2.5, resistance: 2.5, tool: TOOL.AXE, sound: 'wood', flammable: true, tex: { top: 'cartographers_table_top', bottom: 'birch_planks', side: 'cartographers_table_side' } });
+
 export const NUM_BLOCKS = BLOCKS.length;
 
 // Flat lookup tables used by hot loops (mesher, lighting, physics) and workers.

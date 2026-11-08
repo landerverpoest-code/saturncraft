@@ -27,6 +27,7 @@ import { canyonsNear, nearestCanyon } from './mesaPack.js';
 import { hagHutsNear, nearestHagHut } from './hagHut.js';
 import { grottosNear, nearestGrotto } from './deepSea.js';
 import { isleNear, nearestIsle } from './skyIsles.js';
+import { icebergsNear, nearestIceberg, hulksNear, nearestHulk } from './frozenDeep.js';
 import { forgesNear, nearestForge } from './dimensions/cinderForge.js';
 import { wyrmRibsNear, nearestWyrmRibs } from './dimensions/wyrmRibs.js';
 
@@ -56,6 +57,8 @@ const FINDERS = {
   haghut: { near: hagHutsNear, nearest: nearestHagHut },
   grotto: { near: grottosNear, nearest: nearestGrotto },
   isle: { near: isleNear, nearest: nearestIsle },
+  iceberg: { near: icebergsNear, nearest: nearestIceberg },
+  hulk: { near: hulksNear, nearest: nearestHulk },
   // other dimensions (their generators have `dimension`; the overworld's does not)
   cinderforge: { near: forgesNear, nearest: nearestForge },
   wyrmribs: { near: wyrmRibsNear, nearest: nearestWyrmRibs },

@@ -171,6 +171,8 @@ const STRUCTURE_NOTES = {
   canyon: 'A sheer Slot Canyon cut into a Painted Mesa, with a pool on its floor, a chest at the far tip and plank bridges across.',
   haghut: 'A stilted cabin of Bog Planks reached by bog bridges, with a Hag\'s Cauldron and a recipe in riddles.',
   grotto: 'A sea cave in a rock dome on the deep floor: Gleamkelp, a tidestone dais with two chests and a wrecked diving skiff. Trenchmaws lurk inside; bring a lamp.',
+  iceberg: 'A towering berg of Packed Ice on the Frozen Deep with a hollow inside: swim in through the underwater tunnel to a dry ledge, a pool and a chest.',
+  hulk: 'A spruce ship frozen stern-down into the ice of the Frozen Deep, its bow in the air. A hatch in the ice leads to the flooded hold and its treasure.',
   isle: 'A grassy island in the sky over pale Cirrusstone, with an Aerie of two chests, a bean plot and ore. A wild Beanstalk climbs to it from the ground below; Skyrays glide round it.',
   cinderforge: 'An abandoned smithy of Scorched Bricks in the Cinderdeep, with a lava pit and a Cinder Brute spawner. A Slagheart Sigil used in its courtyard wakes the Slag Colossus.',
   wyrmribs: 'The bleached ribcage of a Void Wyrm on an outer island of the Hollow.',

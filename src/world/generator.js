@@ -1,6 +1,6 @@
 // Deterministic terrain generator. Runs inside Web Workers (see gen.worker.js)
 // but is a pure module so it can be unit-tested and used for spawn search.
-import { stampVillages } from './villages.js';
+import { stampVillages, stampVillageBoards } from './villages.js';
 import { stampMineshafts } from './mineshafts.js';
 import { stampProvingVaults } from './provingVaults.js';
 import { stampTemples, stampOutposts } from './temples.js';
@@ -33,6 +33,7 @@ import { stampObservatories } from './observatory.js';
 import { stampStrata, stampCanyons } from './mesaPack.js';
 import { stampSandvaults } from './sandvault.js';
 import { stampHagHuts } from './hagHut.js';
+import { stampFrozenDeep, stampIcebergs, stampHulks } from './frozenDeep.js';
 import { BIOME, BIOMES } from './biomes.js';
 import { MIN_Y, WORLD_HEIGHT, SEA_LEVEL, CHUNK_VOLUME, cidx } from './constants.js';
 import { grassColor, foliageColor } from './textures.js';
@@ -539,6 +540,10 @@ export class TerrainGenerator {
     this.pass('canyons', blocks, meta, biomes, () => stampCanyons(this, blocks, meta, cx, cz));      // Slot Canyons cut into badlands mesas (world/mesaPack.js)
     this.pass('hagHut', blocks, meta, biomes, () => stampHagHuts(this, blocks, meta, cx, cz));       // Hag Huts and bog bridges in swamps (world/hagHut.js)
     this.pass('skyIsles', blocks, meta, biomes, () => stampSkyIsles(this, blocks, meta, cx, cz));    // Cloud Isles and their wild Beanstalks (world/skyIsles.js): high above everything else, a pass of its own
+    this.pass('frozenDeep', blocks, meta, biomes, () => stampFrozenDeep(this, blocks, meta, cx, cz, heightmap, biomes)); // Frozen Deep biome and ice floes under cold oceans (world/frozenDeep.js)
+    this.pass('iceberg', blocks, meta, biomes, () => stampIcebergs(this, blocks, meta, cx, cz));   // Icebergs with hollow chambers (world/frozenDeep.js)
+    this.pass('frozenHulk', blocks, meta, biomes, () => stampHulks(this, blocks, meta, cx, cz));    // Icebound Hulks frozen into the sheet (world/frozenDeep.js)
+    this.pass('villageBoards', blocks, meta, biomes, () => stampVillageBoards(this, blocks, meta, cx, cz)); // the Bounty Board beside each village's well (world/villages.js), a pass of its own so old saves can be given one
 
     // Final heightmap: highest non-air block
     for (let z = 0; z < 16; z++) for (let x = 0; x < 16; x++) {

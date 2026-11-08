@@ -43,6 +43,10 @@ export const FEATURES = [
   { key: 'canyons', since: 6, label: 'Slot Canyons', link: 3 },
   { key: 'hagHut', since: 6, label: 'Hag Huts', link: 3 },
   { key: 'skyIsles', since: 5, label: 'Cloud Isles', link: 3 },
+  { key: 'frozenDeep', since: 7, label: 'Frozen Deep floes', link: 2 },
+  { key: 'iceberg', since: 7, label: 'Icebergs', link: 3 },
+  { key: 'frozenHulk', since: 7, label: 'Icebound Hulks', link: 3 },
+  { key: 'villageBoards', since: 7, label: 'village Bounty Boards', link: 1 },
 ];
 export const CURRENT_FEATURE_VERSION = Math.max(...FEATURES.map((f) => f.since));
 export const FEATURE_KEYS = FEATURES.map((f) => f.key);
@@ -131,13 +135,13 @@ function groundLevels(blocks, fresh) {
   for (let c = 0; c < 256; c++) {
     for (let y = WORLD_HEIGHT - 1; y >= 0; y--) {
       const i = c | (y << 8), b = blocks[i];
-      if (SOLID[b] && !(LEAVES.has(b) && b === fresh[i])) { out[c] = y + MIN_Y; break; }
+      if (SOLID[b] && b !== B.ICE && !(LEAVES.has(b) && b === fresh[i])) { out[c] = y + MIN_Y; break; }
     }
   }
   return out;
 }
 
-const free = (b) => b === B.AIR || b === B.WATER;
+const free = (b) => b === B.AIR || b === B.WATER || b === B.ICE; // (the ice sheet of a frozen sea is made by the terrain, never by a player)
 
 /**
  * Plan the retrofit of one saved chunk. `chunk` is { blocks, meta, biomes, fv? } as stored (unpackChunk's shape); nothing in it

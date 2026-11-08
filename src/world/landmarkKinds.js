@@ -22,6 +22,8 @@ export const LANDMARK_KINDS = [
   { key: 'haghut', name: 'Hag Hut', color: '#7a9a3a', shape: 'house' },
   { key: 'grotto', name: 'Abyssal Grotto', color: '#2a8aa8', shape: 'dome' },
   { key: 'isle', name: 'Cloud Isle', color: '#dce8ff', shape: 'star' },
+  { key: 'iceberg', name: 'Iceberg', color: '#a8d8f8', shape: 'dome' },
+  { key: 'hulk', name: 'Icebound Hulk', color: '#90a8c0', shape: 'boat' },
   // other dimensions: found (and drawn on the Field Guide page) in the dimension named by `dim`, never in the overworld
   { key: 'cinderforge', name: 'Cinderforge', color: '#ff8a30', shape: 'tower', dim: 'cinderdeep' },
   { key: 'wyrmribs', name: 'Wyrm Ribs', color: '#d8d2e8', shape: 'dome', dim: 'hollow' },
