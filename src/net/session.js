@@ -1371,6 +1371,13 @@ export class HostSession extends Session {
     for (const n of r.targets) { const cl = this.clientByName(n); if (cl) cl.ch.send(msg); }
   }
 
+  /** Once a second: ghosts whose minute is up give their seat back (the host is told). */
+  expireGhosts(now) {
+    const held = this.ghosts.map.size ? this.ghosts.seats(now).map((x) => x.name) : [];
+    if (this.ghostNames) for (const n of this.ghostNames) if (!held.includes(n) && !this.clientByName(n)) this.game.chat.add(`${n}'s place was given up`);
+    this.ghostNames = held;
+  }
+
   /** [[id, name, gamemode, ping]] of everybody here (the host's ping is shown as none). */
   hostRoster() {
     return [[0, this.name, this.game ? this.game.player.gamemode : 'survival', -1], ...this.joined().map((c) => [c.id, c.name, c.gm || 'survival', c.ping == null ? -1 : c.ping])];
@@ -1446,9 +1453,7 @@ export class HostSession extends Session {
     if (this.ticks % ENV_EVERY === 0) {
       this.sendEnv();
       const now = performance.now();
-      const held = this.ghosts.map.size ? this.ghosts.seats(now).map((x) => x.name) : [];
-      if (this.ghostNames && this.ghostNames.length) for (const n of this.ghostNames) if (!held.includes(n) && !this.clientByName(n)) g.chat.add(`${n}'s place was given up`);
-      this.ghostNames = held;
+      this.expireGhosts(now);
       for (const c of [...this.clients.values()]) {
         if (now - c.lastSeen > TIMEOUT_MS) { this.drop(c, 'timed out'); continue; }
         if (!c.joined) continue;
