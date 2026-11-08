@@ -1,6 +1,7 @@
 // Multiplayer: a marker above every other player in view (name and distance), or pinned
 // to the screen edge with an arrow when they are off screen, so friends can find each other.
 import * as THREE from 'three';
+import { PING_KINDS } from '../net/social.js';
 
 const _v = new THREE.Vector3();
 const _cam = new THREE.Vector3();
@@ -75,9 +76,11 @@ export class PlayerMarkers {
           m.classList.toggle('pinned', !inside);
           m.classList.add('ping');
           m.style.opacity = String(Math.min(1, pg.life * 6));
-          m.innerHTML = `${arrow}<i>\u25c6</i><b></b><span class="d">${dist} m</span>`;
-          m.querySelector('i').style.color = pg.color;
-          m.querySelector('b').textContent = pg.from;
+          const kind = PING_KINDS[pg.k] || PING_KINDS.go; // a spot, danger, loot or a call for help (net/social.js)
+          m.innerHTML = `${arrow}<i></i><b></b><span class="d">${dist} m</span>`;
+          m.querySelector('i').textContent = kind.glyph;
+          m.querySelector('i').style.color = kind.color || pg.color;
+          m.querySelector('b').textContent = kind.label ? `${pg.from}: ${kind.label}` : pg.from;
         }
       }
     }

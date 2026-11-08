@@ -59,9 +59,10 @@ import { POTIONS } from '../world/potions.js';
 import {
   SocialState, PingBoard, routePing, runSocial, nameKey, cleanToken, loadClientToken, cleanEmote, emoteByName, EMOTE_COOLDOWN_MS,
   PM_FROM, PM_TO, PM_COLOR, TEAM_CHAT, PING_REACH, PING_FALLBACK, playerRows, cleanRoster, cleanPing, canSpectate, nextSpectateTarget,
-  makeResume, pickGuestRecord, reconnectDelay, GAMEMODE_LABEL, teamColor, cleanHostSettings, pickDeathCamTarget, killerOf,
+  makeResume, pickGuestRecord, reconnectDelay, GAMEMODE_LABEL, teamColor, cleanHostSettings, pickDeathCamTarget, killerOf, pingKindFor, cleanPingKind,
 } from './social.js';
 import { PingBeacons } from '../render/pingBeacons.js';
+import { RemoteDiscs } from '../render/remoteDiscs.js';
 import { GuestMeter, allowedEdits, updateEvery, sendsNow, Rate, rateText } from './guard.js';
 import { GuestLedger, plausibleStack, countIn, ALLOW_PER_KIND, ALLOW_SMALL } from './ledger.js';
 import { cleanCamp, mergeCamp, sameCampLayout } from '../world/campfireCooking.js';
@@ -134,6 +135,7 @@ class Session {
     this.friendlyFireAll = false; // host option: team mates can hurt each other whatever their team says
     this.social = new SocialState(); // teams, ops, bans (the host's copy is part of the save; guests mirror the teams)
     this.pings = new PingBoard();    // short-lived beacons
+    this.discs = null;               // other players' thrown Returning Discs (render/remoteDiscs.js), made on first use
     this.beacons = null;             // their 3D markers (render/pingBeacons.js), made on first use
     this.roster = [];                // [[id, name, gamemode, ping]] from the host, for the Tab list
     this.spectate = null;            // { target, switched, prevMode } while following a friend
@@ -177,6 +179,7 @@ class Session {
   render(sec) {
     const now = performance.now();
     for (const rp of this.remotes.values()) rp.update(this.game, sec, now);
+    if (this.discs) this.discs.update(sec, now);
     const act = this.activePings(now).concat(this.waypointList().map((w) => ({ from: 'wp:' + w.name, x: w.x, y: w.y, z: w.z, color: '#7fe2ff', life: 1 })));
     if (act.length || this.beacons) {
       if (!this.beacons) this.beacons = new PingBeacons(this.game.scene);
@@ -197,23 +200,53 @@ class Session {
   /** Beacons to show now (this dimension). */
   activePings(now = performance.now()) { return this.game ? this.pings.active(now, this.game.world.dimension) : []; }
 
-  /** Ping the block under the crosshair: a beacon for the team (or everybody, without a team). */
+  /**
+   * Ping what the crosshair points at: a hostile creature (danger), a dropped item or a chest (loot), any other creature or
+   * block (a spot); sneaking asks for help at your own feet. Shown to the team (or everybody, without one).
+   */
   pingAtCrosshair() {
     const g = this.game, p = g.player, now = performance.now();
     if (!p || p.dead) return false;
     const [ex, ey, ez] = p.eyePos(), [dx, dy, dz] = p.lookDir();
-    const hit = g.world.raycast(ex, ey, ez, dx, dy, dz, PING_REACH, true);
-    if (!hit) { if (g.hud) g.hud.toast('Nothing there to ping', 1500); return false; }
+    let kind = 'go', at = null;
+    if (p.sneaking) { kind = 'help'; at = { x: p.x, y: p.y + 0.2, z: p.z }; }
+    else {
+      const hit = g.world.raycast(ex, ey, ez, dx, dy, dz, PING_REACH, true);
+      let best = hit ? hit.dist : PING_REACH, ent = null;
+      for (const e of (g.entities && g.entities.list) || []) {
+        if ((e.kind !== 'mob' && e.kind !== 'item') || e.dead || e.removed || (e.kind === 'mob' && e.deathTime > 0)) continue;
+        const hw = (e.width || 0.4) / 2 + 0.15, h = e.height || 0.4;
+        const t = rayAABB(ex, ey, ez, dx, dy, dz, e.x - hw, e.y - 0.1, e.z - hw, e.x + hw, e.y + h + 0.1, e.z + hw);
+        if (t !== null && t < best) { best = t; ent = e; }
+      }
+      if (ent) { kind = pingKindFor({ entity: { kind: ent.kind, enemy: !!ent.enemy, monster: !!(ent.def && ent.def.category === 'monster') } }); at = { x: ent.x, y: ent.y + (ent.kind === 'item' ? 0.3 : ent.height || 1) , z: ent.z }; }
+      else if (hit) { kind = pingKindFor({ container: CONTAINER_BLOCKS.has(hit.id) }); at = { x: hit.x + 0.5, y: hit.y + 1, z: hit.z + 0.5 }; }
+      else { if (g.hud) g.hud.toast('Nothing there to ping', 1500); return false; }
+    }
     if (!this.pings.ready(this.name, now)) return false;
-    const at = { x: hit.x + 0.5, y: hit.y + 1, z: hit.z + 0.5 };
-    if (this.isHost) this.handlePing(this.name, at, null);
-    else { this.send({ t: 'ping', x: at.x, y: at.y, z: at.z }); this.showPing({ from: this.name, ...at, dim: g.world.dimension, color: this.social.colorOf(this.name) }, now); }
+    if (this.isHost) this.handlePing(this.name, { ...at, k: kind }, null);
+    else { this.send({ t: 'ping', ...at, k: kind }); this.showPing({ from: this.name, ...at, k: kind, dim: g.world.dimension, color: this.social.colorOf(this.name) }, now); }
     return true;
   }
 
   showPing(ping, now = performance.now()) {
     this.pings.add(ping, now);
     if (this.game && this.game.audio) this.game.audio.play('orb');
+  }
+
+  // ---- a thrown Returning Disc, seen by the others (position only: the thrower's game flies it, entities/disc.js) -----------
+  /** Our disc is in the air (`on`) at this spot, or has landed: everybody else sees it glide. About ten times a second. */
+  sendDisc(d, on = true) {
+    const r1 = (v) => Math.round(v * 10) / 10, g = this.game;
+    const m = { t: 'disc', on: on ? 1 : 0, x: r1(d.x), y: r1(d.y), z: r1(d.z), tier: d.tier, d: g.world.dimension };
+    if (this.isHost) this.broadcast({ ...m, id: 0 }); else this.send(m);
+  }
+
+  /** Somebody else's disc: draw it (in our dimension only). */
+  showDisc(id, m, now = performance.now()) {
+    if (!this.game || !finite(m.x, m.y, m.z) || (typeof m.d === 'string' && m.d !== this.game.world.dimension)) return;
+    if (!this.discs) { if (!m.on) return; this.discs = new RemoteDiscs(this.game.scene); }
+    this.discs.set(id, !!m.on, m.x, m.y, m.z, typeof m.tier === 'string' ? m.tier : 'iron', now);
   }
 
   // ---- social: emotes --------------------------------------------------------------------------------
@@ -333,6 +366,7 @@ class Session {
     for (const rp of this.remotes.values()) rp.dispose();
     this.remotes.clear();
     if (this.beacons) { this.beacons.dispose(); this.beacons = null; }
+    if (this.discs) { this.discs.dispose(); this.discs = null; }
   }
 
   /** `/team chat [on|off]`: plain chat lines go to the team (kept on this machine). Returns the lines, or null for any other command. */
@@ -539,6 +573,13 @@ export class HostSession extends Session {
         c.ch.send({ t: 'pong', ts: m.ts });
         break;
       case 'ping': this.handlePing(c.name, m, c); break;
+      case 'disc': { // a guest's Returning Disc in flight: only its position is shared; passed on to the others
+        const s = c.rp.state;
+        if (!s || !finite(m.x, m.y, m.z) || Math.hypot(m.x - s.x, m.y - s.y, m.z - s.z) > 40) break;
+        this.showDisc(c.id, m);
+        this.broadcast({ t: 'disc', id: c.id, on: m.on ? 1 : 0, x: m.x, y: m.y, z: m.z, tier: typeof m.tier === 'string' ? m.tier.slice(0, 12) : 'iron', d: m.d }, c);
+        break;
+      }
       case 'emote': {
         const e = cleanEmote(m.e), now = performance.now();
         if (!e || now - (c.lastEmote || -1e9) < EMOTE_COOLDOWN_MS) break;
@@ -1324,7 +1365,7 @@ export class HostSession extends Session {
     const from = c ? c.rp.state : g.player;
     const r = routePing(this.social, this.pings, sender, m, from, this.playerNames(), now, g.world.dimension);
     if (!r.ok) return;
-    const msg = { t: 'ping', from: r.ping.from, x: r.ping.x, y: r.ping.y, z: r.ping.z, d: r.ping.dim, c: r.ping.color || undefined };
+    const msg = { t: 'ping', from: r.ping.from, x: r.ping.x, y: r.ping.y, z: r.ping.z, d: r.ping.dim, c: r.ping.color || undefined, k: r.ping.k === 'go' ? undefined : r.ping.k };
     // the host sees it if it is the sender or on the team
     if (!c || r.targets.some((n) => nameKey(n) === nameKey(this.name))) this.showPing(r.ping, now);
     for (const n of r.targets) { const cl = this.clientByName(n); if (cl) cl.ch.send(msg); }
@@ -1596,7 +1637,7 @@ export class ClientSession extends Session {
       case 'ed': if (m.d === undefined || m.d === g.world.dimension) this.edits.apply(m.e); break;
       case 'pl': for (const a of m.p || []) { if (a[0] === this.id) continue; const rp = this.remotes.get(a[0]); if (rp) rp.setState(unpackPlayerState(a.slice(1))); } break;
       case 'join': this.addRemote(m.id, m.name); g.chat.add(`${m.name} joined the game`); break;
-      case 'leave': { const rp = this.remotes.get(m.id); if (rp) { rp.dispose(); this.remotes.delete(m.id); } g.chat.add(`${m.name} left the game`); break; }
+      case 'leave': { const rp = this.remotes.get(m.id); if (rp) { rp.dispose(); this.remotes.delete(m.id); } if (this.discs) this.discs.drop(m.id); g.chat.add(`${m.name} left the game`); break; }
       case 'chat': g.chat.add(`<${m.from}> ${m.m}`, this.social.colorOf(m.from)); break;
       case 'pm': g.chat.add(m.from ? PM_FROM(String(m.from).slice(0, 16), String(m.m || '').slice(0, 256)) : PM_TO(String(m.to || '').slice(0, 16), String(m.m || '').slice(0, 256)), PM_COLOR); break;
       case 'tchat': { const t = this.social.teamOf(m.from); g.chat.add(TEAM_CHAT(String(m.team || '').slice(0, 12), String(m.from || '').slice(0, 16), String(m.m || '').slice(0, 256)), t ? t.color : null); break; }
@@ -1606,10 +1647,11 @@ export class ClientSession extends Session {
       case 'pong': { const r = performance.now() - m.ts; if (Number.isFinite(r) && r >= 0) this.rtt = this.rtt < 0 ? Math.round(r) : Math.round(this.rtt * 0.5 + r * 0.5); break; }
       case 'ping': {
         if (![m.x, m.y, m.z].every(Number.isFinite) || typeof m.from !== 'string') break;
-        this.showPing({ from: m.from, x: m.x, y: m.y, z: m.z, dim: typeof m.d === 'string' ? m.d : g.world.dimension, color: teamColor(m.c) || this.social.colorOf(m.from) });
+        this.showPing({ from: m.from, x: m.x, y: m.y, z: m.z, k: cleanPingKind(m.k), dim: typeof m.d === 'string' ? m.d : g.world.dimension, color: teamColor(m.c) || this.social.colorOf(m.from) });
         break;
       }
       case 'emote': { const rp = this.remotes.get(m.id), e = cleanEmote(m.e); if (rp && e) rp.playEmote(e); break; }
+      case 'disc': if (Number.isInteger(m.id) && m.id !== this.id) this.showDisc(m.id, m); break;
       case 'sign': if (Array.isArray(m.l)) g.setSignText(m.x | 0, m.y | 0, m.z | 0, m.l, true); break;
       case 'frame': g.setFrameItem(m.x | 0, m.y | 0, m.z | 0, m.st || null, true); break;
       case 'pot': g.setPot(m.x | 0, m.y | 0, m.z | 0, m.f || null, true); break;
@@ -1713,7 +1755,7 @@ export class ClientSession extends Session {
         break;
       }
       case 'fuelno': this.onFuelRefused(m); break;
-      case 'bye': this.lost(m.reason || 'The host closed the world', false, m.kick ? { kick: true } : { hostLeft: true }); break;
+      case 'bye': this.lost(m.reason || 'The host closed the world', undefined, m.kick ? { kick: true } : { hostLeft: true }); break;
       default: break;
     }
   }

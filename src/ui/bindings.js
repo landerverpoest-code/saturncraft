@@ -39,7 +39,7 @@ export const ACTIONS = [
   { id: 'help', label: 'Help and how-to topics', group: 'Interface', def: ['F1', null, null] },
   { id: 'dismissHint', label: 'Dismiss the hint on screen', group: 'Interface', def: ['KeyH', null, 'PadBack'] },
   { id: 'players', label: 'Player list (hold)', group: 'Multiplayer', def: ['Tab', null, 'PadRight'] },
-  { id: 'ping', label: 'Ping a spot for your team', group: 'Multiplayer', def: ['KeyB', null, 'PadBack+PadRB'] }, // (every pad button is taken, so the pad gets a chord: hold Back, press the right bumper)
+  { id: 'ping', label: 'Ping a spot, a threat or loot for your team (sneak: call for help)', group: 'Multiplayer', def: ['KeyB', null, 'PadBack+PadRB'] }, // (every pad button is taken, so the pad gets a chord: hold Back, press the right bumper)
   { id: 'emote', label: 'Emote wheel', group: 'Multiplayer', def: ['KeyV', null, 'PadLeft'] },
   ...Array.from({ length: 9 }, (_, i) => ({ id: 'slot' + (i + 1), label: 'Hotbar slot ' + (i + 1), group: 'Hotbar', def: ['Digit' + (i + 1), null, null] })),
 ];

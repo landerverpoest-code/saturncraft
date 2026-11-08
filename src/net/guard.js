@@ -37,7 +37,7 @@ export const LIMITS = {
 /** Message type -> limit kind. Anything not listed is `misc` (and only metered when it changes the world). */
 export const KIND_OF = {
   ed: 'ed', spawn: 'spawn', take: 'take', hit: 'hit', pvp: 'pvp', chat: 'chat', cmd: 'chat', scmd: 'chat', cset: 'cset', mi: 'mi', trade: 'trade', gift: 'trade',
-  steer: 'steer', boat: 'boat', sign: 'misc', frame: 'misc', pot: 'misc', lectern: 'misc', camp: 'misc', note: 'misc', vault: 'misc', fence: 'misc', fuel: 'misc', boxput: 'misc', boom: 'misc', sthit: 'misc', stuse: 'misc', bhit: 'misc',
+  steer: 'steer', boat: 'boat', disc: 'misc', sign: 'misc', frame: 'misc', pot: 'misc', lectern: 'misc', camp: 'misc', note: 'misc', vault: 'misc', fence: 'misc', fuel: 'misc', boxput: 'misc', boom: 'misc', sthit: 'misc', stuse: 'misc', bhit: 'misc',
 };
 export const STRIKES_WARN = 40;   // dropped messages (within STRIKE_WINDOW_MS) before the host is told
 export const STRIKES_KICK = 4000; // ... and before the guest is removed

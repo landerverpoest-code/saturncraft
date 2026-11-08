@@ -1,6 +1,7 @@
 // Ping beacons in the world (net/social.js PingBoard): a thin glowing column and a spinning
 // diamond at the spot a friend pointed out, in their team's colour, fading over the last seconds.
 import * as THREE from 'three';
+import { PING_KINDS } from '../net/social.js';
 
 const COLUMN = new THREE.BoxGeometry(0.12, 1, 0.12).translate(0, 0.5, 0);
 const GEM = new THREE.OctahedronGeometry(0.32);
@@ -30,10 +31,12 @@ export class PingBeacons {
         this.map.set(b.from, e);
       }
       e.group.position.set(b.x, b.y, b.z);
-      e.gem.rotation.y = now / 400;
+      e.gem.rotation.y = b.k === 'danger' ? Math.sin(now / 120) * 0.6 : now / 400; // danger shakes, the rest turn
       e.gem.position.y = 1.1 + Math.sin(now / 300) * 0.12;
       const fade = b.life < 0.15 ? b.life / 0.15 : 1; // the last 3 s fade out
-      e.column.material.color.set(b.color); e.gem.material.color.set(b.color);
+      const kind = PING_KINDS[b.k] || PING_KINDS.go, col = kind.color || b.color;
+      if (e.kind !== b.k) { e.kind = b.k; e.gem.scale.setScalar(b.k === 'danger' ? 1.4 : 1); } // (danger is the big one)
+      e.column.material.color.set(col); e.gem.material.color.set(col);
       e.column.material.opacity = 0.35 * fade; e.gem.material.opacity = 0.9 * fade;
     }
     for (const [k, e] of this.map) if (!keep.has(k)) { this.drop(e); this.map.delete(k); }
