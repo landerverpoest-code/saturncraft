@@ -19,6 +19,7 @@ import { repEvent } from '../mobs/villageRep.js';
 import { championDiscount } from '../mobs/raids.js';
 import { MILESTONES } from '../player/milestones.js';
 import { openBoard, showJournal } from './questScreens.js';
+import { openCartographersTable } from './tableScreens.js';
 import { statRows, killRows, formatTime } from '../player/stats.js';
 import { guideOf, recordOf, LEVEL, TABS } from '../player/fieldGuide.js';
 import { entriesOf, guideProgress, guideRows, TAB_LABELS, itemName } from '../player/fieldGuideEntries.js';
@@ -1853,6 +1854,7 @@ export class UI {
   /** The Bounty Board screen and the Quest Journal (ui/questScreens.js); refreshQuests redraws whichever is open. */
   openBoard(x, y, z) { openBoard(this, x, y, z); }
   showJournal(fromKey = false) { showJournal(this, fromKey); }
+  openCartographersTable(x, y, z) { openCartographersTable(this, x, y, z); } // (ui/tableScreens.js)
   refreshQuests() { if (this.questRefresh && this.layer.firstChild) this.questRefresh(); }
 
   showMilestones() {

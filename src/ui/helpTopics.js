@@ -289,6 +289,10 @@ export function buildTopics({ table, touch = false, pad = false } = {}) {
     { list: Object.values(SETS).map((set) => `${set.name}: ${set.tiers.map((t) => `(${t.n}) ${t.text}`).join('; ')}.`) },
   ]);
 
+  add('maps', "Maps and the Cartographer's Table", 'Systems', [
+    { p: "An Empty Map (eight Paper round a Compass) fills in as you walk. A Cartographer's Table (a Compass, a Paper and four planks) is quicker for ground you have already been over: the game remembers every chunk you come within three of, and the table draws a map of the 128-block square it stands in, inking in only those chunks (a Paper and a Compass in your bag; the Compass is kept). Chunks you have left behind are charted from the lay of the land, structures in them are marked, and what you never visited stays blank. Holding a map and a Paper at the table makes a copy that shares the same picture." },
+  ]);
+
   add('guide', 'Field Guide and Milestones', 'Systems', [
     { p: `Press ${key('guide')} for the Field Guide: creatures, biomes, structures and items you have found fill in as you play. Milestones (pause menu) are goals that pop up when reached; Statistics shows what you have done.` },
   ]);

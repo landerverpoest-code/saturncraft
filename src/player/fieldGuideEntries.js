@@ -193,6 +193,8 @@ const EXTRA_NOTABLE = ['DIAMOND', 'BERYL', 'VOID_PEARL', 'CHARM_OF_UNDYING', 'TI
 const CONTRAPTION_PARTS = ['COMPARATOR', 'OBSERVER', 'DAYLIGHT_SENSOR', 'SNARE_POST', 'SNARE_CORD', 'PULSE_GATE'];
 
 const PACK5_BLOCKS = ['STRATA_RUST', 'SUN_GLYPH', 'DART_TRAP', 'BOG_PLANKS', 'HAG_CAULDRON'];
+const PACK6_BLOCKS = ['PACKED_ICE', 'CARTOGRAPHERS_TABLE'];
+const PACK6_WHY = { PACKED_ICE: 'Frozen Deep floes, icebergs and Icebound Hulks', CARTOGRAPHERS_TABLE: 'Crafting (a Compass, a Paper and four planks)' };
 const PACK5_WHY = { STRATA_RUST: 'Painted Mesas', SUN_GLYPH: 'Sandvaults', DART_TRAP: 'Sandvaults (and crafted)', BOG_PLANKS: 'Hag Huts and bog bridges', HAG_CAULDRON: 'Hag Huts' };
 
 function itemEntries() {
@@ -204,6 +206,7 @@ function itemEntries() {
   if (B.BOUNTY_BOARD !== undefined) add(B.BOUNTY_BOARD, 'Villages and crafting (bounties and tales)');
   for (const k of CONTRAPTION_PARTS) if (B[k] !== undefined) add(B[k], 'Cinnabar and machines (crafted)'); // (world/circuits.js: the parts of cinnabar contraptions)
   for (const k of PACK5_BLOCKS) if (B[k] !== undefined) add(B[k], PACK5_WHY[k]); // the desert / bog pack's finds and traps
+  for (const k of PACK6_BLOCKS) if (B[k] !== undefined) add(B[k], PACK6_WHY[k]); // the Frozen Deep's ice and the Cartographer's Table
   for (const d of DISHES) add(d.id, 'Cooking Pot'); // every dish the Cooking Pot can make (world/cookingPot.js), so a new recipe joins the guide by itself
   return [...sources.entries()].sort((a, b) => a[0] - b[0]).map(([id, from]) => ({ key: String(id), id, name: itemName(id), from }));
 }

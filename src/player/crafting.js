@@ -407,6 +407,8 @@ shaped(['SS', 'PP'], { S: I.STRING, P: 'planks' }, B.LOOM, 1);
 shaped(['FF', 'PP', 'PP'], { F: I.FLINT, P: 'planks' }, B.FLETCHING_TABLE, 1);
 // ...and for cartographers: two sheets of paper over four planks
 shaped(['AA', 'PP', 'PP'], { A: I.PAPER, P: 'planks' }, B.CARTOGRAPHY_DESK, 1);
+// the Cartographer's Table (player/cartographer.js): a compass and paper over four planks
+shaped(['CA', 'PP', 'PP'], { C: I.COMPASS, A: I.PAPER, P: 'planks' }, B.CARTOGRAPHERS_TABLE, 1);
 // ...and for masons (stone over planks), toolsmiths (iron and flint) and armorers (hides over planks)
 shaped(['SS', 'PP', 'PP'], { S: B.STONE, P: 'planks' }, B.MASONRY_BENCH, 1);
 shaped(['IF', 'PP', 'PP'], { I: I.IRON_INGOT, F: I.FLINT, P: 'planks' }, B.WHETSTONE_STAND, 1);

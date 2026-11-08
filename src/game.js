@@ -52,6 +52,7 @@ import { igniteTNT, PrimedTNT } from './entities/tnt.js';
 import { canLight, FIRE_DELAY } from './world/fire.js';
 import { Chat } from './ui/chat.js';
 import { runCommand } from './ui/commands.js';
+import { Explored } from './player/cartographer.js';
 import { Music } from './audio/music.js';
 import { AmbientSystem } from './audio/ambientSystem.js';
 import { Milestones } from './player/milestones.js';
@@ -154,6 +155,7 @@ export class Game {
     this.campfires = new Map();   // "x,y,z" -> { slots: [{ id, t } | null x4] } the foods cooking on a campfire (world/campfireCooking.js)
     this.archaeology = new BrushSites(); // digs being brushed (world/archaeology.js)
     this.maps = new Map();        // map id -> filled map (world/maps.js)
+    this.explored = new Explored(); // the chunks the player has been near, for the Cartographer's Table (player/cartographer.js)
     this.brewingStands = new Map(); // "x,y,z" -> Brewing Alembic state (see world/brewing.js)
     this.hoppers = new Map();     // "x,y,z" -> hopper slots (see world/hoppers.js)
     this.dispensers = new Map();  // "x,y,z" -> dispenser / dropper slots (see world/dispensers.js)
@@ -1385,6 +1387,7 @@ export class Game {
     if (!this.net || this.net.isHost) this.proving.tick(); // Proving Spawner waves (world/provingSystem.js)
     if (!this.net || this.net.isHost) this.raids.tick();
     this.tickMaps();
+    if (this.ticks % 20 === 5 && !this.player.dead) this.explored.track(this.world.dimension, this.player.x, this.player.z, (cx, cz) => !!this.world.getChunk(cx, cz));
     this.guide.tick();
     this.quests.tick();
     if (!this.net || this.net.isHost) { this.tickFurnaces(); this.tickBrewing(); this.tickHoppers(); this.tickCampfires(); } // guests see the host's furnaces and alembics

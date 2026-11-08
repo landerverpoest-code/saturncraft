@@ -59,12 +59,15 @@ export function stampFrozenDeep(gen, blocks, meta, cx, cz, heightmap, biomes) {
   let any = false;
   for (let i = 0; i < 256; i++) if (biomes[i] === BIOME.FROZEN_OCEAN) { any = true; break; }
   if (!any) return;
+  // no floes where an iceberg or a hulk stands: those pass over the same cells, and a retrofit of an old chunk needs each cell to be
+  // changed by one pass only (a berg's tunnel is water again, which would look like the cell was already done)
+  const sites = [...icebergsNear(gen, X0 - 1, Z0 - 1, X0 + 16, Z0 + 16), ...hulksNear(gen, X0 - 1, Z0 - 1, X0 + 16, Z0 + 16)];
   for (let z = 0; z < 16; z++) for (let x = 0; x < 16; x++) {
     const ci = x + z * 16;
     if (biomes[ci] !== BIOME.FROZEN_OCEAN || heightmap[ci] > DEEP_TOP) continue;
     biomes[ci] = BIOME.FROZEN_DEEP;
-    const cap = cidx(x, SEA_LEVEL, z);
-    if (blocks[cap] !== B.ICE) continue;
+    const cap = cidx(x, SEA_LEVEL, z), wx = X0 + x, wz = Z0 + z;
+    if (blocks[cap] !== B.ICE || sites.some((s) => wx >= s.x0 - 1 && wx <= s.x1 + 1 && wz >= s.z0 - 1 && wz <= s.z1 + 1)) continue;
     const f = floeAt(gen, X0 + x, Z0 + z);
     if (f.kind === 'lead') { blocks[cap] = B.WATER; meta[cap] = 0; continue; }
     if (f.kind !== 'floe') continue;

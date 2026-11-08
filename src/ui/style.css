@@ -792,3 +792,7 @@ html.cue-shapes #effects .fx.bad { border-left-style: dashed; }
 
 /* Farscope read-out (player/farscope.js) */
 #overlay-scope .scope-text { position: absolute; left: 50%; top: calc(50% + 38vmin); transform: translateX(-50%); color: #ffe9b0; font: 600 14px/1.2 ui-monospace, monospace; letter-spacing: .04em; text-shadow: 0 1px 3px #000; background: rgba(0,0,0,.45); padding: 3px 10px; border-radius: 10px; white-space: nowrap; }
+
+/* Cartographer's Table (ui/tableScreens.js) */
+.table-chart { display: block; width: 192px; height: 192px; margin: 0 auto 8px; image-rendering: pixelated; border: 2px solid #5a3a22; border-radius: 4px; background: #e6d8a8; }
+.table-body { max-height: 34vh; }

@@ -146,9 +146,10 @@ function groundBlock(biome) {
  * Draw the whole square of `map` from the terrain generator alone, in blocks of
  * SURVEY_STEP x SURVEY_STEP: grass, sand or snow by biome, water darker where it is deeper,
  * land brighter or darker where it rises or falls to the north. A real walk over the ground
- * paints over it, column by column. Returns the number of pixels set.
+ * paints over it, column by column. `only(mx, mz)`, when given, limits it to the map pixels (of the block's top-left corner) it
+ * returns true for (the Cartographer's Table draws only the explored chunks). Returns the number of pixels set.
  */
-export function surveyMap(map, gen) {
+export function surveyMap(map, gen, only = null) {
   let n = 0;
   const rows = new Map();
   const sample = (x, z) => {
@@ -163,6 +164,7 @@ export function surveyMap(map, gen) {
   };
   for (let mz = 0; mz < MAP_SIZE; mz += SURVEY_STEP) {
     for (let mx = 0; mx < MAP_SIZE; mx += SURVEY_STEP) {
+      if (only && !only(mx, mz)) continue;
       const x = map.x0 + mx + 1, z = map.z0 + mz + 1;
       const { top, biome } = sample(x, z);
       let c, f;
