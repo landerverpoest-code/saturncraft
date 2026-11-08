@@ -29,6 +29,7 @@ import { LEAVES } from './trees.js';
  */
 export const FEATURES = [
   { key: 'wildCrops', since: 3, label: 'wild crops', link: 1 },
+  { key: 'strata', since: 6, label: 'Painted Mesa strata', link: 3 },
   { key: 'deepSea', since: 1, label: 'deep sea kelp and grottos', link: 2 },
   { key: 'sunkenRuins', since: 1, label: 'Sunken Ruins', link: 3 },
   { key: 'sunTombs', since: 1, label: 'Sun Tombs', link: 3 },
@@ -38,6 +39,9 @@ export const FEATURES = [
   { key: 'lighthouse', since: 4, label: "Hermit's Lighthouses", link: 3 },
   { key: 'mireShrine', since: 4, label: 'Mire Shrines', link: 3 },
   { key: 'observatory', since: 4, label: "Stargazer's Observatories", link: 3 },
+  { key: 'sandvault', since: 6, label: 'Sandvaults', link: 3 },
+  { key: 'canyons', since: 6, label: 'Slot Canyons', link: 3 },
+  { key: 'hagHut', since: 6, label: 'Hag Huts', link: 3 },
   { key: 'skyIsles', since: 5, label: 'Cloud Isles', link: 3 },
 ];
 export const CURRENT_FEATURE_VERSION = Math.max(...FEATURES.map((f) => f.since));

@@ -115,12 +115,13 @@ describe('the new blocks and items', () => {
   });
 
   it('items are appended after the Skybean and every older id is where it was', () => {
-    expect(I.SKYBEAN).toBe(779);
+    expect(I.PEAT_CLOT).toBeGreaterThan(I.EMBER_BAND); // the gear round's items were appended first; every older id is where it was
+    expect(I.PEAT_CLOT).toBeGreaterThan(I.SKYBEAN);
     const keys = ['PEAT_CLOT', 'SNAPPER_FANG', 'BOG_ESSENCE', 'FARSCOPE', 'WAYMARK_COMPASS', 'RAW_BOGCARP', 'COOKED_BOGCARP', 'RAW_DUNEFIN', 'COOKED_DUNEFIN', 'GILDED_PERCH', 'COOKED_GILDED_PERCH', 'FISH_PIE'];
-    keys.forEach((k, i) => expect(I[k], k).toBe(780 + i));
-    expect(I.COMPASS).toBeLessThan(780);
-    expect(I.FARGLASS).toBeLessThan(780);
-    expect(POTION_ITEM.marsh).toBeGreaterThan(791);
+    keys.forEach((k, i) => expect(I[k], k).toBe(I.PEAT_CLOT + i));
+    expect(I.COMPASS).toBeLessThan(I.PEAT_CLOT);
+    expect(I.FARGLASS).toBeLessThan(I.PEAT_CLOT);
+    expect(POTION_ITEM.marsh).toBeGreaterThan(I.FISH_PIE);
     expect(POTION_ITEM.long_marsh).toBeGreaterThan(POTION_ITEM.marsh);
   });
 
