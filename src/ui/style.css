@@ -789,3 +789,9 @@ html.cue-shapes #effects .fx.bad { border-left-style: dashed; }
 #chat .chat-input:focus-visible, .sign-edit input:focus-visible, .book-page:focus-visible, #steps .st-skip:focus-visible {
   outline: 3px solid #ffd34a; outline-offset: 2px; box-shadow: 0 0 0 2px #000;
 }
+
+/* multiplayer round 6: the dead player's follow-cam bar, the host-left screen */
+.death-cam { margin: 8px 0; display: flex; gap: 8px; align-items: center; justify-content: center; }
+.death-cam .tiny { padding: 4px 10px; font-size: 13px; }
+#netlost .btn { margin: 4px 0; }
+.btn:disabled { opacity: .55; cursor: default; }

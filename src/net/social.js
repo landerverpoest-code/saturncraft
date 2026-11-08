@@ -471,6 +471,21 @@ export function nextSpectateTarget(names, current, dir = 1) {
   return names[(i + dir + names.length) % names.length];
 }
 
+/** Seconds a player in a shared world watches a friend before the Respawn button works (single-player has no wait). */
+export const RESPAWN_WAIT_S = 3;
+/**
+ * Who a dead player's camera follows first: whoever killed them (if still around), else a team mate, else the first friend.
+ * `names`: the candidates (alive, other players); `killer`: a name or null; `mates`: their team's member names or null.
+ */
+export function pickDeathCamTarget(names, killer = null, mates = null) {
+  if (!names.length) return null;
+  if (killer) { const k = names.find((n) => nameKey(n) === nameKey(killer)); if (k) return k; }
+  if (mates) { const set = new Set(mates.map(nameKey)); const m = names.find((n) => set.has(nameKey(n))); if (m) return m; }
+  return names[0];
+}
+/** The player name a death cause names ("player:Alba" -> "Alba"), or null. */
+export const killerOf = (cause) => (typeof cause === 'string' && cause.startsWith('player:') ? cause.slice(7) : null);
+
 // ---- the player list (Tab) --------------------------------------------------------------------------
 export const GAMEMODE_LABEL = { survival: 'Survival', creative: 'Creative', adventure: 'Adventure', spectator: 'Spectator' };
 export const gamemodeLabel = (g) => GAMEMODE_LABEL[g] || 'Survival';

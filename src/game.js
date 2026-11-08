@@ -580,12 +580,14 @@ export class Game {
     this.entities.spawnXp(p.x, p.y + 0.5, p.z, deathXp(p.xp.level));
     p.xp = newXp();
     p.inventory.clear();
+    if (this.net && this.net.beginDeathCam) this.net.beginDeathCam(cause); // watch a friend while the respawn button counts down (net/session.js)
     this.input.unlock();
     this.ui.showDeath(cause);
   }
 
   respawn() {
     const p = this.player;
+    if (this.net && this.net.endDeathCam) this.net.endDeathCam();
     // dying away from the overworld sends you home first
     if (this.world.dimension !== 'overworld') {
       // a multiplayer guest stays with the group (the host decides where everybody is)
@@ -1545,9 +1547,11 @@ export class Game {
 
   render(alpha, sec) {
     const p = this.player, b = p.body;
-    const x = p.prev.x + (b.x - p.prev.x) * alpha;
-    const y = p.prev.y + (b.y - p.prev.y) * alpha;
-    const z = p.prev.z + (b.z - p.prev.z) * alpha;
+    let x = p.prev.x + (b.x - p.prev.x) * alpha;
+    let y = p.prev.y + (b.y - p.prev.y) * alpha;
+    let z = p.prev.z + (b.z - p.prev.z) * alpha;
+    const dc = p.dead && this.net && this.net.deathCamView ? this.net.deathCamView() : null; // a dead player sees through a friend's eyes
+    if (dc) { x = dc.x; y = dc.y; z = dc.z; }
     // the eyes ease down into a crawl (and up out of it) instead of jumping
     const eyeTarget = p.sleeping ? 0.3 : p.eyeHeight;
     this.eyeShown = this.eyeShown === undefined || Math.abs(eyeTarget - this.eyeShown) > 1.5 || p.dead ? eyeTarget : this.eyeShown + (eyeTarget - this.eyeShown) * 0.3;
@@ -1557,7 +1561,7 @@ export class Game {
     const fxScale = this.fx; // reduced motion / flashing (ui/accessibility.js; kept current by setSetting)
     const bob = b.onGround ? Math.sin(sec * 9) * Math.min(0.06, speed * 0.25) * fxScale.bob : 0;
     this.camera.position.set(x, y + eye + Math.abs(bob) * 0.6, z);
-    this.camera.rotation.set(p.pitch, p.yaw, 0, 'YXZ');
+    this.camera.rotation.set(dc ? dc.pitch : p.pitch, dc ? dc.yaw : p.yaw, 0, 'YXZ');
     if (this.perspective && !p.dead) {
       // third person: 4 blocks behind (or in front of) the eyes, pulled in where blocks are in the way
       const [ldx, ldy, ldz] = p.lookDir(), s = this.perspective === 1 ? -1 : 1;

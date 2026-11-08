@@ -36,7 +36,7 @@ import { EditSync } from './editSync.js';
 import { createTransport } from './transport.js';
 import { RemotePlayer } from './remotePlayer.js';
 import { EntityMirror } from './entityMirror.js';
-import { packChunk, unpackChunk, playerSaveData, applyPlayerSave } from '../world/save.js';
+import { packChunk, unpackChunk, playerSaveData, applyPlayerSave, saveGuestCopy } from '../world/save.js';
 import { loadGuestGuide, saveGuestGuide, guideOf } from '../player/fieldGuide.js';
 import { chunkKey } from '../world/world.js';
 import { B, isFurnace, isBox, BOX_COLORS } from '../world/blocks.js';
@@ -59,7 +59,7 @@ import { POTIONS } from '../world/potions.js';
 import {
   SocialState, PingBoard, routePing, runSocial, nameKey, cleanToken, loadClientToken, cleanEmote, emoteByName, EMOTE_COOLDOWN_MS,
   PM_FROM, PM_TO, PM_COLOR, TEAM_CHAT, PING_REACH, PING_FALLBACK, playerRows, cleanRoster, cleanPing, canSpectate, nextSpectateTarget,
-  makeResume, pickGuestRecord, reconnectDelay, GAMEMODE_LABEL, teamColor, cleanHostSettings,
+  makeResume, pickGuestRecord, reconnectDelay, GAMEMODE_LABEL, teamColor, cleanHostSettings, pickDeathCamTarget, killerOf,
 } from './social.js';
 import { PingBeacons } from '../render/pingBeacons.js';
 import { GuestMeter, allowedEdits, updateEvery, sendsNow, Rate, rateText } from './guard.js';
@@ -269,8 +269,42 @@ class Session {
     return true;
   }
 
+  // ---- social: the camera of a dead player (follows a friend while they wait to respawn) ---------------------------------
+  /** A death: the camera goes to whoever killed us, else a team mate, else the first friend. Returns the name or null. */
+  beginDeathCam(cause) {
+    const names = this.spectateCandidates(), mates = this.social.teamOf(this.name);
+    const target = pickDeathCamTarget(names, killerOf(cause), mates ? mates.members.filter((n) => nameKey(n) !== nameKey(this.name)) : null);
+    this.deathCam = target ? { target } : null;
+    return target;
+  }
+  endDeathCam() { this.deathCam = null; }
+  cycleDeathCam(dir) {
+    if (!this.deathCam) return null;
+    const t = nextSpectateTarget(this.spectateCandidates(), this.deathCam.target, dir < 0 ? -1 : 1);
+    if (t) this.deathCam.target = t;
+    return t;
+  }
+  /** What the dead player's camera shows now: { name, x, y, z, yaw, pitch } or null. */
+  deathCamView() {
+    const d = this.deathCam;
+    if (!d || !this.game.player.dead) return null;
+    const rp = [...this.remotes.values()].find((r) => nameKey(r.name) === nameKey(d.target));
+    if (!rp || !rp.state || rp.state.dead) return null;
+    const at = rp.shown || rp.state;
+    return { name: rp.name, x: at.x, y: at.y, z: at.z, yaw: rp.state.yaw, pitch: rp.state.pitch };
+  }
+  tickDeathCam() {
+    const d = this.deathCam;
+    if (!d) return;
+    if (!this.game.player.dead) { this.deathCam = null; return; }
+    if (this.deathCamView()) return;
+    const t = this.cycleDeathCam(1); // the one we watched left or died too
+    if (!t) this.deathCam = null;
+  }
+
   /** Every tick: stay on the followed friend (their position and view). */
   tickSpectate() {
+    if (this.deathCam) this.tickDeathCam();
     const s = this.spectate, p = this.game.player;
     if (!s) return;
     if (p.gamemode !== 'spectator') { this.spectate = null; return; } // the player changed mode themselves
@@ -386,6 +420,9 @@ export class HostSession extends Session {
     // lightning strikes are shown (and burn / hurt) on every client too
     const strike = game.strikeLightning.bind(game);
     game.strikeLightning = (x, y, z) => { strike(x, y, z); if (!this.closed) this.broadcast({ t: 'bolt', x, y, z }); };
+    // closing the tab: tell the guests before the links go (they then show the "host left" screen, not a reconnect loop)
+    this._pagehide = () => { if (!this.closed) this.broadcast({ t: 'bye', reason: 'The host closed the world' }); };
+    globalThis.addEventListener?.('pagehide', this._pagehide, true);
     this.startBackground();
   }
 
@@ -1397,6 +1434,7 @@ export class HostSession extends Session {
     if (this.closed) return;
     this.broadcast({ t: 'bye', reason: 'The host closed the world' });
     this.closed = true;
+    if (this._pagehide) globalThis.removeEventListener?.('pagehide', this._pagehide, true);
     for (const c of [...this.clients.values()]) { this.clients.delete(c.id); setTimeout(() => c.ch.close(), 300); }
     setTimeout(() => { if (this.handle) this.handle.close(); }, 400);
     if (this.edits) this.edits.detach();
@@ -1675,7 +1713,7 @@ export class ClientSession extends Session {
         break;
       }
       case 'fuelno': this.onFuelRefused(m); break;
-      case 'bye': this.lost(m.reason || 'The host closed the world'); break;
+      case 'bye': this.lost(m.reason || 'The host closed the world', false, m.kick ? { kick: true } : { hostLeft: true }); break;
       default: break;
     }
   }
@@ -1964,11 +2002,24 @@ export class ClientSession extends Session {
     return [`Net guest of ${this.hostName()}  ping ${this.rtt >= 0 ? this.rtt + ' ms' : '-'}  in ${rateText(this.ch.rateIn.bps)}  out ${rateText(this.ch.rate.bps)}  ${this.remotes.size + 1} players`];
   }
 
+  /** Is the host still reachable? 'alive' | 'gone' (nobody has that room open any more) | 'unknown' (the signalling server or the network is the trouble). */
+  async probeHost(transport = null) {
+    try {
+      const conn = await (transport || createTransport()).join(this.code, 6000);
+      try { conn.close(); } catch { /* gone */ }
+      return 'alive';
+    } catch (e) {
+      return /No world is open/i.test(String(e && e.message)) ? 'gone' : 'unknown';
+    }
+  }
+
   /**
    * Connection gone. `retry`: it dropped (not a kick, a ban or the host closing the world), so the screen offers to
-   * reconnect - automatically after a moment - and keeps our place and belongings for the rejoin.
+   * reconnect - automatically after a moment, once the host is known to still be there - and keeps our place and belongings
+   * for the rejoin. `opts.hostLeft`: the host closed the world (or has gone: a probe found no room): the screen says so and
+   * offers to keep a copy of the world as we have it (net/session.js saveGuestCopy), which a rejoin would throw away.
    */
-  lost(msg, retry = false) {
+  lost(msg, retry = false, opts = {}) {
     if (this.closed) return;
     this.closed = true;
     console.warn('net: connection lost -', msg);
@@ -1981,22 +2032,43 @@ export class ClientSession extends Session {
     g.input.unlock();
     g.ui.clear();
     g.ui.open = 'netlost';
+    const canRetry = retry && this.code && g.hooks.reconnect;
     const s = document.createElement('div');
     s.className = 'screen';
-    const canRetry = retry && this.code && g.hooks.reconnect;
-    s.innerHTML = `<h2>${canRetry ? 'Connection lost' : 'Disconnected'}</h2><p class="sub"></p>` +
-      (canRetry ? '<p class="sub net-retry"></p><button class="btn" data-a="now">Reconnect now</button>' : '') + '<button class="btn" data-a="title">Back to Title Screen</button>';
-    s.querySelector('p').textContent = msg;
-    s.querySelector('[data-a=title]').onclick = () => { if (this.retryTimer) clearInterval(this.retryTimer); if (g.hooks.quit) g.hooks.quit(); };
+    s.id = 'netlost';
+    s.innerHTML = '<h2></h2><p class="sub net-msg"></p><p class="sub net-retry"></p>' +
+      '<button class="btn hidden" data-a="now">Reconnect now</button>' +
+      (opts.kick ? '' : '<button class="btn" data-a="save">Save a copy of this world</button>') +
+      '<button class="btn" data-a="title">Back to Title Screen</button>';
+    const head = s.querySelector('h2'), line = s.querySelector('.net-msg'), note = s.querySelector('.net-retry'), now = s.querySelector('[data-a=now]');
+    const setHostLeft = (text) => { head.textContent = 'The host left'; line.textContent = text; note.textContent = 'What you built and found here is still on your screen: keep a copy of it as a world of your own.'; now.classList.add('hidden'); };
+    head.textContent = opts.hostLeft ? 'The host left' : canRetry ? 'Connection lost' : 'Disconnected';
+    line.textContent = msg;
+    if (opts.hostLeft) setHostLeft(msg);
+    s.querySelector('[data-a=title]').onclick = () => { if (this.retryTimer) clearInterval(this.retryTimer); this.lostGone = true; if (g.hooks.quit) g.hooks.quit(); };
+    const saveBtn = s.querySelector('[data-a=save]');
+    if (saveBtn) saveBtn.onclick = async () => {
+      saveBtn.disabled = true;
+      try {
+        const r = await saveGuestCopy(g, this.hostName());
+        note.textContent = r ? `Saved as "${r.name}" - open it from the title screen.` : 'All world slots are in use: delete a world on the title screen first.';
+        if (!r) saveBtn.disabled = false;
+      } catch (e) { note.textContent = 'Could not save: ' + (e && e.message ? e.message : e); saveBtn.disabled = false; }
+    };
     if (canRetry) {
       const resume = makeResume(this.code, this.name, g.world.dimension, playerSaveData(g.player), g.player.dead);
       const go = () => { clearInterval(this.retryTimer); g.hooks.reconnect(resume); };
-      let left = reconnectDelay(1);
-      const note = s.querySelector('.net-retry');
-      const show = () => { note.textContent = `Reconnecting in ${left} s - you will come back where you were`; };
-      show();
-      this.retryTimer = setInterval(() => { left--; if (left <= 0) go(); else show(); }, 1000);
-      s.querySelector('[data-a=now]').onclick = go;
+      now.onclick = go;
+      note.textContent = 'Checking whether the host is still there...';
+      this.probeHost().then((state) => {
+        if (this.lostGone) return;
+        if (state === 'gone') { setHostLeft('The host closed the world, or their connection is gone.'); return; }
+        now.classList.remove('hidden');
+        let left = reconnectDelay(1);
+        const show = () => { note.textContent = `Reconnecting in ${left} s - you will come back where you were`; };
+        show();
+        this.retryTimer = setInterval(() => { left--; if (left <= 0) go(); else show(); }, 1000);
+      });
     }
     g.ui.layer.appendChild(s);
   }

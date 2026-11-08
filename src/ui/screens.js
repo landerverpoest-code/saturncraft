@@ -32,7 +32,7 @@ import { isTrinket, TRINKET_SLOTS } from '../player/trinkets.js';
 import { wornSets, SET_PIECES } from '../player/setBonuses.js';
 import { TOUCH_MODE_LABELS, SIZE_RANGE, OPACITY_RANGE, nextTouchMode, normalizeTouch, detectTouch, readTouchEnv } from './touchMath.js';
 import { loadPlayerName, MAX_PLAYERS } from '../net/protocol.js';
-import { EMOTES, EMOTE_LABELS } from '../net/social.js';
+import { EMOTES, EMOTE_LABELS, RESPAWN_WAIT_S } from '../net/social.js';
 import { grindstoneAccepts, grindstoneResult, grindstoneXp, stonecutterOutputs, stonecutterAccepts, loomResult, loomAcceptsCloth, loomAcceptsDye, LOOM_BATCH } from '../world/workstations.js';
 import { BEACON_POWERS, POWER_LEVEL, SECONDARY, BEACON_PAYMENT, beaconLevel, beamColor, beaconMeta, beaconRange } from '../world/beacons.js';
 
@@ -2133,6 +2133,21 @@ export class UI {
     const s = el(`<div class="screen" id="death-screen"><h2>You Died!</h2><p class="sub">Player ${text}</p><button class="btn">Respawn</button></div>`);
     s.querySelector('button').onclick = () => { this.open = null; this.clear(); this.game.respawn(); };
     const net = this.game.net;
+    if (net && net.deathCam) {
+      // dead in a shared world: the camera follows a friend (the killer, a team mate...) while Respawn counts down (net/session.js)
+      const btn = s.querySelector('button'), bar = el('<div class="death-cam"><span class="sub"></span> <button class="btn tiny" data-d="-1">Previous</button> <button class="btn tiny" data-d="1">Next</button></div>');
+      const label = bar.querySelector('span'), paint = () => { const v = net.deathCamView(); label.textContent = v ? `Watching ${v.name}` : ''; bar.classList.toggle('hidden', !v); };
+      bar.querySelectorAll('button').forEach((b) => { b.onclick = () => { net.cycleDeathCam(+b.dataset.d); paint(); }; });
+      s.insertBefore(bar, btn);
+      paint();
+      let left = RESPAWN_WAIT_S;
+      btn.disabled = true; btn.textContent = `Respawn in ${left}`;
+      const timer = setInterval(() => {
+        if (this.open !== 'death') { clearInterval(timer); return; }
+        paint();
+        if (--left <= 0) { clearInterval(timer); btn.disabled = false; btn.textContent = 'Respawn'; } else btn.textContent = `Respawn in ${left}`;
+      }, 1000);
+    }
     if (net && net.spectateCandidates().length) {
       // dead in a shared world: watch a friend instead of respawning right away
       const w = el('<button class="btn">Spectate a Friend</button>');

@@ -15,7 +15,7 @@ import { cleanReputation } from '../mobs/reputation.js';
 import { cleanBlueprints, MAX_VOLUME_CAP } from './buildTools.js';
 import { SocialState, cleanHostSettings } from '../net/social.js';
 import { CURRENT_VERSION, cleanThumbnail } from './saveFormat.js';
-import { writeWorld } from './worldManager.js';
+import { writeWorld, listWorlds } from './worldManager.js';
 import { CURRENT_FEATURE_VERSION, cleanFeatureVersion } from './retrofit.js';
 import { cargoFromSave, FURNACE_CART } from '../mobs/mounts.js';
 
@@ -82,13 +82,21 @@ export function playerSaveData(p) {
 
 /** Serialise the current game into its world slot (1..MAX_WORLDS). */
 export async function saveGame(game) {
+  const data = buildSaveData(game);
+  await writeWorld(game.saveSlot || 1, data); // one transaction: the world, its list summary and (every so often) a backup
+  return data;
+}
+
+/** The world record of the running game (what saveGame writes). */
+export function buildSaveData(game) {
   const w = game.world, p = game.player;
   const chunks = {};
   for (const [k, c] of w.saved) chunks[k] = packChunk(c);
   for (const c of w.chunks.values()) if (c.modified) chunks[chunkKey(c.cx, c.cz)] = packChunk(c);
   const savedMobs = {};
   for (const [k, v] of game.spawner.savedMobs) savedMobs[k] = v;
-  const liveMobs = game.entities.list
+  const guest = !!(game.net && game.net.isClient); // a guest's mobs and stands are copies of the host's: not saved
+  const liveMobs = guest ? [] : game.entities.list
     .filter((e) => e.kind === 'mob' && e.persistent && e.deathTime === 0 && !e.removed)
     .map((e) => e.saveData());
   const data = {
@@ -136,8 +144,25 @@ export async function saveGame(game) {
     social: game.social ? game.social.save() : undefined, // multiplayer teams, the op list, bans and who is who (net/social.js)
     hostSettings: game.net && game.net.isHost ? game.net.settingsSave() : game.hostSettings || undefined, // PvP, guest commands, friendly fire and the player limit of an open world (net/social.js)
   };
-  await writeWorld(game.saveSlot || 1, data); // one transaction: the world, its list summary and (every so often) a backup
   return data;
+}
+
+/**
+ * A guest keeps what it has of a friend's world as a world of its own (the host left, or the link is gone): every edited chunk
+ * it was sent or changed, the signs, frames and pots it knows, the time and weather, and its own belongings. Chests, furnaces and
+ * creatures are the host's and stay behind. Goes into the first free slot; returns { slot, name } or null when all slots are used.
+ */
+export async function saveGuestCopy(game, hostName = '') {
+  const worlds = await listWorlds();
+  const i = worlds.indexOf(null);
+  if (i < 0) return null;
+  const data = buildSaveData(game);
+  const base = hostName ? `${hostName}'s world (copy)` : 'Friend\'s world (copy)';
+  data.name = String(base).slice(0, 40);
+  data.netPlayers = {}; data.social = undefined; data.hostSettings = undefined; data.chests = []; data.furnaces = [];
+  data.meta = { ...(data.meta || {}), createdAt: Date.now() };
+  await writeWorld(i + 1, data, { backup: false });
+  return { slot: i + 1, name: data.name };
 }
 
 /** Apply loaded data to a freshly constructed (not yet started) game. */
