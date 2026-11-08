@@ -36,7 +36,7 @@ import { EditSync } from './editSync.js';
 import { createTransport } from './transport.js';
 import { RemotePlayer } from './remotePlayer.js';
 import { EntityMirror } from './entityMirror.js';
-import { packChunk, unpackChunk, playerSaveData, applyPlayerSave } from '../world/save.js';
+import { packChunk, unpackChunk, playerSaveData, applyPlayerSave, saveGuestCopy } from '../world/save.js';
 import { loadGuestGuide, saveGuestGuide, guideOf } from '../player/fieldGuide.js';
 import { chunkKey } from '../world/world.js';
 import { B, isFurnace, isBox, BOX_COLORS } from '../world/blocks.js';
@@ -59,12 +59,16 @@ import { POTIONS } from '../world/potions.js';
 import {
   SocialState, PingBoard, routePing, runSocial, nameKey, cleanToken, loadClientToken, cleanEmote, emoteByName, EMOTE_COOLDOWN_MS,
   PM_FROM, PM_TO, PM_COLOR, TEAM_CHAT, PING_REACH, PING_FALLBACK, playerRows, cleanRoster, cleanPing, canSpectate, nextSpectateTarget,
-  makeResume, pickGuestRecord, reconnectDelay, GAMEMODE_LABEL, teamColor, cleanHostSettings,
+  makeResume, pickGuestRecord, reconnectDelay, GAMEMODE_LABEL, teamColor, cleanHostSettings, pickDeathCamTarget, killerOf, pingKindFor, cleanPingKind,
 } from './social.js';
 import { PingBeacons } from '../render/pingBeacons.js';
+import { RemoteDiscs } from '../render/remoteDiscs.js';
 import { GuestMeter, allowedEdits, updateEvery, sendsNow, Rate, rateText } from './guard.js';
 import { GuestLedger, plausibleStack, countIn, ALLOW_PER_KIND, ALLOW_SMALL } from './ledger.js';
 import { cleanCamp, mergeCamp, sameCampLayout } from '../world/campfireCooking.js';
+import { PositionHistory, rewindMs, meleeHitOk } from './lagcomp.js';
+import { GhostBook, GHOST_TTL_MS } from './ghosts.js';
+import { reachOf } from '../player/weapons.js';
 
 const STATE_EVERY = 2;      // ticks between player / entity updates (10 Hz)
 const ENV_EVERY = 20;       // time + weather once a second (also the heartbeat)
@@ -131,6 +135,7 @@ class Session {
     this.friendlyFireAll = false; // host option: team mates can hurt each other whatever their team says
     this.social = new SocialState(); // teams, ops, bans (the host's copy is part of the save; guests mirror the teams)
     this.pings = new PingBoard();    // short-lived beacons
+    this.discs = null;               // other players' thrown Returning Discs (render/remoteDiscs.js), made on first use
     this.beacons = null;             // their 3D markers (render/pingBeacons.js), made on first use
     this.roster = [];                // [[id, name, gamemode, ping]] from the host, for the Tab list
     this.spectate = null;            // { target, switched, prevMode } while following a friend
@@ -174,6 +179,7 @@ class Session {
   render(sec) {
     const now = performance.now();
     for (const rp of this.remotes.values()) rp.update(this.game, sec, now);
+    if (this.discs) this.discs.update(sec, now);
     const act = this.activePings(now).concat(this.waypointList().map((w) => ({ from: 'wp:' + w.name, x: w.x, y: w.y, z: w.z, color: '#7fe2ff', life: 1 })));
     if (act.length || this.beacons) {
       if (!this.beacons) this.beacons = new PingBeacons(this.game.scene);
@@ -194,23 +200,53 @@ class Session {
   /** Beacons to show now (this dimension). */
   activePings(now = performance.now()) { return this.game ? this.pings.active(now, this.game.world.dimension) : []; }
 
-  /** Ping the block under the crosshair: a beacon for the team (or everybody, without a team). */
+  /**
+   * Ping what the crosshair points at: a hostile creature (danger), a dropped item or a chest (loot), any other creature or
+   * block (a spot); sneaking asks for help at your own feet. Shown to the team (or everybody, without one).
+   */
   pingAtCrosshair() {
     const g = this.game, p = g.player, now = performance.now();
     if (!p || p.dead) return false;
     const [ex, ey, ez] = p.eyePos(), [dx, dy, dz] = p.lookDir();
-    const hit = g.world.raycast(ex, ey, ez, dx, dy, dz, PING_REACH, true);
-    if (!hit) { if (g.hud) g.hud.toast('Nothing there to ping', 1500); return false; }
+    let kind = 'go', at = null;
+    if (p.sneaking) { kind = 'help'; at = { x: p.x, y: p.y + 0.2, z: p.z }; }
+    else {
+      const hit = g.world.raycast(ex, ey, ez, dx, dy, dz, PING_REACH, true);
+      let best = hit ? hit.dist : PING_REACH, ent = null;
+      for (const e of (g.entities && g.entities.list) || []) {
+        if ((e.kind !== 'mob' && e.kind !== 'item') || e.dead || e.removed || (e.kind === 'mob' && e.deathTime > 0)) continue;
+        const hw = (e.width || 0.4) / 2 + 0.15, h = e.height || 0.4;
+        const t = rayAABB(ex, ey, ez, dx, dy, dz, e.x - hw, e.y - 0.1, e.z - hw, e.x + hw, e.y + h + 0.1, e.z + hw);
+        if (t !== null && t < best) { best = t; ent = e; }
+      }
+      if (ent) { kind = pingKindFor({ entity: { kind: ent.kind, enemy: !!ent.enemy, monster: !!(ent.def && ent.def.category === 'monster') } }); at = { x: ent.x, y: ent.y + (ent.kind === 'item' ? 0.3 : ent.height || 1) , z: ent.z }; }
+      else if (hit) { kind = pingKindFor({ container: CONTAINER_BLOCKS.has(hit.id) }); at = { x: hit.x + 0.5, y: hit.y + 1, z: hit.z + 0.5 }; }
+      else { if (g.hud) g.hud.toast('Nothing there to ping', 1500); return false; }
+    }
     if (!this.pings.ready(this.name, now)) return false;
-    const at = { x: hit.x + 0.5, y: hit.y + 1, z: hit.z + 0.5 };
-    if (this.isHost) this.handlePing(this.name, at, null);
-    else { this.send({ t: 'ping', x: at.x, y: at.y, z: at.z }); this.showPing({ from: this.name, ...at, dim: g.world.dimension, color: this.social.colorOf(this.name) }, now); }
+    if (this.isHost) this.handlePing(this.name, { ...at, k: kind }, null);
+    else { this.send({ t: 'ping', ...at, k: kind }); this.showPing({ from: this.name, ...at, k: kind, dim: g.world.dimension, color: this.social.colorOf(this.name) }, now); }
     return true;
   }
 
   showPing(ping, now = performance.now()) {
     this.pings.add(ping, now);
     if (this.game && this.game.audio) this.game.audio.play('orb');
+  }
+
+  // ---- a thrown Returning Disc, seen by the others (position only: the thrower's game flies it, entities/disc.js) -----------
+  /** Our disc is in the air (`on`) at this spot, or has landed: everybody else sees it glide. About ten times a second. */
+  sendDisc(d, on = true) {
+    const r1 = (v) => Math.round(v * 10) / 10, g = this.game;
+    const m = { t: 'disc', on: on ? 1 : 0, x: r1(d.x), y: r1(d.y), z: r1(d.z), tier: d.tier, d: g.world.dimension };
+    if (this.isHost) this.broadcast({ ...m, id: 0 }); else this.send(m);
+  }
+
+  /** Somebody else's disc: draw it (in our dimension only). */
+  showDisc(id, m, now = performance.now()) {
+    if (!this.game || !finite(m.x, m.y, m.z) || (typeof m.d === 'string' && m.d !== this.game.world.dimension)) return;
+    if (!this.discs) { if (!m.on) return; this.discs = new RemoteDiscs(this.game.scene); }
+    this.discs.set(id, !!m.on, m.x, m.y, m.z, typeof m.tier === 'string' ? m.tier : 'iron', now);
   }
 
   // ---- social: emotes --------------------------------------------------------------------------------
@@ -266,8 +302,42 @@ class Session {
     return true;
   }
 
+  // ---- social: the camera of a dead player (follows a friend while they wait to respawn) ---------------------------------
+  /** A death: the camera goes to whoever killed us, else a team mate, else the first friend. Returns the name or null. */
+  beginDeathCam(cause) {
+    const names = this.spectateCandidates(), mates = this.social.teamOf(this.name);
+    const target = pickDeathCamTarget(names, killerOf(cause), mates ? mates.members.filter((n) => nameKey(n) !== nameKey(this.name)) : null);
+    this.deathCam = target ? { target } : null;
+    return target;
+  }
+  endDeathCam() { this.deathCam = null; }
+  cycleDeathCam(dir) {
+    if (!this.deathCam) return null;
+    const t = nextSpectateTarget(this.spectateCandidates(), this.deathCam.target, dir < 0 ? -1 : 1);
+    if (t) this.deathCam.target = t;
+    return t;
+  }
+  /** What the dead player's camera shows now: { name, x, y, z, yaw, pitch } or null. */
+  deathCamView() {
+    const d = this.deathCam;
+    if (!d || !this.game.player.dead) return null;
+    const rp = [...this.remotes.values()].find((r) => nameKey(r.name) === nameKey(d.target));
+    if (!rp || !rp.state || rp.state.dead) return null;
+    const at = rp.shown || rp.state;
+    return { name: rp.name, x: at.x, y: at.y, z: at.z, yaw: rp.state.yaw, pitch: rp.state.pitch };
+  }
+  tickDeathCam() {
+    const d = this.deathCam;
+    if (!d) return;
+    if (!this.game.player.dead) { this.deathCam = null; return; }
+    if (this.deathCamView()) return;
+    const t = this.cycleDeathCam(1); // the one we watched left or died too
+    if (!t) this.deathCam = null;
+  }
+
   /** Every tick: stay on the followed friend (their position and view). */
   tickSpectate() {
+    if (this.deathCam) this.tickDeathCam();
     const s = this.spectate, p = this.game.player;
     if (!s) return;
     if (p.gamemode !== 'spectator') { this.spectate = null; return; } // the player changed mode themselves
@@ -296,6 +366,7 @@ class Session {
     for (const rp of this.remotes.values()) rp.dispose();
     this.remotes.clear();
     if (this.beacons) { this.beacons.dispose(); this.beacons = null; }
+    if (this.discs) { this.discs.dispose(); this.discs = null; }
   }
 
   /** `/team chat [on|off]`: plain chat lines go to the team (kept on this machine). Returns the lines, or null for any other command. */
@@ -336,6 +407,9 @@ class Session {
     this.pvp = o.pvp; this.guestCommands = o.gc; this.friendlyFireAll = o.ffa; this.maxPlayers = o.mp;
   }
 
+  /** Lag compensation (host only): where a mob was for this attacker. */
+  rewoundPos() { return null; }
+
   /** Lines for the F3 overlay: who we talk to and how much it costs. */
   debugLines() { return []; }
 }
@@ -350,6 +424,8 @@ export class HostSession extends Session {
     this.nextId = 1;
     this.maxPlayers = MAX_PLAYERS; // the host can lower it (pause menu)
     this.viewers = new Map(); // container key -> { kind, x, y, z, ids: Set, sig }
+    this.ghosts = new GhostBook(); // guests whose link dropped, kept for 60 s (net/ghosts.js)
+    this.history = new PositionHistory(); // recent mob positions, rewound for a guest's blows and arrows (net/lagcomp.js)
   }
 
   get link() { return joinLink(this.code); }
@@ -378,6 +454,9 @@ export class HostSession extends Session {
     // lightning strikes are shown (and burn / hurt) on every client too
     const strike = game.strikeLightning.bind(game);
     game.strikeLightning = (x, y, z) => { strike(x, y, z); if (!this.closed) this.broadcast({ t: 'bolt', x, y, z }); };
+    // closing the tab: tell the guests before the links go (they then show the "host left" screen, not a reconnect loop)
+    this._pagehide = () => { if (!this.closed) this.broadcast({ t: 'bye', reason: 'The host closed the world' }); };
+    globalThis.addEventListener?.('pagehide', this._pagehide, true);
     this.startBackground();
   }
 
@@ -494,6 +573,13 @@ export class HostSession extends Session {
         c.ch.send({ t: 'pong', ts: m.ts });
         break;
       case 'ping': this.handlePing(c.name, m, c); break;
+      case 'disc': { // a guest's Returning Disc in flight: only its position is shared; passed on to the others
+        const s = c.rp.state;
+        if (!s || !finite(m.x, m.y, m.z) || Math.hypot(m.x - s.x, m.y - s.y, m.z - s.z) > 40) break;
+        this.showDisc(c.id, m);
+        this.broadcast({ t: 'disc', id: c.id, on: m.on ? 1 : 0, x: m.x, y: m.y, z: m.z, tier: typeof m.tier === 'string' ? m.tier.slice(0, 12) : 'iron', d: m.d }, c);
+        break;
+      }
       case 'emote': {
         const e = cleanEmote(m.e), now = performance.now();
         if (!e || now - (c.lastEmote || -1e9) < EMOTE_COOLDOWN_MS) break;
@@ -571,7 +657,7 @@ export class HostSession extends Session {
         if (g.hush && GUEST_KINDS.has(m.k) && this.near(c, m.x, m.y, m.z, 8)) g.hush.vibrate(m.x, m.y, m.z, m.k, c.rp.target);
         break;
       case 'boom': if (this.near(c, m.x, m.y, m.z, 8) && m.power > 0 && m.power <= 6) g.explode(m.x, m.y, m.z, m.power, null); break;
-      case 'bye': this.drop(c, 'left the game'); break;
+      case 'bye': this.drop(c, 'left the game', true); break;
       default: break;
     }
   }
@@ -584,13 +670,15 @@ export class HostSession extends Session {
     if (ban) { c.ch.send({ t: 'reject', reason: `You are banned from this world${ban.reason ? ': ' + ban.reason : ''}` }); setTimeout(() => this.drop(c), 500); return; }
     // the same guest coming back before the old link timed out: the old link goes, the name stays theirs
     if (tok) for (const o of this.joined()) if (o !== c && o.tok === tok && nameKey(o.name) === nameKey(base)) this.drop(o);
-    if (this.joined().length >= this.maxPlayers - 1) { c.ch.send({ t: 'reject', reason: `This world is full (${this.maxPlayers} players)` }); setTimeout(() => this.drop(c), 500); return; }
+    // (a guest whose link dropped keeps its seat for 60 s: only they can take it, net/ghosts.js)
+    if (!this.ghosts.canJoin(base, tok, this.joined().length + 1, this.maxPlayers, performance.now())) { c.ch.send({ t: 'reject', reason: `This world is full (${this.maxPlayers} players)` }); setTimeout(() => this.drop(c), 500); return; }
     let name = base;
     const taken = new Set(this.playerNames().map(nameKey));
     // a name belongs to the browser that first used it (ops, teams and saved belongings go by name)
     for (let n = 2; taken.has(nameKey(name)) || !soc.identityFree(name, tok); n++) name = base.slice(0, 13) + '-' + n;
     soc.bindIdentity(name, tok);
     c.name = name; c.tok = tok;
+    const ghost = this.ghosts.claim(name, tok, performance.now()); // back within a minute: exactly where they were
     const p = g.player;
     const chunks = this.editedChunks();
     c.ch.send({
@@ -599,7 +687,7 @@ export class HostSession extends Session {
       dl: g.daylightCycle, df: g.difficulty, pvp: this.pvp, gc: this.guestCommands, ffa: this.friendlyFireAll, mp: this.maxPlayers, se: g.seasons.save(), ev: g.worldEvents ? g.worldEvents.syncOut() : undefined,
       soc: 1, teams: soc.teamsToWire(), wps: soc.waypointsToWire(name), // optional: the social layer (net/social.js); older guests ignore both
       worldSpawn: g.worldSpawn, pos: { x: p.x, y: p.y, z: p.z, yaw: p.yaw },
-      player: g.netPlayers[name] || null,
+      player: (ghost && ghost.rec) || g.netPlayers[name] || null, back: ghost ? 1 : undefined,
       signs: [...g.signs], frames: [...g.frames], pots: [...g.pots], lecterns: [...g.lecterns], campfires: [...(g.campfires || [])],
       vaults: g.proving ? g.proving.vaults.save() : [], // who opened which Vault (world/provingSystem.js)
       players: [{ id: 0, name: this.name }, ...this.joined().map((o) => ({ id: o.id, name: o.name }))],
@@ -613,7 +701,7 @@ export class HostSession extends Session {
     c.rp.target.reputation = cleanReputation((g.netPlayers[name] || {}).reputation); // (the host's copy is the true one)
     this.remotes.set(c.id, c.rp);
     this.broadcast({ t: 'join', id: c.id, name }, c);
-    g.chat.add(`${name} joined the game`);
+    g.chat.add(ghost ? `${name} is back` : `${name} joined the game`);
     this.sendRoster();
   }
 
@@ -625,7 +713,8 @@ export class HostSession extends Session {
     return out;
   }
 
-  drop(c, why = null) {
+  /** `graceful`: they left on purpose (or were kicked): no ghost, the seat is free at once. */
+  drop(c, why = null, graceful = false) {
     if (!this.clients.has(c.id)) return;
     this.clients.delete(c.id);
     console.warn('net: dropped', c.name, why || '(closed)');
@@ -639,12 +728,14 @@ export class HostSession extends Session {
     if (rec && c.raw && finite(c.raw[0], c.raw[1], c.raw[2]) && !((c.raw[6] | 0) & 2)) { // (a dead guest's belongings lie on the ground: keep the older record)
       rec.x = c.raw[0]; rec.y = c.raw[1]; rec.z = c.raw[2]; rec.yaw = c.raw[3]; rec.pitch = c.raw[4]; rec.dim = this.game.world.dimension;
     }
+    let ghosted = false;
+    if (!graceful && c.name) { this.ghosts.add(c.name, c.tok, rec ? { ...rec } : null, performance.now()); ghosted = true; }
     if (this.spectate && nameKey(this.spectate.target) === nameKey(c.name)) this.cycleSpectate(1);
     c.rp.dispose();
     this.remotes.delete(c.id);
     this.broadcast({ t: 'leave', id: c.id, name: c.name });
     this.sendRoster();
-    if (why && this.game) this.game.chat.add(`${c.name} ${why}`);
+    if (why && this.game) this.game.chat.add(`${c.name} ${why}${ghosted ? ` (their place is kept for ${GHOST_TTL_MS / 1000} s)` : ''}`);
   }
 
   // ---- blocks ---------------------------------------------------------------------
@@ -688,11 +779,21 @@ export class HostSession extends Session {
   }
 
   // ---- entities ---------------------------------------------------------------------
+  /** Ping of the guest `who` (its stand-in) in ms, or -1. */
+  pingOf(who) { const c = who && who.remote ? this.clients.get(who.remote.id) : null; return c && c.ping != null ? c.ping : -1; }
+
+  /** Where `mob` was when the guest `who` saw it: its position rewound by that guest's ping, at most 200 ms (net/lagcomp.js). Null for no rewind. */
+  rewoundPos(mob, who) {
+    const ms = rewindMs(this.pingOf(who));
+    return ms > 0 ? this.history.at(mob.id, performance.now(), ms) : null;
+  }
+
   /** A guest hit one of our mobs (melee or its arrow). */
   remoteHit(c, m) {
     const s = c.rp.state, mob = this.entity(m.id);
     if (!mob || mob.kind !== 'mob' || mob.deathTime > 0 || !s) return;
-    if (Math.hypot(mob.x - s.x, mob.y - s.y, mob.z - s.z) > (m.p ? 120 : 8)) return;
+    if (m.p) { if (Math.hypot(mob.x - s.x, mob.y - s.y, mob.z - s.z) > 120) return; } // (a thrown Returning Disc: flown on the guest's side)
+    else if (!meleeHitOk(c.rp.target.eyePos(), mob, this.rewoundPos(mob, c.rp.target), reachOf(s.held == null ? null : { id: s.held }))) return; // the mob where the guest saw it (net/lagcomp.js)
     const dmg = Math.max(0, Math.min(40, +m.d || 0)), knock = Math.max(0, Math.min(1.5, +m.k || 0));
     c.rp.target.lastAttacked = mob; // the guest's tamed Howlers join in
     mob.hurt(dmg, m.p ? 'arrow' : 'player', c.rp.target, knock, m.p ? { remote: true } : null);
@@ -1248,7 +1349,7 @@ export class HostSession extends Session {
     if (!c) return false;
     c.ch.send({ t: 'bye', reason: `You were kicked from the world${reason ? ': ' + reason : ''}`, kick: 1 });
     this.game.chat.add(`${c.name} was kicked${reason ? ' (' + reason + ')' : ''}`);
-    setTimeout(() => this.drop(c), 400); // (lets the message out first)
+    setTimeout(() => this.drop(c, null, true), 400); // (lets the message out first)
     return true;
   }
 
@@ -1264,10 +1365,17 @@ export class HostSession extends Session {
     const from = c ? c.rp.state : g.player;
     const r = routePing(this.social, this.pings, sender, m, from, this.playerNames(), now, g.world.dimension);
     if (!r.ok) return;
-    const msg = { t: 'ping', from: r.ping.from, x: r.ping.x, y: r.ping.y, z: r.ping.z, d: r.ping.dim, c: r.ping.color || undefined };
+    const msg = { t: 'ping', from: r.ping.from, x: r.ping.x, y: r.ping.y, z: r.ping.z, d: r.ping.dim, c: r.ping.color || undefined, k: r.ping.k === 'go' ? undefined : r.ping.k };
     // the host sees it if it is the sender or on the team
     if (!c || r.targets.some((n) => nameKey(n) === nameKey(this.name))) this.showPing(r.ping, now);
     for (const n of r.targets) { const cl = this.clientByName(n); if (cl) cl.ch.send(msg); }
+  }
+
+  /** Once a second: ghosts whose minute is up give their seat back (the host is told). */
+  expireGhosts(now) {
+    const held = this.ghosts.map.size ? this.ghosts.seats(now).map((x) => x.name) : [];
+    if (this.ghostNames) for (const n of this.ghostNames) if (!held.includes(n) && !this.clientByName(n)) this.game.chat.add(`${n}'s place was given up`);
+    this.ghostNames = held;
   }
 
   /** [[id, name, gamemode, ping]] of everybody here (the host's ping is shown as none). */
@@ -1290,6 +1398,7 @@ export class HostSession extends Session {
     const g = this.game;
     this.ticks++;
     this.tickSpectate();
+    if (this.clients.size) this.history.record(performance.now(), g.entities.list.filter((x) => x.kind === 'mob' && !x.dead && !x.removed).map((x) => ({ id: x.id, x: x.x, y: x.y, z: x.z }))); else if (this.history.size) this.history.clear();
     if (this.ticks % 40 === 0) this.sendRoster();
     if (this.stalled()) for (const c of this.clients.values()) c.lastSeen = performance.now();
     const e = this.edits.take();
@@ -1344,6 +1453,7 @@ export class HostSession extends Session {
     if (this.ticks % ENV_EVERY === 0) {
       this.sendEnv();
       const now = performance.now();
+      this.expireGhosts(now);
       for (const c of [...this.clients.values()]) {
         if (now - c.lastSeen > TIMEOUT_MS) { this.drop(c, 'timed out'); continue; }
         if (!c.joined) continue;
@@ -1370,6 +1480,7 @@ export class HostSession extends Session {
     if (this.closed) return;
     this.broadcast({ t: 'bye', reason: 'The host closed the world' });
     this.closed = true;
+    if (this._pagehide) globalThis.removeEventListener?.('pagehide', this._pagehide, true);
     for (const c of [...this.clients.values()]) { this.clients.delete(c.id); setTimeout(() => c.ch.close(), 300); }
     setTimeout(() => { if (this.handle) this.handle.close(); }, 400);
     if (this.edits) this.edits.detach();
@@ -1506,6 +1617,7 @@ export class ClientSession extends Session {
       p.setPosition(w.pos.x, w.pos.y, w.pos.z);
       p.yaw = w.pos.yaw;
     }
+    if (w.back && game.chat) game.chat.add('Welcome back - your place was kept');
     this.edits = new EditSync(game.world, { host: false });
     game.world.passive = true; // fluids, fire, falling blocks, simmering pots... run on the host and arrive as edits
     // no mob generation here: every entity comes from the host
@@ -1530,7 +1642,7 @@ export class ClientSession extends Session {
       case 'ed': if (m.d === undefined || m.d === g.world.dimension) this.edits.apply(m.e); break;
       case 'pl': for (const a of m.p || []) { if (a[0] === this.id) continue; const rp = this.remotes.get(a[0]); if (rp) rp.setState(unpackPlayerState(a.slice(1))); } break;
       case 'join': this.addRemote(m.id, m.name); g.chat.add(`${m.name} joined the game`); break;
-      case 'leave': { const rp = this.remotes.get(m.id); if (rp) { rp.dispose(); this.remotes.delete(m.id); } g.chat.add(`${m.name} left the game`); break; }
+      case 'leave': { const rp = this.remotes.get(m.id); if (rp) { rp.dispose(); this.remotes.delete(m.id); } if (this.discs) this.discs.drop(m.id); g.chat.add(`${m.name} left the game`); break; }
       case 'chat': g.chat.add(`<${m.from}> ${m.m}`, this.social.colorOf(m.from)); break;
       case 'pm': g.chat.add(m.from ? PM_FROM(String(m.from).slice(0, 16), String(m.m || '').slice(0, 256)) : PM_TO(String(m.to || '').slice(0, 16), String(m.m || '').slice(0, 256)), PM_COLOR); break;
       case 'tchat': { const t = this.social.teamOf(m.from); g.chat.add(TEAM_CHAT(String(m.team || '').slice(0, 12), String(m.from || '').slice(0, 16), String(m.m || '').slice(0, 256)), t ? t.color : null); break; }
@@ -1540,10 +1652,11 @@ export class ClientSession extends Session {
       case 'pong': { const r = performance.now() - m.ts; if (Number.isFinite(r) && r >= 0) this.rtt = this.rtt < 0 ? Math.round(r) : Math.round(this.rtt * 0.5 + r * 0.5); break; }
       case 'ping': {
         if (![m.x, m.y, m.z].every(Number.isFinite) || typeof m.from !== 'string') break;
-        this.showPing({ from: m.from, x: m.x, y: m.y, z: m.z, dim: typeof m.d === 'string' ? m.d : g.world.dimension, color: teamColor(m.c) || this.social.colorOf(m.from) });
+        this.showPing({ from: m.from, x: m.x, y: m.y, z: m.z, k: cleanPingKind(m.k), dim: typeof m.d === 'string' ? m.d : g.world.dimension, color: teamColor(m.c) || this.social.colorOf(m.from) });
         break;
       }
       case 'emote': { const rp = this.remotes.get(m.id), e = cleanEmote(m.e); if (rp && e) rp.playEmote(e); break; }
+      case 'disc': if (Number.isInteger(m.id) && m.id !== this.id) this.showDisc(m.id, m); break;
       case 'sign': if (Array.isArray(m.l)) g.setSignText(m.x | 0, m.y | 0, m.z | 0, m.l, true); break;
       case 'frame': g.setFrameItem(m.x | 0, m.y | 0, m.z | 0, m.st || null, true); break;
       case 'pot': g.setPot(m.x | 0, m.y | 0, m.z | 0, m.f || null, true); break;
@@ -1647,7 +1760,7 @@ export class ClientSession extends Session {
         break;
       }
       case 'fuelno': this.onFuelRefused(m); break;
-      case 'bye': this.lost(m.reason || 'The host closed the world'); break;
+      case 'bye': this.lost(m.reason || 'The host closed the world', undefined, m.kick ? { kick: true } : { hostLeft: true }); break;
       default: break;
     }
   }
@@ -1936,11 +2049,24 @@ export class ClientSession extends Session {
     return [`Net guest of ${this.hostName()}  ping ${this.rtt >= 0 ? this.rtt + ' ms' : '-'}  in ${rateText(this.ch.rateIn.bps)}  out ${rateText(this.ch.rate.bps)}  ${this.remotes.size + 1} players`];
   }
 
+  /** Is the host still reachable? 'alive' | 'gone' (nobody has that room open any more) | 'unknown' (the signalling server or the network is the trouble). */
+  async probeHost(transport = null) {
+    try {
+      const conn = await (transport || createTransport()).join(this.code, 6000);
+      try { conn.close(); } catch { /* gone */ }
+      return 'alive';
+    } catch (e) {
+      return /No world is open/i.test(String(e && e.message)) ? 'gone' : 'unknown';
+    }
+  }
+
   /**
    * Connection gone. `retry`: it dropped (not a kick, a ban or the host closing the world), so the screen offers to
-   * reconnect - automatically after a moment - and keeps our place and belongings for the rejoin.
+   * reconnect - automatically after a moment, once the host is known to still be there - and keeps our place and belongings
+   * for the rejoin. `opts.hostLeft`: the host closed the world (or has gone: a probe found no room): the screen says so and
+   * offers to keep a copy of the world as we have it (net/session.js saveGuestCopy), which a rejoin would throw away.
    */
-  lost(msg, retry = false) {
+  lost(msg, retry = false, opts = {}) {
     if (this.closed) return;
     this.closed = true;
     console.warn('net: connection lost -', msg);
@@ -1953,22 +2079,45 @@ export class ClientSession extends Session {
     g.input.unlock();
     g.ui.clear();
     g.ui.open = 'netlost';
+    const canRetry = retry && this.code && g.hooks.reconnect;
     const s = document.createElement('div');
     s.className = 'screen';
-    const canRetry = retry && this.code && g.hooks.reconnect;
-    s.innerHTML = `<h2>${canRetry ? 'Connection lost' : 'Disconnected'}</h2><p class="sub"></p>` +
-      (canRetry ? '<p class="sub net-retry"></p><button class="btn" data-a="now">Reconnect now</button>' : '') + '<button class="btn" data-a="title">Back to Title Screen</button>';
-    s.querySelector('p').textContent = msg;
-    s.querySelector('[data-a=title]').onclick = () => { if (this.retryTimer) clearInterval(this.retryTimer); if (g.hooks.quit) g.hooks.quit(); };
+    s.id = 'netlost';
+    s.innerHTML = '<h2></h2><p class="sub net-msg"></p><p class="sub net-retry"></p>' +
+      '<button class="btn hidden" data-a="now">Reconnect now</button>' +
+      (opts.kick ? '' : '<button class="btn" data-a="save">Save a copy of this world</button>') +
+      '<button class="btn" data-a="title">Back to Title Screen</button>';
+    const head = s.querySelector('h2'), line = s.querySelector('.net-msg'), note = s.querySelector('.net-retry'), now = s.querySelector('[data-a=now]');
+    let saved = false;
+    const setHostLeft = (text) => { head.textContent = 'The host left'; line.textContent = text; if (!saved) note.textContent = 'What you built and found here is still on your screen: keep a copy of it as a world of your own.'; now.classList.add('hidden'); };
+    head.textContent = opts.hostLeft ? 'The host left' : canRetry ? 'Connection lost' : 'Disconnected';
+    line.textContent = msg;
+    if (opts.hostLeft) setHostLeft(msg);
+    s.querySelector('[data-a=title]').onclick = () => { if (this.retryTimer) clearInterval(this.retryTimer); this.lostGone = true; if (g.hooks.quit) g.hooks.quit(); };
+    const saveBtn = s.querySelector('[data-a=save]');
+    if (saveBtn) saveBtn.onclick = async () => {
+      saveBtn.disabled = true;
+      try {
+        const r = await saveGuestCopy(g, this.hostName());
+        saved = !!r;
+        note.textContent = r ? `Saved as "${r.name}" - open it from the title screen.` : 'All world slots are in use: delete a world on the title screen first.';
+        if (!r) saveBtn.disabled = false;
+      } catch (e) { note.textContent = 'Could not save: ' + (e && e.message ? e.message : e); saveBtn.disabled = false; }
+    };
     if (canRetry) {
       const resume = makeResume(this.code, this.name, g.world.dimension, playerSaveData(g.player), g.player.dead);
       const go = () => { clearInterval(this.retryTimer); g.hooks.reconnect(resume); };
-      let left = reconnectDelay(1);
-      const note = s.querySelector('.net-retry');
-      const show = () => { note.textContent = `Reconnecting in ${left} s - you will come back where you were`; };
-      show();
-      this.retryTimer = setInterval(() => { left--; if (left <= 0) go(); else show(); }, 1000);
-      s.querySelector('[data-a=now]').onclick = go;
+      now.onclick = go;
+      note.textContent = 'Checking whether the host is still there...';
+      this.probeHost().then((state) => {
+        if (this.lostGone) return;
+        if (state === 'gone') { setHostLeft('The host closed the world, or their connection is gone.'); return; }
+        now.classList.remove('hidden');
+        let left = reconnectDelay(1);
+        const show = () => { note.textContent = `Reconnecting in ${left} s - you will come back where you were`; };
+        show();
+        this.retryTimer = setInterval(() => { left--; if (left <= 0) go(); else show(); }, 1000);
+      });
     }
     g.ui.layer.appendChild(s);
   }

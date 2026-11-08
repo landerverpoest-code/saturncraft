@@ -723,11 +723,14 @@ export class EntityManager {
     const cands = this.list.filter((e) => e.kind === 'mob' && !e.dead && e.deathTime === 0 && !(e.special && e.def.burrower));
     if (!p.dead) cands.push(p.asTarget || (p.asTarget = makePlayerTarget(this.game)));
     if (this.game.net) cands.push(...this.game.net.remoteTargets(proj));
+    // a guest's arrow is checked against the mobs where that guest saw them (host only, net/lagcomp.js)
+    const lag = this.game.net && this.game.net.isHost && proj.shooter && proj.shooter.isRemotePlayer ? this.game.net : null;
     for (const e of cands) {
       if (e === proj.shooter || (proj.shooter && proj.shooter.isPlayer && e.isPlayer && proj.age < 5)) continue;
       if (this.game.net && proj.shooter && proj.shooter.isPlayer && e.isPlayer && (!this.game.net.pvp || this.game.net.blocksPvp(proj.shooter, e))) continue; // PvP off, or team mates with friendly fire off (net/social.js)
       const hw = e.width / 2 + 0.3;
-      const t = rayAABB(ox, oy, oz, dx, dy, dz, e.x - hw, e.y - 0.3, e.z - hw, e.x + hw, e.y + e.height + 0.3, e.z + hw);
+      const past = lag && e.kind === 'mob' ? lag.rewoundPos(e, proj.shooter) : null, ex = past ? past.x : e.x, ey = past ? past.y : e.y, ez = past ? past.z : e.z;
+      const t = rayAABB(ox, oy, oz, dx, dy, dz, ex - hw, ey - 0.3, ez - hw, ex + hw, ey + e.height + 0.3, ez + hw);
       if (t !== null && t <= maxDist && t < bestT) { best = e; bestT = t; }
     }
     return best;

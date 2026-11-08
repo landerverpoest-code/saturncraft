@@ -3,8 +3,9 @@
 // in the air is a copy of the stack's numbers), so a disc cannot be lost or duplicated: when the thrower is dead,
 // far away or the flight runs too long it simply ends. A clean catch starts a streak: each adds a point to the next
 // throw (up to CATCH_STREAK_MAX), and the streak is lost when a flight ends any other way.
-// The disc is local to its thrower (like fireballs it is not shared): its hits reach the host as the usual arrow
-// hits of a guest, so damage and kills are the host's to count; other players see the hits, not the flight.
+// The disc is flown by its thrower's own game: its hits reach the host as the usual arrow hits of a guest, so damage and
+// kills are the host's to count. Its position (only) is sent ten times a second (`disc` messages) so the other players see it
+// glide (render/remoteDiscs.js).
 import * as THREE from 'three';
 import { MATERIALS, ITEMS } from '../world/items.js';
 import * as W from '../world/weaponStats.js';
@@ -75,6 +76,7 @@ export class ReturningDisc {
     this.x = s.x; this.y = s.y; this.z = s.z;
     if (res) { this.end(game, res); return; }
     this.strike(game);
+    if (game.net && game.ticks % 2 === 0) game.net.sendDisc(this); // the others see it fly (net/session.js; position only)
     if (game.ticks % 3 === 0) game.audio.play('disc_whirr', [this.x, this.y, this.z], 0.35);
     if (game.particles && game.ticks % 2 === 0) game.particles.emit(this.x, this.y, this.z, 0, 0, 0, 0.8, 0.9, 1, 8, 0);
   }
@@ -99,6 +101,7 @@ export class ReturningDisc {
 
   end(game, how) {
     this.dead = true;
+    if (game.net && game.net.sendDisc) game.net.sendDisc(this, false);
     const it = game.interaction;
     if (!it) return;
     if (how === 'caught') {

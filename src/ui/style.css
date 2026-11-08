@@ -808,3 +808,8 @@ html.ui-scaled #raidbar:not(.hidden) ~ #bossbar { top: clamp(58px, calc((var(--u
 .panel .set-bonuses .sb-line { color: #3d3a34; }
 .panel .set-bonuses .sb-line.on { color: #0f5a22; font-weight: bold; }
 html.high-contrast .panel .set-bonuses .sb-head, html.high-contrast .panel .set-bonuses .sb-head span, html.high-contrast .panel .set-bonuses .sb-line, html.high-contrast .panel .set-bonuses .sb-line.on { color: #000; }
+/* multiplayer round 6: the dead player's follow-cam bar, the host-left screen */
+.death-cam { margin: 8px 0; display: flex; gap: 8px; align-items: center; justify-content: center; }
+.death-cam .tiny { padding: 4px 10px; font-size: 13px; }
+#netlost .btn { margin: 4px 0; }
+.btn:disabled { opacity: .55; cursor: default; }

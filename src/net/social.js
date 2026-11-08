@@ -389,7 +389,29 @@ export const PING_REACH = 250;      // blocks a beacon may be placed from the se
 export const PING_MAX = 16;
 export const PING_FALLBACK = '#ffd35a';
 
-/** Short-lived beacons: one per sender, they fade after PING_TTL_MS. */
+/**
+ * What a ping says. `go`: a spot (the default: the block you look at); `danger`: a hostile creature under the crosshair
+ * (short-lived: it moves); `loot`: a dropped item or a chest; `help`: sneak while pinging, at your own feet. The kind travels
+ * as the optional `k` of a ping message, older builds show every ping as `go`.
+ */
+export const PING_KINDS = {
+  go: { label: '', ttl: PING_TTL_MS, color: null, glyph: '\u25c6' },
+  danger: { label: 'Danger', ttl: 10000, color: '#ff5555', glyph: '!' },
+  loot: { label: 'Loot', ttl: PING_TTL_MS, color: '#ffd35a', glyph: '\u2605' },
+  help: { label: 'Help!', ttl: 15000, color: '#ffffff', glyph: '?' },
+};
+export const cleanPingKind = (k) => (typeof k === 'string' && Object.prototype.hasOwnProperty.call(PING_KINDS, k) ? k : 'go');
+/** Which kind of ping the crosshair makes: sneaking asks for help, a hostile mob is danger, an item or a container is loot. */
+export function pingKindFor({ sneaking = false, entity = null, container = false } = {}) {
+  if (sneaking) return 'help';
+  if (entity) {
+    if (entity.kind === 'item') return 'loot';
+    if (entity.kind === 'mob') return entity.enemy || entity.monster ? 'danger' : 'go';
+  }
+  return container ? 'loot' : 'go';
+}
+
+/** Short-lived beacons: one per sender, they fade after their kind's lifetime (20 s for a plain spot). */
 export class PingBoard {
   constructor() { this.list = []; this.last = new Map(); }
   /** The sender is allowed to ping again? (rate limit) */
@@ -399,15 +421,15 @@ export class PingBoard {
     const from = cleanName(p.from);
     this.last.set(nameKey(from), now);
     this.list = this.list.filter((o) => nameKey(o.from) !== nameKey(from));
-    this.list.push({ from, x: p.x, y: p.y, z: p.z, dim: p.dim || 'overworld', color: teamColor(p.color) || PING_FALLBACK, at: now });
+    this.list.push({ from, x: p.x, y: p.y, z: p.z, dim: p.dim || 'overworld', color: teamColor(p.color) || PING_FALLBACK, k: cleanPingKind(p.k), at: now });
     if (this.list.length > PING_MAX) this.list.shift();
     return this.list[this.list.length - 1];
   }
-  prune(now) { this.list = this.list.filter((o) => now - o.at < PING_TTL_MS); }
+  prune(now) { this.list = this.list.filter((o) => now - o.at < PING_KINDS[o.k || 'go'].ttl); }
   /** Beacons to draw in `dim`: with how much of their life is left (0..1). */
   active(now, dim) {
     this.prune(now);
-    return this.list.filter((o) => o.dim === dim).map((o) => ({ ...o, life: 1 - (now - o.at) / PING_TTL_MS }));
+    return this.list.filter((o) => o.dim === dim).map((o) => ({ ...o, life: 1 - (now - o.at) / PING_KINDS[o.k || 'go'].ttl }));
   }
   clear() { this.list = []; this.last.clear(); }
 }
@@ -425,7 +447,7 @@ export function routePing(social, board, sender, m, from, names, now, dim) {
   const keys = mates ? new Set(mates.map(nameKey)) : null;
   const targets = names.filter((n) => nameKey(n) !== nameKey(sender) && (!keys || keys.has(nameKey(n))));
   const r1 = (v) => Math.round(v * 10) / 10;
-  return { ok: true, targets, ping: { from: cleanName(sender), x: r1(m.x), y: r1(m.y), z: r1(m.z), dim, color: social.colorOf(sender) } };
+  return { ok: true, targets, ping: { from: cleanName(sender), x: r1(m.x), y: r1(m.y), z: r1(m.z), dim, color: social.colorOf(sender), k: cleanPingKind(m.k) } };
 }
 
 // ---- emotes --------------------------------------------------------------------------------------
@@ -470,6 +492,21 @@ export function nextSpectateTarget(names, current, dir = 1) {
   if (i < 0) return names[dir < 0 ? names.length - 1 : 0];
   return names[(i + dir + names.length) % names.length];
 }
+
+/** Seconds a player in a shared world watches a friend before the Respawn button works (single-player has no wait). */
+export const RESPAWN_WAIT_S = 3;
+/**
+ * Who a dead player's camera follows first: whoever killed them (if still around), else a team mate, else the first friend.
+ * `names`: the candidates (alive, other players); `killer`: a name or null; `mates`: their team's member names or null.
+ */
+export function pickDeathCamTarget(names, killer = null, mates = null) {
+  if (!names.length) return null;
+  if (killer) { const k = names.find((n) => nameKey(n) === nameKey(killer)); if (k) return k; }
+  if (mates) { const set = new Set(mates.map(nameKey)); const m = names.find((n) => set.has(nameKey(n))); if (m) return m; }
+  return names[0];
+}
+/** The player name a death cause names ("player:Alba" -> "Alba"), or null. */
+export const killerOf = (cause) => (typeof cause === 'string' && cause.startsWith('player:') ? cause.slice(7) : null);
 
 // ---- the player list (Tab) --------------------------------------------------------------------------
 export const GAMEMODE_LABEL = { survival: 'Survival', creative: 'Creative', adventure: 'Adventure', spectator: 'Spectator' };
