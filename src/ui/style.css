@@ -792,3 +792,19 @@ html.cue-shapes #effects .fx.bad { border-left-style: dashed; }
 
 /* Farscope read-out (player/farscope.js) */
 #overlay-scope .scope-text { position: absolute; left: 50%; top: calc(50% + 38vmin); transform: translateX(-50%); color: #ffe9b0; font: 600 14px/1.2 ui-monospace, monospace; letter-spacing: .04em; text-shadow: 0 1px 3px #000; background: rgba(0,0,0,.45); padding: 3px 10px; border-radius: 10px; white-space: nowrap; }
+/* QA round 4: with the interface scaled up the sky clock grows too, and the centred raid and boss bars ran under it on windows that are
+   wide enough for the unscaled layout. From a scale of 1.05 up they sit below the clock (zoom scales these offsets with the bars);
+   the narrow-window drop above keeps working for the smaller scales. */
+html.ui-scaled #raidbar, html.ui-scaled #bossbar { top: clamp(10px, calc((var(--ui-scale, 1) - 1) * 100000px + 10px), 76px); }
+html.ui-scaled #raidbar:not(.hidden) ~ #bossbar { top: clamp(58px, calc((var(--ui-scale, 1) - 1) * 100000px + 58px), 124px); }
+@media (max-width: 980px) {
+  html.ui-scaled body:not(.touch-on) #raidbar, html.ui-scaled body:not(.touch-on) #bossbar { top: 76px; }
+  html.ui-scaled body:not(.touch-on) #raidbar:not(.hidden) ~ #bossbar { top: 124px; }
+}
+
+/* QA round 4: the armour set lines sit on the light inventory panel; their colours (made for a dark ground) were about 1.5:1 to 2.5:1 there */
+.panel .set-bonuses .sb-head { color: #5e4200; }
+.panel .set-bonuses .sb-head span { color: #3d3a34; }
+.panel .set-bonuses .sb-line { color: #3d3a34; }
+.panel .set-bonuses .sb-line.on { color: #0f5a22; font-weight: bold; }
+html.high-contrast .panel .set-bonuses .sb-head, html.high-contrast .panel .set-bonuses .sb-head span, html.high-contrast .panel .set-bonuses .sb-line, html.high-contrast .panel .set-bonuses .sb-line.on { color: #000; }

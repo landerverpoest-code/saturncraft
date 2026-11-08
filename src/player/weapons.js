@@ -16,7 +16,8 @@ export function weaponOf(st) {
   const d = st && ITEMS[st.id];
   return d && d.weapon && W.WEAPON_KINDS[d.weapon.type] ? d.weapon : null;
 }
-export const isDisc = (st) => !!(st && ITEMS[st.id] && ITEMS[st.id].disc);
+/** Is this stack a Returning Disc (the thrown weapon)? Not a Music Disc: those carry `disc` (their tune) and go in a Jukebox. */
+export const isDisc = (st) => !!(st && ITEMS[st.id] && ITEMS[st.id].weapon && ITEMS[st.id].weapon.type === 'disc');
 
 /** How far the held stack reaches for a mob (blocks): the glaive's 4.5, a dagger's 2.5, else 3. */
 export function reachOf(st) {

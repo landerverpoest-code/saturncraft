@@ -241,9 +241,11 @@ describe('retrofitting a world', () => {
       expect(c.fv).toBe(CURRENT_FEATURE_VERSION);
       expect(c.modified).toBe(true);
     }
-    const changed = [...w.saved.values()].filter((c) => c.packCache === null);
-    expect(changed.length).toBe(real.changedChunks);
-    for (const c of changed) { expect(c.rev).toBe(4); expect(c.packRev).toBe(-1); }
+    // every chunk visited drops its remembered pack (it still names the old version), changed or not
+    const all = [...w.saved.values()];
+    expect(all.every((c) => c.packCache === null)).toBe(true);
+    for (const c of all) { expect(c.rev).toBe(4); expect(c.packRev).toBe(-1); }
+    expect(all.length).toBeGreaterThanOrEqual(real.changedChunks);
     // a second run has nothing to do
     const again = retrofitSaved(w, { dryRun: false });
     expect(again.scanned).toBe(0); expect(again.current).toBe(found.length);

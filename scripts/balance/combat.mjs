@@ -84,7 +84,7 @@ export const DISC_BLOWS = 2;
 /** Everything the balance checks want to know about one melee or thrown weapon item. */
 export function weaponProfile(id) {
   const d = ITEMS[id], t = d.tool || d.weapon;
-  const disc = !!d.disc;
+  const disc = !!(d.weapon && d.weapon.type === 'disc');
   const damage = disc ? t.throwDamage : t.damage;
   const blowsPerSec = disc ? DISC_BLOWS / (DISC_CYCLE_TICKS / 20) : t.attackSpeed;
   const dagger = t.type === 'dagger', glaive = t.type === 'glaive';

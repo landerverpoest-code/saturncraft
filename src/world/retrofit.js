@@ -245,10 +245,9 @@ export function retrofitSaved(world, { dryRun = true, limit = 150 } = {}) {
     if (plan.placed || plan.biomes) report.changedChunks++;
     if (dryRun) continue;
     const next = { ...c, fv: CURRENT_FEATURE_VERSION, modified: true };
-    if (plan.result) {
-      Object.assign(next, plan.result);
-      next.rev = (c.rev || 0) + 1; next.packCache = null; next.packRev = -1; // so the next save writes the new copy
-    }
+    if (plan.result) Object.assign(next, plan.result);
+    // so the next save writes the new copy (a chunk nothing was placed in needs it too: its remembered pack still says the old version)
+    next.rev = (c.rev || 0) + 1; next.packCache = null; next.packRev = -1;
     world.saved.set(k, next);
   }
   return report;
