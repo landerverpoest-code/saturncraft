@@ -19,6 +19,7 @@
 //   sendCommand(text), requestTravel(dim, arrival), requestExplosion(...), sendVibration(k, x, y, z), sendNote(x, y, z),
 //   onSwitchDimension(dim, pos), onArrived(x, y, z), respawnNearHost(), useFence(x, y, z)
 import { doubleChestHalves, doubleChestView } from '../world/chests.js';
+import { saveRules, loadRules } from '../world/gameRules.js';
 import { igniteTNT, PrimedTNT } from '../entities/tnt.js';
 import { useStand, punchStand } from '../entities/armorStand.js';
 import {
@@ -684,7 +685,7 @@ export class HostSession extends Session {
     c.ch.send({
       t: 'welcome', v: PROTOCOL_VERSION, id: c.id, name, hostName: this.name,
       seed: g.seed, time: g.time, weather: g.weather.save(), gamemode: p.gamemode, dim: g.world.dimension,
-      dl: g.daylightCycle, df: g.difficulty, pvp: this.pvp, gc: this.guestCommands, ffa: this.friendlyFireAll, mp: this.maxPlayers, se: g.seasons.save(), ev: g.worldEvents ? g.worldEvents.syncOut() : undefined,
+      dl: g.daylightCycle, df: g.difficulty, pvp: this.pvp, gc: this.guestCommands, ffa: this.friendlyFireAll, mp: this.maxPlayers, se: g.seasons.save(), ev: g.worldEvents ? g.worldEvents.syncOut() : undefined, wr: saveRules(g.settings), wb: g.border ? g.border.save() : null,
       soc: 1, teams: soc.teamsToWire(), wps: soc.waypointsToWire(name), // optional: the social layer (net/social.js); older guests ignore both
       worldSpawn: g.worldSpawn, pos: { x: p.x, y: p.y, z: p.z, yaw: p.yaw },
       player: (ghost && ghost.rec) || g.netPlayers[name] || null, back: ghost ? 1 : undefined,
@@ -1224,7 +1225,7 @@ export class HostSession extends Session {
   sendEnv() {
     const g = this.game;
     // rb: the raid under way (mobs/raids.js raidStatus): guests near the village show its bar
-    this.broadcast({ t: 'env', time: g.time, w: g.weather.save(), dl: g.daylightCycle, df: g.difficulty, pvp: this.pvp, gc: this.guestCommands, ffa: this.friendlyFireAll, mp: this.maxPlayers, se: g.seasons.save(), ev: g.worldEvents ? g.worldEvents.syncOut() : undefined, rb: g.raids && g.raids.status ? g.raids.status() : null });
+    this.broadcast({ t: 'env', time: g.time, w: g.weather.save(), dl: g.daylightCycle, df: g.difficulty, pvp: this.pvp, gc: this.guestCommands, ffa: this.friendlyFireAll, mp: this.maxPlayers, se: g.seasons.save(), ev: g.worldEvents ? g.worldEvents.syncOut() : undefined, wr: saveRules(g.settings), wb: g.border ? g.border.save() : null, rb: g.raids && g.raids.status ? g.raids.status() : null });
   }
 
   /** Night is skipped once everybody has been asleep for a while (the host in bed for 5 s). */
@@ -1577,6 +1578,13 @@ export class ClientSession extends Session {
    * The host's calendar (`se`: { on, days, offset }, optional so older hosts still work). The season itself
    * follows the synced world time, so only the season length, the offset and the on/off rule travel.
    */
+  /** The host's world rules and world border, when it sends them (older hosts do not): `wr` and `wb` of welcome / env. */
+  applyWorldRules(m) {
+    const g = this.game;
+    if (m.wr && typeof m.wr === 'object') loadRules(g.settings, m.wr);
+    if (g.border && m.wb !== undefined) g.border.load(m.wb);
+  }
+
   applySeasons(se) {
     const g = this.game;
     if (!se || typeof se !== 'object' || !g || !g.seasons) return;
@@ -1601,6 +1609,7 @@ export class ClientSession extends Session {
     if (game.proving) game.proving.vaults.load(w.vaults);
     if (typeof w.dl === 'boolean') game.settings.daylightCycle = w.dl;
     if (typeof w.df === 'string') game.settings.difficulty = w.df;
+    this.applyWorldRules(w);
     this.applySeasons(w.se);
     if (game.worldEvents) game.worldEvents.syncIn(w.ev);
     game.spawner.enabled = false;
@@ -1671,6 +1680,7 @@ export class ClientSession extends Session {
         g.weather.load(m.w);
         if (typeof m.dl === 'boolean') g.settings.daylightCycle = m.dl;
         if (typeof m.df === 'string') g.settings.difficulty = m.df;
+        this.applyWorldRules(m);
         this.applySeasons(m.se);
         if (g.worldEvents) g.worldEvents.syncIn(m.ev); // optional: world events (world/events.js)
         this.setOptions(m);

@@ -1,6 +1,8 @@
 // Game orchestrator: fixed 20 TPS simulation with interpolated rendering.
 import { setActiveRules, rule } from './world/gameRules.js';
 import { columnAt } from './world/coldCurrents.js';
+import { WorldBorder, enforceBorder } from './world/border.js';
+import { BorderWall } from './render/borderWall.js';
 import { Mob } from './mobs/mob.js';
 import { newHopper, hopperStep, HOPPER_COOLDOWN } from './world/hoppers.js';
 import { newDispenser, dispense } from './world/dispensers.js';
@@ -191,6 +193,8 @@ export class Game {
     // including the hundreds of static chunk meshes
     this.scene.matrixAutoUpdate = false;
     this.beaconBeams = new BeaconBeams(this.scene);
+    this.border = new WorldBorder(); // the world border (world/border.js): off until /worldborder narrows it
+    this.borderWall = new BorderWall(this.scene);
     this.camera = new THREE.PerspectiveCamera(s.fov, window.innerWidth / window.innerHeight, 0.05, 1200);
     this.scene.add(this.camera);
     this.scene.fog = new THREE.Fog(0x88aaff, 50, 120);
@@ -1401,6 +1405,13 @@ export class Game {
     if (this.ticks % 4 === 0 && this.hud.bossBar) this.hud.bossBar(bossBarInfo(this.entities.list, p.x, p.y, p.z)); // the boss bar of a Slag Colossus
     p.difficulty = this.difficulty;
     if (!this.dims.pending && this.chunks.isAreaReady(p.x, p.z, 0)) this.player.tick(this.world, p.sleeping || p.riding ? still : mv);
+    // the world border stops the player at its wall and hurts one it has passed over (world/border.js)
+    if (!(this.net && this.net.isClient)) this.border.tick();
+    if (this.border.active && !p.dead && p.gamemode !== 'spectator') {
+      const e = enforceBorder(this.border, p.x, p.z, this.ticks);
+      if (e.x !== p.x || e.z !== p.z) { p.setPosition(e.x, p.y, e.z); p.body.vx = 0; p.body.vz = 0; }
+      if (e.hurt) p.hurt(e.hurt, 'border');
+    }
     else p.prev = { x: p.x, y: p.y, z: p.z };
     if (!blocking) {
       this.interaction.tick({
@@ -1733,6 +1744,7 @@ export class Game {
     const fx = this.postfx.enabled;
     if (fx) this.postfx.begin(); else this.renderer.clear();
     this.beaconBeams.update(sec);
+    this.borderWall.update(this.border, p.x, p.y + 1, p.z, sec);
     this.renderer.render(this.scene, this.camera);
     if (this.perspective === 0 && !zoom) this.held.render(this.renderer, alpha, sec);
     if (fx) {

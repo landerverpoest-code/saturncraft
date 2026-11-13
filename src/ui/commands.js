@@ -1,5 +1,6 @@
 // Chat commands (T or / opens the chat). Each returns a message to print.
 import { WORLD_RULES, WORLD_RULE_NAMES } from '../world/gameRules.js';
+import { borderCommand } from '../world/border.js';
 import { describeWaymark } from '../player/waymark.js';
 import { BIOMES } from '../world/biomes.js';
 import { ITEMS, I, maxStack } from '../world/items.js';
@@ -103,6 +104,7 @@ export const HELP = [
   '/gamemode <survival|creative|adventure|spectator>  (or /gm 0|1|2|3)',
   '/time set <day|night|noon|midnight|ticks>,  /time add <ticks>,  /time query',
   '/gamerule <' + WORLD_RULE_NAMES.join('|') + '> <true|false>',
+  '/worldborder [set <size> [seconds] | add <blocks> [seconds] | center <x> <z> | center here | off]',
   '/gamerule doDaylightCycle <true|false>,  /gamerule doSeasons <true|false>,  /gamerule doHostileSpawning <true|false>,  /gamerule doWorldEvents <true|false>,  /gamerule fireworksHurtPlayers <true|false>',
   '/event  (list),  /event trigger <starfall|dust|fog|festival|hush>,  /event stop <kind|all>  (world events: creative players and the host)',
   '/season  (query),  /season set <spring|summer|autumn|winter>,  /season length <days>',
@@ -128,7 +130,7 @@ export const HELP = [
 ];
 
 /** Commands that change the world or the player; a world made with cheats off (world creation options) refuses them. */
-export const CHEAT_COMMANDS = new Set(['gamemode', 'gm', 'time', 'season', 'event', 'events', 'difficulty', 'gamerule', 'weather', 'tp', 'teleport', 'give', 'enchant', 'summon', 'xp', 'experience', 'kill', 'effect', 'raid', 'caravan', 'heal', 'clear', 'spawnpoint', 'dimension', 'dim', 'retrofit', ...BUILD_COMMANDS]);
+export const CHEAT_COMMANDS = new Set(['worldborder', 'wb', 'gamemode', 'gm', 'time', 'season', 'event', 'events', 'difficulty', 'gamerule', 'weather', 'tp', 'teleport', 'give', 'enchant', 'summon', 'xp', 'experience', 'kill', 'effect', 'raid', 'caravan', 'heal', 'clear', 'spawnpoint', 'dimension', 'dim', 'retrofit', ...BUILD_COMMANDS]);
 
 export function runCommand(game, text) {
   const p = game.player;
@@ -201,6 +203,7 @@ export function runCommand(game, text) {
       game.setSetting('difficulty', d);
       return `The difficulty has been set to ${d[0].toUpperCase() + d.slice(1)}`;
     }
+    case 'worldborder': case 'wb': return game.border ? borderCommand(game.border, args, p) : 'There is no border here';
     case 'gamerule': {
       const usage = `Usage: /gamerule <${Object.keys(GAME_RULES).join('|')}> [true|false]  or  /gamerule maxBuildVolume [blocks]`;
       const num = Object.keys(NUMERIC_RULES).find((k) => k.toLowerCase() === (args[0] || '').toLowerCase());

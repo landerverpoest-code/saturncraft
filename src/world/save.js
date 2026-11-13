@@ -122,6 +122,7 @@ export function buildSaveData(game) {
     pots: [...(game.pots || new Map())], // Decorated Pots' sherds (world/archaeology.js)
     lecterns: [...(game.lecterns || new Map())], // the books on Lecterns and their open pages (world/books.js)
     campfires: [...(game.campfires || new Map())], // the foods cooking on Campfires (world/campfireCooking.js)
+    border: game.border ? game.border.save() : null, // the world border (world/border.js)
     proving: game.proving ? game.proving.save() : null, // Proving Spawner rests and who opened which Vault (world/provingSystem.js)
     maps: [...game.maps.values()].map(encodeMap),
     explored: game.explored ? game.explored.save() : undefined, // the chunks the player has been near (player/cartographer.js)
@@ -201,6 +202,7 @@ export function applySave(game, data) {
   game.netPlayers = data.netPlayers || {};
   game.guestBlueprints = {};
   for (const [k, v] of Object.entries(data.guestBlueprints || {})) game.guestBlueprints[k] = cleanBlueprints(v);
+  if (game.border) game.border.load(data.border);
   if (data.social) game.social = SocialState.from(data.social);
   if (data.hostSettings) game.hostSettings = cleanHostSettings(data.hostSettings);
   game.weather.load(data.weather);

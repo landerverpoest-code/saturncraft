@@ -2161,7 +2161,7 @@ export class UI {
       fall: 'hit the ground too hard', lava: 'tried to swim in lava', fire: 'burned to death', drown: 'drowned',
       starve: 'starved to death', cactus: 'was pricked to death', berry_bush: 'was poked to death by a sweet berry bush', void: 'fell out of the world', explosion: 'was blown up',
       arrow: 'was shot by a Rattler', poison: 'succumbed to poison', magic: 'was killed by magic', wither: 'withered away',
-      wall: 'experienced kinetic energy', freeze: 'froze to death', hot_floor: 'discovered the floor was scalding',
+      wall: 'experienced kinetic energy', freeze: 'froze to death', border: 'left the confines of this world', hot_floor: 'discovered the floor was scalding',
     };
     const text = msgs[cause] || (cause && cause.startsWith('mob:') ? `was slain by a ${cause.slice(4)}` : cause && cause.startsWith('player:') ? `was slain by ${cause.slice(7)}` : 'died');
     const s = el(`<div class="screen" id="death-screen"><h2>You Died!</h2><p class="sub">Player ${text}</p>${this.game.hardcoreOver ? '<p class="sub">This was a One Life world: it can only be watched now.</p>' : ''}<button class="btn">${this.game.hardcoreOver ? 'Watch the world' : 'Respawn'}</button></div>`);

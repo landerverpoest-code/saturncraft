@@ -91,7 +91,7 @@ export function buildTopics({ table, touch = false, pad = false } = {}) {
       'Three suns cross the sky, so days are long and nights are dark and busy with monsters. The sky dial at the top right shows the time.',
       'Beds set your spawn point and skip the night when you sleep in them. With no bed you return to the world spawn.',
       'If you die, everything you carried drops where you fell and most of your experience is lost: go back for it quickly.',
-      'A world has rules of its own (/gamerule): keepInventory keeps your things through a death; fallDamage, drowningDamage and fireDamage switch those hurts off; naturalRegeneration, mobGriefing, doFireTick, doWeatherCycle, doMobLoot, doTileDrops and blastsLightFires change how the world behaves. A One Life world (More world options) is survival on Hard without cheats: when you die there, the world can only be watched.',
+      'A world has rules of its own (/gamerule): keepInventory keeps your things through a death; fallDamage, drowningDamage and fireDamage switch those hurts off; naturalRegeneration, mobGriefing, doFireTick, doWeatherCycle, doMobLoot, doTileDrops and blastsLightFires change how the world behaves. /worldborder set <size> [seconds] puts a square wall around the world (centre it with /worldborder center here): it stops you, and hurts whoever it closes over. A One Life world (More world options) is survival on Hard without cheats: when you die there, the world can only be watched.',
       'Monsters spawn in the dark, so torches keep an area safe. A shelter, a shield and armour help in a fight.',
     ] },
   ]);

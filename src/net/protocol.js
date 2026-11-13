@@ -336,7 +336,7 @@ export function roomFor(slots, st, maxStackOf, stackable = true) {
 }
 
 /** Chat commands that change the shared world: guests have the host run them. */
-export const WORLD_COMMANDS = new Set(['time', 'weather', 'gamerule', 'season', 'event', 'events', 'summon', 'dimension', 'dim',
+export const WORLD_COMMANDS = new Set(['time', 'weather', 'gamerule', 'worldborder', 'wb', 'season', 'event', 'events', 'summon', 'dimension', 'dim',
   // creative building tools (ui/buildCommands.js): the host edits the world for the guest who asks. /wand is not here: the item goes in the guest's own bag.
   'pos1', 'pos2', 'sel', 'fill', 'replace', 'replacenear', 'clone', 'undo', 'redo', 'copy', 'cut', 'paste', 'rotate', 'flip', 'mirror', 'blueprint', 'bp', 'sphere', 'cyl', 'line', 'build']);
 export function commandName(text) { return (String(text).trim().replace(/^\//, '').split(/\s+/)[0] || '').toLowerCase(); }
