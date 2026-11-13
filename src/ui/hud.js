@@ -421,6 +421,9 @@ export class HUD {
     this.ov.fire.classList.toggle('hidden', !(p.fireTicks > 0 && !b.inWater));
     const vign = this.ov.vign;
     vign.style.background = p.hurtTime > 0 ? `radial-gradient(ellipse at center, transparent 50%, rgba(200,0,0,${p.hurtTime / 22}) 100%)` : (p.health <= 4 ? 'radial-gradient(ellipse at center, transparent 60%, rgba(120,0,0,.35) 100%)' : '');
+    // frost creeping in from the edges while Driftsnow freezes you (world/coldCurrents.js)
+    const fr = (p.frost || 0) / 140;
+    if (fr > 0 && !vign.style.background) vign.style.background = `radial-gradient(ellipse at center, transparent ${Math.round(70 - fr * 40)}%, rgba(205,228,255,${(0.25 + fr * 0.5).toFixed(2)}) 100%)`;
     this.tickGhostFace();
     this.updateCaptions();
     // Darkness from Hush Shriekers: black closing in from the edges in waves (game.render works out how dark)

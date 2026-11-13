@@ -47,6 +47,7 @@ export const FEATURES = [
   { key: 'iceberg', since: 7, label: 'Icebergs', link: 3 },
   { key: 'frozenHulk', since: 7, label: 'Icebound Hulks', link: 3 },
   { key: 'villageBoards', since: 7, label: 'village Bounty Boards', link: 1 },
+  { key: 'coldCurrents', since: 8, label: 'Driftsnow hollows and sea vents', link: 2 },
 ];
 export const CURRENT_FEATURE_VERSION = Math.max(...FEATURES.map((f) => f.since));
 export const FEATURE_KEYS = FEATURES.map((f) => f.key);

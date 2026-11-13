@@ -715,6 +715,7 @@ describe('world creation options', () => {
       name: 'My bWorld/b', seedText: 'cheese', worldType: 'normal', // flat is not offered: the generator has no flat mode
       gamemode: 'creative', difficulty: 'hard', allowCheats: false, seasons: false, startSeason: 'winter', seasonDays: 120,
       daylightCycle: false, hostileMobs: false, worldEvents: false, fireworksHurtPlayers: true,
+      keepInventory: false, hardcore: false, // (world/gameRules.js, One Life worlds)
     });
     const junk = cleanOptions({ gamemode: 'spectator', difficulty: 'impossible', startSeason: 'monsoon', allowCheats: 'yes', seasonDays: 'x', name: 'y'.repeat(100) });
     expect(junk).toMatchObject({ gamemode: 'survival', difficulty: 'normal', startSeason: 'spring', allowCheats: true, seasonDays: 8 });

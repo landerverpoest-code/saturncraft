@@ -5,6 +5,7 @@ import { PHYS, groundAccel } from './constants.js';
 import { BLOCKS, SOLID, B, WATERLOGGED, isWaterish } from '../world/blocks.js';
 import { liquidHeight } from '../world/mesher.js';
 import { collisionBoxes, SHAPED_COLLISION, SCAFFOLD_CTX } from '../world/shapes.js';
+import { columnAt, columnSpeed } from '../world/coldCurrents.js';
 
 const EPS = 1e-7;
 
@@ -37,7 +38,11 @@ export class Body {
     const z0 = Math.floor(minZ), z1 = Math.floor(maxZ - EPS);
     for (let x = x0; x <= x1; x++) for (let z = z0; z <= z1; z++) for (let y = y0; y <= y1; y++) {
       const id = world.getBlock(x, y, z);
-      if (!SOLID[id]) continue;
+      if (!SOLID[id]) {
+        // Driftsnow carries whoever wears Leather Boots, stands above its top and does not sneak (world/coldCurrents.js)
+        if (id === B.DRIFTSNOW && SCAFFOLD_CTX.snowWalk && !SCAFFOLD_CTX.sneak && SCAFFOLD_CTX.feetY >= y + 1 - 1e-4) out.push(x, y, z, x + 1, y + 1, z + 1);
+        continue;
+      }
       const shaped = SHAPED_COLLISION[id] ? collisionBoxes(id, world.getMeta(x, y, z), world, x, y, z) : null;
       if (shaped) for (const s of shaped) out.push(x + s[0], y + s[1], z + s[2], x + s[3], y + s[4], z + s[5]);
       else out.push(x, y, z, x + 1, y + 1, z + 1);
@@ -71,8 +76,8 @@ export class Body {
 
   /** Move with collisions and step-up (scaffolding holds up whoever is above its top and not sneaking). */
   move(world, dx, dy, dz, sneakEdge = false) {
-    SCAFFOLD_CTX.feetY = this.y; SCAFFOLD_CTX.sneak = sneakEdge;
-    try { this.moveInner(world, dx, dy, dz, sneakEdge); } finally { SCAFFOLD_CTX.feetY = -Infinity; SCAFFOLD_CTX.sneak = false; }
+    SCAFFOLD_CTX.feetY = this.y; SCAFFOLD_CTX.sneak = sneakEdge; SCAFFOLD_CTX.snowWalk = !!this.snowWalker;
+    try { this.moveInner(world, dx, dy, dz, sneakEdge); } finally { SCAFFOLD_CTX.feetY = -Infinity; SCAFFOLD_CTX.sneak = false; SCAFFOLD_CTX.snowWalk = false; }
   }
 
   moveInner(world, dx, dy, dz, sneakEdge) {
@@ -140,7 +145,7 @@ export class Body {
   /** Update inWater/inLava flags from overlapping fluid blocks. */
   updateFluidState(world, eyeHeight) {
     const b = this.box();
-    this.inWater = false; this.inLava = false; this.eyeInWater = false; this.eyeInLava = false; this.inFire = false; this.inWeb = false; this.inBerry = false; this.inBlight = false;
+    this.inWater = false; this.inLava = false; this.eyeInWater = false; this.eyeInLava = false; this.inFire = false; this.inWeb = false; this.inBerry = false; this.inBlight = false; this.inDrift = false; this.eyeInDrift = false; this.column = 0;
     const ey = this.y + eyeHeight;
     const flow = [0, 0, 0];
     for (let x = Math.floor(b[0] + 0.001); x <= Math.floor(b[3] - 0.001); x++)
@@ -149,6 +154,7 @@ export class Body {
           const id = world.getBlock(x, y, z);
           if (id === B.FIRE) { this.inFire = true; continue; }
           if (id === B.COBWEB) { this.inWeb = true; continue; }
+          if (id === B.DRIFTSNOW) { this.inDrift = true; if (Math.floor(this.x) === x && Math.floor(this.z) === z && ey >= y && ey < y + 1) this.eyeInDrift = true; continue; }
           if (id === B.SWEET_BERRY_BUSH) { this.inBerry = true; continue; }
           if (id === B.BLIGHT_ROSE) { this.inBlight = true; continue; }
           if (WATERLOGGED[id]) { // kelp and seagrass stand in still, full water
@@ -166,6 +172,14 @@ export class Body {
             if (id === B.WATER) this.eyeInWater = true; else this.eyeInLava = true;
           }
         }
+    // a column of bubbles over Mournsand lifts, one over Scaldrock drags down (world/coldCurrents.js)
+    if (this.inWater && !this.noCurrent) {
+      const fx = Math.floor(this.x), fz = Math.floor(this.z);
+      let wy = Math.floor(b[1] + 0.001);
+      if (world.getBlock(fx, wy, fz) !== B.WATER) wy++; // feet on the floor block's top edge
+      if (world.getBlock(fx, wy, fz) === B.WATER) this.column = columnAt(world, fx, wy, fz);
+      if (this.column) this.vy = columnSpeed(this.vy, this.column);
+    }
     // currents: flowing water (and, slowly, lava) pushes whatever is in it, as in the reference
     const fl = Math.hypot(flow[0], flow[1], flow[2]);
     if (fl > 0 && !this.noCurrent) {
@@ -191,6 +205,7 @@ export class Body {
     if (input.crawl) { fwd *= PHYS.CRAWL_MULTIPLIER; str *= PHYS.CRAWL_MULTIPLIER; } // crawling is as slow (no ledge stop)
     let speed = (input.speed ?? PHYS.WALK_SPEED) * (input.sprint ? PHYS.SPRINT_MULTIPLIER : 1);
     if (this.inBerry && !this.inWeb) { this.vx *= 0.8; this.vz *= 0.8; this.vy = Math.max(this.vy, -0.25); } // pushing through a berry bush
+    if (this.inDrift && !this.inWeb) { this.vx *= 0.55; this.vz *= 0.55; this.vy = input.jump ? 0.09 : Math.max(this.vy * 0.4, -0.05); this.fallDistance = 0; speed *= 0.55; } // wading through Driftsnow
     if (this.inWeb) { this.vx *= 0.25; this.vy *= 0.05; this.vz *= 0.25; this.fallDistance = 0; speed *= 0.25; } // stuck in a cobweb
 
     if (this.inWater || this.inLava) {

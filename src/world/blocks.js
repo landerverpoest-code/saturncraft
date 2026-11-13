@@ -895,6 +895,15 @@ ext('PACKED_ICE'); ext('CARTOGRAPHERS_TABLE');
 def(B.PACKED_ICE, 'Packed Ice', { hardness: 0.7, resistance: 0.7, tool: TOOL.PICKAXE, sound: 'glass', slipperiness: 0.98 });
 def(B.CARTOGRAPHERS_TABLE, "Cartographer's Table", { hardness: 2.5, resistance: 2.5, tool: TOOL.AXE, sound: 'wood', flammable: true, tex: { top: 'cartographers_table_top', bottom: 'birch_planks', side: 'cartographers_table_side' } });
 
+
+// Content pack 7 (appended, no id shifts; world/coldCurrents.js): Driftsnow gives way under whoever steps on it and freezes
+// them, Scaldrock burns feet and drags still water down (Mournsand lifts it), the Echo Coffer opens its owner's own store
+// wherever it stands (player/echoCoffer.js).
+ext('DRIFTSNOW'); ext('SCALDROCK'); ext('ECHO_COFFER');
+def(B.DRIFTSNOW, 'Driftsnow', { hardness: 0.25, resistance: 0.25, tool: TOOL.SHOVEL, solid: false, opaque: false, opacity: 2, sound: 'snow' });
+def(B.SCALDROCK, 'Scaldrock', { hardness: 0.5, resistance: 0.5, tool: TOOL.PICKAXE, tier: TIER.WOOD, emit: 3, hot: true });
+def(B.ECHO_COFFER, 'Echo Coffer', { hardness: 22.5, resistance: 600, tool: TOOL.PICKAXE, tier: TIER.WOOD, emit: 7, tex: { top: 'echo_coffer_top', bottom: 'echo_coffer_top', side: 'echo_coffer_side', front: 'echo_coffer_front' } });
+
 export const NUM_BLOCKS = BLOCKS.length;
 
 // Flat lookup tables used by hot loops (mesher, lighting, physics) and workers.

@@ -1,4 +1,5 @@
 // Menus and container screens (inventory, workbench, furnace).
+import { echoStore } from '../player/echoCoffer.js';
 import { doubleChestHalves, doubleChestView } from '../world/chests.js';
 import { createLazyRenderer } from './lazyIcons.js';
 import { iconURL, stackHTML, stackIconURL, tooltipHTML, effectIconURL, setWornArmor } from './icons.js';
@@ -714,6 +715,37 @@ export class UI {
     });
     this.chest = c;
     if (this.game.net && this.game.net.isClient) this.game.net.openContainer(halves ? 'chest2' : 'chest', c.x, c.y, c.z, c); // the host's chest
+  }
+
+  /** The Echo Coffer: the player's own 27 slots, the same behind every coffer (player/echoCoffer.js). Nothing is sent to anyone. */
+  openEchoCoffer() {
+    this.game.input.unlock();
+    const slots = echoStore(this.game.player), n = slots.length;
+    const inv = this.game.player.inventory;
+    const insert = (to, from, end, st) => {
+      let left = st.count;
+      for (let k = from; k < end && left; k++) { const s = to[k]; if (canStack(s, st)) { const q = Math.min(left, maxStack(s.id) - s.count); s.count += q; left -= q; } }
+      for (let k = from; k < end && left; k++) if (!to[k]) { to[k] = { ...st, count: left }; left = 0; }
+      return left;
+    };
+    this.showContainer('chest', 'Echo Coffer', (panel) => {
+      const grid = el('<div class="grid" style="grid-template-columns:repeat(9,var(--slot));margin:0 auto 12px;width:max-content"></div>');
+      for (let i = 0; i < n; i++) {
+        grid.appendChild(this.makeSlot(() => slots[i], (v) => { slots[i] = v; }, {
+          quickMove: () => { const st = slots[i]; const left = insert(inv.slots, 0, 36, st); slots[i] = left ? { ...st, count: left } : null; },
+        }));
+      }
+      panel.appendChild(grid);
+      panel.appendChild(this.inventoryGrid({
+        accept: (st) => {
+          const left = insert(slots, 0, n, st);
+          if (left === st.count) return false;
+          if (left) { st.count = left; return 'partial'; }
+          return true;
+        },
+      }));
+    });
+    if (this.game.milestones) this.game.milestones.event('echo');
   }
 
   /** The 27-slot storage of a Chest Boat or a Minecart with Chest (the same screen as a chest; a guest asks the host through the 'cargo' container). */
@@ -2129,7 +2161,7 @@ export class UI {
       fall: 'hit the ground too hard', lava: 'tried to swim in lava', fire: 'burned to death', drown: 'drowned',
       starve: 'starved to death', cactus: 'was pricked to death', berry_bush: 'was poked to death by a sweet berry bush', void: 'fell out of the world', explosion: 'was blown up',
       arrow: 'was shot by a Rattler', poison: 'succumbed to poison', magic: 'was killed by magic', wither: 'withered away',
-      wall: 'experienced kinetic energy',
+      wall: 'experienced kinetic energy', freeze: 'froze to death', hot_floor: 'discovered the floor was scalding',
     };
     const text = msgs[cause] || (cause && cause.startsWith('mob:') ? `was slain by a ${cause.slice(4)}` : cause && cause.startsWith('player:') ? `was slain by ${cause.slice(7)}` : 'died');
     const s = el(`<div class="screen" id="death-screen"><h2>You Died!</h2><p class="sub">Player ${text}</p>${this.game.hardcoreOver ? '<p class="sub">This was a One Life world: it can only be watched now.</p>' : ''}<button class="btn">${this.game.hardcoreOver ? 'Watch the world' : 'Respawn'}</button></div>`);

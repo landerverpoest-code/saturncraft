@@ -1,11 +1,13 @@
 // The player: physics body, survival stats and environmental damage.
 import { rule, DAMAGE_RULES } from '../world/gameRules.js';
+import { frostStep, FROST } from '../world/coldCurrents.js';
+import { I as ITEM_IDS } from '../world/items.js';
 import { Body } from '../physics/body.js';
 import { PHYS, fallDamage } from '../physics/constants.js';
 import { isStalagmiteTip, stalagmiteFallDamage } from '../world/caves.js';
 import { HungerManager, EXHAUSTION, MAX_HEALTH, MAX_AIR, SPRINT_MIN_FOOD } from './survival.js';
 import { Inventory } from './inventory.js';
-import { B, SOLID } from '../world/blocks.js';
+import { B, SOLID, BLOCKS } from '../world/blocks.js';
 import { I, ITEMS } from '../world/items.js';
 import { MIN_Y } from '../world/constants.js';
 import { armorReduce, armorTotals, wearArmor, BYPASSES_ARMOR } from './armor.js';
@@ -19,7 +21,8 @@ import { gliderUsable, canStartGliding, glideStep, rocketBoost, wallDamage, wear
 import { gearBonuses } from './gear.js';
 import { EFFECTS, addEffect as stackEffect, tickEffects, effectLevel, speedFactor, jumpBonus, fallDamageWithEffects, periodicActions, instantAmount, resistanceFactor } from './effects.js';
 
-const FIRE_SOURCES = new Set(['fire', 'lava', 'fireball']);
+const FIRE_SOURCES = new Set(['fire', 'lava', 'fireball', 'hot_floor']);
+const LEATHER_ARMOR = new Set([ITEM_IDS.LEATHER_HELMET, ITEM_IDS.LEATHER_CHESTPLATE, ITEM_IDS.LEATHER_LEGGINGS, ITEM_IDS.LEATHER_BOOTS]);
 const WARDED_SOURCES = new Set(['arrow', 'explosion', 'fireball', 'magic', 'thrown', 'sonic']); // (a Warding Amulet also stops what creatures deal: player/trinkets.js)
 const NO_PROTECT = new Set(['void', 'kill', 'starve', 'generic']);
 
@@ -181,7 +184,7 @@ export class Player {
     this.health = MAX_HEALTH; this.absorption = 0;
     this.hunger = new HungerManager();
     this.air = MAX_AIR;
-    this.fireTicks = 0;
+    this.fireTicks = 0; this.frost = 0;
     this.effects = {};
     this.setPosition(this.spawn.x, this.spawn.y, this.spawn.z);
   }
@@ -320,6 +323,17 @@ export class Player {
       this.hurt(1, 'fire');
     }
     if (b.inWater) this.fireTicks = 0;
+    // Driftsnow: the frost builds while you are in it, unless you wear leather; at full frost it bites (world/coldCurrents.js)
+    const armor = this.inventory.armor;
+    b.snowWalker = !!(armor[3] && armor[3].id === ITEM_IDS.LEATHER_BOOTS);
+    const warm = this.creative || this.gamemode === 'spectator' || armor.some((s) => s && LEATHER_ARMOR.has(s.id));
+    this.frost = frostStep(this.frost || 0, b.inDrift, warm);
+    if (b.inDrift) this.fireTicks = 0;
+    if (this.frost >= FROST.full && b.inDrift && this.attackTicks % FROST.every === 0) this.hurt(FROST.damage, 'freeze');
+    // a column of bubbles carries air
+    if (b.column && b.eyeInWater) this.air = Math.min(MAX_AIR, this.air + 6);
+    // Scaldrock burns bare feet (1 per second; not while sneaking, not with Fire Resistance)
+    if (!this.creative && !this.sneaking && b.onGround && (BLOCKS[world.getBlock(Math.floor(b.x), Math.floor(b.y - 0.01), Math.floor(b.z))] || {}).hot && this.attackTicks % 20 === 0) this.hurt(1, 'hot_floor');
     // walking through a grown berry bush pricks (reference: 1 damage while moving)
     if (b.inBerry && Math.hypot(b.vx, b.vz) > 0.01 && (world.getMeta(Math.floor(b.x), Math.floor(b.y + 0.1), Math.floor(b.z)) & 3) > 0) this.hurt(1, 'berry_bush');
     // touching a Blight Rose withers (reference: Wither I for 2 s, renewed while in it)

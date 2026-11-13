@@ -1,5 +1,6 @@
 // Game orchestrator: fixed 20 TPS simulation with interpolated rendering.
 import { setActiveRules, rule } from './world/gameRules.js';
+import { columnAt } from './world/coldCurrents.js';
 import { Mob } from './mobs/mob.js';
 import { newHopper, hopperStep, HOPPER_COOLDOWN } from './world/hoppers.js';
 import { newDispenser, dispense } from './world/dispensers.js';
@@ -638,6 +639,17 @@ export class Game {
 
   /** Rain on the ground: splashes near the player; puts out burning things. */
   /** Swirls of the active effects' colours around the player (fewer while invisible). */
+  /** Bubbles in the water columns over Mournsand (rising) and Scaldrock (sinking) near the player (world/coldCurrents.js). */
+  columnParticles() {
+    const p = this.player, w = this.world;
+    for (let i = 0; i < 6; i++) {
+      const x = Math.floor(p.x + (Math.random() - 0.5) * 20), y = Math.floor(p.y + (Math.random() - 0.5) * 14), z = Math.floor(p.z + (Math.random() - 0.5) * 20);
+      if (w.getBlock(x, y, z) !== B.WATER) continue;
+      const dir = columnAt(w, x, y, z);
+      if (dir) this.particles.emit(x + 0.2 + Math.random() * 0.6, y + Math.random(), z + 0.2 + Math.random() * 0.6, 0, dir * 0.12, 0, 0.8, 0.92, 1, 14, 0);
+    }
+  }
+
   effectParticles() {
     const p = this.player;
     // (not in first person: points that close to the eyes would cover the view)
@@ -1410,6 +1422,7 @@ export class Game {
     this.quests.tick();
     if (!this.net || this.net.isHost) { this.tickFurnaces(); this.tickBrewing(); this.tickHoppers(); this.tickCampfires(); } // guests see the host's furnaces and alembics
     this.effectParticles();
+    this.columnParticles();
     this.particles.tick();
     if (this.net) this.net.tick();
     if (this.ticks % 1200 === 0) this.autosave(); // autosave every minute
@@ -1691,6 +1704,7 @@ export class Game {
       this.scene.fog.color.setRGB(0.05 * day, 0.17 * day, 0.4 * day); this.scene.fog.near = 2; this.scene.fog.far = 26 * uv.far;
     }
     else if (b.eyeInLava) { this.scene.fog.color.setRGB(0.6, 0.15, 0.02); this.scene.fog.near = 0; this.scene.fog.far = 2; }
+    else if (b.eyeInDrift) { this.scene.fog.color.setRGB(0.86, 0.9, 0.96); this.scene.fog.near = 0; this.scene.fog.far = 1.5; } // buried in Driftsnow
     else { this.scene.fog.near = R * (0.65 - cd * 0.45); this.scene.fog.far = R * (1 - cd * 0.25); this.dims.adjustFog(this.scene.fog, R); }
     {
       // dust storms and ground fog (world/events.js): the fog closes in and takes on a tint; not underground, not under water

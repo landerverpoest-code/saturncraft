@@ -53,7 +53,7 @@ describe('content pack 6: ids and wiring', () => {
     expect(B.HAG_CAULDRON).toBe(1368);
     expect(B.PACKED_ICE).toBe(1369);
     expect(B.CARTOGRAPHERS_TABLE).toBe(1370);
-    expect(NUM_BLOCKS).toBe(1371);
+    expect(NUM_BLOCKS).toBeGreaterThanOrEqual(1371);
     expect(BLOCKS[B.PACKED_ICE].name).toBe('Packed Ice');
     expect(BLOCKS[B.CARTOGRAPHERS_TABLE].name).toBe("Cartographer's Table");
     for (const n of ['packed_ice', 'cartographers_table_top', 'cartographers_table_side']) expect(TEX_NAMES).toContain(n);
@@ -64,12 +64,12 @@ describe('content pack 6: ids and wiring', () => {
     expect(PROTOCOL_VERSION).toBe(2);
   });
   it('lists the new passes in the retrofit, last, in the generator order, as version 7', () => {
-    const tail = FEATURES.slice(-4);
+    const tail = FEATURES.filter((f) => f.since === 7);
     expect(tail.map((f) => f.key)).toEqual(['frozenDeep', 'iceberg', 'frozenHulk', 'villageBoards']);
     for (const f of tail) expect(f.since).toBe(7);
-    expect(CURRENT_FEATURE_VERSION).toBe(7);
+    expect(CURRENT_FEATURE_VERSION).toBeGreaterThanOrEqual(7);
     const calls = [...src('src/world/generator.js').matchAll(/this\.pass\('([A-Za-z]+)'/g)].map((m) => m[1]);
-    expect(calls.slice(-4)).toEqual(['frozenDeep', 'iceberg', 'frozenHulk', 'villageBoards']);
+    expect(calls.slice(calls.indexOf('frozenDeep')).slice(0, 4)).toEqual(['frozenDeep', 'iceberg', 'frozenHulk', 'villageBoards']);
   });
   it('knows the new landmarks, /locate words, Field Guide notes and milestones', () => {
     for (const k of ['iceberg', 'hulk']) { expect(LANDMARK_BY_KEY[k]).toBeTruthy(); expect(LANDMARK_KINDS.filter((x) => x.key === k)).toHaveLength(1); }

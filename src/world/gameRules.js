@@ -56,7 +56,7 @@ export function loadRules(settings, saved) {
 }
 
 /** Damage sources a rule can switch off: source -> rule name. */
-export const DAMAGE_RULES = { fall: 'fallDamage', stalagmite: 'fallDamage', wall: 'fallDamage', drown: 'drowningDamage', fire: 'fireDamage', lava: 'fireDamage', burn: 'fireDamage' };
+export const DAMAGE_RULES = { fall: 'fallDamage', stalagmite: 'fallDamage', wall: 'fallDamage', drown: 'drowningDamage', fire: 'fireDamage', lava: 'fireDamage', burn: 'fireDamage', hot_floor: 'fireDamage' };
 
 /** Does this damage source count under the given settings? */
 export function damageCounts(settings, source) {

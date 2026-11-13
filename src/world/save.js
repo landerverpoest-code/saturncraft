@@ -2,6 +2,7 @@
 // mobs. Where and how records are stored (IndexedDB, the world list, backups, repair, export / import) lives in
 // worldManager.js and storage.js; the shape of a record, its version and migrations in saveFormat.js.
 import { saveRules, loadRules } from './gameRules.js';
+import { cleanEcho } from '../player/echoCoffer.js';
 import { cleanWaymark } from '../player/waymark.js';
 import { cleanPotFaces } from './archaeology.js';
 import { cleanLectern } from './books.js';
@@ -77,6 +78,7 @@ export function playerSaveData(p) {
     food: p.hunger.food, saturation: p.hunger.saturation, exhaustion: p.hunger.exhaustion,
     air: p.air, spawn: p.spawn, bed: p.bed || null, slots: p.inventory.slots, armor: p.inventory.armor, trinkets: p.inventory.trinkets, xp: p.xp, gamemode: p.gamemode, flying: p.flying, selected: p.inventory.selected, enchSeed: p.enchSeed,
     effects: p.effects,
+    echo: cleanEcho(p.echo), // the Echo Coffer's store (player/echoCoffer.js)
     reputation: cleanReputation(p.reputation), // what villages think of the player (mobs/reputation.js)
     blueprints: cleanBlueprints(p.blueprints), // named building blueprints (world/buildTools.js, ui/buildCommands.js)
     waymark: cleanWaymark(p.waymark), // the Waymark Compass's target (player/waymark.js)
@@ -254,6 +256,7 @@ export function applyPlayerSave(game, d) {
   if (d.xp) p.xp = { ...d.xp };
   if (Number.isInteger(d.enchSeed)) p.enchSeed = d.enchSeed;
   p.effects = cleanEffects(d.effects);
+  p.echo = cleanEcho(d.echo); // (older saves have an empty store)
   p.reputation = cleanReputation(d.reputation); // (older saves have none)
   p.blueprints = cleanBlueprints(d.blueprints); // (older saves have none)
   p.waymark = cleanWaymark(d.waymark); // (older saves have none)
