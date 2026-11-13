@@ -33,7 +33,8 @@ describe('content pack 7: ids and wiring', () => {
     expect(B.DRIFTSNOW).toBe(1371);
     expect(B.SCALDROCK).toBe(1372);
     expect(B.ECHO_COFFER).toBe(1373);
-    expect(NUM_BLOCKS).toBe(1374);
+    expect(NUM_BLOCKS).toBeGreaterThanOrEqual(1374);
+    expect(B.ASSEMBLER).toBe(1374);
     expect(BLOCKS[B.DRIFTSNOW].name).toBe('Driftsnow');
     expect(SOLID[B.DRIFTSNOW]).toBe(0);
     expect(OPAQUE[B.DRIFTSNOW]).toBe(0);

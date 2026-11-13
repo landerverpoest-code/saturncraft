@@ -8,6 +8,7 @@
 // flying straight along it), and armour goes onto a player standing in front. Anything
 // else is dropped like a Dropper does.
 // Meta: bits 0-2 = facing (FACING6 index: down, up, -z, +z, -x, +x), bit 3 = triggered.
+import { assemble } from './assembler.js';
 import { B, BLOCKS, isFluid } from './blocks.js';
 import { ITEMS, I, isArrow } from './items.js';
 import { FACING6, SIDE_TO_FACING, DISPENSER_TRIGGERED } from './circuitShapes.js';
@@ -18,7 +19,7 @@ import { launchRocket, DISPENSED_SPEED } from '../entities/skyRocket.js';
 export const DISPENSER_SLOTS = 9;
 export const TRIGGERED = DISPENSER_TRIGGERED;
 export { DISPENSE_DELAY } from './circuits.js';
-export const isDispenser = (id) => id === B.DISPENSER || id === B.DROPPER;
+export const isDispenser = (id) => id === B.DISPENSER || id === B.DROPPER || id === B.ASSEMBLER;
 export const newDispenser = (x, y, z) => ({ x, y, z, slots: new Array(DISPENSER_SLOTS).fill(null) });
 export const facingDir = (meta) => FACING6[meta & 7] || FACING6[2];
 
@@ -74,6 +75,7 @@ export function dispense(game, x, y, z, rng = Math.random) {
   const w = game.world, id = w.getBlock(x, y, z);
   if (!isDispenser(id)) return 'fail';
   const d = game.getDispenser(x, y, z), slots = d.slots;
+  if (id === B.ASSEMBLER) return assemble(game, x, y, z, slots, facingDir(w.getMeta(x, y, z)), rng); // craft the grid's recipe (world/assembler.js)
   const i = pickSlot(slots, rng);
   const sound = (s) => { if (game.audio) game.audio.play(s, [x + 0.5, y + 0.5, z + 0.5]); };
   if (i < 0) { sound('click'); return 'empty'; }

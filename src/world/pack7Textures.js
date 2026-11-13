@@ -42,6 +42,20 @@ export const PACK7_TEX = {
       else if (d < 3.3) c.set(x, y, hex('#3b2a52'));
     }
   },
+  // Assembler: an iron face with a 3 x 3 grid of sockets and a cinnabar-red output slot; its top shows the same grid from above
+  assembler_front: (c, { hex, shade }) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, shade(hex('#8f9399'), 0.88 + c.h(x, y, 82) * 0.2));
+    for (let gy = 0; gy < 3; gy++) for (let gx = 0; gx < 3; gx++) for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) c.set(2 + gx * 4 + x, 1 + gy * 3 + y - (gy ? 0 : 0), hex(x === 1 && y === 1 ? '#2a2c30' : '#55585e'));
+    for (let y = 11; y < 15; y++) for (let x = 5; x < 11; x++) c.set(x, y, hex(y === 11 || y === 14 || x === 5 || x === 10 ? '#3a3c40' : '#141518'));
+    c.set(13, 12, hex('#d83a2a')); c.set(13, 13, hex('#8a1f16')); c.set(2, 12, hex('#d83a2a')); c.set(2, 13, hex('#8a1f16'));
+    for (let x = 0; x < 16; x++) { c.set(x, 0, hex('#5d6066')); c.set(x, 15, hex('#5d6066')); }
+  },
+  assembler_top: (c, { hex, shade }) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const edge = x === 0 || x === 15 || y === 0 || y === 15, line = x === 5 || x === 10 || y === 5 || y === 10;
+      c.set(x, y, edge ? hex('#5d6066') : line ? hex('#6f4a2a') : shade(hex('#b08a55'), 0.9 + c.h(x, y, 83) * 0.18));
+    }
+  },
   echo_coffer_top: (c, { hex, shade }) => {
     for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
       const edge = x === 0 || x === 15 || y === 0 || y === 15;

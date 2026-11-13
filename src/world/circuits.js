@@ -69,7 +69,7 @@ const isDoorId = (id) => !!BLOCKS[id] && BLOCKS[id].shape === SHAPE.DOOR;
 const OPENABLE_SHAPE = (id) => !!BLOCKS[id] && (BLOCKS[id].shape === SHAPE.DOOR || BLOCKS[id].shape === SHAPE.TRAPDOOR || BLOCKS[id].shape === SHAPE.GATE);
 export const CIRCUIT_REACT = new Uint8Array(BLOCK_LIMIT);
 for (const id of [B.CINNABAR_WIRE, B.CINNABAR_TORCH, B.CINNABAR_TORCH_OFF, B.CINNABAR_LAMP, B.CINNABAR_LAMP_ON, B.REPEATER,
-  B.PISTON, B.STICKY_PISTON, B.STONE_BUTTON, B.WOODEN_PRESSURE_PLATE, B.CHIME_BLOCK, B.DOOR, B.OAK_TRAPDOOR, B.OAK_FENCE_GATE, B.TNT, B.DISPENSER, B.DROPPER, B.DART_TRAP,
+  B.PISTON, B.STICKY_PISTON, B.STONE_BUTTON, B.WOODEN_PRESSURE_PLATE, B.CHIME_BLOCK, B.DOOR, B.OAK_TRAPDOOR, B.OAK_FENCE_GATE, B.TNT, B.DISPENSER, B.DROPPER, B.ASSEMBLER, B.DART_TRAP,
   B.COMPARATOR, B.OBSERVER, B.DAYLIGHT_SENSOR, B.HUSH_SENSOR, B.CALIBRATED_HUSH_SENSOR, B.TARGET, B.LECTERN,
   B.STONE_PRESSURE_PLATE, B.LIGHT_WEIGHTED_PLATE, B.HEAVY_WEIGHTED_PLATE, B.POWERED_RAIL, B.DETECTOR_RAIL, B.ACTIVATOR_RAIL,
   B.SNARE_POST, B.SNARE_CORD, B.PULSE_GATE]) CIRCUIT_REACT[id] = 1;
@@ -78,7 +78,7 @@ CIRCUIT_REACT[B.COPPER_BULB] = 1; CIRCUIT_REACT[B.COPPER_BULB_LIT] = 1; // Coppe
 /** Blocks re-evaluated when their chunk loads or on random ticks (state may be stale after a reload). */
 export const CIRCUIT_SETTLE = new Uint8Array(BLOCK_LIMIT);
 for (const id of [B.CINNABAR_WIRE, B.CINNABAR_TORCH, B.CINNABAR_TORCH_OFF, B.CINNABAR_LAMP, B.CINNABAR_LAMP_ON, B.REPEATER,
-  B.PISTON, B.STICKY_PISTON, B.STONE_BUTTON, B.WOODEN_PRESSURE_PLATE, B.DISPENSER, B.DROPPER, B.DART_TRAP,
+  B.PISTON, B.STICKY_PISTON, B.STONE_BUTTON, B.WOODEN_PRESSURE_PLATE, B.DISPENSER, B.DROPPER, B.ASSEMBLER, B.DART_TRAP,
   B.COMPARATOR, B.OBSERVER, B.DAYLIGHT_SENSOR, B.HUSH_SENSOR, B.CALIBRATED_HUSH_SENSOR, B.TARGET, B.LECTERN,
   B.STONE_PRESSURE_PLATE, B.LIGHT_WEIGHTED_PLATE, B.HEAVY_WEIGHTED_PLATE, B.POWERED_RAIL, B.DETECTOR_RAIL, B.ACTIVATOR_RAIL,
   B.SNARE_POST, B.PULSE_GATE]) CIRCUIT_SETTLE[id] = 1;
@@ -525,7 +525,7 @@ export class Circuits {
         break;
       }
       case B.TNT: if (powerInto(w, x, y, z) > 0) { const f = this.onTNT || w.onTNT; if (f) this.act(() => f(x, y, z)); } break;
-      case B.DISPENSER: case B.DROPPER: case B.DART_TRAP: {
+      case B.DISPENSER: case B.DROPPER: case B.ASSEMBLER: case B.DART_TRAP: {
         // fire once on a rising edge (after a short delay); the triggered bit remembers the power until it goes away
         const p = powerInto(w, x, y, z) > 0;
         if (p && !(m & DISPENSER_TRIGGERED)) { this.act(() => w.setBlock(x, y, z, id, m | DISPENSER_TRIGGERED, false)); w.scheduleTick(x, y, z, DISPENSE_DELAY); }
@@ -647,7 +647,7 @@ export class Circuits {
         else this.act(() => w.setBlock(x, y, z, id, m & ~RAIL_ON, false));
         break;
       case B.CINNABAR_WIRE: this.updateWire(x, y, z); break;
-      case B.DISPENSER: case B.DROPPER: case B.DART_TRAP: if (this.onDispense) this.onDispense(x, y, z, id); break;
+      case B.DISPENSER: case B.DROPPER: case B.ASSEMBLER: case B.DART_TRAP: if (this.onDispense) this.onDispense(x, y, z, id); break;
       case B.COMPARATOR: {
         const out = comparatorTarget(w, x, y, z, m, this.containerSignal);
         if (out !== comparatorLevel(m)) this.act(() => w.setBlock(x, y, z, id, (m & 15) | (out << 4), false));

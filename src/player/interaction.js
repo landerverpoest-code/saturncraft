@@ -84,7 +84,7 @@ const ORE_XP = {
 };
 const BREAK_DELAY = 5;
 /** Blocks that right-click opens / toggles instead of using the held item. */
-const USABLE_BLOCKS = new Set([B.CARTOGRAPHERS_TABLE, B.ECHO_COFFER, B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.CHEST, B.BARREL, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL, B.BREWING_STAND, B.GLOOMSHELL_BOX, B.HOPPER, B.COMPOSTER, B.SWEET_BERRY_BUSH, B.DEWBERRY_BRAMBLE, B.COOKING_POT, B.COOKING_POT_BREW, B.JUKEBOX, B.CAVE_VINES_LIT, B.FLOWER_POT, B.BEACON, B.DISPENSER, B.DROPPER, B.GRINDSTONE, B.STONECUTTER, B.LECTERN, B.CAKE, B.LOOM, B.BOUNTY_BOARD, B.HAG_CAULDRON, ...BOX_COLORS, B.VAULT]);
+const USABLE_BLOCKS = new Set([B.CARTOGRAPHERS_TABLE, B.ECHO_COFFER, B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.CHEST, B.BARREL, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL, B.BREWING_STAND, B.GLOOMSHELL_BOX, B.HOPPER, B.COMPOSTER, B.SWEET_BERRY_BUSH, B.DEWBERRY_BRAMBLE, B.COOKING_POT, B.COOKING_POT_BREW, B.JUKEBOX, B.CAVE_VINES_LIT, B.FLOWER_POT, B.BEACON, B.DISPENSER, B.DROPPER, B.ASSEMBLER, B.GRINDSTONE, B.STONECUTTER, B.LECTERN, B.CAKE, B.LOOM, B.BOUNTY_BOARD, B.HAG_CAULDRON, ...BOX_COLORS, B.VAULT]);
 const CIRCUIT_USE = new Set([B.LEVER, B.STONE_BUTTON, B.REPEATER, B.CHIME_BLOCK, B.COMPARATOR, B.DAYLIGHT_SENSOR, B.PULSE_GATE]);
 const CIRCUIT_PLACE = new Set([B.LEVER, B.STONE_BUTTON, B.CINNABAR_WIRE, B.REPEATER, B.WOODEN_PRESSURE_PLATE, B.STONE_PRESSURE_PLATE, B.LIGHT_WEIGHTED_PLATE, B.HEAVY_WEIGHTED_PLATE, B.PISTON, B.STICKY_PISTON, B.COMPARATOR, B.OBSERVER, B.DAYLIGHT_SENSOR, B.PULSE_GATE, B.SNARE_POST, B.SNARE_CORD]);
 const USE_DELAY = 4;
@@ -1155,7 +1155,7 @@ export class Interaction {
       }
       if (t.id === B.LECTERN && this.useLectern(t, st)) { this.swing = SWING_TICKS; return true; }
       if (t.id === B.CAKE && this.eatCake(t)) { this.swing = SWING_TICKS; return true; }
-      if (t.id === B.CHEST || t.id === B.BARREL || isBox(t.id) || t.id === B.HOPPER || t.id === B.DISPENSER || t.id === B.DROPPER) { g.ui.openChest(t.x, t.y, t.z); g.audio.play('chest_open', [t.x + 0.5, t.y + 0.5, t.z + 0.5]); this.shake('open', t.x, t.y, t.z); return true; }
+      if (t.id === B.CHEST || t.id === B.BARREL || isBox(t.id) || t.id === B.HOPPER || t.id === B.DISPENSER || t.id === B.DROPPER || t.id === B.ASSEMBLER) { g.ui.openChest(t.x, t.y, t.z); g.audio.play('chest_open', [t.x + 0.5, t.y + 0.5, t.z + 0.5]); this.shake('open', t.x, t.y, t.z); return true; }
     }
     if (t && t.id === B.COMPOSTER && !p.sneaking && this.useComposter(t, st)) { this.swing = SWING_TICKS; return true; }
     if (t && (t.id === B.SWEET_BERRY_BUSH || t.id === B.DEWBERRY_BRAMBLE) && this.useBerryBush(t, st, d)) { this.swing = SWING_TICKS; return true; }
@@ -1349,7 +1349,7 @@ export class Interaction {
       const dx = p.x - (px + 0.5), dz = p.z - (pz + 0.5);
       meta = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 1 : 3) : (dz > 0 ? 2 : 0);
     }
-    if (placeId === B.DISPENSER || placeId === B.DROPPER || placeId === B.DART_TRAP) meta = dispenserPlaceMeta([ldx, ldy, ldz]); // the face looks at the player, up or down too
+    if (placeId === B.DISPENSER || placeId === B.DROPPER || placeId === B.ASSEMBLER || placeId === B.DART_TRAP) meta = dispenserPlaceMeta([ldx, ldy, ldz]); // the face looks at the player, up or down too
     if (placeId === B.OBSERVER) meta = circuitPlaceMeta(placeId, t.face, [ldx, ldy, ldz]); // the face looks away from the player
     let chestPair = null;
     if (placeId === B.CHEST) { const pr = pairOnPlace(w, px, py, pz, meta, p.sneaking); meta = pr.meta; chestPair = pr.neighbour; } // join a lone chest beside it

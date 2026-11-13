@@ -1,4 +1,5 @@
 // Menus and container screens (inventory, workbench, furnace).
+import { assemblerPattern, assemblerResult } from '../world/assembler.js';
 import { echoStore } from '../player/echoCoffer.js';
 import { doubleChestHalves, doubleChestView } from '../world/chests.js';
 import { createLazyRenderer } from './lazyIcons.js';
@@ -672,7 +673,7 @@ export class UI {
   openChest(x, y, z) {
     this.game.input.unlock();
     const halves = doubleChestHalves(this.game.world, x, y, z);
-    const here = this.game.world.getBlock(x, y, z), hopper = here === B.HOPPER, disp = here === B.DISPENSER || here === B.DROPPER;
+    const here = this.game.world.getBlock(x, y, z), hopper = here === B.HOPPER, disp = here === B.DISPENSER || here === B.DROPPER || here === B.ASSEMBLER;
     if (!hopper && !disp && this.game.onboarding) this.game.onboarding.trigger('chest'); // first-time hint (player/onboarding.js)
     const c = halves ? doubleChestView(...halves.map((h) => this.game.getChest(h.x, h.y, h.z))) : hopper ? this.game.getHopper(x, y, z) : disp ? this.game.getDispenser(x, y, z) : this.game.getChest(x, y, z);
     const n = c.slots.length;
@@ -690,7 +691,7 @@ export class UI {
     // a Gloomshell Box holds anything but other boxes
     const box = isBox(this.game.world.getBlock(x, y, z));
     const fits = (st) => !box || !isBox(st.id);
-    this.showContainer('chest', disp ? (here === B.DISPENSER ? 'Dispenser' : 'Dropper') : hopper ? 'Hopper' : box ? BLOCKS[this.game.world.getBlock(x, y, z)].name : halves ? 'Large Chest' : this.game.world.getBlock(x, y, z) === B.BARREL ? 'Barrel' : 'Chest', (panel) => {
+    this.showContainer('chest', disp ? BLOCKS[here].name : hopper ? 'Hopper' : box ? BLOCKS[this.game.world.getBlock(x, y, z)].name : halves ? 'Large Chest' : this.game.world.getBlock(x, y, z) === B.BARREL ? 'Barrel' : 'Chest', (panel) => {
       const grid = el(`<div class="grid" style="grid-template-columns:repeat(${disp ? 3 : Math.min(9, n)},var(--slot));margin:0 auto 12px;width:max-content"></div>`);
       for (let i = 0; i < n; i++) {
         grid.appendChild(this.makeSlot(() => c.slots[i], (v) => { c.slots[i] = v; }, {
@@ -703,6 +704,19 @@ export class UI {
         }));
       }
       panel.appendChild(grid);
+      if (here === B.ASSEMBLER) {
+        // what the grid is laid out to make, and whether it has the items to spare (world/assembler.js)
+        const note = el('<p class="sub" style="text-align:center;margin:-6px 0 10px"></p>');
+        panel.appendChild(note);
+        let key = null;
+        this.refreshers.push(() => {
+          const pat = assemblerPattern(c.slots), ready = !!assemblerResult(c.slots);
+          const k = pat ? `${pat.id}:${pat.count}:${ready}` : 'none';
+          if (k === key) return;
+          key = k;
+          note.textContent = pat ? `Makes ${pat.count > 1 ? pat.count + ' x ' : ''}${itemName(pat.id)} on a pulse${ready ? '' : ' (needs two or more in every slot: the last one is the pattern)'}` : 'Lay out a recipe. The last item in each slot stays as the pattern.';
+        });
+      }
       panel.appendChild(this.inventoryGrid({
         accept: (st) => {
           if (!fits(st)) return false;

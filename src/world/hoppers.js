@@ -40,6 +40,12 @@ export function containerAccess(game, x, y, z) {
     const all = c.slots.map((_, i) => arraySlot(c.slots, i, isBox(id) ? (st) => !isBox(st.id) : undefined));
     return { insert: () => all, extract: all };
   }
+  if (id === B.ASSEMBLER && game.getDispenser) {
+    // an Assembler only takes more of what its grid already holds, evening the stacks out; nothing can be pulled from it (world/assembler.js)
+    const arr = game.getDispenser(x, y, z).slots;
+    const slot = (i) => arraySlot(arr, i, () => !!arr[i]);
+    return { insert: () => arr.map((_, i) => i).filter((i) => arr[i]).sort((a, b) => arr[a].count - arr[b].count).map(slot), extract: [] };
+  }
   if ((id === B.DISPENSER || id === B.DROPPER) && game.getDispenser) {
     const all = game.getDispenser(x, y, z).slots.map((_, i, arr) => arraySlot(arr, i));
     return { insert: () => all, extract: all };

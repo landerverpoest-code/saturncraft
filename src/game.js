@@ -961,7 +961,7 @@ export class Game {
       const k = `${x},${y},${z}`, h = this.hoppers.get(k);
       if (h) { for (const st of h.slots) if (st) this.entities.spawnItem(x + 0.5, y + 0.5, z + 0.5, st); this.hoppers.delete(k); if (showing(h)) this.ui.close(); }
     }
-    if (id === B.DISPENSER || id === B.DROPPER) {
+    if (id === B.DISPENSER || id === B.DROPPER || id === B.ASSEMBLER) {
       const k = `${x},${y},${z}`, d = this.dispensers.get(k);
       if (d) { for (const st of d.slots) if (st) this.entities.spawnItem(x + 0.5, y + 0.5, z + 0.5, st); this.dispensers.delete(k); if (showing(d)) this.ui.close(); }
     }

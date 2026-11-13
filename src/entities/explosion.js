@@ -85,7 +85,7 @@ export function explode(game, x, y, z, power, source) {
       const ideal = { type: BLOCKS[id].tool, tier: 99, speed: 1 };
       for (const st of blockDrops(id, ideal, Math.random, meta)) game.entities.spawnItem(bx + 0.5, by + 0.5, bz + 0.5, st);
     }
-    if (isFurnace(id) || id === B.CHEST || id === B.BARREL || id === B.BREWING_STAND || isBox(id) || id === B.LECTERN || id === B.HOPPER || id === B.DISPENSER || id === B.DROPPER || id === B.CAMPFIRE) game.onBlockBroken(bx, by, bz, id, meta);
+    if (isFurnace(id) || id === B.CHEST || id === B.BARREL || id === B.BREWING_STAND || isBox(id) || id === B.LECTERN || id === B.HOPPER || id === B.DISPENSER || id === B.DROPPER || id === B.ASSEMBLER || id === B.CAMPFIRE) game.onBlockBroken(bx, by, bz, id, meta);
   }
   // blastsLightFires: a third of the emptied cells over something solid catch fire
   if (rule('blastsLightFires')) for (const [bx, by, bz] of blocks) {

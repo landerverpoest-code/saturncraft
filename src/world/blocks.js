@@ -899,10 +899,13 @@ def(B.CARTOGRAPHERS_TABLE, "Cartographer's Table", { hardness: 2.5, resistance: 
 // Content pack 7 (appended, no id shifts; world/coldCurrents.js): Driftsnow gives way under whoever steps on it and freezes
 // them, Scaldrock burns feet and drags still water down (Mournsand lifts it), the Echo Coffer opens its owner's own store
 // wherever it stands (player/echoCoffer.js).
-ext('DRIFTSNOW'); ext('SCALDROCK'); ext('ECHO_COFFER');
+ext('DRIFTSNOW'); ext('SCALDROCK'); ext('ECHO_COFFER'); ext('ASSEMBLER');
 def(B.DRIFTSNOW, 'Driftsnow', { hardness: 0.25, resistance: 0.25, tool: TOOL.SHOVEL, solid: false, opaque: false, opacity: 2, sound: 'snow' });
 def(B.SCALDROCK, 'Scaldrock', { hardness: 0.5, resistance: 0.5, tool: TOOL.PICKAXE, tier: TIER.WOOD, emit: 3, hot: true });
 def(B.ECHO_COFFER, 'Echo Coffer', { hardness: 22.5, resistance: 600, tool: TOOL.PICKAXE, tier: TIER.WOOD, emit: 7, tex: { top: 'echo_coffer_top', bottom: 'echo_coffer_top', side: 'echo_coffer_side', front: 'echo_coffer_front' } });
+// The Assembler (world/assembler.js): a 3 x 3 crafting grid that makes its recipe on a cinnabar pulse and throws the result out of its face;
+// meta as the Dispenser's (bits 0-2 facing, bit 3 triggered)
+def(B.ASSEMBLER, 'Assembler', { hardness: 3.5, resistance: 3.5, tool: TOOL.PICKAXE, tier: TIER.WOOD, container: true, tex: { top: 'assembler_top', bottom: 'dispenser_top', side: 'furnace_side', front: 'assembler_front' } });
 
 export const NUM_BLOCKS = BLOCKS.length;
 

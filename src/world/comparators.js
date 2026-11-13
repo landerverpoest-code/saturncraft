@@ -48,7 +48,7 @@ export function daylightLevel(sky, brightness, inverted = false) {
 
 /** Blocks a comparator reads as a container. */
 export function isReadable(id) {
-  return id === B.CHEST || id === B.BARREL || isBox(id) || id === B.HOPPER || id === B.DISPENSER || id === B.DROPPER
+  return id === B.CHEST || id === B.BARREL || isBox(id) || id === B.HOPPER || id === B.DISPENSER || id === B.DROPPER || id === B.ASSEMBLER
     || id === B.BREWING_STAND || id === B.COMPOSTER || id === B.JUKEBOX || isFurnace(id)
     || id === B.CAKE || id === B.LECTERN || id === B.ITEM_FRAME || id === B.HUSH_SENSOR || id === B.CALIBRATED_HUSH_SENSOR;
 }
@@ -80,7 +80,7 @@ export function containerSignal(game, x, y, z) {
   }
   if (id === B.CHEST || id === B.BARREL || isBox(id)) { const c = chestAt(x, y, z); return c ? fullness(c.slots, 27) : 0; }
   if (id === B.HOPPER) { const h = peek(game.hoppers, game.getHopper && ((a, b, c) => game.getHopper(a, b, c)), x, y, z); return h ? fullness(h.slots) : 0; }
-  if (id === B.DISPENSER || id === B.DROPPER) { const d = peek(game.dispensers, game.getDispenser && ((a, b, c) => game.getDispenser(a, b, c)), x, y, z); return d ? fullness(d.slots) : 0; }
+  if (id === B.DISPENSER || id === B.DROPPER || id === B.ASSEMBLER) { const d = peek(game.dispensers, game.getDispenser && ((a, b, c) => game.getDispenser(a, b, c)), x, y, z); return d ? fullness(d.slots) : 0; }
   if (id === B.BREWING_STAND) { const s = peek(game.brewingStands, null, x, y, z); return s ? fullness(s.slots) : 0; }
   const f = peek(game.furnaces, null, x, y, z);
   return f ? fullness([f.input, f.fuel, f.output], 3) : 0;

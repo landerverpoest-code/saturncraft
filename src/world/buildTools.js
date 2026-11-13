@@ -241,7 +241,7 @@ function kinds() {
     if ([SHAPE.DOOR, SHAPE.LADDER, SHAPE.STAIRS, SHAPE.GATE, SHAPE.TRAPDOOR, SHAPE.BED].includes(b.shape)) KINDS[id] = K.SIDE;
   }
   for (const k of ['OAK_WALL_SIGN', 'OAK_SIGN', 'ITEM_FRAME', 'COCOA', 'LECTERN', 'REPEATER', 'COMPARATOR']) if (B[k]) KINDS[B[k]] = K.SIDE;
-  for (const k of ['PISTON', 'STICKY_PISTON', 'PISTON_HEAD', 'OBSERVER', 'DISPENSER', 'DROPPER', 'DART_TRAP']) if (B[k]) KINDS[B[k]] = K.FACING6;
+  for (const k of ['PISTON', 'STICKY_PISTON', 'PISTON_HEAD', 'OBSERVER', 'DISPENSER', 'DROPPER', 'ASSEMBLER', 'DART_TRAP']) if (B[k]) KINDS[B[k]] = K.FACING6;
   for (const k of ['LEVER', 'STONE_BUTTON']) if (B[k]) KINDS[B[k]] = K.ATTACH;
   for (const k of ['TORCH', 'CINNABAR_TORCH', 'CINNABAR_TORCH_OFF', 'HOPPER']) if (B[k]) KINDS[B[k]] = K.TORCH;
   KINDS[B.CHEST] = K.CHEST;

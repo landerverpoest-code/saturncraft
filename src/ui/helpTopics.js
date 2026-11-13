@@ -239,6 +239,7 @@ export function buildTopics({ table, touch = false, pad = false } = {}) {
     { h: 'Safety' },
     { list: [
       `Runaway loops cannot freeze the game: a block is updated at most ${LOOP_LIMIT} times in one tick (the rest waits for the next tick, and a loop that never calms down is given up after ${LOOP_FUSE} ticks), no more than ${OBSERVE_PER_TICK} Observers start a pulse in one tick, and at most ${SCHEDULED_PER_TICK} scheduled block updates run per tick.`,
+      'The Assembler (five Iron Ingots, a Workbench, two Cinnabar and a Dropper) is a workbench for machines: lay a recipe out in its 3 x 3 grid and every cinnabar pulse crafts it once, out of its face or into the container in front. The last item in each slot stays as the pattern; hoppers top the slots up evenly.',
       'Ideas to build: a T flip-flop (a latch of two torches steered by a Pulse Gate pulse), a pulse extender (a Pulse Gate on its longest Limiter setting in front of a piston) and an item sorter (a hopper filled with filler items, so only the wanted item fits, read by a Comparator that unlocks the hopper below).',
     ] },
   ]);
