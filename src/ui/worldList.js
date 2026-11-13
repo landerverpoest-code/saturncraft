@@ -68,6 +68,7 @@ export function readCreateOptions() {
     worldType: $('wo-type').value, gamemode: $('wo-mode').value, difficulty: $('wo-diff').value,
     allowCheats: $('wo-cheats').checked, seasons: $('wo-seasons').checked, startSeason: $('wo-start').value, seasonDays: +$('wo-days').value,
     daylightCycle: $('wo-daylight').checked, hostileMobs: $('wo-hostile').checked, worldEvents: $('wo-events').checked, fireworksHurtPlayers: $('wo-fwhurt').checked,
+    keepInventory: $('wo-keepinv').checked, hardcore: $('wo-hardcore').checked,
   });
 }
 
@@ -131,7 +132,7 @@ export function initWorldList(ctx) {
     const bits = [`seed ${w.seedText || w.seed}`, `${formatTime(w.playTicks)} played`];
     text.appendChild(h('span', null, bits.join(' · ')));
     text.appendChild(h('span', null, `last played ${when(w.savedAt)} · ${formatBytes(w.size)}`));
-    const tags = [w.gamemode, w.difficulty, w.seasons ? null : 'no seasons', w.allowCheats ? null : 'no cheats'].filter(Boolean);
+    const tags = [w.hardcore ? (w.hardcoreOver ? 'one life (spent)' : 'one life') : null, w.gamemode, w.difficulty, w.seasons ? null : 'no seasons', w.allowCheats ? null : 'no cheats'].filter(Boolean);
     text.appendChild(h('span', 'world-tags', tags.join(' · ')));
     if (w.damaged) text.appendChild(h('span', 'wm-bad', w.newer ? 'Made by a newer version' : 'Damaged: click to repair or restore a backup'));
     play.appendChild(text);

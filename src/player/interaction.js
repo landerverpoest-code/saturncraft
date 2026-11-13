@@ -1,5 +1,6 @@
 // Player interaction with the world: mining (with break progress), placing,
 // attacking with the attack cooldown, eating, buckets and containers.
+import { rule } from '../world/gameRules.js';
 import { Mob } from '../mobs/mob.js';
 import { canTameWith, companionFoods, mayCommand, TAME_CHANCE } from '../mobs/companions.js';
 import { pairOnPlace } from '../world/chests.js';
@@ -471,7 +472,7 @@ export class Interaction {
     const xp = p.creative || silk ? null : ORE_XP[id];
     const gearNow = gearBonuses(p.inventory);
     if (xp && canHarvest(id, tool)) g.entities.spawnXp(x + 0.5, y + 0.5, z + 0.5, Math.round((xp[0] + Math.floor(Math.random() * (xp[1] - xp[0] + 1))) * (1 + gearNow.oreXp)));
-    if (!p.creative) {
+    if (!p.creative && rule('doTileDrops')) {
       let drops = blockDrops(id, tool, Math.random, meta, ench);
       // ripe crops take from the soil: the same crop again from the same farmland yields a little less (world/farming.js)
       if (CROPS.has(id)) drops = harvestOnSoil(g.world, x, y, z, id, meta, drops, Math.random, (i) => /_seeds$/.test((ITEMS[i] || {}).key || ''), (a, b, c, i, m) => g.world.setBlockUrgent(a, b, c, i, m));

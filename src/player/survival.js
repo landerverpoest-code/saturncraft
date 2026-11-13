@@ -1,5 +1,6 @@
 // Hunger, saturation, exhaustion and natural regeneration, following the
 // documented food mechanics (Normal difficulty).
+import { rule } from '../world/gameRules.js';
 export const EXHAUSTION = {
   SPRINT_PER_M: 0.1,
   SWIM_PER_M: 0.01,
@@ -45,7 +46,7 @@ export class HungerManager {
       if (this.saturation > 0) this.saturation = Math.max(this.saturation - 1, 0);
       else this.food = Math.max(this.food - 1, 0);
     }
-    const hurt = p.health > 0 && p.health < MAX_HEALTH;
+    const hurt = p.health > 0 && p.health < MAX_HEALTH && rule('naturalRegeneration');
     if (this.saturation > 0 && hurt && this.food >= 20) {
       if (++this.timer >= 10) {
         const f = Math.min(this.saturation, 6);

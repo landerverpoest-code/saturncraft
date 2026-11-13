@@ -1,5 +1,6 @@
 // Main-thread authoritative world: chunk storage, block/light access,
 // edits with light updates, scheduled block ticks and raycasting.
+import { rule } from './gameRules.js';
 import { B, BLOCKS, SOLID, OPAQUE, SHAPE, BLOCK_LIMIT, isFluid, CROPS, isPropagule, PROPAGULE_HANGING } from './blocks.js';
 import { LightEngine } from './lighting.js';
 import { MIN_Y, MAX_Y, WORLD_HEIGHT, SECTION_COUNT, cidx } from './constants.js';
@@ -376,7 +377,7 @@ export class World {
       const id = this.getBlock(t.x, t.y, t.z);
       const d = BLOCKS[id];
       if (d.fluid) tickFluid(this, t.x, t.y, t.z, id);
-      else if (id === B.FIRE) { tickFire(this, t.x, t.y, t.z); if (Math.random() < 0.3) this.emit('fireCrackle', t.x, t.y, t.z); }
+      else if (id === B.FIRE) { if (rule('doFireTick')) tickFire(this, t.x, t.y, t.z); if (Math.random() < 0.3) this.emit('fireCrackle', t.x, t.y, t.z); }
       else if (d.gravity) {
         const below = this.getBlock(t.x, t.y - 1, t.z);
         if ((!SOLID[below] || isFluid(below)) && t.y > MIN_Y) {

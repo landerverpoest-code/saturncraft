@@ -2132,7 +2132,7 @@ export class UI {
       wall: 'experienced kinetic energy',
     };
     const text = msgs[cause] || (cause && cause.startsWith('mob:') ? `was slain by a ${cause.slice(4)}` : cause && cause.startsWith('player:') ? `was slain by ${cause.slice(7)}` : 'died');
-    const s = el(`<div class="screen" id="death-screen"><h2>You Died!</h2><p class="sub">Player ${text}</p><button class="btn">Respawn</button></div>`);
+    const s = el(`<div class="screen" id="death-screen"><h2>You Died!</h2><p class="sub">Player ${text}</p>${this.game.hardcoreOver ? '<p class="sub">This was a One Life world: it can only be watched now.</p>' : ''}<button class="btn">${this.game.hardcoreOver ? 'Watch the world' : 'Respawn'}</button></div>`);
     s.querySelector('button').onclick = () => { this.open = null; this.clear(); this.game.respawn(); };
     const net = this.game.net;
     if (net && net.deathCam) {

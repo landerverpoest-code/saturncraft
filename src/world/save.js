@@ -1,6 +1,7 @@
 // World persistence: modified chunks (run-length encoded), player state, world time, furnaces and persistent passive
 // mobs. Where and how records are stored (IndexedDB, the world list, backups, repair, export / import) lives in
 // worldManager.js and storage.js; the shape of a record, its version and migrations in saveFormat.js.
+import { saveRules, loadRules } from './gameRules.js';
 import { cleanWaymark } from '../player/waymark.js';
 import { cleanPotFaces } from './archaeology.js';
 import { cleanLectern } from './books.js';
@@ -107,10 +108,10 @@ export function buildSaveData(game) {
     seed: game.seed,
     time: game.time,
     featureVersion: cleanFeatureVersion(game.featureVersion, CURRENT_FEATURE_VERSION), // the generator feature version this world's saved chunks have all been brought to (world/retrofit.js; /retrofit)
-    gameRules: { doDaylightCycle: game.settings.daylightCycle !== false, doSeasons: game.settings.seasons !== false, doHostileSpawning: game.settings.hostileMobs !== false, fireworksHurtPlayers: game.settings.fireworksHurtPlayers === true, maxBuildVolume: Number.isFinite(game.settings.maxBuildVolume) ? game.settings.maxBuildVolume : undefined, doWorldEvents: game.settings.worldEvents !== false, difficulty: game.difficulty },
+    gameRules: { doDaylightCycle: game.settings.daylightCycle !== false, doSeasons: game.settings.seasons !== false, doHostileSpawning: game.settings.hostileMobs !== false, fireworksHurtPlayers: game.settings.fireworksHurtPlayers === true, maxBuildVolume: Number.isFinite(game.settings.maxBuildVolume) ? game.settings.maxBuildVolume : undefined, doWorldEvents: game.settings.worldEvents !== false, difficulty: game.difficulty, ...saveRules(game.settings) },
     savedAt: Date.now(),
     // what the world list shows and the options chosen when the world was made (world/saveFormat.js)
-    meta: { createdAt: game.createdAt || Date.now(), worldType: game.worldType || 'normal', allowCheats: game.allowCheats !== false, seedText: game.seedText || null, thumbnail: cleanThumbnail(game.thumbnail) },
+    meta: { createdAt: game.createdAt || Date.now(), worldType: game.worldType || 'normal', allowCheats: game.allowCheats !== false, hardcore: game.hardcore === true || undefined, hardcoreOver: (game.hardcore === true && game.hardcoreOver === true) || undefined, seedText: game.seedText || null, thumbnail: cleanThumbnail(game.thumbnail) },
     player: playerSaveData(p),
     furnaces: [...game.furnaces.values()],
     chests: [...game.chests.values()],
@@ -178,6 +179,7 @@ export function applySave(game, data) {
     game.createdAt = data.meta.createdAt || 0;
     game.worldType = data.meta.worldType || 'normal';
     game.allowCheats = data.meta.allowCheats !== false;
+    game.hardcore = data.meta.hardcore === true; game.hardcoreOver = game.hardcore && data.meta.hardcoreOver === true; // One Life worlds (world/newWorld.js)
     game.seedText = data.meta.seedText || null;
     game.thumbnail = cleanThumbnail(data.meta.thumbnail);
   }
@@ -188,11 +190,12 @@ export function applySave(game, data) {
     if (typeof data.gameRules.doWorldEvents === 'boolean') game.settings.worldEvents = data.gameRules.doWorldEvents;
     if (typeof data.gameRules.doHostileSpawning === 'boolean') game.settings.hostileMobs = data.gameRules.doHostileSpawning;
     game.settings.fireworksHurtPlayers = data.gameRules.fireworksHurtPlayers === true; // (off unless the world turned it on)
+    loadRules(game.settings, data.gameRules); // keepInventory, mobGriefing and the rest (world/gameRules.js)
     // the most blocks one building command may touch (the default when the world never set it)
     if (Number.isInteger(data.gameRules.maxBuildVolume) && data.gameRules.maxBuildVolume >= 1) game.settings.maxBuildVolume = Math.min(data.gameRules.maxBuildVolume, MAX_VOLUME_CAP);
     else delete game.settings.maxBuildVolume;
     if (['peaceful', 'easy', 'normal', 'hard'].includes(data.gameRules.difficulty)) game.settings.difficulty = data.gameRules.difficulty;
-  }
+  } else loadRules(game.settings, null);
   game.netPlayers = data.netPlayers || {};
   game.guestBlueprints = {};
   for (const [k, v] of Object.entries(data.guestBlueprints || {})) game.guestBlueprints[k] = cleanBlueprints(v);

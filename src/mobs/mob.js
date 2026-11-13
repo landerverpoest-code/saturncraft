@@ -1,6 +1,7 @@
 // Mob entity: physics, damage, death/drops and goal-based AI for passive
 // animals, melee/ranged/explosive hostiles, a wall-climber and a neutral
 // teleporter.
+import { rule } from '../world/gameRules.js';
 import { Body } from '../physics/body.js';
 import { fallDamage } from '../physics/constants.js';
 import { isStalagmiteTip, stalagmiteFallDamage } from '../world/caves.js';
@@ -497,6 +498,7 @@ export class Mob {
     if (killedByPlayer && this.def.category === CATEGORY.MONSTER && g.milestones) g.milestones.event('kill');
     if (this.def.onDeath) this.def.onDeath(this, g, killedByPlayer);
     if (this.captain && g.raids) g.raids.onCaptainKilled(this, killedByPlayer); // Dark Omen
+    if (!rule('doMobLoot')) { this.killedByPlayer = false; return; } // the world's rule: no items, no experience
     for (const st of equipmentDrops(this.equip, { killedByPlayer, plunder: source === 'player' ? this.plunder | 0 : 0, picked: this.equipPicked })) g.entities.spawnItem(this.x, this.y + 0.5, this.z, st);
     for (const st of offhandDrops(this.offhand, { killedByPlayer, plunder: source === 'player' ? this.plunder | 0 : 0 })) g.entities.spawnItem(this.x, this.y + 0.5, this.z, st);
     if (killedByPlayer && this.offhand && g.milestones) g.milestones.event('offhand'); // it carried something in its off-hand (mobs/offhand.js)

@@ -1,4 +1,5 @@
 // The player: physics body, survival stats and environmental damage.
+import { rule, DAMAGE_RULES } from '../world/gameRules.js';
 import { Body } from '../physics/body.js';
 import { PHYS, fallDamage } from '../physics/constants.js';
 import { isStalagmiteTip, stalagmiteFallDamage } from '../world/caves.js';
@@ -86,6 +87,7 @@ export class Player {
   hurt(amount, source = 'generic', attacker = null) {
     if (this.dead || amount <= 0) return false;
     if (this.creative && source !== 'void' && source !== 'kill') return false; // creative players only die in the void
+    if (DAMAGE_RULES[source] && !rule(DAMAGE_RULES[source])) return false; // a world rule switched this kind of harm off (world/gameRules.js)
     // difficulty scales what monsters (and their arrows and blasts) deal: Easy min(d/2 + 1, d), Hard d * 1.5
     if (source.startsWith('mob:') || (attacker && attacker.kind === 'mob' && attacker.def && attacker.def.category === 'monster')) {
       if (this.difficulty === 'peaceful') return false;

@@ -1,5 +1,7 @@
 // Explosions: 16x16x16 ray block destruction with blast resistance, entity
 // damage with exposure, and 1/power drop survival.
+import { rule } from '../world/gameRules.js';
+import { canLight } from '../world/fire.js';
 import { B, BLOCKS, isFluid, isFurnace, isBox } from '../world/blocks.js';
 import { igniteTNT } from './tnt.js';
 import { blockDrops } from '../world/mining.js';
@@ -50,7 +52,9 @@ function exposure(world, cx, cy, cz, e) {
 
 export function explode(game, x, y, z, power, source) {
   const w = game.world;
-  const blocks = explosionBlocks((a, b, c) => w.getBlock(a, b, c), x, y, z, power);
+  // a monster's blast (a Fizzlet, a fireball spat by a mob) spares the blocks when the world's mobGriefing rule is off
+  const byMob = !!source && (source.kind === 'mob' || (source.shooter && source.shooter.kind === 'mob'));
+  const blocks = byMob && !rule('mobGriefing') ? [] : explosionBlocks((a, b, c) => w.getBlock(a, b, c), x, y, z, power);
   // Entities
   const radius = power * 2;
   const targets = game.entities.list.filter((e) => (e.kind === 'mob' && e.deathTime === 0 && e !== source) || e.kind === 'item');
@@ -82,6 +86,10 @@ export function explode(game, x, y, z, power, source) {
       for (const st of blockDrops(id, ideal, Math.random, meta)) game.entities.spawnItem(bx + 0.5, by + 0.5, bz + 0.5, st);
     }
     if (isFurnace(id) || id === B.CHEST || id === B.BARREL || id === B.BREWING_STAND || isBox(id) || id === B.LECTERN || id === B.HOPPER || id === B.DISPENSER || id === B.DROPPER || id === B.CAMPFIRE) game.onBlockBroken(bx, by, bz, id, meta);
+  }
+  // blastsLightFires: a third of the emptied cells over something solid catch fire
+  if (rule('blastsLightFires')) for (const [bx, by, bz] of blocks) {
+    if (Math.random() < 1 / 3 && w.getBlock(bx, by, bz) === B.AIR && BLOCKS[w.getBlock(bx, by - 1, bz)].opaque && canLight(w, bx, by, bz)) { w.setBlock(bx, by, bz, B.FIRE); if (w.scheduleTick) w.scheduleTick(bx, by, bz, 30); }
   }
   game.particles.smoke(x, y, z, 80, power * 1.5);
   game.audio.play('explode', [x, y, z]);

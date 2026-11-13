@@ -1,4 +1,5 @@
 // Chat commands (T or / opens the chat). Each returns a message to print.
+import { WORLD_RULES, WORLD_RULE_NAMES } from '../world/gameRules.js';
 import { describeWaymark } from '../player/waymark.js';
 import { BIOMES } from '../world/biomes.js';
 import { ITEMS, I, maxStack } from '../world/items.js';
@@ -80,9 +81,10 @@ function nextTime(t0, pred) {
 }
 
 /** Game rules: command name -> settings key. */
-export const GAME_RULES = { doDaylightCycle: 'daylightCycle', doSeasons: 'seasons', doHostileSpawning: 'hostileMobs', doWorldEvents: 'worldEvents', fireworksHurtPlayers: 'fireworksHurtPlayers' };
+export const GAME_RULES = { doDaylightCycle: 'daylightCycle', doSeasons: 'seasons', doHostileSpawning: 'hostileMobs', doWorldEvents: 'worldEvents', fireworksHurtPlayers: 'fireworksHurtPlayers',
+  ...Object.fromEntries(WORLD_RULE_NAMES.map((n) => [n, n])) }; // (world/gameRules.js: keepInventory, mobGriefing, ...)
 /** Rules that are off unless set (the others are on unless set to false). */
-export const RULES_DEFAULT_OFF = new Set(['fireworksHurtPlayers']);
+export const RULES_DEFAULT_OFF = new Set(['fireworksHurtPlayers', ...WORLD_RULE_NAMES.filter((n) => !WORLD_RULES[n].def)]);
 /** Game rules that hold a number: command name -> { settings key, default, range }. */
 export const NUMERIC_RULES = { maxBuildVolume: { key: 'maxBuildVolume', def: DEFAULT_MAX_VOLUME, min: 1, max: MAX_VOLUME_CAP } };
 /** The current value of a game rule setting key. */
@@ -100,6 +102,7 @@ export const BUILD_HELP = [
 export const HELP = [
   '/gamemode <survival|creative|adventure|spectator>  (or /gm 0|1|2|3)',
   '/time set <day|night|noon|midnight|ticks>,  /time add <ticks>,  /time query',
+  '/gamerule <' + WORLD_RULE_NAMES.join('|') + '> <true|false>',
   '/gamerule doDaylightCycle <true|false>,  /gamerule doSeasons <true|false>,  /gamerule doHostileSpawning <true|false>,  /gamerule doWorldEvents <true|false>,  /gamerule fireworksHurtPlayers <true|false>',
   '/event  (list),  /event trigger <starfall|dust|fog|festival|hush>,  /event stop <kind|all>  (world events: creative players and the host)',
   '/season  (query),  /season set <spring|summer|autumn|winter>,  /season length <days>',
@@ -138,6 +141,7 @@ export function runCommand(game, text) {
     case 'gamemode': case 'gm': {
       const m = { survival: 'survival', s: 'survival', 0: 'survival', creative: 'creative', c: 'creative', 1: 'creative', adventure: 'adventure', a: 'adventure', 2: 'adventure', spectator: 'spectator', sp: 'spectator', 3: 'spectator' }[(args[0] || '').toLowerCase()];
       if (!m) return 'Usage: /gamemode <survival|creative|adventure|spectator>';
+      if (game.hardcore) return 'A One Life world keeps its game mode';
       p.setGamemode(m);
       return `Set own game mode to ${m[0].toUpperCase() + m.slice(1)} Mode`;
     }
@@ -191,6 +195,7 @@ export function runCommand(game, text) {
     case 'difficulty': {
       const v = (args[0] || '').toLowerCase();
       if (!v) return `The difficulty is ${game.difficulty}`;
+      if (game.hardcore) return 'A One Life world stays on Hard';
       const d = ['peaceful', 'easy', 'normal', 'hard'].find((k) => k === v || k[0] === v);
       if (!d) return 'Usage: /difficulty <peaceful|easy|normal|hard>';
       game.setSetting('difficulty', d);

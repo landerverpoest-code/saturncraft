@@ -5,11 +5,13 @@
 import { stringToSeed } from './noise.js';
 import { GAME_MODES, DIFFICULTY_KEYS, SEASON_START, WORLD_TYPES, LIMITS, cleanName } from './saveFormat.js';
 import { cleanDays, DEFAULT_DAYS } from './seasons.js';
+import { WORLD_RULES, WORLD_RULE_NAMES } from './gameRules.js';
 
 export const defaultOptions = () => ({
   name: '', seedText: '', worldType: 'normal', gamemode: 'survival', difficulty: 'normal', allowCheats: true,
   seasons: true, startSeason: 'spring', seasonDays: DEFAULT_DAYS,
   daylightCycle: true, hostileMobs: true, worldEvents: true, fireworksHurtPlayers: false,
+  keepInventory: false, hardcore: false,
 });
 
 const bool = (v, d) => (typeof v === 'boolean' ? v : d);
@@ -19,7 +21,12 @@ const pick = (v, list, d) => (list.includes(v) ? v : d);
 export function cleanOptions(raw = {}) {
   const d = defaultOptions();
   const types = WORLD_TYPES.filter((t) => t.supported).map((t) => t.key);
+  // One Life (hardcore): survival on Hard, no cheats, nothing kept on death - and the death is final
+  const hardcore = bool(raw.hardcore, d.hardcore);
+  if (hardcore) raw = { ...raw, gamemode: 'survival', difficulty: 'hard', allowCheats: false, keepInventory: false };
   return {
+    hardcore,
+    keepInventory: bool(raw.keepInventory, d.keepInventory),
     name: cleanName(raw.name),
     seedText: String(raw.seedText ?? '').replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, LIMITS.seedTextMax),
     worldType: pick(raw.worldType, types, d.worldType),
@@ -48,12 +55,15 @@ export function settingsForOptions(settings, o) {
     ...settings,
     difficulty: o.difficulty, seasons: o.seasons, daylightCycle: o.daylightCycle,
     hostileMobs: o.hostileMobs, worldEvents: o.worldEvents, fireworksHurtPlayers: o.fireworksHurtPlayers,
+    // a new world starts from the default rules (the settings may still hold the last world's), plus what the form chose
+    ...Object.fromEntries(WORLD_RULE_NAMES.map((n) => [n, WORLD_RULES[n].def])), keepInventory: o.keepInventory === true,
   };
 }
 
 /** Finish a brand-new world on its started game: game mode, cheats, season calendar and what the list shows. */
 export function applyNewWorldOptions(game, o) {
   game.allowCheats = o.allowCheats;
+  game.hardcore = o.hardcore === true; game.hardcoreOver = false;
   game.worldType = o.worldType;
   game.seedText = o.seedText || null;
   game.createdAt = Date.now();

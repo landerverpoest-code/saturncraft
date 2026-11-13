@@ -1,4 +1,5 @@
 // Game orchestrator: fixed 20 TPS simulation with interpolated rendering.
+import { setActiveRules, rule } from './world/gameRules.js';
 import { Mob } from './mobs/mob.js';
 import { newHopper, hopperStep, HOPPER_COOLDOWN } from './world/hoppers.js';
 import { newDispenser, dispense } from './world/dispensers.js';
@@ -136,6 +137,7 @@ export class Game {
     this.seed = seed;
     this.featureVersion = CURRENT_FEATURE_VERSION; // see world/retrofit.js; a loaded older save lowers it (applySave)
     this.settings = { ...DEFAULT_SETTINGS, ...settings };
+    setActiveRules(this.settings); // keepInventory, mobGriefing and the other world rules (world/gameRules.js)
     Object.assign(this.settings, normalizeTouch(this.settings)); // (saved touch settings may be anything)
     this.settings.uiScale = cleanUiScale(this.settings.uiScale);
     this.fx = motionScales(this.settings); // how much of each motion / flash effect to show (ui/accessibility.js)
@@ -287,6 +289,7 @@ export class Game {
     this.world.on('blockChanged', (x, y, z, old, id) => { if (old === B.PROVING_SPAWNER || old === B.OMINOUS_SPAWNER || old === B.VAULT) this.proving.blockChanged(x, y, z, old, id); });
     this.world.on('dropItems', (x, y, z, id, meta) => {
       if (this.net && this.net.applyingRemote) return; // the player who made the edit gets the drops
+      if (!rule('doTileDrops')) return;
       for (const st of blockDrops(id, toolOf(null), Math.random, meta)) this.entities.spawnItem(x + 0.5, y + 0.3, z + 0.5, st);
     });
     this.chunks.onChunkLoaded = (cx, cz) => this.spawner.onChunkLoaded(cx, cz);
@@ -427,6 +430,7 @@ export class Game {
   }
 
   setSetting(k, v) {
+    if (this.hardcore && (k === 'difficulty' || k === 'keepInventory')) return; // a One Life world stays on Hard and keeps nothing
     this.settings[k] = v;
     if (ACCESS_KEYS.has(k)) { this.fx = motionScales(this.settings); this.applyAccessClasses(); }
     if (k === 'touchMode') this.applyTouch();
@@ -578,14 +582,18 @@ export class Game {
   onDeath(cause) {
     const p = this.player;
     p.stats.deaths++;
-    for (let i = 0; i < p.inventory.slots.length; i++) {
+    if (this.hardcore && !(this.net && this.net.isClient)) this.hardcoreOver = true; // One Life: this death is final (the world can only be watched)
+    const keep = rule('keepInventory') && !this.hardcore; // the world's rule: nothing is dropped or lost
+    for (let i = 0; !keep && i < p.inventory.slots.length; i++) {
       const st = p.inventory.slots[i];
       if (st) { const e = this.entities.spawnItem(p.x, p.y + 1, p.z, st, [(Math.random() - 0.5) * 0.5, 0.2, (Math.random() - 0.5) * 0.5]); if (e) e.recycled = true; }
     }
-    for (const st of p.inventory.armor.concat(p.inventory.trinkets)) if (st) { const e = this.entities.spawnItem(p.x, p.y + 1, p.z, st, [(Math.random() - 0.5) * 0.5, 0.2, (Math.random() - 0.5) * 0.5]); if (e) e.recycled = true; }
-    this.entities.spawnXp(p.x, p.y + 0.5, p.z, deathXp(p.xp.level));
-    p.xp = newXp();
-    p.inventory.clear();
+    if (!keep) for (const st of p.inventory.armor.concat(p.inventory.trinkets)) if (st) { const e = this.entities.spawnItem(p.x, p.y + 1, p.z, st, [(Math.random() - 0.5) * 0.5, 0.2, (Math.random() - 0.5) * 0.5]); if (e) e.recycled = true; }
+    if (!keep) {
+      this.entities.spawnXp(p.x, p.y + 0.5, p.z, deathXp(p.xp.level));
+      p.xp = newXp();
+      p.inventory.clear();
+    }
     if (this.net && this.net.beginDeathCam) this.net.beginDeathCam(cause); // watch a friend while the respawn button counts down (net/session.js)
     this.input.unlock();
     this.ui.showDeath(cause);
@@ -594,6 +602,14 @@ export class Game {
   respawn() {
     const p = this.player;
     if (this.net && this.net.endDeathCam) this.net.endDeathCam();
+    if (this.hardcoreOver) { // One Life spent: rise as a spectator where you fell
+      const at = [p.x, p.y, p.z];
+      p.respawn(); p.setPosition(at[0], at[1], at[2]);
+      p.setGamemode('spectator');
+      this.input.lock();
+      this.hud.toast('Your one life is spent: you can watch this world, but not touch it');
+      return;
+    }
     // dying away from the overworld sends you home first
     if (this.world.dimension !== 'overworld') {
       // a multiplayer guest stays with the group (the host decides where everybody is)
@@ -1356,7 +1372,7 @@ export class Game {
     const mv = blocking ? { forward: 0, strafe: 0, jump: false, sneak: false, sprint: false } : inp.movement();
     this.tickCircuits();
     this.world.tick();
-    this.weather.tick();
+    if (rule('doWeatherCycle')) this.weather.tick();
     const overworld = this.world.dimension === 'overworld';
     if (overworld) this.tickRain();
     this.lightning.tick();

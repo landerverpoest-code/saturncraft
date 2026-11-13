@@ -291,6 +291,7 @@ export function worldSummary(slot, d, { size } = {}) {
     seasons: rules.doSeasons !== false,
     worldType: typeof meta.worldType === 'string' ? meta.worldType : 'normal',
     allowCheats: meta.allowCheats !== false,
+    hardcore: meta.hardcore === true, hardcoreOver: meta.hardcore === true && meta.hardcoreOver === true,
     damaged: false,
   };
 }

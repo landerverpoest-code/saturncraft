@@ -2,6 +2,7 @@
 // section near the player get a chance to change, as in the reference game
 // (randomTickSpeed = 3). Handles grass spreading, farmland moisture and crop
 // growth.
+import { rule } from './gameRules.js';
 import { B, OPAQUE, SOLID, CROPS, STEM_FRUIT, BLOCK_LIMIT, isPropagule, PROPAGULE_HANGING } from './blocks.js';
 import { BIOMES } from './biomes.js';
 import { MIN_Y, SECTION_COUNT, cidx } from './constants.js';
@@ -162,7 +163,7 @@ export function randomTickBlock(world, x, y, z, id, rng = Math.random) {
     if (rawBlockLight(world, x, y + (id === B.ICE ? 1 : 0), z) > 11) world.setBlock(x, y, z, id === B.ICE ? B.WATER : B.AIR);
     else if (id === B.SNOW_LAYER && snowThaws(world, x, y, z, rng)) world.setBlock(x, y, z, B.AIR);
   } else if (id === B.LAVA) {
-    lavaIgnite(world, x, y, z, rng);
+    if (rule('doFireTick')) lavaIgnite(world, x, y, z, rng);
   } else if (id === B.FIRE) {
     world.scheduleTick(x, y, z, FIRE_DELAY); // keeps fires burning after a reload
   } else if (id === B.CINDERROOT) {
