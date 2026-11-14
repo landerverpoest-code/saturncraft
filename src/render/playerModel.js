@@ -70,7 +70,7 @@ export class PlayerModel {
     this.anim.headPitch = p.pitch;
     const L = lightAt(game, x, y + 1.6, z);
     animateModel(this.root, this.anim, alpha, L, sec, entityGlow(game, x, y + 1.2, z));
-    wearArmor(this.root, p.inventory.armor.map((s) => (s ? s.id : null)));
+    wearArmor(this.root, p.inventory.armor.map((s) => (s ? s.id : null)), null, p.inventory.armor.map((s) => (s ? s.inlay : null)));
     lightArmor(this.root, L);
     const parts = this.root.userData.parts;
     parts.head.rotation.y = p.yaw - this.bodyYaw;

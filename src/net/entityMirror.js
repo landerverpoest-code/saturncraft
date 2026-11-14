@@ -130,7 +130,7 @@ export class EntityMirror {
       // only the ids matter here (what it looks like); the host keeps the real stacks
       const st = (id) => (id && ITEMS[id] ? { id, count: 1, damage: 0 } : null);
       e.yaw = s.yaw; e.hitTime = s.hitTime;
-      e.armor = s.armor.map(st); e.hand = st(s.hand);
+      e.armor = s.armor.map((id, i) => { const a = st(id); const n = a && s.inlays && s.inlays[i]; if (n) a.inlay = n; return a; }); e.hand = st(s.hand);
     }
     else if (e.kind === 'cloud') e.radius = s.radius;
     else if (e.kind === 'arrow') {

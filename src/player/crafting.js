@@ -6,6 +6,7 @@ import { withExtras } from '../world/enchantments.js';
 import { bookCopy } from '../world/books.js';
 import { COLOR } from '../world/colors.js';
 import { fireworkRecipe } from '../world/fireworks.js';
+import { inlayRecipe, STENCIL_IDS } from './inlays.js';
 
 export const TAGS = {
   planks: [B.BAMBOO_PLANKS, B.OAK_PLANKS, B.SPRUCE_PLANKS, B.BIRCH_PLANKS, B.JUNGLE_PLANKS, B.ACACIA_PLANKS, B.DARK_OAK_PLANKS, B.BLOSSOM_PLANKS, B.MANGROVE_PLANKS],
@@ -198,6 +199,9 @@ shapeless([I.SLIMEBALL, I.EMBER_POWDER], I.EMBER_CREAM, 1);
 shapeless([I.SPIDER_EYE, B.BROWN_MUSHROOM, I.SUGAR], I.FERMENTED_SPIDER_EYE, 1);
 shaped([' R ', 'CCC'], { R: I.EMBER_ROD, C: 'stone_mat' }, B.BREWING_STAND, 1);
 
+// Armour Inlays: a stencil is copied with paper and planks (the stencil in the middle is used up, two come out); laying one on armour is special-cased in craft()
+for (const id of STENCIL_IDS) shaped(['PQP', 'QSQ', 'PQP'], { P: 'planks', Q: I.PAPER, S: id }, id, 2);
+
 /**
  * Find the crafting result for a grid.
  * @param {Array<{id:number}|null>} grid row-major
@@ -207,6 +211,8 @@ shaped([' R ', 'CCC'], { R: I.EMBER_ROD, C: 'stone_mat' }, B.BREWING_STAND, 1);
 export function craft(grid, w) {
   const copy = bookCopy(grid); // a Written Book with Writable Books: copies (world/books.js)
   if (copy) return copy.result;
+  const inlay = inlayRecipe(grid); // an armour piece + a stencil + a material: the piece with that inlay (player/inlays.js)
+  if (inlay) return inlay.result;
   const fw = fireworkRecipe(grid.filter(Boolean)); // stars of several colours, shapes and effects; rockets with several stars (world/fireworks.js)
   if (fw) return fw;
   const h = grid.length / w;
@@ -254,7 +260,7 @@ export function craft(grid, w) {
  * bucket, and the Written Book a copy was made from stays.
  */
 export function consumeCraft(grid) {
-  const copy = bookCopy(grid);
+  const copy = bookCopy(grid) || inlayRecipe(grid); // (the stencil stays too)
   for (let i = 0; i < grid.length; i++) {
     const s = grid[i];
     if (!s || (copy && i === copy.keep)) continue;

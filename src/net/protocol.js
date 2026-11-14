@@ -7,6 +7,7 @@ import { sameFw } from '../world/fireworks.js';
 import { equipIds } from '../mobs/equipment.js';
 import { offhandId } from '../mobs/offhand.js';
 import { sameBook } from '../world/books.js';
+import { inlayCode, inlayFromCode, inlayCodes, inlaysFromCodes, sameInlay } from '../player/inlays.js';
 import { effectColorInt } from '../player/effects.js';
 import { TRADE_PROFESSIONS } from '../world/villages.js';
 
@@ -134,7 +135,10 @@ export function packPlayerState(p, held, swingSeq, armor = null) {
     (p.creative ? PF.CREATIVE : 0) | (p.hurtTime > 0 ? PF.HURT : 0) | (p.riding ? PF.RIDING : 0) | ((p.effects && p.effects.invisibility) || p.gamemode === 'spectator' ? PF.INVISIBLE : 0) | (p.crawling ? PF.CRAWL : 0) |
     (p.swimming ? PF.SWIM : 0) | (p.gliding ? PF.GLIDE : 0) | (p.sprinting ? PF.SPRINT : 0);
   const ar = armor || (p.inventory && p.inventory.armor ? p.inventory.armor.map((s) => (s ? s.id : 0)) : [0, 0, 0, 0]);
-  return [r2(p.x), r2(p.y), r2(p.z), r2(p.yaw), r2(p.pitch), held == null ? -1 : held, f, swingSeq | 0, ...ar, effectColorInt(p.effects)];
+  const out = [r2(p.x), r2(p.y), r2(p.z), r2(p.yaw), r2(p.pitch), held == null ? -1 : held, f, swingSeq | 0, ...ar, effectColorInt(p.effects)];
+  const codes = inlayCodes(p.inventory && p.inventory.armor); // (only sent when a piece has an inlay)
+  if (codes) out.push(codes);
+  return out;
 }
 export function unpackPlayerState(a) {
   if (!Array.isArray(a) || a.length < 8 || !a.slice(0, 5).every(Number.isFinite)) return null;
@@ -145,6 +149,7 @@ export function unpackPlayerState(a) {
     hurt: !!(f & PF.HURT), riding: !!(f & PF.RIDING), invisible: !!(f & PF.INVISIBLE), crawling: !!(f & PF.CRAWL), swimming: !!(f & PF.SWIM), gliding: !!(f & PF.GLIDE), sprinting: !!(f & PF.SPRINT), swing: a[7] | 0,
     armor: a.length >= 12 ? [a[8] | 0, a[9] | 0, a[10] | 0, a[11] | 0].map((i) => i || null) : [null, null, null, null],
     fx: a.length >= 13 && Number.isInteger(a[12]) && a[12] > 0 && a[12] <= 0xffffff ? a[12] : 0, // colour of the swirl of potion effects around them
+    inlays: inlaysFromCodes(a[13]), // cosmetic armour inlays (player/inlays.js)
   };
 }
 
@@ -227,12 +232,12 @@ export function savePlayerName(name) {
 export function packEntity(e, riderOf = () => -1, playerIdOf = () => -1) {
   switch (e.kind) {
     case 'mob': return ['m', ...packMob(e, playerIdOf)];
-    case 'item': return ['i', e.id, r2(e.x), r2(e.y), r2(e.z), e.stack.id, e.stack.count, e.stack.damage | 0, e.pickupDelay > 0 ? 1 : 0, e.stack.ench ? cleanEnch(e.stack.ench) : 0, e.stack.contents || 0, Number.isInteger(e.stack.map) ? [e.stack.map, e.stack.mapX | 0, e.stack.mapZ | 0] : 0, e.stack.sherds || 0, e.stack.pages || e.stack.title ? { p: e.stack.pages, t: e.stack.title, a: e.stack.author, g: e.stack.gen || undefined } : 0, e.stack.fw || 0];
+    case 'item': return ['i', e.id, r2(e.x), r2(e.y), r2(e.z), e.stack.id, e.stack.count, e.stack.damage | 0, e.pickupDelay > 0 ? 1 : 0, e.stack.ench ? cleanEnch(e.stack.ench) : 0, e.stack.contents || 0, Number.isInteger(e.stack.map) ? [e.stack.map, e.stack.mapX | 0, e.stack.mapZ | 0] : 0, e.stack.sherds || 0, e.stack.pages || e.stack.title ? { p: e.stack.pages, t: e.stack.title, a: e.stack.author, g: e.stack.gen || undefined } : 0, e.stack.fw || 0, inlayCode(e.stack.inlay)];
     case 'xp': return ['x', e.id, r2(e.x), r2(e.y), r2(e.z), e.value];
     case 'arrow': return ['a', e.id, r2(e.x), r2(e.y), r2(e.z), r2(e.vx), r2(e.vy), r2(e.vz), e.stuck ? 1 : 0, e.pickup ? 1 : 0, e.thrown === 'spear' ? 4 : e.thrown === 'potion' ? 3 : e.thrown === 'egg' ? 2 : e.thrown ? 1 : 0, e.potion | 0];
     case 'boat': return ['b', e.id, r2(e.x), r2(e.y), r2(e.z), r2(e.yaw), e.hitTime | 0, riderOf(e), boatFlags(e), r2(e.pitch || 0), passengerOf(e)];
     case 'falling': return ['f', e.id, r2(e.x), r2(e.y), r2(e.z), e.blockId];
-    case 'stand': return ['s', e.id, r2(e.x), r2(e.y), r2(e.z), r2(e.yaw), e.hitTime | 0, e.armor.map((st) => (st ? st.id : 0)), e.hand ? e.hand.id : 0];
+    case 'stand': return ['s', e.id, r2(e.x), r2(e.y), r2(e.z), r2(e.yaw), e.hitTime | 0, e.armor.map((st) => (st ? st.id : 0)), e.hand ? e.hand.id : 0, inlayCodes(e.armor)];
     // a lingering elixir's (or the Wyrm's breath) cloud: radius to a tenth so it is resent only every few ticks
     case 'cloud': return ['c', e.id, r2(e.x), r2(e.y), r2(e.z), Math.round(e.radius * 10) / 10, e.potion | 0, e.breath ? 1 : 0];
     default: return null;
@@ -259,7 +264,7 @@ export function unpackEntity(a) {
   const [k, id, x, y, z] = a;
   if (![x, y, z].every(Number.isFinite)) return null;
   const o = { kind: ENTITY_KINDS[k], id, x, y, z };
-  if (k === 'i') Object.assign(o, { stack: withExtras({ id: a[5] | 0, count: a[6] | 0, damage: a[7] | 0 }, { ench: a[9], contents: a[10], sherds: a[12], fw: a[14], ...(a[13] && typeof a[13] === 'object' ? { pages: a[13].p, title: a[13].t, author: a[13].a, gen: a[13].g } : {}), ...(Array.isArray(a[11]) ? { map: a[11][0] | 0, mapX: a[11][1], mapZ: a[11][2] } : {}) }), delayed: !!a[8] });
+  if (k === 'i') Object.assign(o, { stack: withExtras({ id: a[5] | 0, count: a[6] | 0, damage: a[7] | 0 }, { ench: a[9], contents: a[10], sherds: a[12], fw: a[14], inlay: inlayFromCode(a[15]), ...(a[13] && typeof a[13] === 'object' ? { pages: a[13].p, title: a[13].t, author: a[13].a, gen: a[13].g } : {}), ...(Array.isArray(a[11]) ? { map: a[11][0] | 0, mapX: a[11][1], mapZ: a[11][2] } : {}) }), delayed: !!a[8] });
   else if (k === 'x') o.value = a[5] | 0;
   else if (k === 'a') Object.assign(o, { vx: a[5], vy: a[6], vz: a[7], stuck: !!a[8], pickup: !!a[9], thrown: a[10] === 4 ? 'spear' : a[10] === 3 ? 'potion' : a[10] === 2 ? 'egg' : a[10] === 1 ? 'snowball' : null, potion: a[11] | 0 });
   else if (k === 'b') {
@@ -270,7 +275,7 @@ export function unpackEntity(a) {
   else if (k === 'c') Object.assign(o, { radius: Math.max(0, Math.min(16, +a[5] || 0)), potion: a[6] | 0, breath: !!a[7] });
   else if (k === 's') {
     const ids = Array.isArray(a[7]) ? a[7] : [];
-    Object.assign(o, { yaw: +a[5] || 0, hitTime: a[6] | 0, armor: [0, 1, 2, 3].map((i) => (ids[i] | 0) || null), hand: (a[8] | 0) || null });
+    Object.assign(o, { yaw: +a[5] || 0, hitTime: a[6] | 0, armor: [0, 1, 2, 3].map((i) => (ids[i] | 0) || null), hand: (a[8] | 0) || null, inlays: inlaysFromCodes(a[9]) });
   }
   return o;
 }
@@ -285,7 +290,7 @@ export function setContainerSlot(kind, c, i, st) {
 }
 export function sameStack(a, b) {
   if (!a || !b) return !a && !b;
-  return a.id === b.id && a.count === b.count && (a.damage | 0) === (b.damage | 0) && sameEnch(a.ench, b.ench) && (a.rw | 0) === (b.rw | 0) && String(a.sherds || '') === String(b.sherds || '') && sameFw(a.fw, b.fw) && sameBook(a, b);
+  return a.id === b.id && a.count === b.count && (a.damage | 0) === (b.damage | 0) && sameEnch(a.ench, b.ench) && (a.rw | 0) === (b.rw | 0) && String(a.sherds || '') === String(b.sherds || '') && sameFw(a.fw, b.fw) && sameInlay(a.inlay, b.inlay) && sameBook(a, b);
 }
 /** A clean copy of a stack (id, count, damage, enchantments and anvil prior work only). */
 export const copyStack = (s) => (s ? withExtras({ id: s.id, count: s.count, damage: s.damage | 0 }, s) : null);

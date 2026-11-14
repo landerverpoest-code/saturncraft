@@ -191,7 +191,7 @@ export class ArmorStand {
     m.position.set(px, py, pz);
     m.rotation.set(0, this.yaw + (this.hitTime > 0 ? Math.sin(this.hitTime * 1.3) * 0.12 : 0), 0);
     for (const mat of m.userData.mats) mat.color.setHex(mat === m.userData.mats[0] ? 0xa8804a : 0x9a9a9a).multiplyScalar(L);
-    wearArmor(m, this.armor.map((s) => (s ? s.id : null)));
+    wearArmor(m, this.armor.map((s) => (s ? s.id : null)), null, this.armor.map((s) => (s ? s.inlay : null)));
     lightArmor(m, L);
     this.setHeld(m, this.hand ? this.hand.id : null);
     if (m.userData.held) m.userData.held.material.color.setScalar(L);

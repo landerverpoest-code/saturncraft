@@ -626,3 +626,10 @@ item('creature_egg', 'Creature Egg', { creatureEgg: true, iconStyle: ['egg', { h
 item('dawnfern_seeds', 'Dawnfern Seeds', { places: B.DAWNFERN, iconStyle: ['seeds', { h: '#3fae7a', H: '#b6f4d0' }] });
 item('plate_scale', 'Plate Scale', { iconStyle: ['shard', { h: '#b08a5a', H: '#e6c894', s: '#6a4a2a' }] });
 item('howler_barding', 'Howler Barding', { stack: 1, durability: 64, barding: 'howler', repairWith: 'PLATE_SCALE', iconStyle: ['saddle', { h: '#9a7a4a', H: '#d8b878', s: '#5a3e22' }] });
+
+// Armour Inlays (player/inlays.js; appended, so no item id shifts): six stencils, each a pattern that can be laid into a piece of armour in a
+// chosen material (cosmetic only). A stencil is not used up by laying it; paper and planks copy it.
+for (const [key, name, h, H] of [
+  ['ringed', 'Ringed', '#c8b078', '#f0e0a8'], ['three_suns', 'Three Suns', '#e0b040', '#fff0a0'], ['tidal', 'Tidal', '#4a90c0', '#a8e0f8'],
+  ['thorn', 'Thorn', '#5a8a3a', '#a8d878'], ['ember', 'Ember', '#d05a2a', '#ffb070'], ['hollow', 'Hollow', '#8a8aa0', '#d0d0e8'],
+]) item('inlay_stencil_' + key, 'Inlay Stencil: ' + name, { iconStyle: ['shard', { h, H, s: '#4a3a2a' }] });
