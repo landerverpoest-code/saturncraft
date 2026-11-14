@@ -621,6 +621,9 @@ poison from eyes) follow the documented table.
 
 * **Creature Eggs** (`src/mobs/creatureEggs.js`; reference: spawn eggs): the Creative Inventory lists an egg for every creature except the bosses and their parts; using one on a block hatches the creature on that face (a guest's egg is hatched by the host through the `/summon` path; survival players use the egg up). It is a single item whose label names the creature - the field a Name Tag writes - so eggs of different creatures do not stack, they travel through saves and the network like any labelled stack, and an egg renamed on an anvil hatches whatever it is named after.
 
+* **The Ember Hearth** (`src/world/emberHearth.js`; six Obsidian around three Glowshard blocks) is a respawn point for the Cinderdeep: feed it Glowshard blocks (up to four charges), use it in the Cinderdeep to bind yourself to it, and if you die there you wake beside it instead of being sent home, at the cost of one charge. It burns only in the Cinderdeep, and the binding is saved with your character.
+* **Glimmermoss** (`src/world/glimmermoss.js`; Moss Carpet and Glowshard Dust make two) is a glowing plant for cave walls (light 7): it hangs like Vines but cannot be climbed, only Shears bring it home, and Bone Meal spreads it to a free neighbouring wall.
+
 **Not yet implemented**
 
 * Large structures beyond villages, temples, wrecks, Tide Citadels, Sunken Ruins, Sun Tombs, Skywatch Towers, Rimekeeps, Sporehalls, outposts, ruined rifts, dungeons, sanctums, bastions, Cinderforges, Hollow Cities and Wyrm Ribs
