@@ -35,6 +35,7 @@ import { buildTopics, searchTopics } from './helpTopics.js';
 import { isTrinket, TRINKET_SLOTS } from '../player/trinkets.js';
 import { wornSets, SET_PIECES } from '../player/setBonuses.js';
 import { TOUCH_MODE_LABELS, SIZE_RANGE, OPACITY_RANGE, nextTouchMode, normalizeTouch, detectTouch, readTouchEnv } from './touchMath.js';
+import { t, LANGUAGES, nextLanguage, getLanguage } from './i18n.js';
 import { WORLD_RULES, WORLD_RULE_NAMES, ruleIn, ruleLockReason } from '../world/gameRules.js';
 import { loadPlayerName, MAX_PLAYERS } from '../net/protocol.js';
 import { EMOTES, EMOTE_LABELS, RESPAWN_WAIT_S } from '../net/social.js';
@@ -1421,36 +1422,38 @@ export class UI {
     this.clear();
     this.open = 'pause';
     const g = this.game;
+    const onOff = (label, on) => `${t(label)}: ${t(on ? 'On' : 'Off')}`;
     const s = el(`<div class="screen pause-screen">
-      <h2>Paused</h2>
-      <button class="btn" data-a="resume">Back to Game</button>
-      <button class="btn" data-a="save">Save Game</button>
-      <div class="btn-row"><button class="btn" data-a="help">Help (${codeLabel(resolveBindings(g.settings.keys).help[0])})</button>
-      <button class="btn" id="hints">Hints: ${g.settings.hints !== false ? 'On' : 'Off'}</button></div>
-      <div class="field"><label>Render distance: <b id="rdv">${g.settings.renderDistance}</b> chunks</label><input type="range" min="2" max="16" value="${g.settings.renderDistance}" id="rd"></div>
-      <div class="field"><label>Field of view: <b id="fovv">${g.settings.fov}</b></label><input type="range" min="50" max="110" value="${g.settings.fov}" id="fov"></div>
-      <div class="field"><label>Look sensitivity (mouse and touch): <b id="msv">${g.settings.sensitivity}</b></label><input type="range" min="10" max="200" value="${g.settings.sensitivity}" id="ms"></div>
-      <div class="field"><label>Volume: <b id="volv">${Math.round(g.settings.volume * 100)}</b>%</label><input type="range" min="0" max="100" value="${Math.round(g.settings.volume * 100)}" id="vol"></div>
-      <div class="field"><label>Music: <b id="musv">${Math.round((g.settings.music ?? 0.5) * 100)}</b>%</label><input type="range" min="0" max="100" value="${Math.round((g.settings.music ?? 0.5) * 100)}" id="mus"></div>
-      <div class="field"><label><input type="checkbox" id="sh" ${g.settings.shadows ? 'checked' : ''}> Sun shadows (3 shadow-casting lights)</label></div>
-      <div class="btn-row"><button class="btn" id="fx">Shaders: ${g.settings.shaders !== false ? 'On' : 'Off'}</button>
-      <button class="btn" id="fast">Low-lag graphics</button></div>
-      <div class="sub" style="font-size:12px;opacity:.7;margin:-4px 0 6px">Laggy? Turn shaders off here or press F7 at any time</div>
-      <div class="btn-row"><button class="btn" id="dlc">Day/night cycle: ${g.settings.daylightCycle !== false ? 'On' : 'Off'}</button>
-      <button class="btn" id="hm">Hostile mobs: ${g.settings.hostileMobs !== false ? 'On' : 'Off'}</button></div>
-      <button class="btn" id="sea">Seasons: ${g.settings.seasons !== false ? 'On' : 'Off'}</button>
-      <button class="btn" id="crd">Show coordinates: ${g.settings.showCoords ? 'On' : 'Off'}</button>
-      <button class="btn" id="diff">Difficulty: ${cap(g.difficulty)}</button>
-      <button class="btn" data-a="rules">World rules...</button>
-      <div class="btn-row"><button class="btn" data-a="controls">Controls</button>
-      <button class="btn" data-a="access">Accessibility</button></div>
-      <div class="btn-row"><button class="btn" data-a="ms">Milestones</button>
-      <button class="btn" data-a="stats">Statistics</button></div>
-      <button class="btn" data-a="guide">Field Guide (${codeLabel(resolveBindings(g.settings.keys).guide[0])})</button>
-      <button class="btn" data-a="journal">Quest Journal (${codeLabel(resolveBindings(g.settings.keys).journal[0])})</button>
-      <button class="btn" data-a="touch">Touch controls: ${g.touch ? 'On' : 'Off'}</button>
+      <h2>${t('Paused')}</h2>
+      <button class="btn" data-a="resume">${t('Back to Game')}</button>
+      <button class="btn" data-a="save">${t('Save Game')}</button>
+      <div class="btn-row"><button class="btn" data-a="help">${t('Help ({key})', { key: codeLabel(resolveBindings(g.settings.keys).help[0]) })}</button>
+      <button class="btn" id="hints">${onOff('Hints', g.settings.hints !== false)}</button></div>
+      <div class="field"><label>${t('Render distance:')} <b id="rdv">${g.settings.renderDistance}</b> ${t('chunks')}</label><input type="range" min="2" max="16" value="${g.settings.renderDistance}" id="rd"></div>
+      <div class="field"><label>${t('Field of view:')} <b id="fovv">${g.settings.fov}</b></label><input type="range" min="50" max="110" value="${g.settings.fov}" id="fov"></div>
+      <div class="field"><label>${t('Look sensitivity (mouse and touch):')} <b id="msv">${g.settings.sensitivity}</b></label><input type="range" min="10" max="200" value="${g.settings.sensitivity}" id="ms"></div>
+      <div class="field"><label>${t('Volume:')} <b id="volv">${Math.round(g.settings.volume * 100)}</b>%</label><input type="range" min="0" max="100" value="${Math.round(g.settings.volume * 100)}" id="vol"></div>
+      <div class="field"><label>${t('Music:')} <b id="musv">${Math.round((g.settings.music ?? 0.5) * 100)}</b>%</label><input type="range" min="0" max="100" value="${Math.round((g.settings.music ?? 0.5) * 100)}" id="mus"></div>
+      <div class="field"><label><input type="checkbox" id="sh" ${g.settings.shadows ? 'checked' : ''}> ${t('Sun shadows (3 shadow-casting lights)')}</label></div>
+      <div class="btn-row"><button class="btn" id="fx">${onOff('Shaders', g.settings.shaders !== false)}</button>
+      <button class="btn" id="fast">${t('Low-lag graphics')}</button></div>
+      <div class="sub" style="font-size:12px;opacity:.7;margin:-4px 0 6px">${t('Laggy? Turn shaders off here or press F7 at any time')}</div>
+      <div class="btn-row"><button class="btn" id="dlc">${onOff('Day/night cycle', g.settings.daylightCycle !== false)}</button>
+      <button class="btn" id="hm">${onOff('Hostile mobs', g.settings.hostileMobs !== false)}</button></div>
+      <button class="btn" id="sea">${onOff('Seasons', g.settings.seasons !== false)}</button>
+      <button class="btn" id="crd">${onOff('Show coordinates', !!g.settings.showCoords)}</button>
+      <button class="btn" id="diff">${t('Difficulty')}: ${t(cap(g.difficulty))}</button>
+      <button class="btn" id="lang">${t('Language')}: ${LANGUAGES[getLanguage()]}</button>
+      <button class="btn" data-a="rules">${t('World rules...')}</button>
+      <div class="btn-row"><button class="btn" data-a="controls">${t('Controls')}</button>
+      <button class="btn" data-a="access">${t('Accessibility')}</button></div>
+      <div class="btn-row"><button class="btn" data-a="ms">${t('Milestones')}</button>
+      <button class="btn" data-a="stats">${t('Statistics')}</button></div>
+      <button class="btn" data-a="guide">${t('Field Guide ({key})', { key: codeLabel(resolveBindings(g.settings.keys).guide[0]) })}</button>
+      <button class="btn" data-a="journal">${t('Quest Journal ({key})', { key: codeLabel(resolveBindings(g.settings.keys).journal[0]) })}</button>
+      <button class="btn" data-a="touch">${onOff('Touch controls', !!g.touch)}</button>
       <div class="net-box"></div>
-      <button class="btn" data-a="title">${g.net && g.net.isClient ? 'Disconnect' : 'Save &amp; Quit to Title'}</button>
+      <button class="btn" data-a="title">${g.net && g.net.isClient ? t('Disconnect') : t('Save & Quit to Title')}</button>
     </div>`);
     this.fillNetBox(s.querySelector('.net-box'));
     const bind = (id, lbl, fn) => s.querySelector('#' + id).addEventListener('input', (e) => { s.querySelector('#' + lbl).textContent = fn(+e.target.value); });
@@ -1462,7 +1465,7 @@ export class UI {
     s.querySelector('#sh').addEventListener('change', (e) => g.setSetting('shadows', e.target.checked));
     const toggle = (id, key, label) => {
       const b = s.querySelector('#' + id);
-      b.onclick = () => { const on = g.settings[key] === false; g.setSetting(key, on); b.textContent = `${label}: ${on ? 'On' : 'Off'}`; };
+      b.onclick = () => { const on = g.settings[key] === false; g.setSetting(key, on); b.textContent = onOff(label, on); };
     };
     toggle('dlc', 'daylightCycle', 'Day/night cycle');
     toggle('sea', 'seasons', 'Seasons');
@@ -1472,23 +1475,24 @@ export class UI {
       // everything that costs the most frames off at once: shaders, sun shadows, high pixel density, far chunks
       g.setSetting('shaders', false); g.setSetting('shadows', false); g.setSetting('pixelRatioCap', 1);
       if (g.settings.renderDistance > 6) { g.setSetting('renderDistance', 6); s.querySelector('#rd').value = 6; s.querySelector('#rdv').textContent = 6; }
-      s.querySelector('#fx').textContent = 'Shaders: Off'; s.querySelector('#sh').checked = false;
-      g.hud.toast('Low-lag graphics: shaders and shadows off');
+      s.querySelector('#fx').textContent = onOff('Shaders', false); s.querySelector('#sh').checked = false;
+      g.hud.toast(t('Low-lag graphics: shaders and shadows off'));
     };
     toggle('hm', 'hostileMobs', 'Hostile mobs');
     toggle('crd', 'showCoords', 'Show coordinates');
+    s.querySelector('#lang').onclick = () => { g.setSetting('language', nextLanguage(getLanguage())); this.showPause(); };
     const db = s.querySelector('#diff');
     if (g.net && g.net.isClient) db.disabled = true; // the host decides
-    db.onclick = () => { const order = ['peaceful', 'easy', 'normal', 'hard']; g.setSetting('difficulty', order[(order.indexOf(g.difficulty) + 1) % 4]); db.textContent = `Difficulty: ${cap(g.difficulty)}`; };
+    db.onclick = () => { const order = ['peaceful', 'easy', 'normal', 'hard']; g.setSetting('difficulty', order[(order.indexOf(g.difficulty) + 1) % 4]); db.textContent = `${t('Difficulty')}: ${t(cap(g.difficulty))}`; };
     s.querySelector('[data-a=resume]').onclick = () => { this.open = null; this.clear(); g.onUIClosed(); };
     s.querySelector('[data-a=title]').onclick = () => g.quitToTitle();
     const sv = s.querySelector('[data-a=save]');
     if (g.net && g.net.isClient) sv.disabled = true; // the host saves a friend's world
     sv.onclick = async () => {
-      sv.disabled = true; sv.textContent = 'Saving…';
+      sv.disabled = true; sv.textContent = t('Saving…');
       const ok = await g.save();
-      sv.textContent = ok ? 'Saved ✓' : 'Save failed';
-      setTimeout(() => { sv.disabled = false; sv.textContent = 'Save Game'; }, 1500);
+      sv.textContent = ok ? t('Saved ✓') : t('Save failed');
+      setTimeout(() => { sv.disabled = false; sv.textContent = t('Save Game'); }, 1500);
     };
     s.querySelector('[data-a=ms]').onclick = () => this.showMilestones();
     s.querySelector('[data-a=stats]').onclick = () => this.showStats();
@@ -1507,19 +1511,19 @@ export class UI {
     this.clear();
     this.open = 'pause';
     const g = this.game;
-    const s = el(`<div class="screen pause-screen rules-screen"><h2>World rules</h2>
+    const s = el(`<div class="screen pause-screen rules-screen"><h2>${t('World rules')}</h2>
       <p class="sub rules-note"></p><div class="rules-list"></div>
-      <button class="btn" data-a="back">Back</button></div>`);
+      <button class="btn" data-a="back">${t('Back')}</button></div>`);
     const list = s.querySelector('.rules-list');
     const locked = WORLD_RULE_NAMES.map((n) => ruleLockReason(g, n));
     const whole = locked.every((r) => r && r !== 'a One Life world keeps nothing') ? locked[0] : null;
-    s.querySelector('.rules-note').textContent = whole ? `Rules cannot be changed here: ${whole}.` : 'Rules belong to this world and are saved with it.';
+    s.querySelector('.rules-note').textContent = whole ? t('Rules cannot be changed here: {why}.', { why: t(whole) }) : t('Rules belong to this world and are saved with it.');
     WORLD_RULE_NAMES.forEach((name, i) => {
       const row = el(`<div class="field rule-row"><b></b> <span class="sub"></span><button class="btn"></button></div>`);
       row.querySelector('b').textContent = name;
-      row.querySelector('.sub').textContent = WORLD_RULES[name].desc + (locked[i] && !whole ? ` (${locked[i]})` : '');
+      row.querySelector('.sub').textContent = t(WORLD_RULES[name].desc) + (locked[i] && !whole ? ` (${t(locked[i])})` : '');
       const btn = row.querySelector('button');
-      const paint = () => { btn.textContent = ruleIn(g.settings, name) ? 'On' : 'Off'; };
+      const paint = () => { btn.textContent = t(ruleIn(g.settings, name) ? 'On' : 'Off'); };
       paint();
       if (locked[i]) btn.disabled = true;
       btn.onclick = () => { g.setSetting(name, !ruleIn(g.settings, name)); paint(); };
@@ -1676,12 +1680,12 @@ export class UI {
   fillNetBox(box) {
     const g = this.game, net = g.net;
     if (!net) {
-      const b = el('<button class="btn" data-a="host">Open to Friends (host)</button>');
+      const b = el(`<button class="btn" data-a="host">${t('Open to Friends (host)')}</button>`);
       const msg = el('<p class="sub net-msg"></p>');
       b.onclick = async () => {
-        b.disabled = true; b.textContent = 'Opening…';
+        b.disabled = true; b.textContent = t('Opening…');
         try { await g.openToFriends(loadPlayerName()); if (this.open === 'pause') this.showPause(); }
-        catch (e) { b.disabled = false; b.textContent = 'Open to Friends (host)'; msg.textContent = e.message || String(e); }
+        catch (e) { b.disabled = false; b.textContent = t('Open to Friends (host)'); msg.textContent = e.message || String(e); }
       };
       box.append(b, msg);
       return;
@@ -2224,28 +2228,28 @@ export class UI {
       arrow: 'was shot by a Rattler', poison: 'succumbed to poison', magic: 'was killed by magic', wither: 'withered away',
       wall: 'experienced kinetic energy', freeze: 'froze to death', border: 'left the confines of this world', hot_floor: 'discovered the floor was scalding',
     };
-    const text = msgs[cause] || (cause && cause.startsWith('mob:') ? `was slain by a ${cause.slice(4)}` : cause && cause.startsWith('player:') ? `was slain by ${cause.slice(7)}` : 'died');
-    const s = el(`<div class="screen" id="death-screen"><h2>You Died!</h2><p class="sub">Player ${text}</p>${this.game.hardcoreOver ? '<p class="sub">This was a One Life world: it can only be watched now.</p>' : ''}<button class="btn">${this.game.hardcoreOver ? 'Watch the world' : 'Respawn'}</button></div>`);
+    const text = msgs[cause] ? t(msgs[cause]) : cause && cause.startsWith('mob:') ? t('was slain by a {mob}', { mob: cause.slice(4) }) : cause && cause.startsWith('player:') ? t('was slain by {name}', { name: cause.slice(7) }) : t('died');
+    const s = el(`<div class="screen" id="death-screen"><h2>${t('You Died!')}</h2><p class="sub">${t('Player {what}', { what: text })}</p>${this.game.hardcoreOver ? `<p class="sub">${t('This was a One Life world: it can only be watched now.')}</p>` : ''}<button class="btn">${this.game.hardcoreOver ? t('Watch the world') : t('Respawn')}</button></div>`);
     s.querySelector('button').onclick = () => { this.open = null; this.clear(); this.game.respawn(); };
     const net = this.game.net;
     if (net && net.deathCam) {
       // dead in a shared world: the camera follows a friend (the killer, a team mate...) while Respawn counts down (net/session.js)
-      const btn = s.querySelector('button'), bar = el('<div class="death-cam"><span class="sub"></span> <button class="btn tiny" data-d="-1">Previous</button> <button class="btn tiny" data-d="1">Next</button></div>');
-      const label = bar.querySelector('span'), paint = () => { const v = net.deathCamView(); label.textContent = v ? `Watching ${v.name}` : ''; bar.classList.toggle('hidden', !v); };
+      const btn = s.querySelector('button'), bar = el(`<div class="death-cam"><span class="sub"></span> <button class="btn tiny" data-d="-1">${t('Previous')}</button> <button class="btn tiny" data-d="1">${t('Next')}</button></div>`);
+      const label = bar.querySelector('span'), paint = () => { const v = net.deathCamView(); label.textContent = v ? t('Watching {name}', { name: v.name }) : ''; bar.classList.toggle('hidden', !v); };
       bar.querySelectorAll('button').forEach((b) => { b.onclick = () => { net.cycleDeathCam(+b.dataset.d); paint(); }; });
       s.insertBefore(bar, btn);
       paint();
       let left = RESPAWN_WAIT_S;
-      btn.disabled = true; btn.textContent = `Respawn in ${left}`;
+      btn.disabled = true; btn.textContent = t('Respawn in {n}', { n: left });
       const timer = setInterval(() => {
         if (this.open !== 'death') { clearInterval(timer); return; }
         paint();
-        if (--left <= 0) { clearInterval(timer); btn.disabled = false; btn.textContent = 'Respawn'; } else btn.textContent = `Respawn in ${left}`;
+        if (--left <= 0) { clearInterval(timer); btn.disabled = false; btn.textContent = t('Respawn'); } else btn.textContent = t('Respawn in {n}', { n: left });
       }, 1000);
     }
     if (net && net.spectateCandidates().length) {
       // dead in a shared world: watch a friend instead of respawning right away
-      const w = el('<button class="btn">Spectate a Friend</button>');
+      const w = el(`<button class="btn">${t('Spectate a Friend')}</button>`);
       w.onclick = () => { this.open = null; this.clear(); this.game.spectateAfterDeath(); };
       s.appendChild(w);
     }

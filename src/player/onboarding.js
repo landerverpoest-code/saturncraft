@@ -12,6 +12,7 @@ import { B, SOLID } from '../world/blocks.js';
 import { I, ITEMS } from '../world/items.js';
 import { codeLabel, resolveBindings } from '../ui/bindings.js';
 import { SPRINT_MIN_FOOD } from './survival.js';
+import { t as tr } from '../ui/i18n.js';
 
 /** Ticks a hint stays up, the quiet time between two hints, and how many may wait their turn. */
 export const HINT_TICKS = 20 * 14;
@@ -54,14 +55,14 @@ const MOUSE_LABELS = { attack: 'left click', use: 'right click' };
 
 /** What to call an action for a player: 'key', 'pad' or 'touch' (ui/bindings.js table = resolveBindings result). */
 export function actionLabel(table, action, mode = 'key') {
-  if (mode === 'touch' && TOUCH_LABELS[action]) return TOUCH_LABELS[action];
+  if (mode === 'touch' && TOUCH_LABELS[action]) return tr(TOUCH_LABELS[action]);
   const row = (table && table[action]) || [];
   const pad = row[2] ? codeLabel(row[2]) : null;
   if (mode === 'pad' && pad) return pad;
   const key = row[0] || row[1];
   if (key) return codeLabel(key);
-  if (MOUSE_LABELS[action]) return MOUSE_LABELS[action];
-  return pad || 'its key';
+  if (MOUSE_LABELS[action]) return tr(MOUSE_LABELS[action]);
+  return pad || tr('its key');
 }
 
 /** Replace {action} placeholders in a hint with the player's own keys. Unknown words are left alone. */
@@ -207,7 +208,7 @@ export class Onboarding {
     this.active = { id, until: this.ticks + HINT_TICKS };
     if (g.hud && g.hud.showHint) {
       const t = this.table, m = this.mode, h = HINTS[id];
-      g.hud.showHint(h.title, fillKeys(h.text, t, m), `${actionLabel(t, 'dismissHint', m)}: got it · ${actionLabel(t, 'help', m)}: help`, id);
+      g.hud.showHint(tr(h.title), fillKeys(tr(h.text), t, m), tr('{dismiss}: got it · {help}: help', { dismiss: actionLabel(t, 'dismissHint', m), help: actionLabel(t, 'help', m) }), id);
     }
   }
 
@@ -301,7 +302,7 @@ export class Onboarding {
     if (this.finished || this.steps.size < STEPS.length) return;
     this.finished = true;
     this.doneAt = this.ticks;
-    if (this.game.hud && this.game.hud.toast) this.game.hud.toast('First Steps complete! Help is always one key away.', 3500);
+    if (this.game.hud && this.game.hud.toast) this.game.hud.toast(tr('First Steps complete! Help is always one key away.'), 3500);
     this.renderSteps();
   }
 
@@ -328,9 +329,9 @@ export class Onboarding {
     const current = STEPS.find((s) => !this.steps.has(s.id));
     return {
       complete: showDone,
-      items: STEPS.map((s) => ({ id: s.id, label: s.label, done: this.steps.has(s.id), current: current === s })),
-      tip: current ? fillKeys(current.tip, t, m) : '',
-      skip: `Skip: ${actionLabel(t, 'help', m)} > First Steps`,
+      items: STEPS.map((s) => ({ id: s.id, label: tr(s.label), done: this.steps.has(s.id), current: current === s })),
+      tip: current ? fillKeys(tr(current.tip), t, m) : '',
+      skip: tr('Skip: {help} > First Steps', { help: actionLabel(t, 'help', m) }),
     };
   }
 

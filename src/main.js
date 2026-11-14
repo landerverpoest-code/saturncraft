@@ -10,6 +10,7 @@ import { takeResume, storeResume, shouldRetryJoin, RECONNECT_MAX, reconnectDelay
 import { wantTouch, readTouchEnv } from './ui/touchMath.js';
 import { applyAccessToRoot } from './ui/accessibility.js';
 import { resolveBindings, codeLabel } from './ui/bindings.js';
+import { t, setLanguage, translateDom, LANGUAGES, isLanguage } from './ui/i18n.js';
 
 const stopTitleScene = startTitleScene(document.getElementById('title-bg'));
 document.getElementById('splash').textContent = SPLASHES[Math.floor(Math.random() * SPLASHES.length)];
@@ -31,6 +32,8 @@ if (wantTouch(loadSettings(), location.search, readTouchEnv())) {
 }
 const loading = document.getElementById('loading');
 const settings = loadSettings();
+if (!isLanguage(settings.language)) settings.language = DEFAULT_SETTINGS.language;
+setLanguage(settings.language); // the title screen reads the saved language before any game exists
 applyAccessToRoot(document.documentElement, settings); // the title screen honours the accessibility classes too
 const rd = document.getElementById('t-rd');
 const sh = document.getElementById('t-sh');
@@ -41,6 +44,17 @@ fx.checked = settings.shaders !== false;
 rd.addEventListener('input', () => { document.getElementById('t-rdv').textContent = rd.value; });
 
 let game = null;
+// language selector: re-translates the whole title screen at once (static text via data-i18n, the rest via the world list)
+const langSel = document.getElementById('t-lang');
+for (const [code, name] of Object.entries(LANGUAGES)) { const o = document.createElement('option'); o.value = code; o.textContent = name; langSel.appendChild(o); }
+langSel.value = settings.language;
+let worldList = null;
+function applyLanguage() {
+  setLanguage(settings.language);
+  translateDom(document.body);
+  if (worldList) worldList.relang();
+}
+langSel.addEventListener('change', () => { settings.language = langSel.value; saveSettings(settings); applyLanguage(); });
 const pname = document.getElementById('pname');
 pname.value = loadPlayerName();
 pname.addEventListener('change', () => { savePlayerName(pname.value); pname.value = loadPlayerName(); });
@@ -53,8 +67,9 @@ function titleURL() {
 }
 
 // ---- saved worlds: the list, backups, import / export and the creation options live in ui/worldList.js ----
-const worldList = initWorldList({ start: (d, slot) => start(d, null, slot) });
+worldList = initWorldList({ start: (d, slot) => start(d, null, slot) });
 const playBtn = document.getElementById('play');
+applyLanguage();
 
 /** Open a saved world (`saveData`), a friend's (`net`) or a new one made with `newOpts` (the creation options). */
 async function start(saveData = null, net = null, slot = null, newOpts = null) {
@@ -94,26 +109,26 @@ async function start(saveData = null, net = null, slot = null, newOpts = null) {
     game.save(); // the new world is in the list from the start, with its options
   }
   loading.classList.add('hidden');
-  if (game.touch) game.hud.toast(net ? `Joined ${net.welcome.hostName}'s world` : 'Left thumb moves · drag to look · hold to mine · Menu > Help');
-  else game.hud.toast(net ? `Joined ${net.welcome.hostName}'s world · click to play` : `Click to play · E for inventory · ${codeLabel(resolveBindings(settings.keys).help[0])} for help`);
+  if (game.touch) game.hud.toast(net ? t("Joined {name}'s world", { name: net.welcome.hostName }) : t('Left thumb moves · drag to look · hold to mine · Menu > Help'));
+  else game.hud.toast(net ? t("Joined {name}'s world · click to play", { name: net.welcome.hostName }) : t('Click to play · E for inventory · {key} for help', { key: codeLabel(resolveBindings(settings.keys).help[0]) }));
 }
 
 /** Join a friend's world by room code (or join link). `resume`: coming back after a dropped link (tries a few times). */
 async function join(input, resume = null) {
   const msg = document.getElementById('join-msg'), btn = document.getElementById('join');
   const code = normalizeRoomCode(input);
-  if (!code) { msg.textContent = 'Enter the room code from your friend\'s pause menu'; return; }
+  if (!code) { msg.textContent = t("Enter the room code from your friend's pause menu"); return; }
   savePlayerName(pname.value);
   btn.disabled = true;
   let session = null;
   const { joinSession } = await import('./net/session.js');
   for (let attempt = 1; !session; attempt++) {
     try {
-      session = await joinSession(code, loadPlayerName(), (s) => { msg.textContent = resume ? `Reconnecting (${attempt}/${RECONNECT_MAX})... ${s}` : s; }, undefined, { resume });
+      session = await joinSession(code, loadPlayerName(), (s) => { msg.textContent = resume ? t('Reconnecting ({n}/{max})... {status}', { n: attempt, max: RECONNECT_MAX, status: s }) : s; }, undefined, { resume });
     } catch (e) {
       const why = e.message || String(e);
       if (!resume || attempt >= RECONNECT_MAX || !shouldRetryJoin(why)) { msg.textContent = why; btn.disabled = false; return; }
-      msg.textContent = `${why} - trying again in ${reconnectDelay(attempt)} s (${attempt}/${RECONNECT_MAX})`;
+      msg.textContent = t('{why} - trying again in {s} s ({n}/{max})', { why, s: reconnectDelay(attempt), n: attempt, max: RECONNECT_MAX });
       await new Promise((r) => setTimeout(r, reconnectDelay(attempt) * 1000));
     }
   }

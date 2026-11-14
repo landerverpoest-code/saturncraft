@@ -15,41 +15,42 @@
   <div id="title-screen" class="screen">
     <canvas id="title-bg"></canvas>
     <div class="title-wrap"><h1>SATURNCRAFT</h1><div id="splash"></div></div>
-    <p class="sub">Three suns. One ringed giant. Survive.</p>
-    <div class="field"><label for="pname">Your name</label><input type="text" id="pname" maxlength="16" /></div>
+    <p class="sub" data-i18n>Three suns. One ringed giant. Survive.</p>
+    <div class="field lang-field"><label for="t-lang" data-i18n>Language</label><select id="t-lang"></select></div>
+    <div class="field"><label for="pname" data-i18n>Your name</label><input type="text" id="pname" maxlength="16" /></div>
     <div id="storage-note" class="wm-note hidden"></div>
     <div id="worlds" class="world-list"></div>
     <p class="sub" id="wm-msg"></p>
-    <div class="btn-row wm-tools"><button class="btn" id="import-btn" title="Add a world from a .saturnworld file">Import world…</button></div>
+    <div class="btn-row wm-tools"><button class="btn" id="import-btn" title="Add a world from a .saturnworld file" data-i18n data-i18n-attr="title">Import world…</button></div>
     <input type="file" id="import-file" accept=".saturnworld,application/gzip,application/octet-stream" hidden />
-    <div class="field"><label for="wname">World name</label><input type="text" id="wname" maxlength="24" placeholder="New World" /></div>
-    <div class="field"><label for="seed">World seed</label><input type="text" id="seed" maxlength="64" placeholder="random (any text or number)" /></div>
+    <div class="field"><label for="wname" data-i18n>World name</label><input type="text" id="wname" maxlength="24" placeholder="New World" data-i18n-attr="placeholder" /></div>
+    <div class="field"><label for="seed" data-i18n>World seed</label><input type="text" id="seed" maxlength="64" placeholder="random (any text or number)" data-i18n-attr="placeholder" /></div>
     <details id="world-options" class="wm-options">
-      <summary>More world options</summary>
+      <summary data-i18n>More world options</summary>
       <div class="wm-grid">
-        <label>World type <select id="wo-type"></select></label>
-        <label>Game mode <select id="wo-mode"><option value="survival">Survival</option><option value="creative">Creative</option><option value="adventure">Adventure</option></select></label>
-        <label>Difficulty <select id="wo-diff"><option value="peaceful">Peaceful</option><option value="easy">Easy</option><option value="normal" selected>Normal</option><option value="hard">Hard</option></select></label>
-        <label><input type="checkbox" id="wo-cheats" checked /> Allow cheats (commands)</label>
-        <label><input type="checkbox" id="wo-seasons" checked /> Seasons</label>
-        <label>Starting season <select id="wo-start"><option value="spring">Spring</option><option value="summer">Summer</option><option value="autumn">Autumn</option><option value="winter">Winter</option></select></label>
-        <label>Days per season <input type="number" id="wo-days" min="1" max="120" value="8" /></label>
-        <label><input type="checkbox" id="wo-daylight" checked /> Day/night cycle</label>
-        <label><input type="checkbox" id="wo-hostile" checked /> Hostile mobs</label>
-        <label><input type="checkbox" id="wo-events" checked /> World events</label>
-        <label><input type="checkbox" id="wo-fwhurt" /> Fireworks hurt players</label>
-        <label><input type="checkbox" id="wo-keepinv" /> Keep inventory on death</label>
-        <label title="Survival on Hard without cheats. When you die the world can only be watched."><input type="checkbox" id="wo-hardcore" /> One Life (hardcore)</label>
+        <label><span data-i18n>World type</span> <select id="wo-type"></select></label>
+        <label><span data-i18n>Game mode</span> <select id="wo-mode"><option value="survival" data-i18n>Survival</option><option value="creative" data-i18n>Creative</option><option value="adventure" data-i18n>Adventure</option></select></label>
+        <label><span data-i18n>Difficulty</span> <select id="wo-diff"><option value="peaceful" data-i18n>Peaceful</option><option value="easy" data-i18n>Easy</option><option value="normal" selected data-i18n>Normal</option><option value="hard" data-i18n>Hard</option></select></label>
+        <label><input type="checkbox" id="wo-cheats" checked /> <span data-i18n>Allow cheats (commands)</span></label>
+        <label><input type="checkbox" id="wo-seasons" checked /> <span data-i18n>Seasons</span></label>
+        <label><span data-i18n>Starting season</span> <select id="wo-start"><option value="spring" data-i18n>Spring</option><option value="summer" data-i18n>Summer</option><option value="autumn" data-i18n>Autumn</option><option value="winter" data-i18n>Winter</option></select></label>
+        <label><span data-i18n>Days per season</span> <input type="number" id="wo-days" min="1" max="120" value="8" /></label>
+        <label><input type="checkbox" id="wo-daylight" checked /> <span data-i18n>Day/night cycle</span></label>
+        <label><input type="checkbox" id="wo-hostile" checked /> <span data-i18n>Hostile mobs</span></label>
+        <label><input type="checkbox" id="wo-events" checked /> <span data-i18n>World events</span></label>
+        <label><input type="checkbox" id="wo-fwhurt" /> <span data-i18n>Fireworks hurt players</span></label>
+        <label><input type="checkbox" id="wo-keepinv" /> <span data-i18n>Keep inventory on death</span></label>
+        <label title="Survival on Hard without cheats. When you die the world can only be watched." data-i18n-attr="title"><input type="checkbox" id="wo-hardcore" /> <span data-i18n>One Life (hardcore)</span></label>
       </div>
     </details>
-    <div class="field"><label>Render distance: <b id="t-rdv">8</b> chunks</label><input type="range" id="t-rd" min="2" max="16" value="8" /></div>
-    <div class="field"><label><input type="checkbox" id="t-sh" checked /> Sun shadows</label> <label><input type="checkbox" id="t-fx" checked /> Shaders</label></div>
+    <div class="field"><label><span data-i18n>Render distance:</span> <b id="t-rdv">8</b> <span data-i18n>chunks</span></label><input type="range" id="t-rd" min="2" max="16" value="8" /></div>
+    <div class="field"><label><input type="checkbox" id="t-sh" checked /> <span data-i18n>Sun shadows</span></label> <label><input type="checkbox" id="t-fx" checked /> <span data-i18n>Shaders</span></label></div>
     <button class="btn" id="play">Create New World</button>
-    <div class="join-row"><input type="text" id="join-code" placeholder="Room code" maxlength="64" /><button class="btn" id="join">Join a Friend</button></div>
+    <div class="join-row"><input type="text" id="join-code" placeholder="Room code" maxlength="64" data-i18n-attr="placeholder" /><button class="btn" id="join" data-i18n>Join a Friend</button></div>
     <p class="sub" id="join-msg"></p>
-    <p class="sub" id="controls-hint" style="margin-top:14px;font-size:13px">WASD move · Space jump · Shift sneak · Ctrl sprint · E inventory · T chat · F1 help · F5 camera · F7 shaders · Esc pause</p>
+    <p class="sub" id="controls-hint" data-i18n style="margin-top:14px;font-size:13px">WASD move · Space jump · Shift sneak · Ctrl sprint · E inventory · T chat · F1 help · F5 camera · F7 shaders · Esc pause</p>
   </div>
-  <div id="loading" class="hidden"><div>Generating terrain…</div><div class="bar"><div></div></div></div>
+  <div id="loading" class="hidden"><div data-i18n>Generating terrain…</div><div class="bar"><div></div></div></div>
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>

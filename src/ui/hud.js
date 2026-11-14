@@ -14,6 +14,7 @@ import { shieldGauge } from '../player/shield.js';
 import { paintGhostFace, ghostPose, GHOST_TICKS } from './ghostFace.js';
 import { hudPalette, motionScales, bossBarLabel, raidBarLabel } from './accessibility.js';
 import { FrameGraph } from './frameGraph.js';
+import { t } from './i18n.js';
 
 const svg = (inner) => `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" shape-rendering="crispEdges">${inner}</svg>`)}`;
 const heartPath = 'M9 16 L2 9 Q0 6 2 3.5 Q4.5 1 7 3 L9 5 L11 3 Q13.5 1 16 3.5 Q18 6 16 9 Z';
@@ -247,6 +248,9 @@ export class HUD {
     el.classList.toggle('hidden', !view);
     if (!view) return;
     el.classList.toggle('complete', !!view.complete);
+    el.setAttribute('aria-label', t('First Steps'));
+    el.querySelector('.st-head b').textContent = t('First Steps');
+    el.querySelector('.st-skip').textContent = t('Skip');
     const list = el.querySelector('.st-list');
     list.textContent = '';
     for (const it of view.items) {
@@ -255,7 +259,7 @@ export class HUD {
       li.className = it.done ? 'done' : it.current ? 'current' : '';
       list.appendChild(li);
     }
-    el.querySelector('.st-tip').textContent = view.complete ? 'All done. Good luck out there!' : view.tip;
+    el.querySelector('.st-tip').textContent = view.complete ? t('All done. Good luck out there!') : view.tip;
     el.querySelector('.st-foot').textContent = view.skip;
     el.querySelector('.st-skip').classList.toggle('hidden', !!view.complete);
   }
@@ -492,12 +496,12 @@ export class HUD {
       ctx.beginPath(); ctx.arc(x, Math.min(h - 2, y), 4 + s.sun.size * 3, 0, Math.PI * 2); ctx.fill();
     }
     ctx.globalAlpha = 1;
-    const label = { day: 'Day', twilight: 'Twilight', night: 'Night' }[st.phase];
+    const label = t({ day: 'Day', twilight: 'Twilight', night: 'Night' }[st.phase]);
     if (this.phaseLabel.textContent !== label) this.phaseLabel.textContent = label;
-    this.timeLabel.textContent = `${st.aboveCount}/3 suns up · light ${15 - st.skyDarken}`;
+    this.timeLabel.textContent = t('{n}/3 suns up · light {light}', { n: st.aboveCount, light: 15 - st.skyDarken });
     // the season (world/seasons.js), hidden when the rule is off or outside the overworld
     const sg = this.game.seasons, show = !!sg && this.game.seasonsOn && this.game.world.dimension === 'overworld';
-    const stext = show ? `${sg.state.name} · day ${sg.state.day}/${sg.state.days}` : '';
+    const stext = show ? t('{season} · day {day}/{days}', { season: t(sg.state.name), day: sg.state.day, days: sg.state.days }) : '';
     if (this.seasonLabel.textContent !== stext) { this.seasonLabel.textContent = stext; this.seasonLabel.dataset.season = show ? sg.state.key : ''; }
     this.seasonLabel.style.display = show ? '' : 'none';
   }

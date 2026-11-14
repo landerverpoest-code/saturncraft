@@ -277,7 +277,7 @@ describe('colour is never the only cue', () => {
   });
 
   it('the season is a word with a day count, and the HUD labels carry roles', () => {
-    expect(src('src/ui/hud.js')).toMatch(/\$\{sg\.state\.name\} · day/);
+    expect(src('src/ui/hud.js')).toMatch(/\{season\} · day \{day\}\/\{days\}/); // the season word with its day count (through t(), ui/i18n.js)
     const hud = src('src/ui/hud.js');
     expect(hud).toMatch(/id="toast" role="status"/);
     expect(hud).toMatch(/id="captions" role="log"/);
