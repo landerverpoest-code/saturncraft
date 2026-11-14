@@ -626,6 +626,9 @@ poison from eyes) follow the documented table.
 
 * **Blasts and the rules screen**: explosions now throw dropped items away from the centre instead of deleting them, unless the new `blastsDestroyItems` rule is on. The pause menu has a **World rules...** screen listing every rule with its description and an On/Off toggle, locked for multiplayer guests, worlds without cheats and keepInventory in One Life worlds.
 
+* **The Rootsnout** (`src/mobs/pack7Mobs.js`) is a big, slow, mossy beast of forests and flower forests. Every few minutes, standing on grass or dirt, it roots in the ground for three seconds and leaves Dawnfern Seeds, which are also what breeds it. Plant the seeds on farmland: a ripe Dawnfern is cut for a glowing Dawnfern Plant (light 5) that stands on grass or dirt and fits a Flower Pot.
+* **The Plateback** is a small armoured burrower of savannas and badlands. A sprinting player nearby, or a blow, makes it curl into a ball for four seconds and take 70 percent less damage. Brush one with a Brush for a Plate Scale (once per animal every five minutes; it also sheds them on its own); six scales make **Howler Barding**, which a tamed Howler wears for half damage until it has soaked up 64 (Shears take it off, wear intact). Deviation: guests do not see the barding plate on a Howler (the host still applies its protection).
+
 **Not yet implemented**
 
 * Large structures beyond villages, temples, wrecks, Tide Citadels, Sunken Ruins, Sun Tombs, Skywatch Towers, Rimekeeps, Sporehalls, outposts, ruined rifts, dungeons, sanctums, bastions, Cinderforges, Hollow Cities and Wyrm Ribs
@@ -716,8 +719,7 @@ Code: `src/world/dimensions/` (registry and scaling, generators, portal logic, s
 * **Dropped items**: blocks drop as small turning 3-D cubes (two or three for stacks); other items drop as sprites rather than extruded 3-D models.
 * **Step-up** (0.6 blocks) is implemented, but without slabs or stairs in the
   block set it rarely comes into play; full blocks always need a jump.
-* **Saving** keeps modified chunks, the player, time, furnaces and animals;
-  hostile mobs, dropped items and in-flight fluids are not saved.
+* **Saving** keeps modified chunks, the player, time, furnaces, animals, dropped items (the 400 nearest, with their remaining lifetime; `src/world/saveEntities.js`) and hostile mobs within 64 blocks of the player (up to 80, with health, gear and names; they do not return on peaceful or with hostile spawning off); in-flight fluids are not saved, and a multiplayer guest saves no entities.
 * **Balance notes** (`node scripts/balance/report.mjs` prints the numbers, `tests/balance.test.js` keeps them in bounds). Found and fixed:
   a good name, the Lantern Festival and Village Champion cut the *goods a settler asks for its beryl* as well as the beryl price of its
   wares, and beryl prices bottom out at one, so "1 beryl -> 2 Hay Bales" sold back as 18 Wheat paid 1.3-1.5 beryl (and 4 Leather
