@@ -103,6 +103,8 @@ describe('crafting graph', () => {
     BOG_ESSENCE: "boiled in a Hag's Cauldron (player/interaction.js, world/hagCauldron.js)",
     SURVEYOR_WAND: '/wand or the creative inventory (ui/buildCommands.js)',
     CREATURE_EGG: 'the creative inventory only (mobs/creatureEggs.js)',
+    DAWNFERN_SEEDS: 'a Rootsnout roots them up every few minutes (mobs/pack7Mobs.js)',
+    PLATE_SCALE: 'brushing a Plateback with a Brush, or one sheds it (mobs/pack7Mobs.js)',
   };
   const extra = new Set([
     ...ITEMS.filter((it) => it && (it.potion || it.splash || it.lingering)).map((i) => i.id), // brewed (world/brewing.js)

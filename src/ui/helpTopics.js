@@ -141,6 +141,7 @@ export function buildTopics({ table, touch = false, pad = false } = {}) {
     { h: 'Wild crops' },
     { list: [
       'Frostroots grow wild in small plots on snowy plains and in taiga; village farms in cold lands sometimes grow them too.',
+      'Rootsnouts, big slow mossy beasts of forests and flower forests, stop every few minutes to root in grass or dirt and leave Dawnfern Seeds (the same seeds breed them). Plant them on farmland: a ripe Dawnfern is cut for a glowing Dawnfern Plant that stands on grass or dirt and fits a Flower Pot.',
       'Dewberry Brambles stand on forest edges, in flower forests and in meadows, often ripe.',
       'Sungourds lie in patches on savanna, in jungles and on warm plains; warm villages sometimes plant the stem. Break a Sungourd for Gourd Wedges, craft a wedge into seeds.',
     ] },
@@ -212,6 +213,7 @@ export function buildTopics({ table, touch = false, pad = false } = {}) {
       'Farscope: a Farglass with a gold ring. Hold right mouse to look through it, scroll (or use the hotbar keys) to step the zoom, and read the range under the ring.',
       'Waymark Compass: points at the last Bounty Board you opened or the last place you marked (/waymark here, /wp add).',
       'Fishing rods can carry Lure (a quicker bite) and Haul (better finds and a second fish). Bogs give Bogcarp, dry lands Dunefin, and a Gilded Perch is rare. Cook them on a fire, or put any fish and wheat in the Cooking Pot for a Fish Pie.',
+      'Platebacks, small armoured burrowers of savannas and badlands, curl into a ball when you sprint close or hit them (70 percent less damage). Brush one with a Brush for a Plate Scale; six scales make Howler Barding, which a tamed Howler wears for half damage until it has soaked up 64 (Shears take it off).',
       'Sandsnappers wait buried in sand (sneak to pass nearer); Peat Lurkers lie in bog water with only their eyes showing; a struck Cliffkite stoops on whoever hit it.',
     ] },
   ]);

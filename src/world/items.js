@@ -620,3 +620,9 @@ for (const [kind, p] of Object.entries({
 
 // Creature Egg (mobs/creatureEggs.js; appended, so no item id shifts): a creative-mode egg that hatches the creature its label names
 item('creature_egg', 'Creature Egg', { creatureEgg: true, iconStyle: ['egg', { h: '#7fd6a8' }] });
+
+// Pack 7 creatures (mobs/pack7Mobs.js; appended, so no item id shifts): the seeds a Rootsnout roots up, the scales a Plateback sheds
+// (a brushed one, or on its own) and the Howler Barding six of them make. The barding's wear is its `damage` (absorbed hits, 64 breaks it).
+item('dawnfern_seeds', 'Dawnfern Seeds', { places: B.DAWNFERN, iconStyle: ['seeds', { h: '#3fae7a', H: '#b6f4d0' }] });
+item('plate_scale', 'Plate Scale', { iconStyle: ['shard', { h: '#b08a5a', H: '#e6c894', s: '#6a4a2a' }] });
+item('howler_barding', 'Howler Barding', { stack: 1, durability: 64, barding: 'howler', repairWith: 'PLATE_SCALE', iconStyle: ['saddle', { h: '#9a7a4a', H: '#d8b878', s: '#5a3e22' }] });

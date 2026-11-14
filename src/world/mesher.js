@@ -63,7 +63,8 @@ const CROP_TILES = { [B.WHEAT]: [0, 1, 2, 3, 4, 5, 6, 7].map((i) => texId('wheat
   [B.MELON_STEM]: [0, 1, 2, 3, 4, 5, 6, 7].map((i) => texId('stem_' + i)), [B.PUMPKIN_STEM]: [0, 1, 2, 3, 4, 5, 6, 7].map((i) => texId('stem_' + i)),
   [B.POTATOES]: [0, 0, 1, 1, 2, 2, 2, 3].map((i) => texId('potatoes_' + i)), [B.BEETROOTS]: [0, 0, 1, 1, 2, 2, 2, 3].map((i) => texId('beetroots_' + i)),
   [B.CINDERROOT]: [0, 1, 2, 3, 3, 3, 3, 3].map((i) => texId('cinderroot_' + i)),
-  [B.FROSTROOTS]: [0, 0, 1, 1, 2, 2, 2, 3].map((i) => texId('frostroots_' + i)), [B.SUNGOURD_STEM]: [0, 1, 2, 3, 4, 5, 6, 7].map((i) => texId('stem_' + i)) };
+  [B.FROSTROOTS]: [0, 0, 1, 1, 2, 2, 2, 3].map((i) => texId('frostroots_' + i)), [B.SUNGOURD_STEM]: [0, 1, 2, 3, 4, 5, 6, 7].map((i) => texId('stem_' + i)),
+  [B.DAWNFERN]: [0, 0, 0, 0, 0, 0, 0, 1].map((i) => texId('dawnfern_' + i)) }; // (two looks: a sprout, and the ripe glowing fern)
 const FARMLAND_MOIST = texId('farmland_moist');
 const PROPAGULE_HANG_TILE = texId('mangrove_propagule_hanging');
 const WATER_STILL = texId('water');

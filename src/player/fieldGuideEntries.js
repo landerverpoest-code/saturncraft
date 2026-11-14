@@ -52,6 +52,8 @@ const HABITAT_NOTES = {
   hoverling: 'Caged at Raider Outposts, drifting through Hollow cities',
   dune_strider: 'Desert villages and the open desert',
   dustmole: 'Hidden in the sand until it digs out',
+  rootsnout: 'Forests and flower forests, rooting up Dawnfern Seeds every few minutes',
+  plateback: 'Savannas and badlands; curls into a ball when a runner comes near',
   tarnling: 'Quiet ponds, tarns and waterholes',
   gloamlynx: 'Only at dusk and by night',
   brinecrab: 'Sand, mud and gravel along the shore',
@@ -194,7 +196,7 @@ const CONTRAPTION_PARTS = ['COMPARATOR', 'OBSERVER', 'DAYLIGHT_SENSOR', 'SNARE_P
 
 const PACK5_BLOCKS = ['STRATA_RUST', 'SUN_GLYPH', 'DART_TRAP', 'BOG_PLANKS', 'HAG_CAULDRON'];
 const PACK6_BLOCKS = ['PACKED_ICE', 'CARTOGRAPHERS_TABLE'];
-const PACK7_WHY = { DRIFTSNOW: 'Hollows in snowy ground (and crafted from Snow Blocks)', SCALDROCK: 'Scald Vents on ocean floors (and crafted from Ember Cream)', ECHO_COFFER: 'Crafting (eight Obsidian around an Eye of the Void)', TIDE_HEART: 'Crafting (Tide Crystals and Tide Shards around a Diamond)', EMBER_HEARTH: 'Crafting (six Obsidian and three Glowshard blocks)', GLIMMERMOSS: 'Crafting (Moss Carpet and Glowshard Dust; cut from caves with Shears)' };
+const PACK7_WHY = { DRIFTSNOW: 'Hollows in snowy ground (and crafted from Snow Blocks)', SCALDROCK: 'Scald Vents on ocean floors (and crafted from Ember Cream)', ECHO_COFFER: 'Crafting (eight Obsidian around an Eye of the Void)', TIDE_HEART: 'Crafting (Tide Crystals and Tide Shards around a Diamond)', EMBER_HEARTH: 'Crafting (six Obsidian and three Glowshard blocks)', GLIMMERMOSS: 'Crafting (Moss Carpet and Glowshard Dust; cut from caves with Shears)', DAWNFERN_PLANT: 'Cutting a ripe Dawnfern (grown from Dawnfern Seeds)' };
 const PACK6_WHY = { PACKED_ICE: 'Frozen Deep floes, icebergs and Icebound Hulks', CARTOGRAPHERS_TABLE: 'Crafting (a Compass, a Paper and four planks)' };
 const PACK5_WHY = { STRATA_RUST: 'Painted Mesas', SUN_GLYPH: 'Sandvaults', DART_TRAP: 'Sandvaults (and crafted)', BOG_PLANKS: 'Hag Huts and bog bridges', HAG_CAULDRON: 'Hag Huts' };
 
@@ -209,6 +211,7 @@ function itemEntries() {
   for (const k of PACK5_BLOCKS) if (B[k] !== undefined) add(B[k], PACK5_WHY[k]); // the desert / bog pack's finds and traps
   for (const k of PACK6_BLOCKS) if (B[k] !== undefined) add(B[k], PACK6_WHY[k]); // the Frozen Deep's ice and the Cartographer's Table
   for (const k of Object.keys(PACK7_WHY)) if (B[k] !== undefined) add(B[k], PACK7_WHY[k]); // Driftsnow, Scaldrock and the Echo Coffer
+  add(I.DAWNFERN_SEEDS, 'Rootsnout (it roots them up every few minutes)'); add(I.PLATE_SCALE, 'Plateback (brushed with a Brush, or shed)'); add(I.HOWLER_BARDING, 'Crafting (six Plate Scales)'); // (Pack 7 creatures)
   for (const d of DISHES) add(d.id, 'Cooking Pot'); // every dish the Cooking Pot can make (world/cookingPot.js), so a new recipe joins the guide by itself
   return [...sources.entries()].sort((a, b) => a[0] - b[0]).map(([id, from]) => ({ key: String(id), id, name: itemName(id), from }));
 }

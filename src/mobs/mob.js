@@ -34,6 +34,7 @@ import { conversionStep, newConversion } from './hostileVariants.js'; // registe
 import { outOfMeleeReach } from './duneStrider.js'; // registers the Dune Strider
 import { mountReady, rideMove, rideJump, mountTick, mountFollowStep, riderFallDamage, riderInput } from './mounts.js'; // rules of Gallopers, Thistlehorns and Dune Striders
 import './fauna.js'; // registers the Thistlehorn, Dustmole, Gloamlynx and Tarnling
+import './pack7Mobs.js'; // registers the Rootsnout and the Plateback, and hooks the Howler's barding
 import './shoreMobs.js'; // registers the Brinecrab and the Wickling
 import './duneMobs.js'; // registers the Sandsnapper, the Peat Lurker and the Cliffkite
 import './oceanSky.js'; // registers the Lanternfin, Trenchmaw and Skyray

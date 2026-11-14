@@ -60,9 +60,11 @@ export const SPAWN_TABLES = {
     mushroom_fields: [],
   },
   creature: {
-    plains: [...FARM_ANIMALS, { type: 'galloper', weight: 5, min: 2, max: 6 }, { type: 'hopper', weight: 4, min: 2, max: 3 }], birch_forest: FARM_ANIMALS, flower_forest: FARM_ANIMALS, blossom_grove: FARM_ANIMALS, dark_forest: FARM_ANIMALS,
+    plains: [...FARM_ANIMALS, { type: 'galloper', weight: 5, min: 2, max: 6 }, { type: 'hopper', weight: 4, min: 2, max: 3 }], birch_forest: FARM_ANIMALS, flower_forest: [...FARM_ANIMALS, { type: 'rootsnout', weight: 2, min: 1, max: 2 }], blossom_grove: FARM_ANIMALS, dark_forest: FARM_ANIMALS,
     // swamps and savannas: the same farm animals (reference swamps add slimes, savannas horses)
-    swamp: [...FARM_ANIMALS, { type: 'croaker', weight: 12, min: 2, max: 5 }, { type: 'brinecrab', weight: 4, min: 2, max: 3 }], savanna: [...FARM_ANIMALS, { type: 'galloper', weight: 6, min: 2, max: 6 }, { type: 'thistlehorn', weight: 10, min: 3, max: 5 }],
+    swamp: [...FARM_ANIMALS, { type: 'croaker', weight: 12, min: 2, max: 5 }, { type: 'brinecrab', weight: 4, min: 2, max: 3 }], savanna: [...FARM_ANIMALS, { type: 'galloper', weight: 6, min: 2, max: 6 }, { type: 'thistlehorn', weight: 10, min: 3, max: 5 }, { type: 'plateback', weight: 6, min: 2, max: 3 }],
+    // badlands: Platebacks among the mesas
+    badlands: [{ type: 'plateback', weight: 8, min: 2, max: 3 }],
     // jungles: mostly pigs and chickens
     jungle: [{ type: 'cluckling', weight: 10, min: 4, max: 4 }, { type: 'bristleback', weight: 10, min: 4, max: 4 }, { type: 'mooxen', weight: 4, min: 4, max: 4 }, { type: 'squawklet', weight: 8, min: 1, max: 2 }, { type: 'croaker', weight: 3, min: 2, max: 3 }],
     // mangrove swamps: Croakers hopping over the mud and roots
@@ -70,7 +72,7 @@ export const SPAWN_TABLES = {
     // the mushroom islands keep only their cattle
     mushroom_fields: [{ type: 'mooxen', weight: 8, min: 4, max: 8 }],
     // packs of Howlers (wolves) in forests and taiga
-    forest: [...FARM_ANIMALS, { type: 'howler', weight: 5, min: 4, max: 4 }],
+    forest: [...FARM_ANIMALS, { type: 'howler', weight: 5, min: 4, max: 4 }, { type: 'rootsnout', weight: 2, min: 1, max: 2 }],
     taiga: [...FARM_ANIMALS, { type: 'howler', weight: 8, min: 4, max: 4 }, { type: 'vixling', weight: 8, min: 2, max: 4 }, { type: 'hopper', weight: 4, min: 2, max: 3 }, { type: 'croaker', weight: 2, min: 2, max: 3 }, { type: 'gloamlynx', weight: 3, min: 1, max: 1 }],
     snowy_taiga: [{ type: 'howler', weight: 8, min: 4, max: 4 }, { type: 'fleecer', weight: 6, min: 2, max: 4 }, { type: 'vixling', weight: 8, min: 2, max: 4 }, { type: 'hopper', weight: 4, min: 2, max: 3 }, { type: 'gloamlynx', weight: 3, min: 1, max: 1 }],
     // Cragbucks (goats) on the high peaks

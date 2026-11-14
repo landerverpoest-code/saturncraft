@@ -899,7 +899,7 @@ def(B.CARTOGRAPHERS_TABLE, "Cartographer's Table", { hardness: 2.5, resistance: 
 // Content pack 7 (appended, no id shifts; world/coldCurrents.js): Driftsnow gives way under whoever steps on it and freezes
 // them, Scaldrock burns feet and drags still water down (Mournsand lifts it), the Echo Coffer opens its owner's own store
 // wherever it stands (player/echoCoffer.js).
-ext('DRIFTSNOW'); ext('SCALDROCK'); ext('ECHO_COFFER'); ext('ASSEMBLER'); ext('TIDE_HEART'); ext('EMBER_HEARTH'); ext('GLIMMERMOSS');
+ext('DRIFTSNOW'); ext('SCALDROCK'); ext('ECHO_COFFER'); ext('ASSEMBLER'); ext('TIDE_HEART'); ext('EMBER_HEARTH'); ext('GLIMMERMOSS'); ext('DAWNFERN'); ext('DAWNFERN_PLANT');
 def(B.DRIFTSNOW, 'Driftsnow', { hardness: 0.25, resistance: 0.25, tool: TOOL.SHOVEL, solid: false, opaque: false, opacity: 2, sound: 'snow' });
 def(B.SCALDROCK, 'Scaldrock', { hardness: 0.5, resistance: 0.5, tool: TOOL.PICKAXE, tier: TIER.WOOD, emit: 3, hot: true });
 def(B.ECHO_COFFER, 'Echo Coffer', { hardness: 22.5, resistance: 600, tool: TOOL.PICKAXE, tier: TIER.WOOD, emit: 7, tex: { top: 'echo_coffer_top', bottom: 'echo_coffer_top', side: 'echo_coffer_side', front: 'echo_coffer_front' } });
@@ -914,6 +914,14 @@ def(B.EMBER_HEARTH, 'Ember Hearth', { hardness: 50, resistance: 1200, tool: TOOL
 // Glimmermoss (world/glimmermoss.js): a glowing wall plant of caves, hung like Vines (meta = the side of its wall) but not climbable;
 // only Shears bring it home
 def(B.GLIMMERMOSS, 'Glimmermoss', { hardness: 0, resistance: 0, solid: false, opaque: false, shape: SHAPE.LADDER, layer: LAYER.CUTOUT, sound: 'grass', flammable: true, replaceable: true, needsSupport: true, emit: 7, drops: 'glimmermoss' });
+
+// Dawnfern (mobs/pack7Mobs.js): a fern grown from the Seeds a Rootsnout roots up. The crop (meta 0-7, farmland, random ticks like any crop) is a
+// sprout until ripe; a ripe one is cut for Dawnfern Plant, a cross-shaped glowing fern that stands on grass or dirt and fits a Flower Pot.
+// The crop glows at every stage (light 5): lighting is per block id, so a sprout shines as softly as the ripe fern.
+def(B.DAWNFERN, 'Dawnfern', { ...plant, shape: SHAPE.CROP, drops: 'dawnfern', emit: 5, hidden: true, tex: { all: 'dawnfern_1' } });
+def(B.DAWNFERN_PLANT, 'Dawnfern Plant', { ...plant, emit: 5, flammable: true, tex: { all: 'dawnfern_1' } });
+CROPS.add(B.DAWNFERN);
+POTTED.push(B.DAWNFERN_PLANT); // appended: pot metas index this list
 
 export const NUM_BLOCKS = BLOCKS.length;
 
