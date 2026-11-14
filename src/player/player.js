@@ -49,6 +49,7 @@ export class Player {
     this.attackTicks = 100;     // ticks since last swing (attack cooldown)
     this.listeners = { hurt: [], death: [] };
     this.stats = newStats();    // blocks, distances, kills, deaths, trades, play time (player/stats.js)
+    this.hearth = null;         // the Ember Hearth bound to: { x, y, z } in the Cinderdeep, or null (world/emberHearth.js)
     this.reputation = {};       // village key -> -100..100: what each village thinks of the player (mobs/reputation.js)
     this.xp = newXp();
     this.gamemode = 'survival';  // or 'creative'

@@ -22,6 +22,7 @@ import { scaffoldTick } from './scaffolding.js';
 import { potTick, isReady as potReady, BREW_STAGE_TICKS } from './cookingPot.js';
 import { SETTLE_TICKS } from './composter.js';
 import { CURRENT_FEATURE_VERSION } from './retrofit.js';
+import { mossSupported } from './glimmermoss.js';
 import { SIDE_DIRS, selectionBox, collisionBoxes, SHAPED_COLLISION, DOOR_UPPER, BED_HEAD } from './shapes.js';
 
 export function chunkKey(cx, cz) { return (cx + 32768) * 65536 + (cz + 32768); }
@@ -295,6 +296,7 @@ export class World {
       const wall = this.getBlock(x + dx, y, z + dz);
       return !!(SOLID[wall] && (OPAQUE[wall] || BLOCKS[wall].tint === 'foliage' || BLOCKS[wall].tint === 'birch' || BLOCKS[wall].tint === 'spruce'));
     }
+    if (id === B.GLIMMERMOSS) return mossSupported((a, b, c) => this.getBlock(a, b, c), x, y, z, metaIn ?? this.getMeta(x, y, z));
     if (id === B.LILY_PAD) return below === B.WATER || below === B.ICE;
     if (id === B.BROWN_MUSHROOM || id === B.RED_MUSHROOM) return !!(SOLID[below] && OPAQUE[below]);
     if (BLOCKS[id].circuitPart) return circuitSupported(this, x, y, z, id, metaIn ?? this.getMeta(x, y, z));

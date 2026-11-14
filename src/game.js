@@ -92,6 +92,7 @@ import { explode } from './entities/explosion.js';
 import { saveGame, applySave, applyPlayerSave } from './world/save.js';
 import { storageStatus } from './world/storage.js';
 import { isQuotaError } from './world/saveFormat.js';
+import { hearthCharges, hearthSpot, spendCharge, HEARTH_DIMENSION } from './world/emberHearth.js';
 import { DimensionManager } from './world/dimensions/manager.js';
 import { DIMENSIONS } from './world/dimensions/dims.js';
 import { EnchantBooks } from './render/enchantBooks.js';
@@ -616,6 +617,8 @@ export class Game {
       this.hud.toast('Your one life is spent: you can watch this world, but not touch it');
       return;
     }
+    // an Ember Hearth in the Cinderdeep (world/emberHearth.js): rise beside it while it still burns
+    if (this.world.dimension === HEARTH_DIMENSION && p.hearth && this.respawnAtHearth()) { this.input.lock(); return; }
     // dying away from the overworld sends you home first
     if (this.world.dimension !== 'overworld') {
       // a multiplayer guest stays with the group (the host decides where everybody is)
@@ -630,6 +633,19 @@ export class Game {
     }
     this.player.respawn();
     this.input.lock();
+  }
+
+  /** Respawn beside the player's Ember Hearth if it is still there and charged (one charge used); otherwise forget it. True if risen there. */
+  respawnAtHearth() {
+    const p = this.player, w = this.world, h = p.hearth;
+    if (!w.isLoaded(h.x, h.z)) return false; // (cannot check: fall through to the usual way home, keeping the hearth)
+    const charges = w.getBlock(h.x, h.y, h.z) === B.EMBER_HEARTH ? hearthCharges(w.getMeta(h.x, h.y, h.z)) : 0;
+    const spot = charges > 0 ? hearthSpot((a, b, c) => w.getBlock(a, b, c), h.x, h.y, h.z) : null;
+    if (!spot) { p.hearth = null; this.hud.toast(charges > 0 ? 'Your hearth is walled in' : 'Your hearth has gone cold'); return false; }
+    w.setBlockUrgent(h.x, h.y, h.z, B.EMBER_HEARTH, spendCharge(charges));
+    p.respawn(); p.setPosition(spot.x, spot.y, spot.z);
+    this.hud.toast(`You rise by your hearth (${spendCharge(charges)} charge${spendCharge(charges) === 1 ? '' : 's'} left)`);
+    return true;
   }
 
   /** Dead in a shared world: come back as a spectator following a friend (Shift, or /spectate off, to rejoin the game). */

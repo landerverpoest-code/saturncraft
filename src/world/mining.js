@@ -90,6 +90,7 @@ function baseDrops(blockId, b, rng, meta, tool) {
     // Violite clusters: 4 shards with a pickaxe, 2 otherwise (reference)
     case 'violite_cluster': return [{ id: I.VIOLITE_SHARD, count: tool && tool.type === 'pickaxe' ? 4 : 2 }];
     case 'gravel': return rng() < 0.1 ? [{ id: I.FLINT, count: 1 }] : [{ id: B.GRAVEL, count: 1 }];
+    case 'glimmermoss': return tool && tool.shears ? [{ id: blockId, count: 1 }] : []; // (only Shears bring the moss home)
     case 'cobweb': return tool && (tool.type === 'sword' || tool.shears) ? [{ id: I.STRING, count: 1 }] : [];
     case 'melon_stem': return [{ id: I.MELON_SEEDS, count: 1 + ((meta & 7) === 7 && rng() < 0.5 ? 1 : 0) }];
     case 'pumpkin_stem': return [{ id: I.PUMPKIN_SEEDS, count: 1 + ((meta & 7) === 7 && rng() < 0.5 ? 1 : 0) }];

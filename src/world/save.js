@@ -4,6 +4,7 @@
 import { saveRules, loadRules } from './gameRules.js';
 import { cleanEcho } from '../player/echoCoffer.js';
 import { cleanWaymark } from '../player/waymark.js';
+import { cleanHearth } from './emberHearth.js';
 import { cleanPotFaces } from './archaeology.js';
 import { cleanLectern } from './books.js';
 import { cleanCamp } from './campfireCooking.js';
@@ -82,6 +83,7 @@ export function playerSaveData(p) {
     reputation: cleanReputation(p.reputation), // what villages think of the player (mobs/reputation.js)
     blueprints: cleanBlueprints(p.blueprints), // named building blueprints (world/buildTools.js, ui/buildCommands.js)
     waymark: cleanWaymark(p.waymark), // the Waymark Compass's target (player/waymark.js)
+    hearth: cleanHearth(p.hearth), // the Ember Hearth bound to (world/emberHearth.js)
   };
 }
 
@@ -262,6 +264,7 @@ export function applyPlayerSave(game, d) {
   p.reputation = cleanReputation(d.reputation); // (older saves have none)
   p.blueprints = cleanBlueprints(d.blueprints); // (older saves have none)
   p.waymark = cleanWaymark(d.waymark); // (older saves have none)
+  p.hearth = cleanHearth(d.hearth); // (older saves have none)
   if (d.gamemode) p.setGamemode(d.gamemode);
   p.flying = !!d.flying && p.creative;
   p.inventory.selected = d.selected;

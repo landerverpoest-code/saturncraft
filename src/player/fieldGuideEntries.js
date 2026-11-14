@@ -194,7 +194,7 @@ const CONTRAPTION_PARTS = ['COMPARATOR', 'OBSERVER', 'DAYLIGHT_SENSOR', 'SNARE_P
 
 const PACK5_BLOCKS = ['STRATA_RUST', 'SUN_GLYPH', 'DART_TRAP', 'BOG_PLANKS', 'HAG_CAULDRON'];
 const PACK6_BLOCKS = ['PACKED_ICE', 'CARTOGRAPHERS_TABLE'];
-const PACK7_WHY = { DRIFTSNOW: 'Hollows in snowy ground (and crafted from Snow Blocks)', SCALDROCK: 'Scald Vents on ocean floors (and crafted from Ember Cream)', ECHO_COFFER: 'Crafting (eight Obsidian around an Eye of the Void)', TIDE_HEART: 'Crafting (Tide Crystals and Tide Shards around a Diamond)' };
+const PACK7_WHY = { DRIFTSNOW: 'Hollows in snowy ground (and crafted from Snow Blocks)', SCALDROCK: 'Scald Vents on ocean floors (and crafted from Ember Cream)', ECHO_COFFER: 'Crafting (eight Obsidian around an Eye of the Void)', TIDE_HEART: 'Crafting (Tide Crystals and Tide Shards around a Diamond)', EMBER_HEARTH: 'Crafting (six Obsidian and three Glowshard blocks)', GLIMMERMOSS: 'Crafting (Moss Carpet and Glowshard Dust; cut from caves with Shears)' };
 const PACK6_WHY = { PACKED_ICE: 'Frozen Deep floes, icebergs and Icebound Hulks', CARTOGRAPHERS_TABLE: 'Crafting (a Compass, a Paper and four planks)' };
 const PACK5_WHY = { STRATA_RUST: 'Painted Mesas', SUN_GLYPH: 'Sandvaults', DART_TRAP: 'Sandvaults (and crafted)', BOG_PLANKS: 'Hag Huts and bog bridges', HAG_CAULDRON: 'Hag Huts' };
 

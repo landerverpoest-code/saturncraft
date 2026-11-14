@@ -899,7 +899,7 @@ def(B.CARTOGRAPHERS_TABLE, "Cartographer's Table", { hardness: 2.5, resistance: 
 // Content pack 7 (appended, no id shifts; world/coldCurrents.js): Driftsnow gives way under whoever steps on it and freezes
 // them, Scaldrock burns feet and drags still water down (Mournsand lifts it), the Echo Coffer opens its owner's own store
 // wherever it stands (player/echoCoffer.js).
-ext('DRIFTSNOW'); ext('SCALDROCK'); ext('ECHO_COFFER'); ext('ASSEMBLER'); ext('TIDE_HEART');
+ext('DRIFTSNOW'); ext('SCALDROCK'); ext('ECHO_COFFER'); ext('ASSEMBLER'); ext('TIDE_HEART'); ext('EMBER_HEARTH'); ext('GLIMMERMOSS');
 def(B.DRIFTSNOW, 'Driftsnow', { hardness: 0.25, resistance: 0.25, tool: TOOL.SHOVEL, solid: false, opaque: false, opacity: 2, sound: 'snow' });
 def(B.SCALDROCK, 'Scaldrock', { hardness: 0.5, resistance: 0.5, tool: TOOL.PICKAXE, tier: TIER.WOOD, emit: 3, hot: true });
 def(B.ECHO_COFFER, 'Echo Coffer', { hardness: 22.5, resistance: 600, tool: TOOL.PICKAXE, tier: TIER.WOOD, emit: 7, tex: { top: 'echo_coffer_top', bottom: 'echo_coffer_top', side: 'echo_coffer_side', front: 'echo_coffer_front' } });
@@ -908,6 +908,12 @@ def(B.ECHO_COFFER, 'Echo Coffer', { hardness: 22.5, resistance: 600, tool: TOOL.
 def(B.ASSEMBLER, 'Assembler', { hardness: 3.5, resistance: 3.5, tool: TOOL.PICKAXE, tier: TIER.WOOD, container: true, tex: { top: 'assembler_top', bottom: 'dispenser_top', side: 'furnace_side', front: 'assembler_front' } });
 // The Tide Heart (world/tideHeart.js): an underwater beacon woken by a frame of Tidestone
 def(B.TIDE_HEART, 'Tide Heart', { hardness: 3, resistance: 3, tool: TOOL.PICKAXE, tier: TIER.WOOD, emit: 15, sound: 'glass' });
+
+// The Ember Hearth (world/emberHearth.js): a respawn point for the Cinderdeep; meta = charges 0..4, Glowshard blocks add one.
+def(B.EMBER_HEARTH, 'Ember Hearth', { hardness: 50, resistance: 1200, tool: TOOL.PICKAXE, tier: TIER.DIAMOND, emit: 7, sound: 'stone' });
+// Glimmermoss (world/glimmermoss.js): a glowing wall plant of caves, hung like Vines (meta = the side of its wall) but not climbable;
+// only Shears bring it home
+def(B.GLIMMERMOSS, 'Glimmermoss', { hardness: 0, resistance: 0, solid: false, opaque: false, shape: SHAPE.LADDER, layer: LAYER.CUTOUT, sound: 'grass', flammable: true, replaceable: true, needsSupport: true, emit: 7, drops: 'glimmermoss' });
 
 export const NUM_BLOCKS = BLOCKS.length;
 

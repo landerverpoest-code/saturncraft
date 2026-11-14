@@ -1,4 +1,4 @@
-// Procedural textures of content pack 7 (world/coldCurrents.js, player/echoCoffer.js): Driftsnow, Scaldrock and the Echo Coffer.
+// Procedural textures of content pack 7 (world/coldCurrents.js, player/echoCoffer.js): Driftsnow, Scaldrock and the Echo Coffer, the Ember Hearth and Glimmermoss.
 // Merged into textures.js like the other texture modules; each painter gets (canvas, { hex, mix, shade }).
 
 export const PACK7_TEX = {
@@ -75,6 +75,28 @@ export const PACK7_TEX = {
       if (Math.abs(d - 4.2) < 0.6) col = hex('#9a4fe0');
       if (d < 1.1) col = hex('#d9b8ff');
       c.set(x, y, col);
+    }
+  },
+  // Ember Hearth: a squat obsidian hearth, its top a bowl of glowing embers ringed with Glowshard-gold studs
+  ember_hearth: (c, { hex, shade, mix }) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const edge = x === 0 || x === 15 || y === 0 || y === 15, d = Math.hypot(x - 7.5, y - 7.5);
+      let col = shade(hex('#1d1530'), 0.75 + c.h(x, y, 85) * 0.5);
+      if (edge) col = shade(hex('#3a2f55'), 0.9 + c.h(x, y, 86) * 0.2);
+      else if (d < 4.6) col = mix(hex('#ffd45a'), hex('#d8431a'), Math.min(1, d / 4.6) + (c.h(x, y, 87) - 0.5) * 0.4);
+      else if (d < 5.6) col = hex('#2a1f40');
+      if ((x === 2 || x === 13) && (y === 2 || y === 13)) col = hex('#e6c34a');
+      c.set(x, y, col);
+    }
+  },
+  // Glimmermoss: a clear tile with soft green tufts that glow pale at their tips
+  glimmermoss: (c, { hex, shade, mix }) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const n = c.h(x >> 1, y >> 1, 88), edge = Math.min(x, 15 - x, y, 15 - y);
+      if (n < 0.42 + edge * 0.03) continue;
+      const tip = c.h(x, y, 89);
+      c.set(x, y, tip > 0.82 ? hex('#d6ffd8') : tip > 0.6 ? mix(hex('#7be08a'), hex('#3fb0a0'), c.h(x, y, 90)) : shade(hex('#2f8f58'), 0.8 + c.h(x, y, 91) * 0.3));
     }
   },
 };

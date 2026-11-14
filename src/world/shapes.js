@@ -410,7 +410,7 @@ export function selectionBox(id, meta) {
   if (BLOCKS[id].shape === SHAPE.GATE) return (meta & 1) === 0 ? [0, 0, 6 / 16, 1, 1, 10 / 16] : [6 / 16, 0, 0, 10 / 16, 1, 1];
   if (id === B.BED) return BED_BOX;
   if (BLOCKS[id].shape === SHAPE.SLAB) return slabBox(meta);
-  if (id === B.LADDER || id === B.VINES || id === B.ROPE_LADDER) return ladderBox(meta);
+  if (id === B.LADDER || id === B.VINES || id === B.ROPE_LADDER || id === B.GLIMMERMOSS) return ladderBox(meta);
   if (id === B.LILY_PAD) return [0, 0, 0, 1, 1 / 64, 1];
   if (id === B.TORCH || id === B.CINNABAR_TORCH || id === B.CINNABAR_TORCH_OFF) return torchBox(meta);
   if (BLOCKS[id].shape === SHAPE.WIRE || BLOCKS[id].shape === SHAPE.CIRCUIT) return circuitSelection(id, meta);

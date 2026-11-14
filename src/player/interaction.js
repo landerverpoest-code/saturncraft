@@ -61,6 +61,8 @@ import { summonColossus } from '../mobs/slagColossus.js';
 import { isBook } from '../world/books.js';
 import { carveFacing, CARVE_SEEDS } from '../mobs/pumpkins.js';
 import { CAKE_SLICES, CAKE_FOOD } from '../world/signalBlocks.js';
+import { hearthCharges, canCharge, chargeUp, canSet, HEARTH_MAX_CHARGES, HEARTH_DIMENSION } from '../world/emberHearth.js';
+import { spreadSpots, pickSpread } from '../world/glimmermoss.js';
 import { sideOf, SIDE_DIRS, DOOR_OPEN, DOOR_UPPER, BED_HEAD, SLAB_TOP, SLAB_DOUBLE, STAIRS_UPSIDE, GATE_OPEN, TRAPDOOR_OPEN, TRAPDOOR_TOP } from '../world/shapes.js';
 
 /** Brightness for block particles: local light, dimmed with the combined sunlight (as the held item). */
@@ -85,7 +87,7 @@ const ORE_XP = {
 };
 const BREAK_DELAY = 5;
 /** Blocks that right-click opens / toggles instead of using the held item. */
-const USABLE_BLOCKS = new Set([B.CARTOGRAPHERS_TABLE, B.ECHO_COFFER, B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.CHEST, B.BARREL, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL, B.BREWING_STAND, B.GLOOMSHELL_BOX, B.HOPPER, B.COMPOSTER, B.SWEET_BERRY_BUSH, B.DEWBERRY_BRAMBLE, B.COOKING_POT, B.COOKING_POT_BREW, B.JUKEBOX, B.CAVE_VINES_LIT, B.FLOWER_POT, B.BEACON, B.DISPENSER, B.DROPPER, B.ASSEMBLER, B.GRINDSTONE, B.STONECUTTER, B.LECTERN, B.CAKE, B.LOOM, B.BOUNTY_BOARD, B.HAG_CAULDRON, ...BOX_COLORS, B.VAULT]);
+const USABLE_BLOCKS = new Set([B.CARTOGRAPHERS_TABLE, B.ECHO_COFFER, B.EMBER_HEARTH, B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.CHEST, B.BARREL, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL, B.BREWING_STAND, B.GLOOMSHELL_BOX, B.HOPPER, B.COMPOSTER, B.SWEET_BERRY_BUSH, B.DEWBERRY_BRAMBLE, B.COOKING_POT, B.COOKING_POT_BREW, B.JUKEBOX, B.CAVE_VINES_LIT, B.FLOWER_POT, B.BEACON, B.DISPENSER, B.DROPPER, B.ASSEMBLER, B.GRINDSTONE, B.STONECUTTER, B.LECTERN, B.CAKE, B.LOOM, B.BOUNTY_BOARD, B.HAG_CAULDRON, ...BOX_COLORS, B.VAULT]);
 const CIRCUIT_USE = new Set([B.LEVER, B.STONE_BUTTON, B.REPEATER, B.CHIME_BLOCK, B.COMPARATOR, B.DAYLIGHT_SENSOR, B.PULSE_GATE]);
 const CIRCUIT_PLACE = new Set([B.LEVER, B.STONE_BUTTON, B.CINNABAR_WIRE, B.REPEATER, B.WOODEN_PRESSURE_PLATE, B.STONE_PRESSURE_PLATE, B.LIGHT_WEIGHTED_PLATE, B.HEAVY_WEIGHTED_PLATE, B.PISTON, B.STICKY_PISTON, B.COMPARATOR, B.OBSERVER, B.DAYLIGHT_SENSOR, B.PULSE_GATE, B.SNARE_POST, B.SNARE_CORD]);
 const USE_DELAY = 4;
@@ -1122,6 +1124,7 @@ export class Interaction {
       if (t.id === B.LOOM) { g.ui.openLoom(t.x, t.y, t.z); return true; }
       if (t.id === B.BOUNTY_BOARD) { g.ui.openBoard(t.x, t.y, t.z); return true; }
       if (t.id === B.ECHO_COFFER) { g.ui.openEchoCoffer(t.x, t.y, t.z); g.audio.play('chest_open', [t.x + 0.5, t.y + 0.5, t.z + 0.5]); return true; }
+      if (t.id === B.EMBER_HEARTH) return this.useEmberHearth(t);
       if (t.id === B.CARTOGRAPHERS_TABLE) { g.ui.openCartographersTable(t.x, t.y, t.z); return true; }
       if (t.id === B.BREWING_STAND) { g.ui.openBrewing(t.x, t.y, t.z); return true; }
       if (CIRCUIT_USE.has(t.id)) {
@@ -1330,7 +1333,7 @@ export class Interaction {
       meta = s | (upper ? TRAPDOOR_TOP : 0);
     }
     const torch = placeId === B.TORCH || placeId === B.CINNABAR_TORCH;
-    if (torch || placeId === B.LADDER || placeId === B.VINES || placeId === B.ROPE_LADDER) {
+    if (torch || placeId === B.LADDER || placeId === B.VINES || placeId === B.ROPE_LADDER || placeId === B.GLIMMERMOSS) {
       // torches stand on floors or hang on walls; ladders only hang on walls
       if (t.face[1] === -1 || (!torch && t.face[1] === 1)) return false;
       if (t.face[1] === 0) { const s = sideOf(-t.face[0], -t.face[2]); meta = torch ? 1 + s : s; }
@@ -1451,6 +1454,29 @@ export class Interaction {
     else p.inventory.damageSelected(1);
   }
 
+  /**
+   * Right-click on an Ember Hearth (world/emberHearth.js): a Glowshard block in hand adds a charge; otherwise, in the Cinderdeep,
+   * a charged hearth becomes the respawn point; elsewhere it only gives a hint.
+   */
+  useEmberHearth(t) {
+    const g = this.game, p = g.player, w = g.world, st = p.inventory.selectedStack;
+    const charges = hearthCharges(w.getMeta(t.x, t.y, t.z));
+    this.swing = SWING_TICKS;
+    if (st && st.id === B.GLOWSHARD) {
+      if (!canCharge(charges)) { g.hud.toast('The hearth is full'); return true; }
+      w.setBlockUrgent(t.x, t.y, t.z, B.EMBER_HEARTH, chargeUp(charges));
+      if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
+      g.audio.play('click', [t.x + 0.5, t.y + 0.5, t.z + 0.5]);
+      g.hud.toast(`The hearth glows brighter (${chargeUp(charges)}/${HEARTH_MAX_CHARGES})`);
+      return true;
+    }
+    if (w.dimension !== HEARTH_DIMENSION) { g.hud.toast('The hearth only burns in the Cinderdeep'); return true; }
+    if (!canSet(charges, w.dimension)) { g.hud.toast('The hearth is cold: feed it a Glowshard block'); return true; }
+    p.hearth = { x: t.x, y: t.y, z: t.z };
+    g.hud.toast('Respawn point set');
+    return true;
+  }
+
   boneMeal(t) {
     const g = this.game, w = g.world;
     if (t.id === B.FARMLAND) { // Bone Meal on bare soil that remembers a crop: the soil is fertile again
@@ -1482,6 +1508,14 @@ export class Interaction {
         else { w.urgentEdits = true; try { growTree(w, t.x, t.y, t.z, SAPLING_TREE[t.id]); } finally { w.urgentEdits = false; } }
       }
       burst(t.x, t.y, t.z);
+      return true;
+    }
+    if (t.id === B.GLIMMERMOSS) {
+      // one more patch on a free wall spot beside it (world/glimmermoss.js)
+      const spot = pickSpread(spreadSpots((a, b, c) => w.getBlock(a, b, c), t.x, t.y, t.z), Math.random());
+      if (!spot) return false;
+      w.setBlockUrgent(spot.x, spot.y, spot.z, B.GLIMMERMOSS, spot.meta);
+      burst(spot.x, spot.y, spot.z);
       return true;
     }
     if (t.id === B.GRASS && !w.getBlock(t.x, t.y + 1, t.z)) {

@@ -415,6 +415,8 @@ shaped(['OOO', 'OEO', 'OOO'], { O: B.OBSIDIAN, E: I.EYE_OF_THE_VOID }, B.ECHO_CO
 shaped(['CC', 'CC'], { C: I.EMBER_CREAM }, B.SCALDROCK, 1);
 shaped(['CSC', 'SDS', 'CSC'], { C: I.TIDE_CRYSTAL, S: I.TIDE_SHARD, D: I.DIAMOND }, B.TIDE_HEART, 1); // (world/tideHeart.js)
 shaped(['SS', 'SS'], { S: B.SNOW_BLOCK }, B.DRIFTSNOW, 4);
+shaped(['OOO', 'GGG', 'OOO'], { O: B.OBSIDIAN, G: B.GLOWSHARD }, B.EMBER_HEARTH, 1); // (world/emberHearth.js)
+shapeless([B.MOSS_CARPET, I.GLOWSHARD_DUST], B.GLIMMERMOSS, 2); // (world/glimmermoss.js)
 // ...and for masons (stone over planks), toolsmiths (iron and flint) and armorers (hides over planks)
 shaped(['SS', 'PP', 'PP'], { S: B.STONE, P: 'planks' }, B.MASONRY_BENCH, 1);
 shaped(['IF', 'PP', 'PP'], { I: I.IRON_INGOT, F: I.FLINT, P: 'planks' }, B.WHETSTONE_STAND, 1);
