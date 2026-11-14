@@ -2,7 +2,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { MockWorld } from './helpers.js';
 import { B } from '../src/world/blocks.js';
-import { WORLD_RULES, WORLD_RULE_NAMES, ruleIn, rule, setActiveRules, saveRules, loadRules, damageCounts } from '../src/world/gameRules.js';
+import { ruleLockReason, WORLD_RULES, WORLD_RULE_NAMES, ruleIn, rule, setActiveRules, saveRules, loadRules, damageCounts } from '../src/world/gameRules.js';
 import { runCommand, GAME_RULES, RULES_DEFAULT_OFF, HELP } from '../src/ui/commands.js';
 import { cleanOptions, settingsForOptions, applyNewWorldOptions, defaultOptions } from '../src/world/newWorld.js';
 import { worldSummary } from '../src/world/saveFormat.js';
@@ -114,6 +114,37 @@ describe('explosions under the rules', () => {
     const g = blastGame();
     explode(g, 0.5, 64.5, 0.5, 3, { kind: 'mob' });
     expect(count(g.world, B.AIR)).toBeGreaterThan(5);
+  });
+
+  it('a blast throws dropped items away from the centre; blastsDestroyItems destroys them instead', () => {
+    const mk = (x) => ({ kind: 'item', x, y: 64.5, z: 0.5, height: 0.25, rest: 9, pickupDelay: 0, dead: false, body: { vx: 0, vy: 0, vz: 0 } });
+    const g = blastGame();
+    const near = mk(2.5), far = mk(40.5);
+    g.entities.list.push(near, far);
+    explode(g, 0.5, 64.5, 0.5, 3, null);
+    expect(near.dead).toBe(false);
+    expect(near.body.vx).toBeGreaterThan(0.1);
+    expect(near.rest).toBe(0);
+    expect(far.body.vx).toBe(0);
+    setActiveRules({ blastsDestroyItems: true });
+    const h = blastGame(); const it2 = mk(2.5), far2 = mk(40.5);
+    h.entities.list.push(it2, far2);
+    explode(h, 0.5, 64.5, 0.5, 3, null);
+    expect(it2.dead).toBe(true);
+    expect(far2.dead).toBe(false);
+  });
+
+  it('the World rules screen locks rules for guests, cheatless worlds and keepInventory in a One Life world', () => {
+    expect(ruleLockReason({ allowCheats: true }, 'mobGriefing')).toBe(null);
+    expect(ruleLockReason({ allowCheats: false }, 'mobGriefing')).toMatch(/cheats/);
+    expect(ruleLockReason({ allowCheats: true, net: { isClient: true } }, 'mobGriefing')).toMatch(/host/);
+    expect(ruleLockReason({ allowCheats: true, hardcore: true }, 'keepInventory')).not.toBe(null);
+    expect(ruleLockReason({ allowCheats: true, hardcore: true }, 'mobGriefing')).toBe(null);
+  });
+
+  it('blastsDestroyItems is a rule, off by default', () => {
+    expect(WORLD_RULES.blastsDestroyItems.def).toBe(false);
+    expect(WORLD_RULE_NAMES).toContain('blastsDestroyItems');
   });
 
   it('blastsLightFires leaves fires on solid ground, and only then', () => {

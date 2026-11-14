@@ -217,7 +217,7 @@ export const VARIANT_MOBS = {
   rime_rattler: {
     name: 'Rime Rattler', role: 'stray', category: CATEGORY.MONSTER,
     health: 20, speed: 0.25, width: 0.6, height: 1.99, followRange: 16, ranged: true,
-    burnsInSun: true, sound: 'rattle', needsSky: true,
+    burnsInSun: true, coldProof: true, sound: 'rattle', needsSky: true,
     arrowEffect: ['slowness', 600, 0], // 30 s of Slowness per hit
     customAI: (m, g, p, pd) => m.rangedAI(g, p, pd),
     // plain Rattler loot, and (killed by a player) 0-1 Arrows of Slowness, the tip they shoot with

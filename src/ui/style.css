@@ -817,3 +817,9 @@ html.high-contrast .panel .set-bonuses .sb-head, html.high-contrast .panel .set-
 /* Cartographer's Table (ui/tableScreens.js) */
 .table-chart { display: block; width: 192px; height: 192px; margin: 0 auto 8px; image-rendering: pixelated; border: 2px solid #5a3a22; border-radius: 4px; background: #e6d8a8; }
 .table-body { max-height: 34vh; }
+
+/* World rules screen */
+.rules-screen .rule-row { display: flex; align-items: center; gap: 8px; width: min(520px, calc(100vw - 32px)); }
+.rules-screen .rule-row .sub { flex: 1; margin: 0; text-align: left; }
+.rules-screen .rule-row .btn { min-width: 64px; margin: 0; }
+.rules-screen .rules-list { display: flex; flex-direction: column; gap: 6px; margin: 6px 0; }

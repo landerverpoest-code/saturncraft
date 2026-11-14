@@ -79,6 +79,14 @@ export function enforceBorder(border, x, z, tick) {
   return { x, z, hurt: tick % 20 === 0 ? WorldBorder.damage(d) : 0 };
 }
 
+/**
+ * May something be made or unmade at (x, z)? True with no border (or none active) and inside the wall. Natural spawning
+ * (mobs/spawner.js) and a player's placing and breaking (player/interaction.js) ask this: the wall bounds the world's makers.
+ */
+export function borderAllows(border, x, z) {
+  return !border || !border.active || border.contains(x, z);
+}
+
 const fmt = (n) => (n >= BORDER_MAX ? 'off' : String(Math.round(n * 10) / 10));
 
 /** /worldborder: returns the line to print. `pos` is where the caller stands (for `center here`). */

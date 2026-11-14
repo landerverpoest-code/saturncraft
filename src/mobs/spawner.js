@@ -14,6 +14,7 @@ import { I } from '../world/items.js';
 import { LEAVES } from '../world/trees.js';
 import { MIN_Y } from '../world/constants.js';
 import { chunkKey } from '../world/world.js';
+import { borderAllows } from '../world/border.js';
 import { attemptDimensionSpawn } from './dimensionMobs.js';
 import './cinderMobs.js'; // registers the Capwalker and the Dirge Wailer (Cinderdeep sub-biomes)
 import './slagColossus.js'; // registers the Slag Colossus, the Cinderforge boss
@@ -205,6 +206,9 @@ export class MobSpawner {
     return (below === B.GRASS || below === B.MYCELIUM || below === B.MUD) && isBrightEnoughForAnimal(raw, blk); // (Croakers on mangrove mud)
   }
 
+  /** May a natural spawn happen at this column? Never outside an active world border. */
+  inBorder(x, z) { return borderAllows(this.game.border, x + 0.5, z + 0.5); }
+
   /** One spawn attempt in a chunk; `surface` starts the pack on top of the terrain instead of a random height. */
   attempt(cx, cz, category, surface = false) {
     const g = this.game, w = g.world, p = g.player;
@@ -227,7 +231,7 @@ export class MobSpawner {
         const dx = x + 0.5 - p.x, dy = y - p.y, dz = z + 0.5 - p.z;
         const d2 = dx * dx + dy * dy + dz * dz;
         if (d2 < SPAWN_MIN_DIST * SPAWN_MIN_DIST || d2 > DESPAWN_FAR * DESPAWN_FAR) continue;
-        if (!w.isLoaded(x, z)) continue;
+        if (!w.isLoaded(x, z) || !this.inBorder(x, z)) continue;
         if (!entry) {
           entry = weightedPick(table);
           if (!entry) return count;
@@ -267,7 +271,7 @@ export class MobSpawner {
     if (g.ticks % 40 === 0 && fish < 24 && w.dimension === 'overworld') {
       const a = Math.random() * Math.PI * 2, r = 16 + Math.random() * 24;
       const x = Math.floor(p.x + Math.cos(a) * r), z = Math.floor(p.z + Math.sin(a) * r);
-      if (w.isLoaded(x, z)) {
+      if (w.isLoaded(x, z) && this.inBorder(x, z)) {
         // rivers are only a few blocks deep: small schools of Silverfins just under the surface
         const river = BIOMES[w.biomeAt(x, z)]?.key === 'river';
         const y = SEA_LEVEL - 2 - Math.floor(Math.random() * (river ? 2 : 6));
@@ -286,7 +290,7 @@ export class MobSpawner {
       for (const e of g.entities.list) if (e.type === 'gillnewt' && !e.dead) newts++;
       if (newts < 6) {
         const x = Math.floor(p.x + (Math.random() - 0.5) * 40), z = Math.floor(p.z + (Math.random() - 0.5) * 40);
-        if (w.isLoaded(x, z) && Math.hypot(x - p.x, z - p.z) > 6) {
+        if (w.isLoaded(x, z) && this.inBorder(x, z) && Math.hypot(x - p.x, z - p.z) > 6) {
           for (let y = Math.floor(p.y) - 10; y <= Math.floor(p.y) + 10; y++) {
             if (w.getBlock(x, y, z) === B.WATER && isNewtPoolFloor(w.getBlock(x, y - 1, z), mangrove) && w.getBlock(x, y + 1, z) !== B.WATER) {
               for (let i = 0, n = 1 + Math.floor(Math.random() * 3); i < n; i++) this.spawnMob('gillnewt', x + 0.5, y + 0.05, z + 0.5);
@@ -300,7 +304,7 @@ export class MobSpawner {
     if (g.ticks % 20 === 0 && ambient < 15 && w.dimension !== 'cinderdeep' && w.dimension !== 'hollow') {
       const x = Math.floor(p.x + (Math.random() - 0.5) * 48), z = Math.floor(p.z + (Math.random() - 0.5) * 48);
       const y = Math.floor(Math.min(62, p.y + (Math.random() - 0.5) * 32));
-      if (w.isLoaded(x, z) && !w.getBlock(x, y, z) && !w.getBlock(x, y - 1, z) && Math.hypot(x - p.x, z - p.z) > 12 && Math.max(w.skyLight(x, y, z), w.blockLight(x, y, z)) <= 3) this.spawnMob('flitter', x + 0.5, y - 0.5, z + 0.5);
+      if (w.isLoaded(x, z) && this.inBorder(x, z) && !w.getBlock(x, y, z) && !w.getBlock(x, y - 1, z) && Math.hypot(x - p.x, z - p.z) > 12 && Math.max(w.skyLight(x, y, z), w.blockLight(x, y, z)) <= 3) this.spawnMob('flitter', x + 0.5, y - 0.5, z + 0.5);
     }
     if (this.hostileEnabled()) {
       if (monsters < cap) {
@@ -466,7 +470,7 @@ export class MobSpawner {
         const y = w.heightAt(x, z) + 1;
         const ground = w.getBlock(x, y - 1, z);
         const soil = ground === B.GRASS || ground === B.MYCELIUM || ground === B.SNOWY_GRASS || ground === B.SNOW_LAYER || (ground === B.SAND && (entry.type === 'hopper' || entry.type === 'shellback')) || (entry.type === 'cragbuck' && SOLID[ground]) || (MOBS[entry.type].spawnOn && MOBS[entry.type].spawnOn.has(ground));
-        if (!soil || !this.canFit(entry.type, x, y, z)) continue;
+        if (!soil || !this.inBorder(x, z) || !this.canFit(entry.type, x, y, z)) continue;
         this.spawnMob(entry.type, x + 0.5, y, z + 0.5);
       }
     }

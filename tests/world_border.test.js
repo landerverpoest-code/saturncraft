@@ -1,9 +1,14 @@
 // The world border (world/border.js).
 import { describe, it, expect } from 'vitest';
-import { WorldBorder, enforceBorder, borderCommand, BORDER_MAX, BORDER_GRACE } from '../src/world/border.js';
+import { WorldBorder, enforceBorder, borderCommand, borderAllows, BORDER_MAX, BORDER_GRACE } from '../src/world/border.js';
 import { runCommand, CHEAT_COMMANDS, HELP } from '../src/ui/commands.js';
 import { WORLD_COMMANDS } from '../src/net/protocol.js';
 import { BYPASSES_ARMOR } from '../src/player/armor.js';
+import { MobSpawner } from '../src/mobs/spawner.js';
+import { CATEGORY } from '../src/mobs/mobTypes.js';
+import { BIOME } from '../src/world/biomes.js';
+import { B } from '../src/world/blocks.js';
+import { Interaction } from '../src/player/interaction.js';
 
 describe('world border', () => {
   it('is off by default and saves as nothing', () => {
@@ -107,5 +112,53 @@ describe('world border', () => {
     const game = { border: new WorldBorder(), player: { x: 0, z: 0 }, settings: {}, allowCheats: true };
     expect(runCommand(game, '/worldborder set 32')).toContain('32 blocks wide');
     expect(game.border.size).toBe(32);
+  });
+});
+
+describe('the border bounds the makers', () => {
+  it('borderAllows: always without an active border, else only inside the wall', () => {
+    const b = new WorldBorder();
+    expect(borderAllows(b, 1e6, 1e6)).toBe(true);
+    expect(borderAllows(null, 5, 5)).toBe(true);
+    expect(borderAllows(undefined, 5, 5)).toBe(true);
+    b.set(20);
+    expect(borderAllows(b, 9.5, -9.5)).toBe(true);
+    expect(borderAllows(b, 10.5, 0)).toBe(false);
+    expect(borderAllows(b, 0, -40)).toBe(false);
+  });
+
+  it('natural spawning never picks a spot outside an active border', () => {
+    const border = new WorldBorder();
+    const spawned = [];
+    const world = { dimension: 'overworld', heightAt: () => 63, getBlock: (x, y) => (y < 64 ? B.GRASS : B.AIR), biomeAt: () => BIOME.PLAINS, isLoaded: () => true };
+    const game = { world, border, player: { x: -10, y: 64, z: 0 }, entities: { list: [] } };
+    const sp = new MobSpawner(game);
+    sp.validSpawn = () => true;
+    sp.spawnMob = (type, x, y, z) => { spawned.push([x, z]); return { yaw: 0 }; };
+    for (let i = 0; i < 400; i++) sp.attempt(2, 0, CATEGORY.CREATURE, true);
+    expect(spawned.length).toBeGreaterThan(10); // without a border they spawn freely
+    spawned.length = 0;
+    border.set(80); // wall at x = 40, through the middle of chunk 2
+    for (let i = 0; i < 400; i++) sp.attempt(2, 0, CATEGORY.CREATURE, true);
+    expect(spawned.length).toBeGreaterThan(2);
+    for (const [x, z] of spawned) expect(border.contains(x, z)).toBe(true);
+    border.setCenter(1000, 1000); // the whole area is outside now
+    spawned.length = 0;
+    for (let i = 0; i < 100; i++) sp.attempt(2, 0, CATEGORY.CREATURE, true);
+    expect(spawned.length).toBe(0);
+  });
+
+  it('a player can neither break nor place outside an active border', () => {
+    const border = new WorldBorder(); border.set(20);
+    const set = [];
+    const world = { getBlock: () => B.DIRT, getMeta: () => 0, setBlockUrgent: (...a) => set.push(a) };
+    const game = { world, border, player: { gamemode: 'creative', creative: true, inventory: { selectedStack: null }, sneaking: false }, audio: { play() {} }, particles: null, ticks: 0 };
+    const ia = new Interaction(game);
+    ia.target = { x: 30, y: 64, z: 0, id: B.DIRT, face: [0, 1, 0] };
+    ia.mine();
+    expect(set.length).toBe(0);
+    expect(ia.use()).toBe(false);
+    ia.target = { x: 9, y: 64, z: 0, id: B.DIRT, face: [1, 0, 0] }; // the cell beside it is at x 10: past the wall
+    expect(ia.use()).toBe(false);
   });
 });

@@ -72,7 +72,7 @@ FACES.capwalker = (c) => {
 
 export const CAPWALKER = {
   name: 'Capwalker', role: 'mooshroom', category: CATEGORY.MONSTER, neutral: true,
-  health: 14, speed: 0.2, width: 0.7, height: 1.55, attack: 3, followRange: 24, sound: 'spore_puff',
+  health: 14, speed: 0.2, width: 0.7, height: 1.55, attack: 3, fireImmune: true, followRange: 24, sound: 'spore_puff',
   hitEffect: ['poison', 100, 0], customAI: capwalkerAI, onHurt: capwalkerHurt,
   drops: [{ id: I.GLOWCAP_SPORES, min: 1, max: 3 }],
 };
