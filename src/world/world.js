@@ -33,7 +33,7 @@ function chunkScanTable() {
   scanTable = new Uint8Array(BLOCK_LIMIT);
   for (let id = 0; id < BLOCK_LIMIT; id++) if (CIRCUIT_SETTLE[id]) scanTable[id] = 4;
   for (let id = 0; id < BLOCK_LIMIT; id++) if (LISTENS[id]) scanTable[id] |= 8;
-  scanTable[B.SPAWNER] = 1; scanTable[B.BEACON] = 2; scanTable[B.PROVING_SPAWNER] = 3; scanTable[B.OMINOUS_SPAWNER] = 3;
+  scanTable[B.TIDE_HEART] = 5; scanTable[B.SPAWNER] = 1; scanTable[B.BEACON] = 2; scanTable[B.PROVING_SPAWNER] = 3; scanTable[B.OMINOUS_SPAWNER] = 3;
   return scanTable;
 }
 
@@ -51,6 +51,7 @@ export class Chunk {
     // monster spawner positions (for the spawner logic)
     this.spawners = new Set();
     this.beacons = new Set(); // beacon positions (world/beacons.js)
+    this.hearts = new Set(); // Tide Heart positions (world/tideHeart.js)
     this.provers = new Set(); // Proving Spawner positions (world/provingSystem.js)
     // circuit parts (re-evaluated when the chunk loads: scheduled ticks are not saved)
     this.circuits = new Set();
@@ -72,7 +73,7 @@ export class Chunk {
         if (!k) continue;
         if (k === 4) { this.circuits.add(i); continue; }
         const pos = `${cx * 16 + (i & 15)},${MIN_Y + (i >> 8)},${cz * 16 + ((i >> 4) & 15)}`;
-        (k === 1 ? this.spawners : k === 2 ? this.beacons : this.provers).add(pos);
+        (k === 1 ? this.spawners : k === 2 ? this.beacons : k === 5 ? this.hearts : this.provers).add(pos);
       }
       this.sectionNonAir[s] = n;
       this.sectionTick[s] = t;
@@ -206,6 +207,8 @@ export class World {
     if (id === B.SPAWNER) c.spawners.add(`${x},${y},${z}`);
     if (old === B.BEACON) c.beacons.delete(`${x},${y},${z}`);
     if (id === B.BEACON) c.beacons.add(`${x},${y},${z}`);
+    if (old === B.TIDE_HEART) c.hearts.delete(`${x},${y},${z}`);
+    if (id === B.TIDE_HEART) c.hearts.add(`${x},${y},${z}`);
     if ((old === B.PROVING_SPAWNER || old === B.OMINOUS_SPAWNER) && id !== B.PROVING_SPAWNER && id !== B.OMINOUS_SPAWNER) c.provers.delete(`${x},${y},${z}`);
     if (id === B.PROVING_SPAWNER || id === B.OMINOUS_SPAWNER) c.provers.add(`${x},${y},${z}`);
     if (CIRCUIT_SETTLE[id]) c.circuits.add(i);

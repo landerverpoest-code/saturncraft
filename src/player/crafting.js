@@ -413,6 +413,7 @@ shaped(['CA', 'PP', 'PP'], { C: I.COMPASS, A: I.PAPER, P: 'planks' }, B.CARTOGRA
 // content pack 7 (world/coldCurrents.js, player/echoCoffer.js)
 shaped(['OOO', 'OEO', 'OOO'], { O: B.OBSIDIAN, E: I.EYE_OF_THE_VOID }, B.ECHO_COFFER, 1);
 shaped(['CC', 'CC'], { C: I.EMBER_CREAM }, B.SCALDROCK, 1);
+shaped(['CSC', 'SDS', 'CSC'], { C: I.TIDE_CRYSTAL, S: I.TIDE_SHARD, D: I.DIAMOND }, B.TIDE_HEART, 1); // (world/tideHeart.js)
 shaped(['SS', 'SS'], { S: B.SNOW_BLOCK }, B.DRIFTSNOW, 4);
 // ...and for masons (stone over planks), toolsmiths (iron and flint) and armorers (hides over planks)
 shaped(['SS', 'PP', 'PP'], { S: B.STONE, P: 'planks' }, B.MASONRY_BENCH, 1);

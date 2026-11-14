@@ -56,6 +56,17 @@ export const PACK7_TEX = {
       c.set(x, y, edge ? hex('#5d6066') : line ? hex('#6f4a2a') : shade(hex('#b08a55'), 0.9 + c.h(x, y, 83) * 0.18));
     }
   },
+  // Tide Heart: a pale sea-green crystal with a bright core and darker facets, ringed by a thin gold band
+  tide_heart: (c, { hex, shade, mix }) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const d = Math.hypot(x - 7.5, y - 7.5), facet = ((x + y) >> 2) & 1;
+      let col = mix(hex('#eafff6'), hex('#2f9c8f'), Math.min(1, d / 9));
+      col = shade(col, (facet ? 0.92 : 1.04) + c.h(x, y, 84) * 0.08);
+      if (Math.abs(d - 6.4) < 0.55) col = hex('#e6c34a');
+      if (x === 0 || x === 15 || y === 0 || y === 15) col = hex('#1f6f68');
+      c.set(x, y, col);
+    }
+  },
   echo_coffer_top: (c, { hex, shade }) => {
     for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
       const edge = x === 0 || x === 15 || y === 0 || y === 15;

@@ -1,4 +1,5 @@
 // Menus and container screens (inventory, workbench, furnace).
+import { eggCatalog } from '../mobs/creatureEggs.js';
 import { assemblerPattern, assemblerResult } from '../world/assembler.js';
 import { echoStore } from '../player/echoCoffer.js';
 import { doubleChestHalves, doubleChestView } from '../world/chests.js';
@@ -1232,6 +1233,8 @@ export class UI {
     const CREATIVE_FIRST_ROWS = 6; // rows drawn at once on opening; the rest follow as they scroll into view
     const hidden = new Set([B.AIR, B.CINDERROOT, B.WATER, B.LAVA, B.FURNACE_LIT, B.SMOKER_LIT, B.BLAST_FURNACE_LIT, B.WHEAT, B.CARROTS, B.POTATOES, B.BEETROOTS, B.MELON_STEM, B.PUMPKIN_STEM, B.DOOR, B.BED, B.FIRE, B.PAINTING, B.PAINTING_B, B.OAK_WALL_SIGN, B.COCOA, B.FROSTROOTS, B.SUNGOURD_STEM]);
     for (const b of BLOCKS) if (b && b.doorItem) hidden.add(b.id); // doors are placed from their door items
+    hidden.add(I.CREATURE_EGG); // listed per creature below
+    const eggs = eggCatalog();
     const all = ITEMS.filter((d) => d && d.id && !hidden.has(d.id) && !(d.block && BLOCKS[d.block] && BLOCKS[d.block].hidden));
     this.showContainer('creative', 'Creative Inventory', (panel) => {
       const search = el('<input class="creative-search" placeholder="Search items...">');
@@ -1244,6 +1247,19 @@ export class UI {
         this.slotRefs = this.slotRefs.filter((r) => !r.opts.catalog);
         grid.innerHTML = '';
         const q = search.value.trim().toLowerCase();
+        // one Creature Egg per creature (mobs/creatureEggs.js): the same item, labelled with what it hatches
+        for (const e of eggs) {
+          if (q && !e.name.toLowerCase().includes(q)) continue;
+          grid.appendChild(this.makeSlot(() => e.stack, () => {}, {
+            lazy, catalog: true,
+            onClick: (ev) => {
+              if (this.cursor) { this.cursor = null; return; }
+              const st = { ...e.stack, count: ev.button === 2 ? 1 : maxStack(e.stack.id) };
+              if (ev.shiftKey) { inv.add(st); return; }
+              this.cursor = st;
+            },
+          }));
+        }
         for (const d of all) {
           if (q && !d.name.toLowerCase().includes(q)) continue;
           grid.appendChild(this.makeSlot(() => ({ id: d.id, count: 1 }), () => {}, {

@@ -102,6 +102,7 @@ describe('crafting graph', () => {
     SLAG_SIGIL: 'Slagsteel Ingots, Ember Rods, a Dirge Crystal and Obsidian (world/dimensions/register.js)',
     BOG_ESSENCE: "boiled in a Hag's Cauldron (player/interaction.js, world/hagCauldron.js)",
     SURVEYOR_WAND: '/wand or the creative inventory (ui/buildCommands.js)',
+    CREATURE_EGG: 'the creative inventory only (mobs/creatureEggs.js)',
   };
   const extra = new Set([
     ...ITEMS.filter((it) => it && (it.potion || it.splash || it.lingering)).map((i) => i.id), // brewed (world/brewing.js)

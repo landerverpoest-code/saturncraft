@@ -2,6 +2,7 @@
 import { setActiveRules, rule } from './world/gameRules.js';
 import { columnAt } from './world/coldCurrents.js';
 import { WorldBorder, enforceBorder } from './world/border.js';
+import { heartState, heartReaches, HEART_PERIOD, HEART_DURATION, HEART_EFFECTS, HEART_STRIKE } from './world/tideHeart.js';
 import { BorderWall } from './render/borderWall.js';
 import { Mob } from './mobs/mob.js';
 import { newHopper, hopperStep, HOPPER_COOLDOWN } from './world/hoppers.js';
@@ -1037,6 +1038,37 @@ export class Game {
     this.beaconBeams.set(beams);
   }
 
+  /**
+   * Tide Hearts in loaded chunks nearby (world/tideHeart.js): every four seconds each awake heart gives the local player
+   * its gifts when they are wet and in reach; a full heart strikes monsters in the water around it (the host's game only).
+   */
+  tickTideHearts() {
+    const w = this.world, p = this.player, t = this.ticks;
+    const pcx = Math.floor(p.x) >> 4, pcz = Math.floor(p.z) >> 4;
+    const guest = !!(this.net && this.net.isClient);
+    for (let dx = -7; dx <= 7; dx++) for (let dz = -7; dz <= 7; dz++) {
+      const c = w.getChunk(pcx + dx, pcz + dz);
+      if (!c || !c.hearts || !c.hearts.size) continue;
+      for (const k of c.hearts) {
+        const [x, y, z] = k.split(',').map(Number);
+        const st = heartState(w, x, y, z);
+        if (!st.awake) continue;
+        if (t % HEART_PERIOD === 0 && !p.dead) {
+          const wet = p.body.inWater || !!(this.world.rainingAt && this.world.rainingAt(Math.floor(p.x), Math.floor(p.y + 1.6), Math.floor(p.z)));
+          if (heartReaches(st, x, y, z, p.x, p.y + 0.9, p.z, wet)) {
+            for (const e of HEART_EFFECTS) p.addEffect(e, HEART_DURATION, 0);
+            if (this.milestones) this.milestones.event('tideheart');
+          }
+        }
+        if (st.strikes && !guest) for (const e of this.entities.list) {
+          if (e.kind !== 'mob' || e.dead || e.deathTime > 0 || e.def.category !== CATEGORY.MONSTER || !e.body || !e.body.inWater) continue;
+          if (Math.hypot(e.x - (x + 0.5), e.y - (y + 0.5), e.z - (z + 0.5)) <= HEART_STRIKE.range) e.hurt(HEART_STRIKE.damage, 'magic', null, 0);
+        }
+        if (Math.random() < 0.5) this.particles.emit(x + 0.5 + (Math.random() - 0.5) * 3, y + 0.5 + (Math.random() - 0.5) * 3, z + 0.5 + (Math.random() - 0.5) * 3, 0, 0.02, 0, 0.5, 0.95, 1, 30, 0);
+      }
+    }
+  }
+
   tickFurnaces() {
     for (const f of this.furnaces.values()) {
       if (!this.world.isLoaded(f.x, f.z)) continue;
@@ -1440,6 +1472,7 @@ export class Game {
     if (this.ticks % 100 === 0) this.milestones.tick();
     if (this.ticks % 20 === 0) this.onboarding.tick(); // hints and First Steps: one cheap look a second
     if (this.ticks % 20 === 0) this.tickBeacons(this.ticks % BEACON_PERIOD === 0);
+    if (this.ticks % HEART_STRIKE.period === 0) this.tickTideHearts();
     if (this.ticks % 20 === 0) {
       // music mood: underground, night (all suns down) or day
       const px = Math.floor(p.x), py = Math.floor(p.y + 1), pz = Math.floor(p.z);

@@ -79,6 +79,7 @@ export const MILESTONES = [
   { id: 'haghut', title: 'Over the Bog', desc: 'Find a Hag Hut', icon: B.BOG_PLANKS, tick: near(hagHutsNear) },
   { id: 'grotto', title: 'Down in the Dark', desc: 'Find an Abyssal Grotto on the deep sea floor', icon: B.TIDESTONE_BRICKS, tick: near(grottosNear) },
   { id: 'iceberg', title: 'Tip of the Iceberg', desc: 'Find an Iceberg on the Frozen Deep', icon: B.PACKED_ICE, tick: near(icebergsNear) },
+  { id: 'tideheart', title: 'Heart of the Tide', desc: 'Feel the gifts of a Tide Heart', icon: B.TIDE_HEART, event: 'tideheart' },
   { id: 'echo', title: 'Pocket in the Dark', desc: 'Open an Echo Coffer', icon: B.ECHO_COFFER, event: 'echo' },
   { id: 'hulk', title: 'Frozen in Time', desc: 'Find an Icebound Hulk', icon: B.SPRUCE_PLANKS, tick: near(hulksNear) },
   { id: 'diver', title: 'Light for the Deep', desc: "Make a Diver's Lamp or a Diver's Helm", icon: I.DIVERS_LAMP, inv: (g) => has(g, I.DIVERS_LAMP, I.DIVERS_HELM) },

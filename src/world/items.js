@@ -617,3 +617,6 @@ for (const [kind, p] of Object.entries({
   TIPPED_ARROW[kind] = item('tipped_arrow_' + kind, p.name.replace('Elixir of', 'Arrow of'), { tipped: kind, gear: ['arrow', { tip: p.color }] }).id;
   LINGERING_ITEM[kind] = item('lingering_elixir_' + kind, 'Lingering ' + p.name, { stack: 1, potion: { kind, splash: true, lingering: true }, throwable: 'potion', iconStyle: ['lingering', { g: '#c8dcf0', h: p.color }] }).id;
 }
+
+// Creature Egg (mobs/creatureEggs.js; appended, so no item id shifts): a creative-mode egg that hatches the creature its label names
+item('creature_egg', 'Creature Egg', { creatureEgg: true, iconStyle: ['egg', { h: '#7fd6a8' }] });

@@ -1,5 +1,6 @@
 // Player interaction with the world: mining (with break progress), placing,
 // attacking with the attack cooldown, eating, buckets and containers.
+import { useEgg } from '../mobs/creatureEggs.js';
 import { rule } from '../world/gameRules.js';
 import { Mob } from '../mobs/mob.js';
 import { canTameWith, companionFoods, mayCommand, TAME_CHANCE } from '../mobs/companions.js';
@@ -969,6 +970,15 @@ export class Interaction {
         return true;
       }
       return false;
+    }
+    if (d && d.creatureEgg && this.target && !usable) {
+      // a Creature Egg hatches on the face it is used on (mobs/creatureEggs.js)
+      const key = useEgg(g, st, this.target);
+      if (!key) { if (g.hud) g.hud.toast('This egg is blank: name it after a creature on an anvil'); return true; }
+      if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1);
+      g.audio.play('pop', [this.target.x + 0.5, this.target.y + 0.5, this.target.z + 0.5]);
+      this.swing = SWING_TICKS;
+      return true;
     }
     if (d && d.cocoa && this.target && this.target.id === B.JUNGLE_LOG && this.target.face[1] === 0) {
       // plant beans on the side of a jungle log
