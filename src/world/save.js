@@ -1,5 +1,5 @@
-// World persistence: modified chunks (run-length encoded), player state, world time, furnaces and persistent passive
-// mobs. Where and how records are stored (IndexedDB, the world list, backups, repair, export / import) lives in
+// World persistence: modified chunks (run-length encoded), player state, world time, furnaces, persistent passive
+// mobs, dropped items and nearby monsters. Where and how records are stored (IndexedDB, the world list, backups, repair, export / import) lives in
 // worldManager.js and storage.js; the shape of a record, its version and migrations in saveFormat.js.
 import { saveRules, loadRules } from './gameRules.js';
 import { cleanEcho } from '../player/echoCoffer.js';
@@ -21,6 +21,7 @@ import { SocialState, cleanHostSettings } from '../net/social.js';
 import { CURRENT_VERSION, cleanThumbnail } from './saveFormat.js';
 import { writeWorld, listWorlds } from './worldManager.js';
 import { CURRENT_FEATURE_VERSION, cleanFeatureVersion } from './retrofit.js';
+import { saveItems, loadItems, saveHostiles, loadHostiles } from './saveEntities.js';
 import { cargoFromSave, FURNACE_CART } from '../mobs/mounts.js';
 
 export { MAX_WORLDS, listWorlds, loadGame, loadWorld, deleteSave, renameWorld, duplicateWorld, listBackups, restoreBackup, repairWorld, exportWorld, importWorld, writeWorld } from './worldManager.js';
@@ -146,6 +147,8 @@ export function buildSaveData(game) {
     peddler: game.spawner.peddlerState ? saveCaravanState(game.spawner.peddlerState) : undefined, // chance of the next Roving Peddler
     inhabited: [...(game.spawner.inhabited || new Map())].filter(([, t]) => t >= 1200), // ticks players spent near each chunk (local difficulty)
     savedMobs, liveMobs, chunks,
+    items: saveItems(game), // dropped items of this dimension with their remaining lifetime (world/saveEntities.js)
+    hostiles: saveHostiles(game), // despawnable monsters within 64 blocks of the player (world/saveEntities.js)
     // which dimension the player (and the fields above) are in, plus the other dimensions' state
     ...(game.dims ? game.dims.saveData(packChunk) : {}),
     netPlayers: game.netPlayers || {}, // multiplayer guests' state by name
@@ -246,6 +249,8 @@ export function applySave(game, data) {
     list.push(m);
     game.spawner.savedMobs.set(k, list);
   }
+  loadHostiles(game, data.hostiles); // (older saves have none; nothing returns on peaceful or with hostile spawning off)
+  loadItems(game, data.items); // (older saves have none)
 }
 
 export function applyPlayerSave(game, d) {
