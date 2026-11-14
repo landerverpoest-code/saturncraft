@@ -12,6 +12,7 @@
 //   doMobLoot            creatures drop items and experience             (on)
 //   doTileDrops          broken blocks drop items                        (on)
 //   blastsLightFires     explosions leave fires behind                   (off)
+//   blastsDestroyItems   explosions destroy dropped items (else push them) (off)
 
 export const WORLD_RULES = {
   keepInventory: { def: false, desc: 'Keep items and experience on death' },
@@ -25,6 +26,7 @@ export const WORLD_RULES = {
   doMobLoot: { def: true, desc: 'Creatures drop items and experience' },
   doTileDrops: { def: true, desc: 'Broken blocks drop items' },
   blastsLightFires: { def: false, desc: 'Explosions leave fires behind' },
+  blastsDestroyItems: { def: false, desc: 'Explosions destroy dropped items instead of pushing them' },
 };
 
 export const WORLD_RULE_NAMES = Object.keys(WORLD_RULES);
@@ -62,4 +64,12 @@ export const DAMAGE_RULES = { fall: 'fallDamage', stalagmite: 'fallDamage', wall
 export function damageCounts(settings, source) {
   const r = DAMAGE_RULES[source];
   return !r || ruleIn(settings, r);
+}
+
+/** Why the World rules screen may not change a rule right now (null: it may). Takes the running Game (or anything shaped like it). */
+export function ruleLockReason(game, name) {
+  if (game.net && game.net.isClient) return 'the host decides';
+  if (game.allowCheats === false) return 'cheats are off in this world';
+  if (game.hardcore && name === 'keepInventory') return 'a One Life world keeps nothing';
+  return null;
 }

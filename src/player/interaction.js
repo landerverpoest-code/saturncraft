@@ -13,6 +13,7 @@ import { isPot, canAdd, startBrew, takeServing, kindsIn, KIND_NAMES, hasHeat, is
 import { bitOfItem, kindStandIn, DISHES } from '../world/cooking.js';
 import { cauldronFeed, CAULDRON_STEPS, CAULDRON_YIELD } from '../world/hagCauldron.js';
 import { varietyBonus, recordMeal, countsForVariety } from './variety.js';
+import { borderAllows } from '../world/border.js';
 import { aimTip } from '../world/aimTips.js';
 import { campAdd, canCampCook, campCount, CAMP_SLOTS } from '../world/campfireCooking.js';
 import { B, BLOCKS, SOLID, SHAPE, isFluid, CROPS, isFurnace, DOOR_SETS, CANDLES, POTTED, WATERLOGGED_FORM, isPropagule, PROPAGULE_HANGING, isBox, BOX_COLORS } from '../world/blocks.js';
@@ -423,6 +424,7 @@ export class Interaction {
   mine() {
     const g = this.game, p = g.player, t = this.target;
     if (this.breakDelay > 0 || p.gamemode === 'adventure') return; // adventurers can't break blocks
+    if (!borderAllows(g.border, t.x + 0.5, t.z + 0.5)) { this.breaking = null; return; } // nothing is unmade beyond the world border
     if (t.id === B.ITEM_FRAME && g.frames.get(`${t.x},${t.y},${t.z}`)) {
       // the first hit knocks the item out of the frame
       const st = g.frames.get(`${t.x},${t.y},${t.z}`);
@@ -896,6 +898,11 @@ export class Interaction {
     const d = st && ITEMS[st.id];
     // Armour: right-click puts it on (swapping with what is worn), unless aiming at something usable
     const usable = this.target && (USABLE_BLOCKS.has(this.target.id) || [SHAPE.GATE, SHAPE.DOOR, SHAPE.TRAPDOOR].includes(BLOCKS[this.target.id].shape));
+    // nothing is placed (or used) beyond an active world border: neither the aimed block nor the cell beside it may lie outside
+    if (this.target && g.border && g.border.active) {
+      const bt = this.target, bf = bt.face || [0, 0, 0];
+      if (!borderAllows(g.border, bt.x + 0.5, bt.z + 0.5) || (!(usable && !p.sneaking) && !borderAllows(g.border, bt.x + bf[0] + 0.5, bt.z + bf[2] + 0.5))) return false;
+    }
     if (d && d.armor && !usable && !(d.block !== undefined && this.target)) { // a Carved Pumpkin aimed at a block is placed instead
       const inv = p.inventory, worn = inv.armor[d.armor.slot];
       inv.armor[d.armor.slot] = st;

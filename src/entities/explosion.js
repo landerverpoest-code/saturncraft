@@ -66,7 +66,13 @@ export function explode(game, x, y, z, power, source) {
     const dist = Math.hypot(dx, dy, dz);
     const d = dist / radius;
     if (d > 1) continue;
-    if (e.kind === 'item') { e.dead = true; continue; }
+    if (e.kind === 'item') {
+      // a dropped item is thrown from the centre like any body; only the blastsDestroyItems rule makes the blast destroy it
+      if (rule('blastsDestroyItems')) { e.dead = true; continue; }
+      const ib = e.body, k = 1 - d;
+      if (dist > 0.01 && ib) { ib.vx += dx / dist * k; ib.vy += dy / dist * k; ib.vz += dz / dist * k; e.rest = 0; e.pickupDelay = Math.max(e.pickupDelay || 0, 10); }
+      continue;
+    }
     const ex = exposure(w, x, y, z, { x: e.x, y: e.y, z: e.z, width: e.width, height: e.height });
     const dmg = explosionDamage(power, d, ex);
     const impact = (1 - d) * ex;

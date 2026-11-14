@@ -35,6 +35,7 @@ import { buildTopics, searchTopics } from './helpTopics.js';
 import { isTrinket, TRINKET_SLOTS } from '../player/trinkets.js';
 import { wornSets, SET_PIECES } from '../player/setBonuses.js';
 import { TOUCH_MODE_LABELS, SIZE_RANGE, OPACITY_RANGE, nextTouchMode, normalizeTouch, detectTouch, readTouchEnv } from './touchMath.js';
+import { WORLD_RULES, WORLD_RULE_NAMES, ruleIn, ruleLockReason } from '../world/gameRules.js';
 import { loadPlayerName, MAX_PLAYERS } from '../net/protocol.js';
 import { EMOTES, EMOTE_LABELS, RESPAWN_WAIT_S } from '../net/social.js';
 import { grindstoneAccepts, grindstoneResult, grindstoneXp, stonecutterOutputs, stonecutterAccepts, loomResult, loomAcceptsCloth, loomAcceptsDye, LOOM_BATCH } from '../world/workstations.js';
@@ -1440,6 +1441,7 @@ export class UI {
       <button class="btn" id="sea">Seasons: ${g.settings.seasons !== false ? 'On' : 'Off'}</button>
       <button class="btn" id="crd">Show coordinates: ${g.settings.showCoords ? 'On' : 'Off'}</button>
       <button class="btn" id="diff">Difficulty: ${cap(g.difficulty)}</button>
+      <button class="btn" data-a="rules">World rules...</button>
       <div class="btn-row"><button class="btn" data-a="controls">Controls</button>
       <button class="btn" data-a="access">Accessibility</button></div>
       <div class="btn-row"><button class="btn" data-a="ms">Milestones</button>
@@ -1496,6 +1498,35 @@ export class UI {
     s.querySelector('[data-a=controls]').onclick = () => this.showControls();
     s.querySelector('[data-a=access]').onclick = () => this.showAccessibility();
     s.querySelector('[data-a=touch]').onclick = () => this.showTouchSettings();
+    s.querySelector('[data-a=rules]').onclick = () => this.showWorldRules();
+    this.layer.appendChild(s);
+  }
+
+  /** World rules (world/gameRules.js): every rule with what it does and an On/Off button (the same as /gamerule). */
+  showWorldRules() {
+    this.clear();
+    this.open = 'pause';
+    const g = this.game;
+    const s = el(`<div class="screen pause-screen rules-screen"><h2>World rules</h2>
+      <p class="sub rules-note"></p><div class="rules-list"></div>
+      <button class="btn" data-a="back">Back</button></div>`);
+    const list = s.querySelector('.rules-list');
+    const locked = WORLD_RULE_NAMES.map((n) => ruleLockReason(g, n));
+    const whole = locked.every((r) => r && r !== 'a One Life world keeps nothing') ? locked[0] : null;
+    s.querySelector('.rules-note').textContent = whole ? `Rules cannot be changed here: ${whole}.` : 'Rules belong to this world and are saved with it.';
+    WORLD_RULE_NAMES.forEach((name, i) => {
+      const row = el(`<div class="field rule-row"><b></b> <span class="sub"></span><button class="btn"></button></div>`);
+      row.querySelector('b').textContent = name;
+      row.querySelector('.sub').textContent = WORLD_RULES[name].desc + (locked[i] && !whole ? ` (${locked[i]})` : '');
+      const btn = row.querySelector('button');
+      const paint = () => { btn.textContent = ruleIn(g.settings, name) ? 'On' : 'Off'; };
+      paint();
+      if (locked[i]) btn.disabled = true;
+      btn.onclick = () => { g.setSetting(name, !ruleIn(g.settings, name)); paint(); };
+      list.appendChild(row);
+    });
+    s.querySelector('[data-a=back]').onclick = () => this.showPause();
+    this.padBack = () => this.showPause();
     this.layer.appendChild(s);
   }
 

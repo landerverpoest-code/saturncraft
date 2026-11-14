@@ -5,7 +5,8 @@ import { rule } from '../world/gameRules.js';
 import { Body } from '../physics/body.js';
 import { fallDamage } from '../physics/constants.js';
 import { isStalagmiteTip, stalagmiteFallDamage } from '../world/caves.js';
-import { B, SOLID, CROPS, isWaterish, CROAKLIGHTS } from '../world/blocks.js';
+import { frostStep, FROST } from '../world/coldCurrents.js';
+import { B, BLOCKS, SOLID, CROPS, isWaterish, CROAKLIGHTS } from '../world/blocks.js';
 import { I, ITEMS } from '../world/items.js';
 import { MOBS, CATEGORY } from './mobTypes.js';
 import { BIOMES } from '../world/biomes.js';
@@ -352,7 +353,7 @@ export class Mob {
   hurt(dmg, source, attacker = null, knockback = 0.4, projectile = null) {
     if (this.deathTime > 0 || this.removed) return false;
     const rawDmg = dmg; // (before armour: a Warhammer's stagger asks whether the swing was a full one)
-    if ((this.def.fireImmune || this.effects.fire_resistance) && (source === 'fire' || source === 'lava' || source === 'fireball')) return false;
+    if ((this.def.fireImmune || this.effects.fire_resistance) && (source === 'fire' || source === 'lava' || source === 'fireball' || source === 'hot_floor')) return false;
     if (this.def.onHurt) { dmg = this.def.onHurt(this, dmg, source, attacker); if (dmg <= 0) return false; }
     if (this.type === 'voidwalker' && projectile) {
       // Voidwalkers dodge projectiles by teleporting
@@ -638,6 +639,7 @@ export class Mob {
     b.updateFluidState(g.world, this.height * 0.85);
     // a Blight Rose withers whatever brushes it (the Void Wyrm and Ashwraiths fly too high to care)
     if (b.inBlight && this.deathTime === 0 && (!this.effects.wither || this.effects.wither.ticks < 10)) addEffect(this.effects, 'wither', 40, 0);
+    this.hazardTick(g);
     this.move = null;
     if (this.boatSeat) {
       // sitting in a boat (entities/entities.js seats it): it goes where the boat goes
@@ -759,6 +761,22 @@ export class Mob {
     const drag = this.def.noclip ? 1 : 0.91;
     b.vx *= drag; b.vy *= drag; b.vz *= drag;
     b.fallDistance = 0;
+  }
+
+  /**
+   * The pack-7 ground hazards, as the player meets them (player/player.js): Driftsnow builds frost that bites at full (1 'freeze'
+   * every FROST.every ticks; def.coldProof creatures are never chilled), and Scaldrock burns a creature's feet (1 'hot_floor' a
+   * second; def.fireImmune creatures and those with Fire Resistance are spared).
+   */
+  hazardTick(g) {
+    const b = this.body;
+    if (this.deathTime > 0) return;
+    this.frost = frostStep(this.frost || 0, b.inDrift, !!this.def.coldProof);
+    if (this.frost >= FROST.full && b.inDrift && g.ticks % FROST.every === 0) this.hurt(FROST.damage, 'freeze', null, 0);
+    if (b.onGround && !this.def.fireImmune && !this.effects.fire_resistance && g.ticks % 20 === 0) {
+      const below = BLOCKS[g.world.getBlock(Math.floor(b.x), Math.floor(b.y - 0.01), Math.floor(b.z))];
+      if (below && below.hot) this.hurt(1, 'hot_floor', null, 0);
+    }
   }
 
   environment(g) {

@@ -175,7 +175,7 @@ export const MOBS = {
     health: 6, speed: 0.3, width: 0.5, height: 0.9, drops: [],
   },
   frostling: {
-    name: 'Frostling', role: 'snow golem', category: CATEGORY.CREATURE, guard: true, snowGolem: true, sound: 'squish',
+    name: 'Frostling', role: 'snow golem', category: CATEGORY.CREATURE, guard: true, snowGolem: true, coldProof: true, sound: 'squish',
     health: 4, speed: 0.2, width: 0.7, height: 1.9, attack: 0, noFallDamage: true,
     drops: [{ id: I.SNOWBALL, min: 0, max: 15 }],
   },
@@ -187,7 +187,7 @@ export const MOBS = {
     tamedHealth: 8, tamedAttack: 2, companion: { tameFood: [I.GILDED_CARROT], perk: 'forager', gifts: 'burrow', sitDrop: 0.08 },
   },
   frostbear: {
-    name: 'Frostbear', role: 'polar bear', category: CATEGORY.CREATURE, neutralBeast: true, sound: 'grunt',
+    name: 'Frostbear', role: 'polar bear', category: CATEGORY.CREATURE, neutralBeast: true, coldProof: true, sound: 'grunt',
     health: 30, speed: 0.25, width: 1.4, height: 1.4, attack: 6,
     drops: [{ id: I.RAW_SALMON_BEAR, min: 0, max: 2 }],
     // fed raw silverfin two grown ones have a cub; offered raw redfin (1 in 3) a wild one becomes a companion that follows, sits and guards its owner (mobs/companions.js)
