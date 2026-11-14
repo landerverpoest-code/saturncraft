@@ -135,6 +135,10 @@ function baseDrops(blockId, b, rng, meta, tool) {
       for (let k = 0; k < 3; k++) if (rng() < 4 / 7) n++;
       return [{ id: I.FROSTROOT, count: n }];
     }
+    case 'dawnfern': { // a sprout gives its seed back; a ripe fern is cut for the plant and now and then a seed
+      if ((meta & 7) < 7) return [{ id: I.DAWNFERN_SEEDS, count: 1 }];
+      return [{ id: B.DAWNFERN_PLANT, count: 1 }, ...(rng() < 0.5 ? [{ id: I.DAWNFERN_SEEDS, count: 1 }] : [])];
+    }
     case 'sungourd_stem': return [{ id: I.SUNGOURD_SEEDS, count: 1 + ((meta & 7) === 7 && rng() < 0.5 ? 1 : 0) }];
     case 'sungourd': return [{ id: I.GOURD_WEDGE, count: 3 + Math.floor(rng() * 4) }];
     case 'cinderroot': return [{ id: I.CINDERROOT, count: (meta & 7) >= 3 ? randInt(rng, 2, 4) : 1 }];

@@ -99,4 +99,25 @@ export const PACK7_TEX = {
       c.set(x, y, tip > 0.82 ? hex('#d6ffd8') : tip > 0.6 ? mix(hex('#7be08a'), hex('#3fb0a0'), c.h(x, y, 90)) : shade(hex('#2f8f58'), 0.8 + c.h(x, y, 91) * 0.3));
     }
   },
+  // Dawnfern: a small pale sprout, and the ripe glowing fern with luminous frond tips
+  dawnfern_0: (c, { hex, shade, mix }) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
+    for (let y = 9; y < 16; y++) {
+      const reach = Math.round((15 - y) * 0.8);
+      for (const x of [7, 8]) c.set(x, y, shade(hex('#3f9a6a'), 0.85 + c.h(x, y, 92) * 0.3));
+      if (y < 14) for (let k = 1; k <= Math.min(reach, 3); k++) { c.set(7 - k, y - k + 1, shade(hex('#58b886'), 0.9 + c.h(7 - k, y, 93) * 0.2)); c.set(8 + k, y - k + 1, shade(hex('#58b886'), 0.9 + c.h(8 + k, y, 94) * 0.2)); }
+    }
+  },
+  dawnfern_1: (c, { hex, shade, mix }) => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) c.set(x, y, [0, 0, 0], 0);
+    for (let y = 2; y < 16; y++) for (const x of [7, 8]) c.set(x, y, shade(hex('#2f8a5a'), 0.85 + c.h(x, y, 95) * 0.3));
+    for (let y = 3; y < 15; y += 2) {
+      const len = Math.min(6, 2 + Math.floor((y - 3) / 2));
+      for (let k = 1; k <= len; k++) {
+        const yy = y + Math.floor(k / 3) * (y < 8 ? 1 : 0) - 1, tip = k >= len - 1;
+        for (const x of [7 - k, 8 + k]) c.set(x, yy, tip ? mix(hex('#d6ffd8'), hex('#ffe9a8'), c.h(x, yy, 96)) : shade(hex('#4fb87e'), 0.8 + c.h(x, yy, 97) * 0.35));
+      }
+    }
+    c.set(7, 1, hex('#fff6c8')); c.set(8, 1, hex('#fff6c8')); c.set(7, 2, hex('#d6ffd8')); c.set(8, 2, hex('#d6ffd8'));
+  },
 };

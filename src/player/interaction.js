@@ -56,6 +56,7 @@ import { interactMount, canSeatMob, cartFuelTicks, guestWantsMount } from '../mo
 import { wandClick } from '../ui/buildCommands.js';
 import { interactHoverling } from '../mobs/hoverling.js';
 import { catchTarnling, releaseTarnling } from '../mobs/fauna.js';
+import { brushPlateback, equipBarding, removeBarding } from '../mobs/pack7Mobs.js';
 import { galeLeap } from '../mobs/gustling.js';
 import { summonColossus } from '../mobs/slagColossus.js';
 import { isBook } from '../world/books.js';
@@ -1638,6 +1639,8 @@ export class Interaction {
       if (guestWantsMount(mob, p, st)) { g.mount(mob, 0); this.swing = SWING_TICKS; return true; } // a tacked-up Galloper or Thistlehorn: the guest rides it, the host moves it
     }
     if (mob.netProxy) return g.net.interactMob(mob); // multiplayer guest: the host feeds, shears, tames or trades
+    if (mob.type === 'plateback' && brushPlateback(g, mob, p, st, g.ticks, () => { this.swing = SWING_TICKS; })) return true; // a Brush shakes a Plate Scale loose (mobs/pack7Mobs.js)
+    if (mob.type === 'howler' && (equipBarding(g, mob, p, st, () => { this.swing = SWING_TICKS; }) || removeBarding(g, mob, p, st, () => { this.swing = SWING_TICKS; }))) return true; // Howler Barding on, Shears take it off
     if (mob.def.bucketable && catchTarnling(g, mob, p, st, () => { this.swing = SWING_TICKS; })) return true; // scoop a Tarnling out of its pond (mobs/fauna.js)
     if ((mob.def.villager || mob.def.trader) && mob.deathTime === 0 && mob.trades.length && !(d && d.food && mob.def.food)) { g.ui.openTrade(mob); g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); return true; }
     if ((mob.def.tameable || mob.def.companion) && mob.deathTime === 0 && this.interactHowler(mob, st, d)) return true;

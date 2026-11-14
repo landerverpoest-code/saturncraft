@@ -496,3 +496,6 @@ export const SMELTING = {
   [I.FROSTROOT]: I.ROASTED_FROSTROOT,
   [I.RAW_BOGCARP]: I.COOKED_BOGCARP, [I.RAW_DUNEFIN]: I.COOKED_DUNEFIN, [I.GILDED_PERCH]: I.COOKED_GILDED_PERCH,
 };
+
+// Pack 7 creatures (mobs/pack7Mobs.js): six Plate Scales, two rows of three, make the barding a tamed Howler wears
+shaped(['SSS', 'SSS'], { S: I.PLATE_SCALE }, I.HOWLER_BARDING, 1);
