@@ -86,6 +86,7 @@ import { inventoryKeyIsSlotAction } from './ui/menuNav.js';
 import { resolveBindings } from './ui/bindings.js';
 import { FrameGraph } from './ui/frameGraph.js';
 import { ACCESS_DEFAULTS, CaptionLog, motionScales, applyAccessToRoot, cleanUiScale } from './ui/accessibility.js';
+import { detectLanguage, setLanguage } from './ui/i18n.js';
 import { TOUCH_DEFAULTS, normalizeTouch, wantTouch, readTouchEnv } from './ui/touchMath.js';
 import { Audio } from './audio/audio.js';
 import { explode } from './entities/explosion.js';
@@ -133,7 +134,7 @@ export const DIFFICULTIES = ['peaceful', 'easy', 'normal', 'hard'];
 
 const ACCESS_KEYS = new Set(['reduceMotion', 'reduceFlashing', 'highContrast', 'largeText', 'colorBlind', 'shapeCues', 'uiScale', 'largeCaptions']);
 
-export const DEFAULT_SETTINGS = { renderDistance: 8, fov: 75, sensitivity: 100, volume: 0.5, music: 0.5, shadows: true, shaders: true, shadowMapSize: 1024, pixelRatioCap: 1.25, daylightCycle: true, seasons: true, worldEvents: true, hostileMobs: true, fireworksHurtPlayers: false, difficulty: 'normal', showCoords: false, hints: true, firstSteps: true, keys: {}, ...ACCESS_DEFAULTS, ...TOUCH_DEFAULTS };
+export const DEFAULT_SETTINGS = { renderDistance: 8, fov: 75, sensitivity: 100, volume: 0.5, music: 0.5, shadows: true, shaders: true, shadowMapSize: 1024, pixelRatioCap: 1.25, daylightCycle: true, seasons: true, worldEvents: true, hostileMobs: true, fireworksHurtPlayers: false, difficulty: 'normal', language: detectLanguage(), showCoords: false, hints: true, firstSteps: true, keys: {}, ...ACCESS_DEFAULTS, ...TOUCH_DEFAULTS };
 
 export class Game {
   constructor(canvas, seed, settings, hooks = {}, saveData = null) {
@@ -142,6 +143,7 @@ export class Game {
     this.seed = seed;
     this.featureVersion = CURRENT_FEATURE_VERSION; // see world/retrofit.js; a loaded older save lowers it (applySave)
     this.settings = { ...DEFAULT_SETTINGS, ...settings };
+    setLanguage(this.settings.language);
     setActiveRules(this.settings); // keepInventory, mobGriefing and the other world rules (world/gameRules.js)
     Object.assign(this.settings, normalizeTouch(this.settings)); // (saved touch settings may be anything)
     this.settings.uiScale = cleanUiScale(this.settings.uiScale);
@@ -450,6 +452,7 @@ export class Game {
     if (ACCESS_KEYS.has(k) && this.particles) this.particles.density = this.fx.particles;
     if (k === 'hints' && !v && this.onboarding) this.onboarding.dismiss();
     if (k === 'firstSteps' && this.onboarding) this.onboarding.renderSteps();
+    if (k === 'language') { setLanguage(v); if (this.onboarding) this.onboarding.renderSteps(); }
     if (k === 'volume') this.audio.setVolume(v);
     if (k === 'music') this.music.setVolume(v);
     if (k === 'shadows') this.sky.setShadowsEnabled(v && (this.quality || 0) < 2);

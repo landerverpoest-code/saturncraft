@@ -477,6 +477,7 @@ body.tc-left #tc-ui > .tc-btn { right: auto; left: calc(var(--bx) * var(--u) + e
 .wm-grid { display: grid; grid-template-columns: 1fr; gap: 6px; padding: 6px 0; }
 .wm-grid label { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .wm-grid select, .wm-grid input[type=number] { background: #111; color: #fff; border: 2px solid #444; border-radius: 4px; padding: 4px; font-size: 14px; max-width: 150px; }
+.lang-field select { background: #111; color: #fff; border: 2px solid #444; border-radius: 4px; padding: 6px; font-size: 14px; width: 100%; }
 .wm-grid input[type=number] { width: 70px; }
 .wm-dialog { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; background: rgba(4, 4, 10, .78); padding: 16px; }
 .wm-box { width: 420px; max-width: 100%; max-height: 90vh; overflow-y: auto; background: #1c1a26; border: 2px solid #4d4a58; border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 8px; color: #ddd; }

@@ -7,6 +7,7 @@ import { LIMITS, WORLD_TYPES, formatBytes, cleanThumbnail } from '../world/saveF
 import { getStorage, storageStatus } from '../world/storage.js';
 import { cleanOptions } from '../world/newWorld.js';
 import { formatTime } from '../player/stats.js';
+import { t, getLanguage } from './i18n.js';
 
 const $ = (id) => document.getElementById(id);
 function h(tag, cls, text) {
@@ -15,7 +16,7 @@ function h(tag, cls, text) {
   if (text !== undefined) e.textContent = text;
   return e;
 }
-const when = (t) => (t ? new Date(t).toLocaleString() : 'never');
+const when = (ts) => (ts ? new Date(ts).toLocaleString(getLanguage()) : t('never'));
 
 /** A modal box. `buttons`: [{ label, value, kind }]; resolves with the clicked value (null if dismissed). */
 export function modal({ title, lines = [], input = null, build = null, buttons }) {
@@ -82,11 +83,17 @@ export function initWorldList(ctx) {
 
   // world types: unsupported ones are shown but cannot be picked
   const typeSel = $('wo-type');
-  for (const t of WORLD_TYPES) {
-    const o = h('option', null, t.supported ? t.label : `${t.label} (generator has no flat mode yet)`);
-    o.value = t.key; o.disabled = !t.supported;
-    typeSel.appendChild(o);
-  }
+  const fillTypes = () => {
+    const keep = typeSel.value;
+    typeSel.innerHTML = '';
+    for (const wt of WORLD_TYPES) {
+      const o = h('option', null, wt.supported ? t(wt.label) : t('{label} (generator has no flat mode yet)', { label: t(wt.label) }));
+      o.value = wt.key; o.disabled = !wt.supported;
+      typeSel.appendChild(o);
+    }
+    if (keep) typeSel.value = keep;
+  };
+  fillTypes();
   const seasonsBox = $('wo-seasons');
   const syncSeasons = () => { $('wo-start').disabled = $('wo-days').disabled = !seasonsBox.checked; };
   seasonsBox.addEventListener('change', syncSeasons); syncSeasons();
@@ -94,15 +101,16 @@ export function initWorldList(ctx) {
   async function showStorage() {
     const note = $('storage-note');
     const st = getStorage();
-    let text = '';
-    if (!st.persistent) text = 'This browser blocks world storage: worlds will be lost when the page closes. Export them to keep them.';
+    let text = '', q0 = null;
+    if (!st.persistent) text = t('This browser blocks world storage: worlds will be lost when the page closes. Export them to keep them.');
     else {
       const q = await storageStatus(st).catch(() => null);
-      if (q && q.level && q.level !== 'ok') text = `Browser storage is ${Math.round(q.ratio * 100)}% full (${formatBytes(q.usage)} of ${formatBytes(q.quota)}). ${q.level === 'critical' ? 'Saving may fail: export and delete worlds you do not need.' : 'Consider exporting or deleting old worlds.'}`;
+      q0 = q;
+      if (q && q.level && q.level !== 'ok') text = `${t('Browser storage is {pct}% full ({used} of {quota}).', { pct: Math.round(q.ratio * 100), used: formatBytes(q.usage), quota: formatBytes(q.quota) })} ${q.level === 'critical' ? t('Saving may fail: export and delete worlds you do not need.') : t('Consider exporting or deleting old worlds.')}`;
     }
     note.textContent = text;
     note.classList.toggle('hidden', !text);
-    note.classList.toggle('wm-bad', /fail|lost/.test(text));
+    note.classList.toggle('wm-bad', !!text && (!st.persistent || (q0 && q0.level === 'critical')));
   }
 
   async function refresh() {
@@ -114,11 +122,11 @@ export function initWorldList(ctx) {
   function render() {
     list.innerHTML = '';
     const used = worlds.filter(Boolean).length;
-    if (used) list.appendChild(h('div', 'world-head', `Your worlds (${used}/${MAX_WORLDS})`));
+    if (used) list.appendChild(h('div', 'world-head', t('Your worlds ({used}/{max})', { used, max: MAX_WORLDS })));
     for (const w of worlds) if (w) list.appendChild(card(w));
     const full = used >= MAX_WORLDS;
     playBtn.disabled = full;
-    playBtn.textContent = full ? `Max ${MAX_WORLDS} worlds · delete one first` : 'Create New World';
+    playBtn.textContent = full ? t('Max {max} worlds · delete one first', { max: MAX_WORLDS }) : t('Create New World');
     $('import-btn').disabled = full;
   }
 
@@ -129,21 +137,21 @@ export function initWorldList(ctx) {
     if (thumb) { const img = h('img', 'world-thumb'); img.src = thumb; img.alt = ''; play.appendChild(img); } else play.appendChild(h('div', 'world-thumb none', '?'));
     const text = h('div', 'world-text');
     text.appendChild(h('b', null, w.name));
-    const bits = [`seed ${w.seedText || w.seed}`, `${formatTime(w.playTicks)} played`];
+    const bits = [t('seed {seed}', { seed: w.seedText || w.seed }), t('{time} played', { time: formatTime(w.playTicks) })];
     text.appendChild(h('span', null, bits.join(' · ')));
-    text.appendChild(h('span', null, `last played ${when(w.savedAt)} · ${formatBytes(w.size)}`));
-    const tags = [w.hardcore ? (w.hardcoreOver ? 'one life (spent)' : 'one life') : null, w.gamemode, w.difficulty, w.seasons ? null : 'no seasons', w.allowCheats ? null : 'no cheats'].filter(Boolean);
+    text.appendChild(h('span', null, t('last played {when} · {size}', { when: when(w.savedAt), size: formatBytes(w.size) })));
+    const tags = [w.hardcore ? (w.hardcoreOver ? t('one life (spent)') : t('one life')) : null, w.gamemode && t(w.gamemode), w.difficulty && t(w.difficulty), w.seasons ? null : t('no seasons'), w.allowCheats ? null : t('no cheats')].filter(Boolean);
     text.appendChild(h('span', 'world-tags', tags.join(' · ')));
-    if (w.damaged) text.appendChild(h('span', 'wm-bad', w.newer ? 'Made by a newer version' : 'Damaged: click to repair or restore a backup'));
+    if (w.damaged) text.appendChild(h('span', 'wm-bad', w.newer ? t('Made by a newer version') : t('Damaged: click to repair or restore a backup')));
     play.appendChild(text);
     play.onclick = () => open(w);
     const acts = h('div', 'world-actions');
     const act = (label, title, fn, cls = '') => { const b = h('button', `btn world-act ${cls}`, label); b.title = title; b.onclick = fn; acts.appendChild(b); return b; };
-    act('Rename', 'Rename this world', () => rename(w));
-    act('Copy', 'Duplicate this world', () => duplicate(w));
-    act('Export', 'Download this world as a file', () => exportIt(w));
-    act(`Backups (${w.backups || 0})`, 'Restore an earlier snapshot', () => backups(w));
-    act('Delete', 'Delete this world', () => remove(w), 'world-del');
+    act(t('Rename'), t('Rename this world'), () => rename(w));
+    act(t('Copy'), t('Duplicate this world'), () => duplicate(w));
+    act(t('Export'), t('Download this world as a file'), () => exportIt(w));
+    act(t('Backups ({n})', { n: w.backups || 0 }), t('Restore an earlier snapshot'), () => backups(w));
+    act(t('Delete'), t('Delete this world'), () => remove(w), 'world-del');
     el.append(play, acts);
     return el;
   }
@@ -152,7 +160,7 @@ export function initWorldList(ctx) {
     say('');
     const r = await loadWorld(w.slot);
     if (r.status === 'ok') { ctx.start(r.data, w.slot); return; }
-    if (r.status === 'missing') { say('That world is gone.', true); refresh(); return; }
+    if (r.status === 'missing') { say(t('That world is gone.'), true); refresh(); return; }
     await damaged(w, r);
   }
 
@@ -160,21 +168,21 @@ export function initWorldList(ctx) {
   async function damaged(w, r) {
     const newer = r.status === 'newer';
     const lines = newer
-      ? [r.problems[0].msg, 'Update the game to open it. The world was not touched.']
-      : [`"${w.name}" failed its integrity check (${r.problems.length} problem${r.problems.length === 1 ? '' : 's'}):`, ...r.problems.slice(0, 5).map((p) => ` - ${p.msg}`), ...(r.problems.length > 5 ? [` - and ${r.problems.length - 5} more`] : [])];
-    if (r.status === 'repairable') lines.push('Repair drops what is damaged (damaged terrain regenerates from the seed). The original is kept as a backup.');
-    if (r.status === 'damaged') lines.push('This cannot be repaired automatically.');
+      ? [r.problems[0].msg, t('Update the game to open it. The world was not touched.')]
+      : [t('"{name}" failed its integrity check ({problems}):', { name: w.name, problems: t(r.problems.length === 1 ? '{n} problem' : '{n} problems', { n: r.problems.length }) }), ...r.problems.slice(0, 5).map((p) => ` - ${p.msg}`), ...(r.problems.length > 5 ? [' - ' + t('and {n} more', { n: r.problems.length - 5 })] : [])];
+    if (r.status === 'repairable') lines.push(t('Repair drops what is damaged (damaged terrain regenerates from the seed). The original is kept as a backup.'));
+    if (r.status === 'damaged') lines.push(t('This cannot be repaired automatically.'));
     const nBackups = (await listBackups(w.slot)).length;
     const buttons = [];
-    if (r.status === 'repairable') buttons.push({ label: 'Repair and open', value: 'repair' });
-    if (!newer) buttons.push({ label: nBackups ? `Restore a backup (${nBackups})` : 'No backups available', value: 'backups', disabled: !nBackups });
-    buttons.push({ label: 'Cancel', value: null });
-    const pick = await modal({ title: newer ? 'Newer world' : 'Damaged world', lines, buttons: buttons.filter((b) => !b.disabled) });
+    if (r.status === 'repairable') buttons.push({ label: t('Repair and open'), value: 'repair' });
+    if (!newer) buttons.push({ label: nBackups ? t('Restore a backup ({n})', { n: nBackups }) : t('No backups available'), value: 'backups', disabled: !nBackups });
+    buttons.push({ label: t('Cancel'), value: null });
+    const pick = await modal({ title: newer ? t('Newer world') : t('Damaged world'), lines, buttons: buttons.filter((b) => !b.disabled) });
     if (pick === 'repair') {
-      say('Repairing…');
+      say(t('Repairing…'));
       const rep = await repairWorld(w.slot);
-      if (!rep.ok) { say(`Repair failed: ${rep.error}`, true); return; }
-      say(`Repaired: ${rep.fixes.join(', ') || 'nothing to fix'}.`);
+      if (!rep.ok) { say(t('Repair failed: {error}', { error: rep.error }), true); return; }
+      say(t('Repaired: {fixes}.', { fixes: rep.fixes.join(', ') || t('nothing to fix') }));
       const again = await loadWorld(w.slot);
       if (again.status === 'ok') ctx.start(again.data, w.slot); else refresh();
     } else if (pick === 'backups') await backups(w);
@@ -182,68 +190,68 @@ export function initWorldList(ctx) {
 
   async function backups(w) {
     const index = await listBackups(w.slot);
-    if (!index.length) { await modal({ title: `Backups of ${w.name}`, lines: ['No backups yet. A snapshot is kept automatically while you play (about every 15 minutes, the last 3).'], buttons: [{ label: 'Close', value: null }] }); return; }
+    if (!index.length) { await modal({ title: t('Backups of {name}', { name: w.name }), lines: [t('No backups yet. A snapshot is kept automatically while you play (about every 15 minutes, the last 3).')], buttons: [{ label: t('Close'), value: null }] }); return; }
     const id = await modal({
-      title: `Backups of ${w.name}`,
-      lines: ['Pick a snapshot to restore. The world as it is now is kept as a backup too.'],
+      title: t('Backups of {name}', { name: w.name }),
+      lines: [t('Pick a snapshot to restore. The world as it is now is kept as a backup too.')],
       build: (box, close) => {
         const wrap = h('div', 'wm-backups');
         for (const b of index) {
           const row = h('div', 'wm-backup');
-          row.appendChild(h('span', null, `${when(b.savedAt)} · ${formatTime(b.playTicks || 0)} played · ${formatBytes(b.size)}${b.reason && b.reason !== 'auto' ? ` · ${b.reason}` : ''}`));
-          const btn = h('button', 'btn', 'Restore');
+          row.appendChild(h('span', null, `${when(b.savedAt)} · ${t('{time} played', { time: formatTime(b.playTicks || 0) })} · ${formatBytes(b.size)}${b.reason && b.reason !== 'auto' ? ` · ${b.reason}` : ''}`));
+          const btn = h('button', 'btn', t('Restore'));
           btn.onclick = () => close(b.id);
           row.appendChild(btn);
           wrap.appendChild(row);
         }
         box.appendChild(wrap);
       },
-      buttons: [{ label: 'Close', value: null }],
+      buttons: [{ label: t('Close'), value: null }],
     });
     if (!id) return;
-    const sure = await modal({ title: 'Restore this backup?', lines: [`"${w.name}" goes back to how it was on ${when(index.find((b) => b.id === id).savedAt)}. Progress since then stays available as a backup.`], buttons: [{ label: 'Restore', value: 'yes', kind: 'danger' }, { label: 'Cancel', value: null }] });
+    const sure = await modal({ title: t('Restore this backup?'), lines: [t('"{name}" goes back to how it was on {when}. Progress since then stays available as a backup.', { name: w.name, when: when(index.find((b) => b.id === id).savedAt) })], buttons: [{ label: t('Restore'), value: 'yes', kind: 'danger' }, { label: t('Cancel'), value: null }] });
     if (sure !== 'yes') return;
     const r = await restoreBackup(w.slot, id);
-    say(r.ok ? `Restored "${w.name}" from the backup.` : `Could not restore: the backup is ${r.status === 'newer' ? 'from a newer version' : r.status === 'missing' ? 'missing' : 'damaged'}.`, !r.ok);
+    say(r.ok ? t('Restored "{name}" from the backup.', { name: w.name }) : t('Could not restore: the backup is {why}.', { why: r.status === 'newer' ? t('from a newer version') : r.status === 'missing' ? t('missing') : t('damaged') }), !r.ok);
     refresh();
   }
 
   async function rename(w) {
-    const r = await modal({ title: 'Rename world', input: { value: w.name, max: LIMITS.nameMax }, buttons: [{ label: 'Rename', value: 'ok' }, { label: 'Cancel', value: null }] });
+    const r = await modal({ title: t('Rename world'), input: { value: w.name, max: LIMITS.nameMax }, buttons: [{ label: t('Rename'), value: 'ok' }, { label: t('Cancel'), value: null }] });
     if (!r || !r.text.trim()) return;
     const n = await renameWorld(w.slot, r.text);
-    say(n ? `Renamed to "${n}".` : 'Could not rename that world.', !n);
+    say(n ? t('Renamed to "{name}".', { name: n }) : t('Could not rename that world.'), !n);
     refresh();
   }
 
   async function duplicate(w) {
-    say('Copying…');
+    say(t('Copying…'));
     try {
       const s = await duplicateWorld(w.slot);
-      say(s ? `Copied as "${s.name}".` : `Could not copy: ${worlds.filter(Boolean).length >= MAX_WORLDS ? 'all world slots are used' : 'the world could not be read'}.`, !s);
-    } catch (e) { say(e && /quota/i.test(e.name + e.message) ? 'Not enough storage space to copy this world.' : 'Copy failed.', true); }
+      say(s ? t('Copied as "{name}".', { name: s.name }) : t('Could not copy: {why}.', { why: worlds.filter(Boolean).length >= MAX_WORLDS ? t('all world slots are used') : t('the world could not be read') }), !s);
+    } catch (e) { say(e && /quota/i.test(e.name + e.message) ? t('Not enough storage space to copy this world.') : t('Copy failed.'), true); }
     refresh();
   }
 
   async function remove(w) {
     const ok = await modal({
-      title: `Delete "${w.name}"?`,
-      lines: [`${formatTime(w.playTicks)} of play, ${formatBytes(w.size)}${w.backups ? `, and its ${w.backups} backup${w.backups === 1 ? '' : 's'}` : ''} will be deleted for good. This cannot be undone. Export it first if you may want it back.`],
-      buttons: [{ label: 'Delete forever', value: 'yes', kind: 'danger' }, { label: 'Keep it', value: null }],
+      title: t('Delete "{name}"?', { name: w.name }),
+      lines: [t('{time} of play, {size}{backups} will be deleted for good. This cannot be undone. Export it first if you may want it back.', { time: formatTime(w.playTicks), size: formatBytes(w.size), backups: w.backups ? t(w.backups === 1 ? ', and its {n} backup' : ', and its {n} backups', { n: w.backups }) : '' })],
+      buttons: [{ label: t('Delete forever'), value: 'yes', kind: 'danger' }, { label: t('Keep it'), value: null }],
     });
     if (ok !== 'yes') return;
     await deleteSave(w.slot);
-    say(`Deleted "${w.name}".`);
+    say(t('Deleted "{name}".', { name: w.name }));
     refresh();
   }
 
   async function exportIt(w) {
-    say('Packing…');
+    say(t('Packing…'));
     try {
       const { bytes, filename } = await exportWorld(w.slot);
       download(bytes, filename);
-      say(`Exported ${filename} (${formatBytes(bytes.length)}).`);
-    } catch (e) { say(e.message || 'Export failed.', true); }
+      say(t('Exported {file} ({size}).', { file: filename, size: formatBytes(bytes.length) }));
+    } catch (e) { say(e.message || t('Export failed.'), true); }
   }
 
   $('import-btn').onclick = () => $('import-file').click();
@@ -251,16 +259,18 @@ export function initWorldList(ctx) {
     const file = e.target.files && e.target.files[0];
     e.target.value = '';
     if (!file) return;
-    if (file.size > LIMITS.maxFileBytes) { say(`That file is larger than ${formatBytes(LIMITS.maxFileBytes)}.`, true); return; }
-    say(`Reading ${file.name.slice(0, 40)}…`);
+    if (file.size > LIMITS.maxFileBytes) { say(t('That file is larger than {size}.', { size: formatBytes(LIMITS.maxFileBytes) }), true); return; }
+    say(t('Reading {file}…', { file: file.name.slice(0, 40) }));
     let bytes;
-    try { bytes = new Uint8Array(await file.arrayBuffer()); } catch { say('Could not read that file.', true); return; }
+    try { bytes = new Uint8Array(await file.arrayBuffer()); } catch { say(t('Could not read that file.'), true); return; }
     const r = await importWorld(bytes);
-    if (!r.ok) say(`Import failed: ${r.error}`, true);
-    else say(`Imported "${r.summary.name}"${r.fixes.length ? ` (repaired: ${r.fixes.join(', ')})` : ''}${r.migratedFrom ? ` (upgraded from format ${r.migratedFrom})` : ''}.`);
+    if (!r.ok) say(t('Import failed: {error}', { error: r.error }), true);
+    else say(`${t('Imported "{name}"', { name: r.summary.name })}${r.fixes.length ? ` ${t('(repaired: {fixes})', { fixes: r.fixes.join(', ') })}` : ''}${r.migratedFrom ? ` ${t('(upgraded from format {n})', { n: r.migratedFrom })}` : ''}.`);
     refresh();
   };
 
   refresh();
-  return { refresh, worlds: () => worlds };
+  /** The language changed: rebuild what this module wrote itself (the title screen's static text is translateDom's job). */
+  const relang = () => { fillTypes(); render(); showStorage(); };
+  return { refresh, relang, worlds: () => worlds };
 }
