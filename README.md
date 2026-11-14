@@ -629,6 +629,8 @@ poison from eyes) follow the documented table.
 * **The Rootsnout** (`src/mobs/pack7Mobs.js`) is a big, slow, mossy beast of forests and flower forests. Every few minutes, standing on grass or dirt, it roots in the ground for three seconds and leaves Dawnfern Seeds, which are also what breeds it. Plant the seeds on farmland: a ripe Dawnfern is cut for a glowing Dawnfern Plant (light 5) that stands on grass or dirt and fits a Flower Pot.
 * **The Plateback** is a small armoured burrower of savannas and badlands. A sprinting player nearby, or a blow, makes it curl into a ball for four seconds and take 70 percent less damage. Brush one with a Brush for a Plate Scale (once per animal every five minutes; it also sheds them on its own); six scales make **Howler Barding**, which a tamed Howler wears for half damage until it has soaked up 64 (Shears take it off, wear intact). Deviation: guests do not see the barding plate on a Howler (the host still applies its protection).
 
+* **Glazed Tiles** (`src/world/glazedTextures.js`): sixteen dye-coloured tiles with bold repeating patterns (four motifs); smelt a coloured Terracotta in a furnace to get them, and the pattern on top turns to match the way you faced when you placed it.
+
 **Not yet implemented**
 
 * Large structures beyond villages, temples, wrecks, Tide Citadels, Sunken Ruins, Sun Tombs, Skywatch Towers, Rimekeeps, Sporehalls, outposts, ruined rifts, dungeons, sanctums, bastions, Cinderforges, Hollow Cities and Wyrm Ribs
