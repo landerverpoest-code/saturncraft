@@ -100,7 +100,7 @@ export function buildTopics({ table, touch = false, pad = false } = {}) {
     { p: `Your bag has a 2x2 crafting grid; a workbench gives a 3x3 grid. The recipe book beside every grid lists all ${RECIPES.length} recipes: green ones can be made with what you carry, and a click lays the ingredients into the grid (Shift-click for as many as possible).` },
     { list: [
       'Planks, sticks and a workbench come first, then wooden, stone, iron and diamond tools, each tier mining harder blocks and lasting longer.',
-      `A furnace turns ore, sand, clay and raw food into ingots, glass, bricks and cooked meals. It needs fuel and takes ${SMELT_TIME / 20} seconds per item.`,
+      `A furnace turns ore, sand, clay and raw food into ingots, glass, bricks and cooked meals. It needs fuel and takes ${SMELT_TIME / 20} seconds per item. A coloured Terracotta smelts into Glazed Tiles of the same colour, a bold pattern that turns with the way you faced when you placed it.`,
       'Shift-click on a crafting result makes as many as you can. Shift-click a stack in the bag to send it to the open container.',
     ] },
   ]);

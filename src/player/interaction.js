@@ -1365,7 +1365,7 @@ export class Interaction {
     }
     if (BLOCKS[placeId].needsSupport && !w.hasSupport(px, py, pz, placeId, meta)) return false;
     if ((placeId === B.TALL_GRASS || placeId === B.SUNPETAL || placeId === B.REDBLOOM) && !w.hasSupport(px, py, pz, placeId)) return false;
-    if (placeId === B.FURNACE || BLOCKS[placeId].tex.front) {
+    if (placeId === B.FURNACE || BLOCKS[placeId].tex.front || BLOCKS[placeId].glazed) {
       // face the player: meta 0 = -z front, 1 = +x, 2 = +z, 3 = -x
       const dx = p.x - (px + 0.5), dz = p.z - (pz + 0.5);
       meta = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 1 : 3) : (dz > 0 ? 2 : 0);

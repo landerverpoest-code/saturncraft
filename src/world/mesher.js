@@ -1,7 +1,7 @@
 // Face-culled section mesher with smooth lighting and ambient occlusion.
 // Input is a 18x18x18 padded copy of a 16^3 section (1 block border from
 // neighbours) so it can run inside a worker without access to the world.
-import { B, BLOCKS, OPAQUE, SOLID, SHAPES, LAYERS, SHAPE, LAYER, BLOCK_LIMIT, WATERLOGGED, CANDLES, POTTED, PROPAGULE_HANGING } from './blocks.js';
+import { B, BLOCKS, OPAQUE, SOLID, SHAPES, LAYERS, SHAPE, LAYER, BLOCK_LIMIT, WATERLOGGED, GLAZED, CANDLES, POTTED, PROPAGULE_HANGING } from './blocks.js';
 import { LEAVES } from './trees.js';
 import { waterTint } from './biomes.js';
 import { FACE_TILE, FRONT_TILE, texId } from './textures.js';
@@ -244,10 +244,12 @@ export function meshSection(sec) {
         const f = FACES[d];
         buf.ensure(4);
         const fn = f.n, under = nb === B.WATER ? UNDERWATER : 0;
+        // Glazed Tiles turn their top face by the facing in their meta: the corner UVs run round the square, so a shift is a quarter turn
+        const turn = d === 2 && GLAZED[id] ? meta[i] & 3 : 0;
         for (let k = 0; k < 4; k++) {
-          const vo = cb + k * 3;
+          const vo = cb + k * 3, uk = (k + turn) & 3;
           buf.vert(x + FACE_VERT[vo], y + FACE_VERT[vo + 1], z + FACE_VERT[vo + 2],
-            fn[0], fn[1], fn[2], CORNER_U[k], CORNER_V[k], r, g, b2, sk[k], bl[k], ao[k] + leafWave + under, tile);
+            fn[0], fn[1], fn[2], CORNER_U[uk], CORNER_V[uk], r, g, b2, sk[k], bl[k], ao[k] + leafWave + under, tile);
         }
         buf.quad(ao[0] + ao[2] > ao[1] + ao[3]);
       }

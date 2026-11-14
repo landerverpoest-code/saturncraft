@@ -22,6 +22,7 @@ import { OCEANSKY_TEX } from './oceanSkyTextures.js';
 import { PACK5_TEX } from './pack5Textures.js';
 import { PACK6_TEX } from './pack6Textures.js';
 import { PACK7_TEX } from './pack7Textures.js';
+import { GLAZED_TEX } from './glazedTextures.js';
 
 export const TEX_SIZE = 16;
 
@@ -66,6 +67,7 @@ for (const n of Object.keys(BOARD_TEX)) addTex(n); // the Bounty Board (world/bo
 for (const n of Object.keys(OCEANSKY_TEX)) addTex(n); // Cirrusstone, the Beanstalk, Gleamkelp (world/oceanSkyTextures.js)
 for (const n of Object.keys(PACK5_TEX)) addTex(n); // Strata, Sandvault Bricks, the Dart Trap, Bog Planks, the Hag's Cauldron (world/pack5Textures.js)
 for (const n of Object.keys(PACK7_TEX)) addTex(n); // Driftsnow, Scaldrock, the Echo Coffer (world/pack7Textures.js)
+for (const n of Object.keys(GLAZED_TEX)) addTex(n); // the sixteen Glazed Tiles (world/glazedTextures.js)
 for (const n of Object.keys(PACK6_TEX)) addTex(n); // Packed Ice, the Cartographer's Table (world/pack6Textures.js)
 ARTS.forEach(([, w, h], art) => { for (let p = 0; p < w * h; p++) addTex(`painting_${art}_${p}`); });
 for (let i = 0; i < 8; i++) addTex('fire_' + i);
@@ -1326,6 +1328,7 @@ function paint(c, name) {
   else if (PACK5_TEX[name]) PACK5_TEX[name](c, { hex, mix, shade });
   else if (PACK6_TEX[name]) PACK6_TEX[name](c, { hex, mix, shade });
   else if (PACK7_TEX[name]) PACK7_TEX[name](c, { hex, mix, shade });
+  else if (GLAZED_TEX[name]) GLAZED_TEX[name](c, { hex, mix, shade });
   else c.noiseFill(P.stone);
 }
 
