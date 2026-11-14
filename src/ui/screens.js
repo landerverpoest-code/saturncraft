@@ -377,8 +377,8 @@ export class UI {
           let made = 0;
           for (let n = 0; n < 64; n++) {
             const rr = result();
-            if (!rr || !canStack(rr, r)) break;
-            const left = inv.add({ ...rr, damage: 0 });
+            if (!rr || (n && !canStack(rr, r))) break;
+            const left = inv.add({ damage: 0, ...rr });
             consume();
             made += rr.count;
             if (left) { this.game.entities.spawnItem(this.game.player.x, this.game.player.y + 1, this.game.player.z, { ...rr, count: left }); break; }
@@ -386,7 +386,7 @@ export class UI {
           if (made && this.game.quests) this.game.quests.emit('craft', { id: r.id, n: made }); // (bounties and tales, player/questSystem.js)
         } else {
           const c = this.cursor;
-          if (!c) this.cursor = { ...r, damage: 0 }; // (keeps a box's contents, a pot's sherds)
+          if (!c) this.cursor = { damage: 0, ...r }; // (keeps a box's contents, a pot's sherds)
           else if (canStack(c, r) && c.count + r.count <= maxStack(r.id)) c.count += r.count;
           else return;
           consume();

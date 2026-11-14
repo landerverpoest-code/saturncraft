@@ -292,6 +292,8 @@ export function buildTopics({ table, touch = false, pad = false } = {}) {
     { h: 'Armour sets' },
     { p: 'Wear two, three or four pieces of one material for a bonus; the tooltip of every piece and the inventory screen show what you have reached. The Dirgestep Boots are the fourth piece of the Slagsteel set (Slagsteel Ingots make a helmet, chestplate and leggings).' },
     { list: Object.values(SETS).map((set) => `${set.name}: ${set.tiers.map((t) => `(${t.n}) ${t.text}`).join('; ')}.`) },
+    { h: 'Armour inlays' },
+    { p: 'Inlay Stencils (found in the chests of tombs, temples, ruins, sunken wrecks and the Deep Hush: Ringed, Three Suns, Tidal, Thorn, Ember and Hollow) decorate armour. Lay a piece of armour, a stencil and a metal, gem or shard (Iron, Gold, Copper, Diamond, Beryl, Azurite, Cinnabar, Violite, Ember Quartz or Slagsteel) in any crafting grid: out comes the same piece with the pattern inlaid in that colour. The stencil is not used up, the material is, and a new inlay replaces an old one. It is only for looks: it never changes protection, durability or enchantments, and everyone sees it on you and on armour stands. A stencil can be copied with paper: put it in the middle of a grid with four Paper and four planks round it for two.' },
   ]);
 
   add('maps', "Maps and the Cartographer's Table", 'Systems', [

@@ -4,22 +4,26 @@
 import * as THREE from 'three';
 import { ITEMS, ARMOR_MATERIALS } from '../world/items.js';
 import { itemCanvas } from '../ui/icons.js';
+import { cleanInlay, inlayMask, INLAY_MATERIALS } from '../player/inlays.js';
 
 const texCache = new Map();
-function armorTexture(color) {
-  if (texCache.has(color)) return texCache.get(color);
+function armorTexture(color, inlay = null) {
+  const key = inlay ? `${color}|${inlay.p}|${inlay.m}` : color;
+  if (texCache.has(key)) return texCache.get(key);
+  const mask = inlay ? inlayMask(inlay.p) : null, ink = inlay ? new THREE.Color(INLAY_MATERIALS[inlay.m].color) : null;
   const c = document.createElement('canvas'); c.width = c.height = 16;
   const ctx = c.getContext('2d'), base = new THREE.Color(color);
   let s = 11; const rnd = () => { s = (s * 1103515245 + 12345) | 0; return ((s >>> 16) & 0x7fff) / 0x7fff; };
   for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
     const edge = x === 0 || y === 0 || x === 15 || y === 15;
     const f = (edge ? 0.7 : 0.88 + rnd() * 0.14) * (y < 3 ? 1.1 : 1);
+    if (mask && mask[y * 16 + x]) { ctx.fillStyle = `rgb(${Math.round(ink.r * 255 * (0.92 + rnd() * 0.08))},${Math.round(ink.g * 255 * (0.92 + rnd() * 0.08))},${Math.round(ink.b * 255 * (0.92 + rnd() * 0.08))})`; ctx.fillRect(x, y, 1, 1); continue; }
     ctx.fillStyle = `rgb(${Math.min(255, base.r * 255 * f)},${Math.min(255, base.g * 255 * f)},${Math.min(255, base.b * 255 * f)})`;
     ctx.fillRect(x, y, 1, 1);
   }
   const t = new THREE.CanvasTexture(c);
   t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; t.colorSpace = THREE.SRGBColorSpace;
-  texCache.set(color, t);
+  texCache.set(key, t);
   return t;
 }
 
@@ -34,11 +38,13 @@ const SHELLS = [
 /**
  * Make the model wear `ids` (four item ids or null). `glints` (optional, four booleans): which pieces are
  * enchanted; their shells are marked (`material.userData.glint`) so the caller can make them shimmer.
+ * `inlays` (optional, four { p, m } or null): each piece's cosmetic inlay (player/inlays.js), drawn into its texture.
  * Returns the shell materials (for lighting).
  */
-export function wearArmor(root, ids, glints = null) {
+export function wearArmor(root, ids, glints = null, inlays = null) {
   const ud = root.userData;
-  const key = ids.map((i) => i || 0).join(',') + (glints ? ':' + glints.map((g) => (g ? 1 : 0)).join('') : '');
+  const key = ids.map((i) => i || 0).join(',') + (glints ? ':' + glints.map((g) => (g ? 1 : 0)).join('') : '') +
+    (inlays ? ':' + [0, 1, 2, 3].map((i) => { const n = cleanInlay(inlays[i]); return n ? n.p + '/' + n.m : ''; }).join(',') : '');
   if (ud.armorKey === key) return ud.armorMats || [];
   ud.armorKey = key;
   for (const m of ud.armorMeshes || []) { m.parent.remove(m); m.geometry.dispose(); }
@@ -48,7 +54,7 @@ export function wearArmor(root, ids, glints = null) {
     if (!a) return;
     if (a.glider) { addWings(ud, a); return; } // a Voidwing: two membrane wings on the back
     if (a.pumpkin) { addPumpkinHead(ud); return; } // a Carved Pumpkin: a cube over the head with its face in front
-    const mat = new THREE.MeshLambertMaterial({ map: armorTexture(ARMOR_MATERIALS[a.material].color) });
+    const mat = new THREE.MeshLambertMaterial({ map: armorTexture(ARMOR_MATERIALS[a.material].color, inlays ? cleanInlay(inlays[slot]) : null) });
     mat.userData.base = new THREE.Color(0xffffff);
     mat.userData.glint = !!(glints && glints[slot]);
     ud.armorMats.push(mat);

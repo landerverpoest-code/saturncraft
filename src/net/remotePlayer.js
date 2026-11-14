@@ -164,7 +164,7 @@ export class RemotePlayer {
     this.anim.headPitch = cur.pitch;
     const L = lightAt(game, cur.x, cur.y + 1.6, cur.z);
     animateModel(this.root, this.anim, 1, L, sec, entityGlow(game, cur.x, cur.y + 1.2, cur.z));
-    wearArmor(this.root, s.armor || [null, null, null, null]);
+    wearArmor(this.root, s.armor || [null, null, null, null], null, s.inlays || null);
     lightArmor(this.root, L);
     const parts = this.root.userData.parts;
     parts.head.rotation.y = cur.yaw - this.bodyYaw;

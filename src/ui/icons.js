@@ -13,6 +13,7 @@ import { BOOK_GENERATIONS, bookGeneration } from '../world/books.js';
 import { EFFECTS, effectLabel, formatTicks, LINGER_DURATION_FACTOR } from '../player/effects.js';
 import * as W from '../world/weaponStats.js';
 import { trinketLines } from '../player/trinkets.js';
+import { cleanInlay, inlayLine, inlayMask, INLAY_MATERIALS } from '../player/inlays.js';
 import { setLines } from '../player/setBonuses.js';
 import { TOOL_TEMPLATES, GEAR_TEMPLATES, paintTemplate, materialRamp, ramp, WOOD_HANDLE } from './toolArt.js';
 
@@ -364,19 +365,38 @@ export function addGlint(c) {
   return c;
 }
 
-/** Data URL icon for an item id (with the enchantment glint when `glint`). */
-export function iconURL(id, glint = false) {
-  const key = glint ? id + ':g' : id;
+/**
+ * Armour Inlays: a little 6x6 emblem of the pattern, in the material's colour, in the icon's lower right corner
+ * (the pattern's 16x16 mask sampled every other pixel).
+ */
+export function addInlayMark(c, inlay) {
+  const n = cleanInlay(inlay), mask = n && inlayMask(n.p);
+  if (!mask) return c;
+  const ctx = c.getContext('2d'), col = INLAY_MATERIALS[n.m].color;
+  const x0 = c.width - 7, y0 = c.height - 7;
+  ctx.fillStyle = '#1a1a22';
+  ctx.fillRect(x0 - 1, y0 - 1, 8, 8);
+  ctx.fillStyle = col;
+  ctx.fillRect(x0, y0, 6, 6);
+  ctx.fillStyle = '#1a1a22';
+  for (let y = 0; y < 6; y++) for (let x = 0; x < 6; x++) if (!mask[(2 + y * 2) * 16 + 2 + x * 2]) ctx.fillRect(x0 + x, y0 + y, 1, 1);
+  return c;
+}
+
+/** Data URL icon for an item id (with the enchantment glint when `glint`, and an inlay emblem for an inlaid armour piece). */
+export function iconURL(id, glint = false, inlay = null) {
+  const n = cleanInlay(inlay);
+  const key = (glint ? id + ':g' : id) + (n ? `:${n.p}/${n.m}` : '');
   if (cache.has(key)) return cache.get(key);
   const d = ITEMS[id];
   let url = '';
-  if (d) url = itemCanvas(id, glint).toDataURL();
+  if (d) { const c = itemCanvas(id, glint); url = (n ? addInlayMark(c, n) : c).toDataURL(); }
   cache.set(key, url);
   return url;
 }
 
-/** Icon of a stack: enchanted stacks glint. */
-export const stackIconURL = (st) => iconURL(st.id, hasEnch(st));
+/** Icon of a stack: enchanted stacks glint, inlaid armour carries a small emblem. */
+export const stackIconURL = (st) => iconURL(st.id, hasEnch(st), st.inlay);
 
 /** Inner HTML of a slot holding a stack: icon (+ animated glint), count and durability bar. */
 export function stackHTML(st) {
@@ -443,6 +463,8 @@ export function tooltipHTML(st, extra = '') {
     h += `<div class="tt-dura">${Math.round(bundleWeight(list))}/${BUNDLE_CAPACITY}</div>`;
   }
   for (const l of lines) h += `<div class="tt-ench">${esc(l)}</div>`;
+  const inl = inlayLine(st); // Armour Inlays: "Three Suns inlay in Beryl"
+  if (inl) h += `<div class="tt-dura">${esc(inl)}</div>`;
   const dur = d.durability;
   if (dur && st.damage > 0) h += `<div class="tt-dura">Durability: ${dur - st.damage} / ${dur}</div>`;
   if (d.tipped) {
