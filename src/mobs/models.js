@@ -38,6 +38,65 @@ function faceTexture(key, base, draw) {
 }
 const px = (ctx, color, pts) => { ctx.fillStyle = color; for (const [x, y, w = 1, h = 1] of pts) ctx.fillRect(x, y, w, h); };
 
+
+// A part's grey-scale skin (tinted by the part's colour): mottled, with a darker rim so the boxes read as solid forms, a lighter
+// back and a darker underside, and per-kind touches (dark paws on limbs, a brow shadow on heads, ring bands on tails).
+function skinTexture(key, kind) {
+  const k = `skin:${kind}:${key}`;
+  if (noiseTexCache.has(k)) return noiseTexCache.get(k);
+  const c = document.createElement('canvas'); c.width = c.height = 16;
+  const ctx = c.getContext('2d');
+  let s = 0; for (const ch of key) s = (s * 31 + ch.charCodeAt(0)) | 0;
+  const rnd = () => { s = (s * 1103515245 + 12345) | 0; return ((s >>> 16) & 0x7fff) / 0x7fff; };
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    let v = 0.86 + rnd() * 0.14;
+    if (rnd() < 0.07) v -= 0.12; // flecks
+    if (rnd() < 0.04) v += 0.1;
+    v += (7.5 - y) / 7.5 * 0.07; // lighter above, darker below
+    const edge = x === 0 || y === 0 || x === 15 || y === 15;
+    if (edge) v *= 0.82; else if (x === 1 || y === 1) v *= 1.05;
+    if (kind === 'limb') { if (y >= 12) v *= 0.62; else if (y >= 10) v *= 0.84; }
+    if (kind === 'head' && (y === 6 || y === 7)) v *= 0.9;
+    if (kind === 'tail' && (y % 4 === 3)) v *= 0.78;
+    if (kind === 'body' && x >= 3 && x <= 12 && y >= 11) v *= 1.08; // a paler belly
+    v = Math.max(0, Math.min(1, v));
+    const g = Math.round(255 * v);
+    ctx.fillStyle = `rgb(${g},${g},${g})`; ctx.fillRect(x, y, 1, 1);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; t.colorSpace = THREE.SRGBColorSpace;
+  noiseTexCache.set(k, t);
+  return t;
+}
+const partKind = (name) => (/^(leg|arm|foot|hand|paw|hoof|fin|flip)/i.test(name) ? 'limb' : /^head|^skull/i.test(name) ? 'head' : /^tail|^seg/i.test(name) ? 'tail' : /^body|^torso|^belly|^shell/i.test(name) ? 'body' : 'plain');
+
+/** Bake light-and-shade into a box's vertices: tops catch the light, undersides and the far side fall into shadow. */
+function shadeBox(geo) {
+  const n = geo.attributes.normal, pos = geo.attributes.position, col = new Float32Array(n.count * 3);
+  geo.computeBoundingBox();
+  const h = Math.max(1e-6, geo.boundingBox.max.y - geo.boundingBox.min.y);
+  for (let i = 0; i < n.count; i++) {
+    const ny = n.getY(i), nx = Math.abs(n.getX(i));
+    let v = ny > 0.5 ? 1 : ny < -0.5 ? 0.58 : nx > 0.5 ? 0.8 : 0.9;
+    if (Math.abs(ny) < 0.5) v *= 0.9 + 0.1 * ((pos.getY(i) - geo.boundingBox.min.y) / h); // sides darken towards the ground
+    col[i * 3] = col[i * 3 + 1] = col[i * 3 + 2] = v;
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+}
+
+// The eyes a head gets when no one painted its face: whites, a coloured pupil, nostrils and a brow line, tinted from the head.
+function defaultFace(key, base) {
+  return faceTexture('auto' + key, base, (c) => {
+    const col = new THREE.Color(base), dark = col.clone().multiplyScalar(0.35), lum = col.r * 0.3 + col.g * 0.6 + col.b * 0.1;
+    const brow = '#' + dark.getHexString(), pupil = lum > 0.55 ? '#1c1410' : '#e8c040';
+    px(c, brow, [[2, 4, 4, 1], [10, 4, 4, 1]]);
+    px(c, '#f4f0e6', [[3, 5, 3, 3], [10, 5, 3, 3]]);
+    px(c, pupil, [[4, 6, 2, 2], [10, 6, 2, 2]]);
+    px(c, '#080808', [[4, 7], [11, 7]]);
+    px(c, brow, [[7, 10, 2, 1], [5, 12, 6, 1]]);
+  });
+}
+
 // part: [name, size[w,h,d], pivot[x,y,z], offset[x,y,z], colour, opts]
 const MODELS = {
   bristleback: {
@@ -706,10 +765,10 @@ export function buildModel(type) {
   const parts = {};
   const mats = [];
   const matCache = new Map();
-  const matFor = (color, opts) => {
-    const k = color + (opts.emissive || '') + (opts.glow ? 'g' : '') + (opts.alpha ? 'a' : '');
+  const matFor = (color, opts, kind) => {
+    const k = color + kind + (opts.emissive || '') + (opts.glow ? 'g' : '') + (opts.alpha ? 'a' : '');
     if (matCache.has(k)) return matCache.get(k);
-    const m = new THREE.MeshLambertMaterial({ map: noiseTexture(type + color), color, ...(opts.alpha ? { transparent: true, opacity: opts.alpha, depthWrite: false } : {}) });
+    const m = new THREE.MeshLambertMaterial({ map: skinTexture(type + color, kind), vertexColors: true, color, ...(opts.alpha ? { transparent: true, opacity: opts.alpha, depthWrite: false } : {}) });
     m.userData.base = new THREE.Color(color);
     if (opts.emissive) { m.emissive = new THREE.Color(opts.emissive); m.userData.emissive = m.emissive.clone(); }
     matCache.set(k, m); mats.push(m);
@@ -719,10 +778,13 @@ export function buildModel(type) {
     const pivotGroup = new THREE.Group();
     pivotGroup.position.set(pivot[0] / 16, pivot[1] / 16, pivot[2] / 16);
     const geo = new THREE.BoxGeometry(size[0] / 16, size[1] / 16, size[2] / 16);
-    const base = matFor(color, opts);
+    shadeBox(geo);
+    const kind = partKind(name);
+    const base = matFor(color, opts, kind);
     let material = base;
-    if (opts.face) {
-      const fm = new THREE.MeshLambertMaterial({ map: faceTexture(type, color, FACES[opts.face]) });
+    const autoFace = !opts.face && name === 'head' && !opts.alpha && !opts.emissive && size[0] >= 5 && size[1] >= 5 && !(spec.noFace);
+    if (opts.face || autoFace) {
+      const fm = new THREE.MeshLambertMaterial({ vertexColors: true, map: opts.face ? faceTexture(type, color, FACES[opts.face]) : defaultFace(type + color, color) });
       fm.userData.base = new THREE.Color(0xffffff);
       mats.push(fm);
       material = [base, base, base, base, base, fm];
