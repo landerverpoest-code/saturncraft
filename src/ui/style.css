@@ -40,6 +40,8 @@ canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: auto
 .cursor-stack .glint-fx { inset: 0; }
 @keyframes glint { from { background-position: 100% 100%; } to { background-position: 0% 0%; } }
 .tooltip .tt-name.ench { color: #8ef0ff; }
+.tooltip .tt-forged { color: #ff9a2a; font-size: 13px; }
+.tooltip .tt-name.forged { color: #ffb050; text-shadow: 0 0 6px #ff7a1a; }
 .tooltip .tt-ench { color: #b9a4d8; font-size: 13px; }
 .tooltip .tt-dura { color: #aaa; font-size: 12px; }
 #item-name .ench-list { display: block; text-align: center; font-size: 13px; color: #c8b0f0; }

@@ -559,9 +559,10 @@ for (const kind of ['warhammer', 'dagger', 'glaive', 'disc']) {
   }
 }
 // Slagsteel armour (reference: none): the set with the Dirgestep Boots as its fourth piece (player/setBonuses.js)
-ARMOR_MATERIALS.slagsteel = { defense: [2, 6, 5, 3], durability: 19, toughness: 0, color: '#8a7a86', name: 'Slagsteel' };
+// (each piece also wards 15% off fire, lava and burning: `fireward`, player/gear.js; the Boots come at the very end of this file)
+ARMOR_MATERIALS.slagsteel = { defense: [2, 6, 5, 2], durability: 19, toughness: 1, color: '#5e5662', accent: '#e0782a', name: 'Slagsteel' };
 [['helmet', 'Helmet', 11], ['chestplate', 'Chestplate', 16], ['leggings', 'Leggings', 15]].forEach(([piece, pname, base], slot) => {
-  item(`slagsteel_${piece}`, `Slagsteel ${pname}`, { stack: 1, durability: base * 19, repairWith: 'SLAGSTEEL_INGOT', armor: { slot, piece, material: 'slagsteel', defense: ARMOR_MATERIALS.slagsteel.defense[slot], toughness: 0 } });
+  item(`slagsteel_${piece}`, `Slagsteel ${pname}`, { stack: 1, durability: base * 19, repairWith: 'SLAGSTEEL_INGOT', armor: { slot, piece, material: 'slagsteel', defense: ARMOR_MATERIALS.slagsteel.defense[slot], toughness: 1, fireward: 0.15 } });
 });
 // Trinkets (player/trinkets.js): two slots beside the armour; each kind works once, and only while worn there
 const ICON_ANKLET = ['................', '...........ww...', '..........wwW...', '.........wwW....', '....hhhh.wW.....', '...hHHHHh.......', '..hH....Hh......', '..hh....hh......', '..hH....Hh......', '...hHHHHh.......', '....hhhh........', '................', '................', '................', '................', '................'];
@@ -642,3 +643,13 @@ item('seared_slagboar_chop', 'Seared Slagboar Chop', { food: { hunger: 8, satura
 
 // Wanderer's Broth (world/wandererBroth.js; appended, so no item id shifts): bowl + a wild flower + a mushroom; the flower decides the effect (stack.broth).
 item('wanderers_broth', "Wanderer's Broth", { stack: 1, food: { hunger: 6, saturation: 7.2, always: true, leaves: 'bowl', broth: true }, iconStyle: ['bowl', { h: '#8a6034', H: '#a87a48', w: '#b8884a' }] });
+
+// Slagsteel gear set (player/slagsteelGear.js; appended, so no item id shifts): the Boots complete the armour (the helmet, chestplate and
+// leggings sit with the Dirgestep Boots above) and a sword, axe, shovel and hoe join the pickaxe: a little better than iron, below diamond.
+item('slagsteel_boots', 'Slagsteel Boots', { stack: 1, durability: 13 * 19, repairWith: 'SLAGSTEEL_INGOT', armor: { slot: 3, piece: 'boots', material: 'slagsteel', defense: ARMOR_MATERIALS.slagsteel.defense[3], toughness: 1, fireward: 0.15 } });
+for (const [type, [damage, attackSpeed]] of Object.entries({ sword: [6.5, 1.6], axe: [9, 0.95], shovel: [5, 1], hoe: [1, 3.5] })) {
+  item(`slagsteel_${type}`, `Slagsteel ${type[0].toUpperCase()}${type.slice(1)}`, {
+    stack: 1, durability: 480, repairWith: 'SLAGSTEEL_INGOT',
+    tool: { type, material: 'slagsteel', speed: 7, tier: TIER.IRON, damage, attackSpeed },
+  });
+}

@@ -268,9 +268,9 @@ describe('slagsteel armour and set bonuses', () => {
   it('the Dirgestep Boots complete the Slagsteel set', () => {
     expect(setOfItem(I.DIRGESTEP_BOOTS)).toBe('slagsteel');
     expect(countPieces(full()).slagsteel).toBe(4);
-    expect(gearTotals(full(), []).fireResist).toBeCloseTo(0.8);
-    expect(gearTotals(full().slice(0, 2), []).fireResist).toBeCloseTo(0.35);
-    expect(gearTotals(full().slice(0, 1), []).fireResist).toBe(0);
+    expect(gearTotals(full(), []).fireResist).toBeCloseTo(0.45); // 15% a Slagsteel piece
+    expect(gearTotals(full().slice(0, 2), []).fireResist).toBeCloseTo(0.3);
+    expect(gearTotals(full().slice(0, 1), []).fireResist).toBeCloseTo(0.15);
   });
   it('bonuses are cumulative and start at the pieces named', () => {
     expect(bonusFor('iron', 1)).toEqual({});

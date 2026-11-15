@@ -7,17 +7,18 @@ import { itemCanvas } from '../ui/icons.js';
 import { cleanInlay, inlayMask, INLAY_MATERIALS } from '../player/inlays.js';
 
 const texCache = new Map();
-function armorTexture(color, inlay = null) {
-  const key = inlay ? `${color}|${inlay.p}|${inlay.m}` : color;
+function armorTexture(color, inlay = null, accent = null) {
+  const key = (accent ? `${color}+${accent}` : color) + (inlay ? `|${inlay.p}|${inlay.m}` : '');
   if (texCache.has(key)) return texCache.get(key);
   const mask = inlay ? inlayMask(inlay.p) : null, ink = inlay ? new THREE.Color(INLAY_MATERIALS[inlay.m].color) : null;
   const c = document.createElement('canvas'); c.width = c.height = 16;
-  const ctx = c.getContext('2d'), base = new THREE.Color(color);
+  const ctx = c.getContext('2d'), base = new THREE.Color(color), glow = accent ? new THREE.Color(accent) : null;
   let s = 11; const rnd = () => { s = (s * 1103515245 + 12345) | 0; return ((s >>> 16) & 0x7fff) / 0x7fff; };
   for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
     const edge = x === 0 || y === 0 || x === 15 || y === 15;
     const f = (edge ? 0.7 : 0.88 + rnd() * 0.14) * (y < 3 ? 1.1 : 1);
     if (mask && mask[y * 16 + x]) { ctx.fillStyle = `rgb(${Math.round(ink.r * 255 * (0.92 + rnd() * 0.08))},${Math.round(ink.g * 255 * (0.92 + rnd() * 0.08))},${Math.round(ink.b * 255 * (0.92 + rnd() * 0.08))})`; ctx.fillRect(x, y, 1, 1); continue; }
+    if (glow && !edge && rnd() < 0.16) { ctx.fillStyle = `rgb(${Math.round(glow.r * 255 * (0.8 + rnd() * 0.25))},${Math.round(glow.g * 255 * (0.8 + rnd() * 0.25))},${Math.round(glow.b * 255 * (0.8 + rnd() * 0.25))})`; ctx.fillRect(x, y, 1, 1); continue; } // glowing slag seams
     ctx.fillStyle = `rgb(${Math.min(255, base.r * 255 * f)},${Math.min(255, base.g * 255 * f)},${Math.min(255, base.b * 255 * f)})`;
     ctx.fillRect(x, y, 1, 1);
   }
@@ -54,7 +55,7 @@ export function wearArmor(root, ids, glints = null, inlays = null) {
     if (!a) return;
     if (a.glider) { addWings(ud, a); return; } // a Voidwing: two membrane wings on the back
     if (a.pumpkin) { addPumpkinHead(ud); return; } // a Carved Pumpkin: a cube over the head with its face in front
-    const mat = new THREE.MeshLambertMaterial({ map: armorTexture(ARMOR_MATERIALS[a.material].color, inlays ? cleanInlay(inlays[slot]) : null) });
+    const mat = new THREE.MeshLambertMaterial({ map: armorTexture(ARMOR_MATERIALS[a.material].color, inlays ? cleanInlay(inlays[slot]) : null, ARMOR_MATERIALS[a.material].accent) });
     mat.userData.base = new THREE.Color(0xffffff);
     mat.userData.glint = !!(glints && glints[slot]);
     ud.armorMats.push(mat);

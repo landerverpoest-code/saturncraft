@@ -15,6 +15,7 @@ import * as W from '../world/weaponStats.js';
 import { trinketLines } from '../player/trinkets.js';
 import { cleanInlay, inlayLine, inlayMask, INLAY_MATERIALS } from '../player/inlays.js';
 import { setLines } from '../player/setBonuses.js';
+import { forgedLines } from '../player/slagsteelGear.js';
 import { brothLine, cleanBroth, brothIsGood } from '../world/wandererBroth.js';
 import { tName, tCreature } from './i18n.js';
 import { TOOL_TEMPLATES, GEAR_TEMPLATES, paintTemplate, materialRamp, ramp, WOOD_HANDLE } from './toolArt.js';
@@ -329,6 +330,12 @@ function itemIcon(d) {
     ctx.fillStyle = col;
     ctx.fillRect(x * 2, y * 2, 2, 2);
   }
+  const accent = d.armor && !d.iconStyle && ARMOR_MATERIALS[d.armor.material].accent;
+  if (accent) { // glowing seams: every fifth painted cell of an armour piece takes the material's accent
+    ctx.fillStyle = accent;
+    let n = 0;
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) if (tpl[y][x] !== '.' && ++n % 5 === 0) ctx.fillRect(x * 2, y * 2, 2, 2);
+  }
   // dark outline pass
   const img = ctx.getImageData(0, 0, 32, 32);
   const out = ctx.createImageData(32, 32);
@@ -448,7 +455,10 @@ export function tooltipHTML(st, extra = '') {
   const d = ITEMS[st.id];
   if (!d) return '';
   const lines = enchLines(st);
-  let h = `<div class="tt-name${lines.length ? ' ench' : ''}">${esc(tName(d.name))}${esc(extra)}</div>`;
+  let h = `<div class="tt-name${lines.length ? ' ench' : ''}${st.forged ? ' forged' : ''}">${st.forged ? 'Ember-forged ' : ''}${esc(tName(d.name))}${esc(extra)}</div>`;
+  const fl = forgedLines(st); // Ember-forged gear: its orange glint line
+  for (const l of fl) h += `<div class="tt-forged">${esc(l)}</div>`;
+  if (d.armor && d.armor.fireward) h += `<div class="tt-good">Fire, lava and burning hurt ${Math.round(d.armor.fireward * 100)}% less</div>`;
   if (st.label) h += `<div class="tt-label">"${esc(d.name === 'Creature Egg' ? tCreature(st.label) : st.label)}"</div>`; // a Name Tag's name
   if (d.written || d.writable) {
     // a book names its title and author, or how many pages are written

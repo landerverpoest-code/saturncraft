@@ -1,5 +1,6 @@
 // Armour set bonuses: wearing two, three or four pieces of one set adds a bonus (shown in the tooltip of every piece
 // of the set and on the inventory screen). Bonuses are cumulative: the four-piece set also has the two-piece bonus.
+// (Each Slagsteel piece also wards 15% off fire, lava and burning: player/slagsteelGear.js.)
 // The Dirgestep Boots count as the fourth piece of the Slagsteel set. Bonus keys are added up by player/gear.js.
 import { ITEMS } from '../world/items.js';
 
@@ -23,8 +24,8 @@ export const SETS = {
     { n: 4, text: '+2 protection (4 in all)', b: { protect: 2 } },
   ] },
   slagsteel: { name: 'Forgewalker', tiers: [
-    { n: 2, text: 'Fire, lava and burning hurt 35% less', b: { fireResist: 0.35 } },
-    { n: 4, text: 'Fire, lava and burning hurt 80% less in all', b: { fireResist: 0.45 } },
+    { n: 2, text: 'Knockback you take is cut by 20%', b: { knockResist: 0.2 } },
+    { n: 4, text: '+1 protection against everything', b: { protect: 1 } },
   ] },
 };
 export const SET_KEYS = Object.keys(SETS);
