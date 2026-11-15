@@ -633,3 +633,9 @@ for (const [key, name, h, H] of [
   ['ringed', 'Ringed', '#c8b078', '#f0e0a8'], ['three_suns', 'Three Suns', '#e0b040', '#fff0a0'], ['tidal', 'Tidal', '#4a90c0', '#a8e0f8'],
   ['thorn', 'Thorn', '#5a8a3a', '#a8d878'], ['ember', 'Ember', '#d05a2a', '#ffb070'], ['hollow', 'Hollow', '#8a8aa0', '#d0d0e8'],
 ]) item('inlay_stencil_' + key, 'Inlay Stencil: ' + name, { iconStyle: ['shard', { h, H, s: '#4a3a2a' }] });
+
+// Cinderdeep fauna (mobs/cinderFauna.js; appended, so no item id shifts): the gland a Smokeray carries (a Slow Falling brewing ingredient, like a
+// Feather) and the meat of a Slagboar, raw and seared.
+item('smoke_gland', 'Smoke Gland', { iconStyle: ['lump', { h: '#7a7484', H: '#c8c0d4' }] });
+item('raw_slagboar_chop', 'Raw Slagboar Chop', { food: { hunger: 3, saturation: 1.8 }, iconStyle: ['meat', { h: '#a8342a', w: '#f0d8c8' }] });
+item('seared_slagboar_chop', 'Seared Slagboar Chop', { food: { hunger: 8, saturation: 12.8 }, iconStyle: ['meat', { h: '#7a3a22', w: '#e8c8a0' }] });

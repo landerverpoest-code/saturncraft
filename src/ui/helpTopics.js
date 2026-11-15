@@ -267,6 +267,11 @@ export function buildTopics({ table, touch = false, pad = false } = {}) {
       'Phase 2 adds lava pillars (a ring of flame on the floor, a second to leave it) and two Cinder Brutes. In phase 3 it charges in a straight line after pawing the ground: step aside and it may run into a wall and be stunned, which makes it take half again as much damage.',
       'A Colossus nobody is fighting withdraws after a minute and leaves the sigil behind. It drops a Colossus Core, Slagsteel, Dirge Crystals and Ember Rods, and sometimes a book of Sunmend.',
     ] },
+    { h: 'Creatures of the Cinderdeep' },
+    { list: [
+      'Smokerays are huge, slow rays of smoke that drift through the open caverns. One that sees you within 48 blocks hovers and swells for a second (watch its mouth glow), then spits a slow Slag Glob that bursts where it lands: move, or take cover. It drops Smoke Gland, which brews Slow Falling like a Feather, and sometimes Blast Powder.',
+      'Slagboars graze the Cinderdeep floor in herds and charge anything in sight within 10 blocks: they paw the ground for a moment, then run in a straight line, hit for 6 and throw you up, then rest for 3 seconds. Step aside. They fear Glowshard and will not come within 6 blocks of it. Feed two Cinderroot to breed them: the young of a bred pair are calm toward you for life. Raw Slagboar Chop cooks in a furnace, smoker or campfire.',
+    ] },
     { h: 'Tempering gear' },
     { p: 'Put a sword, axe, spear, tool or piece of armour on the left of an anvil and a tempering material on the right. Each step needs the one before it:' },
     { list: [
@@ -275,7 +280,7 @@ export function buildTopics({ table, touch = false, pad = false } = {}) {
       'Sunmend repairs gear you wear or hold from the experience you pick up, two points of wear for each point of experience.',
     ] },
     { h: 'More elixirs' },
-    { list: ['Glowcap Spores brew Haste, Dirge Crystals brew Ironskin (Resistance) and a Gilded Apple brews Warding (Absorption) on a Murky Elixir, as other ingredients do; Cinnabar Dust lengthens them and Glowshard Dust strengthens them.'] },
+    { list: ['Smoke Glands (from Smokerays) brew Slow Falling like Feathers, Glowcap Spores brew Haste, Dirge Crystals brew Ironskin (Resistance) and a Gilded Apple brews Warding (Absorption) on a Murky Elixir, as other ingredients do; Cinnabar Dust lengthens them and Glowshard Dust strengthens them.'] },
   ]);
 
   add('gear', 'Weapons, trinkets and armour sets', 'Systems', [

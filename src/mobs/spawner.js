@@ -18,6 +18,7 @@ import { borderAllows } from '../world/border.js';
 import { attemptDimensionSpawn } from './dimensionMobs.js';
 import './cinderMobs.js'; // registers the Capwalker and the Dirge Wailer (Cinderdeep sub-biomes)
 import './slagColossus.js'; // registers the Slag Colossus, the Cinderforge boss
+import './cinderFauna.js'; // registers the Smokeray and the Slagboar and adds them to the Cinderdeep spawn tables
 import { BIOMES } from '../world/biomes.js';
 import { outpostsNear } from '../world/temples.js';
 import { hutsNear, hutAt } from '../world/swampHuts.js';

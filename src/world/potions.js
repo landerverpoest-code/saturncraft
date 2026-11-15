@@ -85,6 +85,7 @@ export const EFFECT_INGREDIENTS = {
   wraith_tear: 'regeneration',
   slimeball: 'leaping',            // the reference uses a rabbit's foot; there are no rabbits here
   feather: 'slow_falling',         // reference: phantom membrane
+  smoke_gland: 'slow_falling',     // a Smokeray's gland (mobs/cinderFauna.js): a second way to the same elixir
   turtle_shell: 'turtle_master',   // the Shellback Helmet (reference: turtle shell)
   blight_rose: 'decay',            // reference: the Bedrock-only decay elixir has no brew; here a Blight Rose makes it
   glimmerfin: 'luck',              // the rare fishing catch
