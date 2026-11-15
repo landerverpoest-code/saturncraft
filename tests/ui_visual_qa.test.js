@@ -408,7 +408,7 @@ describe('layout fixes found by looking at the screens', () => {
 
   it('every full-page screen (Milestones too) is a pause-screen, so it gets the dark backdrop and the HUD cards stay behind it', () => {
     for (const title of ['Touch controls', 'Controls', 'Accessibility', 'Help', 'Statistics', 'Field Guide', 'Milestones']) {
-      expect(SCREENS, title).toMatch(new RegExp(`class="screen pause-screen[^"]*"><h2>${title}\\b`));
+      expect(SCREENS, title).toMatch(new RegExp(`class="screen pause-screen[^"]*"><h2>(?:\\$\\{t\\('${title}'\\)\\}|${title}\\b)`));
     }
   });
 

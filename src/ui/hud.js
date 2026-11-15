@@ -223,8 +223,8 @@ export class HUD {
   milestone(m) {
     const card = document.createElement('div');
     card.className = 'milestone';
-    card.innerHTML = `<img src="${iconURL(m.icon)}"><div><div class="m-head">Milestone reached!</div><div class="m-title"></div></div>`;
-    card.querySelector('.m-title').textContent = m.title;
+    card.innerHTML = `<img src="${iconURL(m.icon)}"><div><div class="m-head">${t('Milestone reached!')}</div><div class="m-title"></div></div>`;
+    card.querySelector('.m-title').textContent = t(m.title);
     this.root.appendChild(card);
     setTimeout(() => card.classList.add('out'), 4500);
     setTimeout(() => card.remove(), 5200);

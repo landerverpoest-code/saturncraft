@@ -86,7 +86,7 @@ import { inventoryKeyIsSlotAction } from './ui/menuNav.js';
 import { resolveBindings } from './ui/bindings.js';
 import { FrameGraph } from './ui/frameGraph.js';
 import { ACCESS_DEFAULTS, CaptionLog, motionScales, applyAccessToRoot, cleanUiScale } from './ui/accessibility.js';
-import { detectLanguage, setLanguage } from './ui/i18n.js';
+import { t, detectLanguage, setLanguage } from './ui/i18n.js';
 import { TOUCH_DEFAULTS, normalizeTouch, wantTouch, readTouchEnv } from './ui/touchMath.js';
 import { Audio } from './audio/audio.js';
 import { explode } from './entities/explosion.js';
@@ -313,7 +313,7 @@ export class Game {
       const r = resolveBlock(p.shield, amount, attacker);
       this.audio.play(r.disabled ? 'shield_break' : r.parry ? 'parry' : 'shield', [p.x, p.y + 1, p.z]);
       if (r.parry && !r.disabled) this.milestones.event('parry');
-      if (r.disabled) { p.blocking = false; this.hud.toast('Your shield was knocked down!'); }
+      if (r.disabled) { p.blocking = false; this.hud.toast(t('Your shield was knocked down!')); }
       if (!p.creative && r.wear) p.inventory.damageSelected(r.wear);
       if (attacker && attacker.body && attacker.kind === 'mob') {
         const dx = attacker.x - p.x, dz = attacker.z - p.z, d = Math.hypot(dx, dz) || 1;
@@ -331,7 +331,7 @@ export class Game {
         this.particles.emit(p.x, p.y + 1, p.z, (Math.random() - 0.5) * 0.5, Math.random() * 0.5, (Math.random() - 0.5) * 0.5, gold ? 1.4 : 0.4, gold ? 1.1 : 1.3, gold ? 0.2 : 0.5, 30 + Math.random() * 20, 0.01);
       }
       this.audio.play('levelup');
-      this.hud.toast('The Charm of Undying saved you!');
+      this.hud.toast(t('The Charm of Undying saved you!'));
     }];
 
     if (this.saveData) {
@@ -482,7 +482,7 @@ export class Game {
     s.enabled = this.seasonsOn;
     const prev = s.state.index;
     s.update(this.time);
-    if (this.hud && s.enabled && prev !== s.state.index && this.ticks > 20) this.hud.toast(`${s.state.name} has come`);
+    if (this.hud && s.enabled && prev !== s.state.index && this.ticks > 20) this.hud.toast(t('{season} has come', { season: t(s.state.name) }));
   }
 
   /** Hostile mobs switched off: clear the monsters that are already around (like peaceful). */
@@ -536,7 +536,7 @@ export class Game {
       const now = Date.now();
       if (now - (this._saveWarnAt || 0) > 60000) {
         this._saveWarnAt = now;
-        this.hud.toast(this.saveProblem === 'quota' ? 'Save failed: browser storage is full. Free space or export this world from the title screen.' : 'Autosave failed. Your progress since the last save is not stored.', 6000);
+        this.hud.toast(this.saveProblem === 'quota' ? t('Save failed: browser storage is full. Free space or export this world from the title screen.') : t('Autosave failed. Your progress since the last save is not stored.'), 6000);
       }
       return ok;
     }
@@ -545,7 +545,7 @@ export class Game {
       const q = await storageStatus().catch(() => null);
       if (q && q.level && q.level !== 'ok' && q.level !== this._quotaWarned) {
         this._quotaWarned = q.level;
-        this.hud.toast(`Browser storage is ${Math.round(q.ratio * 100)}% full${q.level === 'critical' ? ': saving may fail soon. Delete or export a world.' : '. Consider exporting or deleting old worlds.'}`, 6000);
+        this.hud.toast(q.level === 'critical' ? t('Browser storage is {pct}% full: saving may fail soon. Delete or export a world.', { pct: Math.round(q.ratio * 100) }) : t('Browser storage is {pct}% full. Consider exporting or deleting old worlds.', { pct: Math.round(q.ratio * 100) }), 6000);
       }
     }
     return ok;
@@ -630,7 +630,7 @@ export class Game {
       p.respawn(); p.setPosition(at[0], at[1], at[2]);
       p.setGamemode('spectator');
       this.input.lock();
-      this.hud.toast('Your one life is spent: you can watch this world, but not touch it');
+      this.hud.toast(t('Your one life is spent: you can watch this world, but not touch it'));
       return;
     }
     // an Ember Hearth in the Cinderdeep (world/emberHearth.js): rise beside it while it still burns
@@ -645,7 +645,7 @@ export class Game {
     if (p.bed && this.world.isLoaded(p.bed.x, p.bed.z) && this.world.getBlock(p.bed.x, p.bed.y, p.bed.z) !== B.BED) {
       p.bed = null;
       p.spawn = { ...this.worldSpawn };
-      this.hud.toast('You have no home bed, or it was obstructed');
+      this.hud.toast(t('You have no home bed, or it was obstructed'));
     }
     this.player.respawn();
     this.input.lock();
@@ -657,10 +657,10 @@ export class Game {
     if (!w.isLoaded(h.x, h.z)) return false; // (cannot check: fall through to the usual way home, keeping the hearth)
     const charges = w.getBlock(h.x, h.y, h.z) === B.EMBER_HEARTH ? hearthCharges(w.getMeta(h.x, h.y, h.z)) : 0;
     const spot = charges > 0 ? hearthSpot((a, b, c) => w.getBlock(a, b, c), h.x, h.y, h.z) : null;
-    if (!spot) { p.hearth = null; this.hud.toast(charges > 0 ? 'Your hearth is walled in' : 'Your hearth has gone cold'); return false; }
+    if (!spot) { p.hearth = null; this.hud.toast(charges > 0 ? t('Your hearth is walled in') : t('Your hearth has gone cold')); return false; }
     w.setBlockUrgent(h.x, h.y, h.z, B.EMBER_HEARTH, spendCharge(charges));
     p.respawn(); p.setPosition(spot.x, spot.y, spot.z);
-    this.hud.toast(`You rise by your hearth (${spendCharge(charges)} charge${spendCharge(charges) === 1 ? '' : 's'} left)`);
+    this.hud.toast(spendCharge(charges) === 1 ? t('You rise by your hearth (1 charge left)') : t('You rise by your hearth ({n} charges left)', { n: spendCharge(charges) }));
     return true;
   }
 
@@ -761,16 +761,16 @@ export class Game {
     const m = w.getMeta(x, y, z);
     const [dx, , dz] = SIDE_DIRS[m & 3];
     const head = m & BED_HEAD ? [x, z] : [x + dx, z + dz];
-    if (skyState(this.time).aboveCount > 0) { this.hud.toast('You can only sleep at night (when all three suns are down)'); return; }
-    if (Math.hypot(p.x - (head[0] + 0.5), p.z - (head[1] + 0.5)) > 3.5) { this.hud.toast('You may not rest now; the bed is too far away'); return; }
+    if (skyState(this.time).aboveCount > 0) { this.hud.toast(t('You can only sleep at night (when all three suns are down)')); return; }
+    if (Math.hypot(p.x - (head[0] + 0.5), p.z - (head[1] + 0.5)) > 3.5) { this.hud.toast(t('You may not rest now; the bed is too far away')); return; }
     for (const e of this.entities.mobs) {
       if (e.dead || e.def.category !== CATEGORY.MONSTER) continue;
-      if (Math.abs(e.x - (head[0] + 0.5)) < 8 && Math.abs(e.z - (head[1] + 0.5)) < 8 && Math.abs(e.y - y) < 5) { this.hud.toast('You may not rest now; there are monsters nearby'); return; }
+      if (Math.abs(e.x - (head[0] + 0.5)) < 8 && Math.abs(e.z - (head[1] + 0.5)) < 8 && Math.abs(e.y - y) < 5) { this.hud.toast(t('You may not rest now; there are monsters nearby')); return; }
     }
     p.bed = { x: head[0], y, z: head[1] };
     const stand = this.standNextTo(head[0], y, head[1]) || { x: head[0] + 0.5, y: y + 0.5625, z: head[1] + 0.5 };
     p.spawn = stand;
-    this.hud.toast('Respawn point set');
+    this.hud.toast(t('Respawn point set'));
     // lie down on the bed
     p.sleeping = { x: head[0], y, z: head[1], ticks: 0 };
     p.setPosition(head[0] + 0.5, y + 0.5625, head[1] + 0.5);
@@ -1206,7 +1206,7 @@ export class Game {
     if (w.getBlock(x, y, z) !== B.CHIME_BLOCK) return false;
     this.audio.play(chimeSoundAt(w, x, y, z), [x + 0.5, y + 0.5, z + 0.5]);
     this.chimeNote(x, y, z);
-    if (toast && this.hud) this.hud.toast('Note ' + noteName(pitchOf(w.getMeta(x, y, z))));
+    if (toast && this.hud) this.hud.toast(t('Note {name}', { name: noteName(pitchOf(w.getMeta(x, y, z))) }));
     if (!fromNet && this.net && this.net.sendNote) this.net.sendNote(x, y, z);
     if (!this.net || this.net.isHost) hearChime(this.entities.list, x, y, z, this.ticks); // Hoverlings nearby remember where it rang
     return true;
@@ -1571,7 +1571,7 @@ export class Game {
       // multiplayer: ping a spot for the team (B), the emote wheel (V); a spectator's Shift lets go of the friend they follow
       if (inp.wasPressed('ping')) this.net.pingAtCrosshair();
       if (inp.wasPressed('emote')) { this.input.unlock(); this.ui.openEmotes(); }
-      if (this.net.spectate && inp.wasPressed('sneak')) { this.net.stopSpectate(); this.hud.toast('Stopped following'); }
+      if (this.net.spectate && inp.wasPressed('sneak')) { this.net.stopSpectate(); this.hud.toast(t('Stopped following')); }
     }
     if (this.ui.open === 'emotes') {
       if (inp.wasPressed('emote')) this.ui.close();
@@ -1584,7 +1584,7 @@ export class Game {
     } else if (inp.wasPressed('pause') && this.running) { this.input.unlock(); this.ui.showPause(); } // a gamepad's Start button
     if (inp.wasPressed('debug')) this.hud.setDebug(!this.hud.showDebug);
     if (inp.wasPressed('hud')) this.hud.setVisible(!this.hud.visible);
-    if (inp.wasPressed('shaders')) { const on = this.settings.shaders === false; this.setSetting('shaders', on); this.hud.toast(`Shaders ${on ? 'on' : 'off'} (F7)`); }
+    if (inp.wasPressed('shaders')) { const on = this.settings.shaders === false; this.setSetting('shaders', on); this.hud.toast(on ? t('Shaders on (F7)') : t('Shaders off (F7)')); }
     if (inp.wasPressed('perspective')) { this.perspective = (this.perspective + 1) % 3; document.getElementById('crosshair').style.visibility = this.perspective === 2 ? 'hidden' : ''; }
     if (!this.ui.blocking && !menuAtStart) {
       const m = inp.consumeMouse();
@@ -1657,9 +1657,9 @@ export class Game {
     this.renderer.setSize(window.innerWidth, window.innerHeight, false);
     this.sky.setShadowsEnabled(this.settings.shadows && level < 2);
     this.postfx.enabled = this.settings.shaders !== false && level < 3;
-    const names = ['', 'pixel density lowered', 'sun shadows off', 'shaders off'];
-    if (level > 0 && level <= 3) this.hud.toast(`Smoothing the picture: ${names[level]}`);
-    if (level === 0) this.hud.toast('Picture quality restored');
+    const names = ['', t('pixel density lowered'), t('sun shadows off'), t('shaders off')];
+    if (level > 0 && level <= 3) this.hud.toast(t('Smoothing the picture: {what}', { what: names[level] }));
+    if (level === 0) this.hud.toast(t('Picture quality restored'));
   }
 
   render(alpha, sec) {
@@ -1847,7 +1847,7 @@ export class Game {
     this.waypointNo = (this.waypointNo || 0) + 1;
     const name = `Mark${this.waypointNo}`;
     const out = runCommand(this, this.net ? `/wp add ${name}` : `/waymark here ${name}`);
-    this.hud.toast(this.net ? out : `Waymark set here: ${name}`, 2200);
+    this.hud.toast(this.net ? out : t('Waymark set here: {name}', { name }), 2200);
     return out;
   }
 
@@ -1856,7 +1856,7 @@ export class Game {
     const w = cleanWaymark({ dim: this.world.dimension, ...wm });
     if (!w) return;
     this.player.waymark = w;
-    if (this.player.inventory.count(I.WAYMARK_COMPASS) > 0) this.hud.toast(`Waymark set: ${w.label}`, 2200);
+    if (this.player.inventory.count(I.WAYMARK_COMPASS) > 0) this.hud.toast(t('Waymark set: {label}', { label: w.label }), 2200);
   }
 
   /** The sun the light shafts stream from: the brightest one up, fading in rain and underground. */

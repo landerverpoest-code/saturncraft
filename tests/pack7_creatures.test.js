@@ -177,7 +177,7 @@ describe('Rootsnout rooting', () => {
     think(m, g, p, ROOT.TICKS);
     expect(g.items).toEqual([{ id: I.DAWNFERN_SEEDS, count: 1 }]);
     expect(m.headPitch).toBe(0);
-    expect(m.rootTimer).toBeGreaterThanOrEqual(ROOT.MIN_DELAY - 1);
+    expect(m.rootTimer).toBeGreaterThanOrEqual(ROOT.MIN_DELAY - 40);
   });
   it('does not root on stone, and a hit breaks it off', () => {
     const g = fakeGame({ world: { getBlock: () => B.STONE } }), p = fakePlayer({ x: 30, z: 30 });

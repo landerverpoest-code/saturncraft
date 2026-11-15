@@ -402,8 +402,8 @@ export class UI {
   /** Recipe book beside a crafting grid: green = craftable now; click lays the ingredients in. */
   recipeBook(w) {
     const inv = this.game.player.inventory;
-    const book = el('<div class="panel recipe-book"><h3>Recipes</h3></div>');
-    const opt = el('<label class="recipe-opt"><input type="checkbox" checked> Craftable only</label>');
+    const book = el(`<div class="panel recipe-book"><h3>${t('Recipes')}</h3></div>`);
+    const opt = el(`<label class="recipe-opt"><input type="checkbox" checked> ${t('Craftable only')}</label>`);
     const list = el('<div class="grid recipe-list" style="grid-template-columns:repeat(5,var(--slot))"></div>');
     book.append(opt, list);
     const fits = RECIPES.map((r) => ({ r, layout: recipeLayout(r, w) })).filter((e) => e.layout);
@@ -452,7 +452,7 @@ export class UI {
     this.clear();
     this.refreshers = []; this.slotRefs = [];
     this.open = kind;
-    const panel = el(`<div class="panel"><h3>${title}</h3></div>`);
+    const panel = el(`<div class="panel"><h3>${t(title)}</h3></div>`);
     const screen = el('<div class="screen" style="background:rgba(0,0,0,.35)"></div>');
     this.side = null; this.sideRight = null;
     inner(panel);
@@ -479,7 +479,7 @@ export class UI {
   armorColumn() {
     const inv = this.game.player.inventory;
     const col = el('<div class="grid armor-slots" style="grid-template-columns:var(--slot)"></div>');
-    const labels = ['Helmet', 'Chestplate', 'Leggings', 'Boots'];
+    const labels = [t('Helmet'), t('Chestplate'), t('Leggings'), t('Boots')];
     for (let i = 0; i < 4; i++) {
       const s = this.makeSlot(() => inv.armor[i], (v) => { inv.armor[i] = v; if (v) this.game.audio.play('equip'); }, {
         filter: (st) => !!(ITEMS[st.id].armor && ITEMS[st.id].armor.slot === i),
@@ -502,7 +502,7 @@ export class UI {
         filter: (st) => isTrinket(st) && !inv.trinkets.some((t, j) => t && j !== i && t.id === st.id), // (a kind works once: no use wearing two)
         quickMove: () => { const st = inv.trinkets[i]; if (st && !inv.add(st)) inv.trinkets[i] = null; },
       });
-      s.title = 'Trinket';
+      s.title = t('Trinket');
       s.classList.add('armor-slot', 'trinket-slot');
       col.appendChild(s);
     }
@@ -537,7 +537,7 @@ export class UI {
       panel.appendChild(top);
       panel.appendChild(this.setBonusPanel());
       panel.appendChild(this.inventoryGrid());
-      panel.appendChild(el('<div class="recipes-hint">Tip: logs → planks → sticks / workbench. Shift-click moves stacks, right-click splits.</div>'));
+      panel.appendChild(el(`<div class="recipes-hint">${t('Tip: logs → planks → sticks / workbench. Shift-click moves stacks, right-click splits.')}</div>`));
       this.sideRight = this.effectPanel();
     });
   }
@@ -546,7 +546,7 @@ export class UI {
   effectPanel() {
     const fx = this.game.player.effects;
     if (!Object.keys(fx).length) return null;
-    const box = el('<div class="panel effect-panel"><h3>Effects</h3></div>');
+    const box = el(`<div class="panel effect-panel"><h3>${t('Effects')}</h3></div>`);
     const rows = new Map();
     const render = () => {
       for (const [n, e] of Object.entries(fx)) {
@@ -583,7 +583,7 @@ export class UI {
       const top = el('<div class="brew-top"></div>');
       const fuel = el('<div class="brew-fuel"></div>');
       const fuelSlot = slot(FUEL_SLOT, 'fuel', (st) => st.id === I.EMBER_POWDER);
-      fuelSlot.title = 'Ember Powder (20 brews each)';
+      fuelSlot.title = t('Ember Powder (20 brews each)');
       const fuelBar = el('<div class="brew-fuelbar"><div></div></div>');
       fuel.append(fuelSlot, fuelBar);
       const main = el('<div class="brew-main"></div>');
@@ -593,7 +593,7 @@ export class UI {
       for (const i of VIAL_SLOTS) main.appendChild(slot(i, 'v' + i, (st) => isVial(st.id) && st.count === 1));
       top.append(fuel, main);
       panel.appendChild(top);
-      panel.appendChild(el('<div class="brew-hint">Water Vials + Cinderroot make a Murky Elixir, the base for effects.</div>'));
+      panel.appendChild(el(`<div class="brew-hint">${t('Water Vials + Cinderroot make a Murky Elixir, the base for effects.')}</div>`));
       panel.appendChild(this.inventoryGrid({
         accept: (st) => {
           if (st.id === I.EMBER_POWDER && (!s.slots[FUEL_SLOT] || s.slots[FUEL_SLOT].id === st.id)) {
@@ -717,7 +717,7 @@ export class UI {
           const k = pat ? `${pat.id}:${pat.count}:${ready}` : 'none';
           if (k === key) return;
           key = k;
-          note.textContent = pat ? `Makes ${pat.count > 1 ? pat.count + ' x ' : ''}${itemName(pat.id)} on a pulse${ready ? '' : ' (needs two or more in every slot: the last one is the pattern)'}` : 'Lay out a recipe. The last item in each slot stays as the pattern.';
+          note.textContent = pat ? t(ready ? 'Makes {what} on a pulse' : 'Makes {what} on a pulse (needs two or more in every slot: the last one is the pattern)', { what: `${pat.count > 1 ? pat.count + ' x ' : ''}${itemName(pat.id)}` }) : t('Lay out a recipe. The last item in each slot stays as the pattern.');
         });
       }
       panel.appendChild(this.inventoryGrid({
@@ -826,10 +826,10 @@ export class UI {
       left.appendChild(book);
       const slots = el('<div class="ench-slots"></div>');
       const itemSlot = this.workSlot(0, { single: true, filter: (st) => isEnchantable({ ...st, count: 1 }) });
-      itemSlot.title = 'Item to enchant';
+      itemSlot.title = t('Item to enchant');
       const azSlot = this.workSlot(1, { filter: (st) => st.id === I.AZURITE });
       azSlot.classList.add('azurite-slot');
-      azSlot.title = 'Azurite';
+      azSlot.title = t('Azurite');
       slots.append(itemSlot, azSlot);
       left.appendChild(slots);
       top.appendChild(left);
@@ -849,7 +849,7 @@ export class UI {
       let key = '';
       this.refreshers.push(() => {
         const st = this.work[0], n = shelves();
-        info.textContent = `Bookshelves: ${Math.min(15, n)} / 15  ·  Level ${p.xp.level}`;
+        info.textContent = t('Bookshelves: {n} / 15  ·  Level {level}', { n: Math.min(15, n), level: p.xp.level });
         const k = `${st ? st.id : -1}:${p.enchSeed}:${n}:${p.xp.level}:${this.work[1] ? this.work[1].count : 0}`;
         if (k === key) return;
         key = k;
@@ -940,8 +940,8 @@ export class UI {
         const r = combine();
         const too = r && r.cost >= ANVIL_MAX_COST && !p.creative;
         cost.className = 'anvil-cost' + (!r ? '' : too || (!p.creative && p.xp.level < r.cost) ? ' bad' : ' ok');
-        cost.textContent = !r ? (this.work && this.work[0] && this.work[1] ? 'These cannot be combined' : 'Put an item on the left, and a matching item, its material, a tempering material (Slagsteel Ingots, Dirge Crystals, a Colossus Core) or an Enchanted Book on the right')
-          : too ? 'Too Expensive!' : `Level cost: ${r.cost}`;
+        cost.textContent = !r ? (this.work && this.work[0] && this.work[1] ? t('These cannot be combined') : t('Put an item on the left, and a matching item, its material, a tempering material (Slagsteel Ingots, Dirge Crystals, a Colossus Core) or an Enchanted Book on the right'))
+          : too ? t('Too Expensive!') : t('Level cost: {n}', { n: r.cost });
         out.classList.toggle('blocked', !!r && (too || (!p.creative && p.xp.level < r.cost)));
       });
       panel.appendChild(this.inventoryGrid({
@@ -993,8 +993,8 @@ export class UI {
       const info = el('<div class="recipes-hint beacon-info"></div>');
       panel.appendChild(info);
       const rows = el('<div class="beacon-powers"></div>');
-      const prim = el('<div class="beacon-col"><div class="beacon-head">Primary Power</div></div>');
-      const sec = el('<div class="beacon-col"><div class="beacon-head">Secondary Power</div></div>');
+      const prim = el(`<div class="beacon-col"><div class="beacon-head">${t('Primary Power')}</div></div>`);
+      const sec = el(`<div class="beacon-col"><div class="beacon-head">${t('Secondary Power')}</div></div>`);
       const button = (name, label, onPick) => {
         const b = el(`<button class="beacon-power" title="${label}"><img src="${effectIconURL(name)}"></button>`);
         b.addEventListener('mousedown', (e) => { e.preventDefault(); onPick(); this.refreshAll(); });
@@ -1004,16 +1004,16 @@ export class UI {
         const b = button(name, EFFECTS[name].name, () => { primary = name; });
         b.dataset.power = name; prim.appendChild(b); return b;
       });
-      const regen = button('regeneration', 'Regeneration', () => { secondary = SECONDARY.REGENERATION; });
-      const boost = el('<button class="beacon-power boost" title="Primary power II"><b>II</b></button>');
+      const regen = button('regeneration', t('Regeneration'), () => { secondary = SECONDARY.REGENERATION; });
+      const boost = el(`<button class="beacon-power boost" title="${t('Primary power II')}"><b>II</b></button>`);
       boost.addEventListener('mousedown', (e) => { e.preventDefault(); secondary = SECONDARY.BOOST; this.refreshAll(); });
       sec.append(regen, boost);
       rows.append(prim, sec);
       panel.appendChild(rows);
       const pay = el('<div class="beacon-pay"></div>');
       const slot = this.workSlot(0, { single: true, filter: (st) => BEACON_PAYMENT.has(st.id) });
-      slot.title = 'Payment: an iron or gold ingot, a diamond or a beryl';
-      const ok = el('<button class="btn beacon-ok">Confirm</button>');
+      slot.title = t('Payment: an iron or gold ingot, a diamond or a beryl');
+      const ok = el(`<button class="btn beacon-ok">${t('Confirm')}</button>`);
       ok.addEventListener('click', () => {
         const level = beaconLevel(w, x, y, z);
         if (!this.work[0] || !primary || POWER_LEVEL[primary] > level) return;
@@ -1027,7 +1027,7 @@ export class UI {
       panel.appendChild(pay);
       this.refreshers.push(() => {
         const level = beaconLevel(w, x, y, z), lit = level > 0 && !!beamColor(w, x, y, z);
-        info.textContent = !level ? 'Build a pyramid of iron, gold, diamond or beryl blocks under the beacon' : `Pyramid level ${level}${lit ? '' : ' · the beam is blocked'}  ·  range ${beaconRange(level)} blocks`;
+        info.textContent = !level ? t('Build a pyramid of iron, gold, diamond or beryl blocks under the beacon') : t(lit ? 'Pyramid level {level}  ·  range {range} blocks' : 'Pyramid level {level} · the beam is blocked  ·  range {range} blocks', { level, range: beaconRange(level) });
         for (const b of primBtns) { b.disabled = POWER_LEVEL[b.dataset.power] > level; b.classList.toggle('on', primary === b.dataset.power); }
         regen.disabled = boost.disabled = level < 4;
         regen.classList.toggle('on', level >= 4 && secondary === SECONDARY.REGENERATION);
@@ -1058,8 +1058,8 @@ export class UI {
       panel.appendChild(hint);
       this.refreshers.push(() => {
         const r = result(), w = this.work || [];
-        hint.textContent = r ? (r.xp[1] > 0 ? `Removes enchantments · ${r.xp[0]}–${r.xp[1]} experience` : 'Repairs the pair (+5 %)')
-          : w[0] || w[1] ? 'These cannot be ground' : 'Two of the same item to repair them, or one enchanted item to strip it';
+        hint.textContent = r ? (r.xp[1] > 0 ? t('Removes enchantments · {a}–{b} experience', { a: r.xp[0], b: r.xp[1] }) : t('Repairs the pair (+5 %)'))
+          : w[0] || w[1] ? t('These cannot be ground') : t('Two of the same item to repair them, or one enchanted item to strip it');
       });
       panel.appendChild(this.inventoryGrid({
         accept: (st) => {
@@ -1108,7 +1108,7 @@ export class UI {
       const top = el('<div class="inv-top grind-top loom-top"></div>');
       const ins = el('<div class="grind-ins"></div>');
       const cloth = this.workSlot(0, { filter: loomAcceptsCloth }), dye = this.workSlot(1, { filter: loomAcceptsDye });
-      cloth.title = 'Wool or carpets'; dye.title = 'A dye (Bone Meal bleaches)';
+      cloth.title = t('Wool or carpets'); dye.title = t('A dye (Bone Meal bleaches)');
       ins.append(cloth, dye);
       top.append(ins, el('<div class="arrow">➜</div>'));
       top.appendChild(this.makeSlot(() => { const r = result(); return r ? r.result : null; }, () => {}, { onClick: (e) => take(e.shiftKey) }));
@@ -1117,7 +1117,7 @@ export class UI {
       panel.appendChild(hint);
       this.refreshers.push(() => {
         const w = this.work || [];
-        hint.textContent = result() ? `One dye recolours up to ${LOOM_BATCH}` : w[0] && w[1] ? 'Already that colour' : 'Wool or carpets above, a dye below';
+        hint.textContent = result() ? t('One dye recolours up to {n}', { n: LOOM_BATCH }) : w[0] && w[1] ? t('Already that colour') : t('Wool or carpets above, a dye below');
       });
       panel.appendChild(this.inventoryGrid({
         accept: (st) => {
@@ -1170,7 +1170,7 @@ export class UI {
       this.refreshers.push(() => {
         const st = this.work && this.work[0], o = options();
         if (st && selFor !== st.id) { selFor = st.id; sel = -1; }
-        hint.textContent = !st ? 'Put in a stone block to cut' : sel < 0 ? 'Pick what to cut it into' : `${tName(ITEMS[o[sel].id].name)}${o[sel].count > 1 ? ' ×' + o[sel].count : ''}`;
+        hint.textContent = !st ? t('Put in a stone block to cut') : sel < 0 ? t('Pick what to cut it into') : `${tName(ITEMS[o[sel].id].name)}${o[sel].count > 1 ? ' ×' + o[sel].count : ''}`;
         const k = `${st ? st.id : -1}:${sel}`;
         if (k === key) return;
         key = k;
@@ -1207,10 +1207,10 @@ export class UI {
     this.game.input.unlock();
     const slotKey = (i) => codeLabel(((this.game.input.keys || {})['slot' + (i + 1)] || [])[0] || 'Digit' + (i + 1)); // (the hotbar slot keys, as remapped)
     const keyNames = EMOTES.map((k, i) => slotKey(i)).join(', ');
-    const s = el(`<div class="screen emote-screen"><h2>Emote</h2><div class="emote-wheel" role="group" aria-label="Emotes"></div><p class="sub">Click one or press ${keyNames}, or use the D-pad and A - they show on your body for the others</p></div>`);
+    const s = el(`<div class="screen emote-screen"><h2>${t('Emote')}</h2><div class="emote-wheel" role="group" aria-label="${t('Emotes')}"></div><p class="sub">${t('Click one or press {keys}, or use the D-pad and A - they show on your body for the others', { keys: keyNames })}</p></div>`);
     const wheel = s.querySelector('.emote-wheel');
     EMOTES.forEach((k, i) => {
-      const b = el(`<button class="btn emote-btn" style="--a:${Math.round(-90 + i * 360 / EMOTES.length)}deg"><b>${slotKey(i)}</b> ${EMOTE_LABELS[k]}</button>`);
+      const b = el(`<button class="btn emote-btn" style="--a:${Math.round(-90 + i * 360 / EMOTES.length)}deg"><b>${slotKey(i)}</b> ${t(EMOTE_LABELS[k])}</button>`);
       b.onclick = () => this.pickEmote(k);
       wheel.appendChild(b);
     });
@@ -1239,7 +1239,7 @@ export class UI {
     const eggs = eggCatalog();
     const all = ITEMS.filter((d) => d && d.id && !hidden.has(d.id) && !(d.block && BLOCKS[d.block] && BLOCKS[d.block].hidden));
     this.showContainer('creative', 'Creative Inventory', (panel) => {
-      const search = el('<input class="creative-search" placeholder="Search items...">');
+      const search = el(`<input class="creative-search" placeholder="${t('Search items...')}">`);
       search.addEventListener('keydown', (e) => e.stopPropagation());
       search.addEventListener('keyup', (e) => e.stopPropagation());
       const grid = el('<div class="grid creative-grid" style="grid-template-columns:repeat(9,var(--slot))"></div>');
@@ -1305,7 +1305,7 @@ export class UI {
     this.showContainer('trade', title, (panel) => {
       let bar = null, repLine = null, gift = null;
       if (!trader) {
-        const head = el('<div class="trade-head"><div class="trade-level"><span class="trade-level-name"></span><div class="trade-bar" role="progressbar" aria-label="Progress to the next settler level" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="trade-bar-fill"></div></div><span class="trade-level-count"></span></div><div class="trade-rep" role="status"></div></div>');
+        const head = el(`<div class="trade-head"><div class="trade-level"><span class="trade-level-name"></span><div class="trade-bar" role="progressbar" aria-label="${t('Progress to the next settler level')}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="trade-bar-fill"></div></div><span class="trade-level-count"></span></div><div class="trade-rep" role="status"></div></div>`);
         bar = head.querySelector('.trade-level');
         repLine = head.querySelector('.trade-rep');
         gift = el('<button class="btn trade-gift"></button>');
@@ -1318,7 +1318,7 @@ export class UI {
           <div class="slot price"></div><span class="price-cue" aria-hidden="true"></span>
           <div class="arrow" aria-hidden="true">➜</div>
           <div class="slot">${this.slotHTML({ id: o.get, count: o.getCount })}</div>
-          <span class="trade-name"></span><button class="btn trade-btn">Trade</button></div>`);
+          <span class="trade-name"></span><button class="btn trade-btn">${t('Trade')}</button></div>`);
         row.querySelector('.trade-name').textContent = tName(ITEMS[o.get].name);
         const btn = row.querySelector('button'), priceSlot = row.querySelector('.price'), cueEl = row.querySelector('.price-cue');
         btn.addEventListener('click', (e) => { // (a click, not a mousedown: Enter, Space and the gamepad's A press it too; Shift trades as often as affordable)
@@ -1337,7 +1337,7 @@ export class UI {
             if (key) repEvent(g, g.player, key, REP.trade * done, 'trade');
             g.player.stats.trades += done; g.milestones.event('trade'); if (g.quests) g.quests.emit('trade', { n: done }); if (trader) g.milestones.event('peddler'); g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]); g.entities.spawnXp(g.player.x, g.player.y + 1, g.player.z, 3 * done);
             if (up) {
-              if (g.hud) g.hud.toast(`The settler is now a ${LEVEL_NAMES[mob.level - 1]}: new offers`, 3500);
+              if (g.hud) g.hud.toast(t('The settler is now a {rank}: new offers', { rank: t(LEVEL_NAMES[mob.level - 1]) }), 3500);
               g.audio.play('levelup', [mob.x, mob.y + 1.5, mob.z]);
               this.openTrade(mob); // (the list grew)
               return;
@@ -1354,28 +1354,28 @@ export class UI {
           priceSlot.title = cue.text;
           cueEl.textContent = cue.mark ? `${cue.mark} ${cue.word}` : '';
           cueEl.className = 'price-cue' + (cue.cls ? ' ' + cue.cls : '');
-          row.setAttribute('aria-label', `${tName(ITEMS[o.get].name)} x${o.getCount} for ${tName(ITEMS[o.give].name)} x${now}. ${cue.text}${o.uses >= MAX_USES ? '. Sold out' : ''}`);
+          row.setAttribute('aria-label', `${tName(ITEMS[o.get].name)} x${o.getCount} ${t('for')} ${tName(ITEMS[o.give].name)} x${now}. ${cue.text}${o.uses >= MAX_USES ? '. ' + t('Sold out') : ''}`);
           const refused = refusesTrade(market().rep);
           const ok = canTrade(o, inv, cut, market());
           btn.disabled = !ok;
           row.classList.toggle('sold-out', o.uses >= MAX_USES);
-          btn.textContent = o.uses >= MAX_USES ? 'Sold out' : refused ? 'Refused' : 'Trade';
+          btn.textContent = o.uses >= MAX_USES ? t('Sold out') : refused ? t('Refused') : t('Trade');
         });
         list.appendChild(row);
       });
       if (bar) {
         this.refreshers.push(() => {
           const lp = levelProgress(mob.tradeCount | 0), lv = Math.max(lp.level, mob.level | 0);
-          bar.querySelector('.trade-level-name').textContent = `${LEVEL_NAMES[lv - 1]} (level ${lv})`;
+          bar.querySelector('.trade-level-name').textContent = t('{rank} (level {n})', { rank: t(LEVEL_NAMES[lv - 1]), n: lv });
           bar.querySelector('.trade-bar-fill').style.width = `${Math.round(lp.frac * 100)}%`;
           bar.querySelector('.trade-bar').setAttribute('aria-valuenow', String(Math.round(lp.frac * 100)));
-          bar.querySelector('.trade-level-count').textContent = lp.max ? 'Master' : `${lp.done} / ${lp.need} trades to ${LEVEL_NAMES[lp.level]}`;
+          bar.querySelector('.trade-level-count').textContent = lp.max ? t('Master') : t('{done} / {need} trades to {rank}', { done: lp.done, need: lp.need, rank: t(LEVEL_NAMES[lp.level]) });
           const mk = market(), rep = mk.rep, st = standing(rep);
-          repLine.textContent = key ? `Standing: ${st.name} (${rep > 0 ? '+' : ''}${Math.round(rep)}) - ${repHint(rep)}${mk.festival ? `; Lantern Festival: a further ${Math.round(mk.festival * 100)} % off` : ''}` : 'No village to speak for this settler';
+          repLine.textContent = key ? t('Standing: {name} ({rep}) - {hint}', { name: st.name, rep: (rep > 0 ? '+' : '') + Math.round(rep), hint: repHint(rep) }) + (mk.festival ? t('; Lantern Festival: a further {pct} % off', { pct: Math.round(mk.festival * 100) }) : '') : t('No village to speak for this settler');
           repLine.dataset.standing = String(st.index);
           const sel = inv.selectedStack, worth = sel && key ? giftValue(mob.profession, sel.id) : 0;
           gift.disabled = !key || !worth || g.time - mob.lastGift < GIFT_COOLDOWN;
-          gift.textContent = worth ? (g.time - mob.lastGift < GIFT_COOLDOWN ? 'Already given a gift' : `Gift: ${tName(ITEMS[sel.id].name)}`) : 'Gift (hold goods it wants)';
+          gift.textContent = worth ? (g.time - mob.lastGift < GIFT_COOLDOWN ? t('Already given a gift') : t('Gift: {name}', { name: tName(ITEMS[sel.id].name) })) : t('Gift (hold goods it wants)');
         });
         gift.addEventListener('click', () => {
           if (gift.disabled) return;
@@ -1385,13 +1385,13 @@ export class UI {
           if (!g.player.creative) inv.removeFromSlot(inv.selected, 1);
           mob.lastGift = g.time;
           repEvent(g, g.player, key, worth);
-          if (g.hud) g.hud.toast('The settler is delighted', 2500);
+          if (g.hud) g.hud.toast(t('The settler is delighted'), 2500);
           g.audio.play('hmm', [mob.x, mob.y + 1.5, mob.z]);
           this.refreshAll();
         });
       }
       panel.appendChild(list);
-      panel.appendChild(el(`<div class="recipes-hint">Shift-click trades as often as you can afford. ${trader ? 'The pack does not refill, and the peddler moves on after a day.' : 'Offers restock every half day; until then each use makes an offer a little dearer. More trades raise the settler\'s level and unlock better offers.'}</div>`));
+      panel.appendChild(el(`<div class="recipes-hint">${t('Shift-click trades as often as you can afford.')} ${trader ? t('The pack does not refill, and the peddler moves on after a day.') : t("Offers restock every half day; until then each use makes an offer a little dearer. More trades raise the settler's level and unlock better offers.")}</div>`));
       panel.appendChild(this.inventoryGrid());
     });
     this.refreshAll();
@@ -1401,7 +1401,7 @@ export class UI {
   showSleep() {
     this.clear();
     this.open = 'sleep';
-    const s = el('<div class="screen sleep-screen" style="justify-content:flex-end;padding-bottom:12vh"><button class="btn">Leave Bed</button></div>');
+    const s = el(`<div class="screen sleep-screen" style="justify-content:flex-end;padding-bottom:12vh"><button class="btn">${t('Leave Bed')}</button></div>`);
     s.querySelector('button').onclick = () => this.game.wakeUp(false);
     this.layer.appendChild(s);
     this.sleepEl = s;
@@ -1538,24 +1538,24 @@ export class UI {
   showTouchSettings() {
     this.clear();
     this.open = 'pause';
-    const g = this.game, t = normalizeTouch(g.settings);
+    const g = this.game, ts = normalizeTouch(g.settings);
     const detected = detectTouch(readTouchEnv());
     this.touchPreview = true; // the on-screen buttons stay visible behind this screen so size and opacity can be judged
-    const s = el(`<div class="screen pause-screen touch-settings"><h2>Touch controls</h2>
-      <button class="btn" data-a="mode">Touch controls: ${TOUCH_MODE_LABELS[t.touchMode]}</button>
-      <p class="sub">Auto turns them on for phones and tablets${detected ? ' (this device looks like one)' : ' (this device does not look like one)'}.</p>
-      <div class="field"><label>Button size: <b id="tsv">${t.touchSize}</b>%</label><input type="range" min="${SIZE_RANGE[0]}" max="${SIZE_RANGE[1]}" step="5" value="${t.touchSize}" id="ts"></div>
-      <div class="field"><label>Button opacity: <b id="tov">${t.touchOpacity}</b>%</label><input type="range" min="${OPACITY_RANGE[0]}" max="${OPACITY_RANGE[1]}" step="5" value="${t.touchOpacity}" id="to"></div>
-      <button class="btn" data-a="left">Left-handed layout: ${t.touchLeft ? 'On' : 'Off'}</button>
-      <p class="sub">Left thumb moves (push far to sprint), drag the other side to look, hold to mine. Double-tap Jump to fly in creative mode. Hold a slot for a right click; Split and Quick change the next taps.</p>
-      <button class="btn" data-a="back">Back</button></div>`);
+    const s = el(`<div class="screen pause-screen touch-settings"><h2>${t('Touch controls')}</h2>
+      <button class="btn" data-a="mode">${t('Touch controls')}: ${t(TOUCH_MODE_LABELS[ts.touchMode])}</button>
+      <p class="sub">${t(detected ? 'Auto turns them on for phones and tablets (this device looks like one).' : 'Auto turns them on for phones and tablets (this device does not look like one).')}</p>
+      <div class="field"><label>${t('Button size')}: <b id="tsv">${ts.touchSize}</b>%</label><input type="range" min="${SIZE_RANGE[0]}" max="${SIZE_RANGE[1]}" step="5" value="${ts.touchSize}" id="ts"></div>
+      <div class="field"><label>${t('Button opacity')}: <b id="tov">${ts.touchOpacity}</b>%</label><input type="range" min="${OPACITY_RANGE[0]}" max="${OPACITY_RANGE[1]}" step="5" value="${ts.touchOpacity}" id="to"></div>
+      <button class="btn" data-a="left">${t('Left-handed layout')}: ${t(ts.touchLeft ? 'On' : 'Off')}</button>
+      <p class="sub">${t('Left thumb moves (push far to sprint), drag the other side to look, hold to mine. Double-tap Jump to fly in creative mode. Hold a slot for a right click; Split and Quick change the next taps.')}</p>
+      <button class="btn" data-a="back">${t('Back')}</button></div>`);
     const mode = s.querySelector('[data-a=mode]');
-    mode.onclick = () => { const m = nextTouchMode(normalizeTouch(g.settings).touchMode); g.setSetting('touchMode', m); mode.textContent = `Touch controls: ${TOUCH_MODE_LABELS[m]}`; };
+    mode.onclick = () => { const m = nextTouchMode(normalizeTouch(g.settings).touchMode); g.setSetting('touchMode', m); mode.textContent = `${t('Touch controls')}: ${t(TOUCH_MODE_LABELS[m])}`; };
     const bind = (id, lbl, key) => s.querySelector('#' + id).addEventListener('input', (e) => { s.querySelector('#' + lbl).textContent = e.target.value; g.setSetting(key, +e.target.value); });
     bind('ts', 'tsv', 'touchSize');
     bind('to', 'tov', 'touchOpacity');
     const left = s.querySelector('[data-a=left]');
-    left.onclick = () => { const on = !g.settings.touchLeft; g.setSetting('touchLeft', on); left.textContent = `Left-handed layout: ${on ? 'On' : 'Off'}`; };
+    left.onclick = () => { const on = !g.settings.touchLeft; g.setSetting('touchLeft', on); left.textContent = `${t('Left-handed layout')}: ${t(on ? 'On' : 'Off')}`; };
     s.querySelector('[data-a=back]').onclick = () => this.showPause();
     this.padBack = () => this.showPause();
     this.layer.appendChild(s);
@@ -1573,12 +1573,14 @@ export class UI {
     let table = resolveBindings(g.settings.keys);
     let waiting = null; // { id, slot }
     let note = '';
-    const s = el(`<div class="screen pause-screen controls-screen"><h2>Controls</h2>
+    const s = el(`<div class="screen pause-screen controls-screen"><h2>${t('Controls')}</h2>
       <p class="sub controls-pad"></p><p class="sub controls-note"></p><div class="controls-list"></div>
-      <div class="btn-row"><button class="btn" data-a="reset">Reset all</button><button class="btn" data-a="back">Back</button></div></div>`);
+      <div class="btn-row"><button class="btn" data-a="reset">${t('Reset all')}</button><button class="btn" data-a="back">${t('Back')}</button></div></div>`);
     const list = s.querySelector('.controls-list'), noteEl = s.querySelector('.controls-note');
     const stop = () => { waiting = null; inp.capture = null; };
-    const label = (id) => ACTIONS.find((a) => a.id === id).label;
+    const actionLabel = (a) => (/^slot\d$/.test(a.id) ? t('Hotbar slot {n}', { n: a.id.slice(4) }) : t(a.label));
+    const slotName = (n) => t(SLOT_NAMES[n]);
+    const label = (id) => actionLabel(ACTIONS.find((a) => a.id === id));
     const commit = (next) => { table = next; g.setSetting('keys', toOverrides(table)); };
     const onCode = (code) => {
       if (!waiting) return;
@@ -1586,11 +1588,11 @@ export class UI {
       if (code === 'Escape') { stop(); note = ''; render(); return; }
       const clear = code === 'Backspace' || code === 'PadBack';
       const r = setBinding(table, id, slot, clear ? null : code);
-      if (r.error) { note = r.error; render(); return; } // keep waiting for a fitting key
+      if (r.error) { note = t(r.error); render(); return; } // keep waiting for a fitting key
       stop();
       commit(r.table);
-      note = clear ? `${label(id)} cleared`
-        : r.swapped ? `${codeLabel(code)} was ${label(r.swapped.id)}'s ${SLOT_NAMES[r.swapped.slot].toLowerCase()}: the two swapped places`
+      note = clear ? t('{name} cleared', { name: label(id) })
+        : r.swapped ? t("{key} was {name}'s {slot}: the two swapped places", { key: codeLabel(code), name: label(r.swapped.id), slot: slotName(r.swapped.slot).toLowerCase() })
         : `${label(id)}: ${codeLabel(code)}`;
       render();
     };
@@ -1600,22 +1602,22 @@ export class UI {
       noteEl.textContent = note;
       noteEl.setAttribute('role', 'status');
       s.querySelector('.controls-pad').textContent = inp.pad.connected
-        ? 'Gamepad connected: left stick moves, right stick looks. Inventories still need the mouse.'
-        : 'Plug in a gamepad and press any button to play with it.';
+        ? t('Gamepad connected: left stick moves, right stick looks. Inventories still need the mouse.')
+        : t('Plug in a gamepad and press any button to play with it.');
       for (const group of GROUPS) {
-        list.appendChild(el(`<div class="world-head">${group}</div>`));
+        list.appendChild(el(`<div class="world-head">${t(group)}</div>`));
         for (const a of ACTIONS.filter((x) => x.group === group)) {
           const row = el('<div class="control-row"><span class="control-name"></span></div>');
-          row.firstChild.textContent = a.label;
+          row.firstChild.textContent = actionLabel(a);
           for (let slot = 0; slot < 3; slot++) {
             const b = el('<button class="btn control-key"></button>');
             const on = waiting && waiting.id === a.id && waiting.slot === slot;
-            b.textContent = on ? (SLOT_KINDS[slot] === 'pad' ? 'Press a button…' : 'Press a key…') : codeLabel(table[a.id][slot]);
-            b.title = `${a.label} · ${SLOT_NAMES[slot]}: click to change, right-click to clear`;
+            b.textContent = on ? (SLOT_KINDS[slot] === 'pad' ? t('Press a button…') : t('Press a key…')) : codeLabel(table[a.id][slot]);
+            b.title = t('{name} · {slot}: click to change, right-click to clear', { name: actionLabel(a), slot: slotName(slot) });
             b.classList.toggle('waiting', !!on);
             b.classList.toggle('unbound', !table[a.id][slot]);
             b.onclick = () => { waiting = { id: a.id, slot }; note = ''; inp.capture = onCode; render(); };
-            b.oncontextmenu = (e) => { e.preventDefault(); stop(); commit(setBinding(table, a.id, slot, null).table); note = `${a.label} cleared`; render(); };
+            b.oncontextmenu = (e) => { e.preventDefault(); stop(); commit(setBinding(table, a.id, slot, null).table); note = t('{name} cleared', { name: actionLabel(a) }); render(); };
             row.appendChild(b);
           }
           list.appendChild(row);
@@ -1623,7 +1625,7 @@ export class UI {
       }
       if (keep >= 0) { const again = list.querySelectorAll('.control-key')[keep]; if (again) again.focus(); }
     };
-    s.querySelector('[data-a=reset]').onclick = () => { stop(); commit(resolveBindings(null)); note = 'Controls reset to the defaults'; render(); };
+    s.querySelector('[data-a=reset]').onclick = () => { stop(); commit(resolveBindings(null)); note = t('Controls reset to the defaults'); render(); };
     s.querySelector('[data-a=back]').onclick = () => { stop(); this.showPause(); };
     this.padBack = () => { stop(); this.showPause(); };
     this.layer.appendChild(s);
@@ -1635,27 +1637,27 @@ export class UI {
     this.clear();
     this.open = 'pause';
     const g = this.game;
-    const onOff = (k) => (g.settings[k] ? 'On' : 'Off');
-    const s = el(`<div class="screen pause-screen"><h2>Accessibility</h2>
-      <button class="btn" data-k="captions">Sound captions: ${onOff('captions')}</button>
-      <p class="sub">Shows what you hear, and from which side, at the bottom right.</p>
-      <button class="btn" data-k="largeCaptions">Larger subtitles: ${onOff('largeCaptions')}</button>
-      <p class="sub">Bigger sound captions on a darker strip (works with or without Sound captions turned on above).</p>
-      <button class="btn" data-k="reduceMotion">Reduce motion: ${onOff('reduceMotion')}</button>
-      <p class="sub">No head bob, hurt tilt, sprint zoom, trembling held items or apparitions, and about a third of the usual particles; Veilfire drifts slowly, falling stars and meteorite trails are left out and fewer grains blow in a dust storm.</p>
-      <button class="btn" data-k="reduceFlashing">Reduce flashing: ${onOff('reduceFlashing')}</button>
-      <p class="sub">Lightning only brightens the sky a little, hearts stop flashing, stars stay steady and fireworks and meteorite impacts throw fewer sparks with no white twinkles.</p>
-      <button class="btn" data-a="cb">Colour-blind HUD: ${COLOR_BLIND_LABELS[g.settings.colorBlind] || 'Off'}</button>
-      <p class="sub">Moves the status-bar colours apart and marks poison and hunger with a cross.</p>
-      <button class="btn" data-k="shapeCues">Shape cues: ${onOff('shapeCues')}</button>
-      <p class="sub">Patterns and symbols as well as colour: a cross on poison and hunger, a diamond on bonus hearts, hatching and words on the boss and raid bars, an arrow on each effect.</p>
-      <div class="field ui-scale-row"><label for="ui-scale">UI scale: <b id="ui-scale-v">${Math.round(cleanUiScale(g.settings.uiScale) * 100)}%</b></label><input type="range" id="ui-scale" min="${Math.round(UI_SCALE_MIN * 100)}" max="${Math.round(UI_SCALE_MAX * 100)}" step="${Math.round(UI_SCALE_STEP * 100)}" value="${Math.round(cleanUiScale(g.settings.uiScale) * 100)}" aria-valuetext="${Math.round(cleanUiScale(g.settings.uiScale) * 100)} percent" /></div>
-      <p class="sub">Makes the menus and the on-screen display smaller or larger, from 75 % to 150 %.</p>
-      <button class="btn" data-k="highContrast">High contrast: ${onOff('highContrast')}</button>
-      <p class="sub">Black and white menus with thick outlines, and brighter text on the screen.</p>
-      <button class="btn" data-k="largeText">Large text: ${onOff('largeText')}</button>
-      <p class="sub">Makes menu and screen text about a third bigger; menus scroll when they no longer fit.</p>
-      <button class="btn" data-a="back">Back</button></div>`);
+    const onOff = (k) => t(g.settings[k] ? 'On' : 'Off');
+    const s = el(`<div class="screen pause-screen"><h2>${t('Accessibility')}</h2>
+      <button class="btn" data-k="captions">${t('Sound captions')}: ${onOff('captions')}</button>
+      <p class="sub">${t('Shows what you hear, and from which side, at the bottom right.')}</p>
+      <button class="btn" data-k="largeCaptions">${t('Larger subtitles')}: ${onOff('largeCaptions')}</button>
+      <p class="sub">${t('Bigger sound captions on a darker strip (works with or without Sound captions turned on above).')}</p>
+      <button class="btn" data-k="reduceMotion">${t('Reduce motion')}: ${onOff('reduceMotion')}</button>
+      <p class="sub">${t('No head bob, hurt tilt, sprint zoom, trembling held items or apparitions, and about a third of the usual particles; Veilfire drifts slowly, falling stars and meteorite trails are left out and fewer grains blow in a dust storm.')}</p>
+      <button class="btn" data-k="reduceFlashing">${t('Reduce flashing')}: ${onOff('reduceFlashing')}</button>
+      <p class="sub">${t('Lightning only brightens the sky a little, hearts stop flashing, stars stay steady and fireworks and meteorite impacts throw fewer sparks with no white twinkles.')}</p>
+      <button class="btn" data-a="cb">${t('Colour-blind HUD')}: ${t(COLOR_BLIND_LABELS[g.settings.colorBlind] || 'Off')}</button>
+      <p class="sub">${t('Moves the status-bar colours apart and marks poison and hunger with a cross.')}</p>
+      <button class="btn" data-k="shapeCues">${t('Shape cues')}: ${onOff('shapeCues')}</button>
+      <p class="sub">${t('Patterns and symbols as well as colour: a cross on poison and hunger, a diamond on bonus hearts, hatching and words on the boss and raid bars, an arrow on each effect.')}</p>
+      <div class="field ui-scale-row"><label for="ui-scale">${t('UI scale')}: <b id="ui-scale-v">${Math.round(cleanUiScale(g.settings.uiScale) * 100)}%</b></label><input type="range" id="ui-scale" min="${Math.round(UI_SCALE_MIN * 100)}" max="${Math.round(UI_SCALE_MAX * 100)}" step="${Math.round(UI_SCALE_STEP * 100)}" value="${Math.round(cleanUiScale(g.settings.uiScale) * 100)}" aria-valuetext="${Math.round(cleanUiScale(g.settings.uiScale) * 100)} ${t('percent')}" /></div>
+      <p class="sub">${t('Makes the menus and the on-screen display smaller or larger, from 75 % to 150 %.')}</p>
+      <button class="btn" data-k="highContrast">${t('High contrast')}: ${onOff('highContrast')}</button>
+      <p class="sub">${t('Black and white menus with thick outlines, and brighter text on the screen.')}</p>
+      <button class="btn" data-k="largeText">${t('Large text')}: ${onOff('largeText')}</button>
+      <p class="sub">${t('Makes menu and screen text about a third bigger; menus scroll when they no longer fit.')}</p>
+      <button class="btn" data-a="back">${t('Back')}</button></div>`);
     s.querySelectorAll('[data-k]').forEach((b) => {
       const k = b.dataset.k, name = b.textContent.split(':')[0];
       b.setAttribute('aria-pressed', String(!!g.settings[k]));
@@ -1667,10 +1669,10 @@ export class UI {
       };
     });
     const scaleIn = s.querySelector('#ui-scale'), scaleV = s.querySelector('#ui-scale-v');
-    scaleIn.oninput = () => { const v = cleanUiScale(Number(scaleIn.value) / 100); scaleV.textContent = `${Math.round(v * 100)}%`; scaleIn.setAttribute('aria-valuetext', `${Math.round(v * 100)} percent`); };
+    scaleIn.oninput = () => { const v = cleanUiScale(Number(scaleIn.value) / 100); scaleV.textContent = `${Math.round(v * 100)}%`; scaleIn.setAttribute('aria-valuetext', `${Math.round(v * 100)} ${t('percent')}`); };
     scaleIn.onchange = () => g.setSetting('uiScale', cleanUiScale(Number(scaleIn.value) / 100)); // (applied on release, so the slider under the finger does not move)
     const cb = s.querySelector('[data-a=cb]');
-    cb.onclick = () => { g.setSetting('colorBlind', nextColorBlind(g.settings.colorBlind)); cb.textContent = `Colour-blind HUD: ${COLOR_BLIND_LABELS[g.settings.colorBlind]}`; };
+    cb.onclick = () => { g.setSetting('colorBlind', nextColorBlind(g.settings.colorBlind)); cb.textContent = `${t('Colour-blind HUD')}: ${t(COLOR_BLIND_LABELS[g.settings.colorBlind])}`; };
     s.querySelector('[data-a=back]').onclick = () => this.showPause();
     this.padBack = () => this.showPause();
     this.layer.appendChild(s);
@@ -1691,14 +1693,14 @@ export class UI {
       return;
     }
     if (net.isHost) {
-      const info = el(`<div class="net-room"><p class="sub">Open to friends · room code <b class="net-code"></b></p>
-        <div class="join-row"><input type="text" readonly class="net-link"><button class="btn" data-a="copy">Copy Link</button></div></div>`);
+      const info = el(`<div class="net-room"><p class="sub">${t('Open to friends · room code')} <b class="net-code"></b></p>
+        <div class="join-row"><input type="text" readonly class="net-link"><button class="btn" data-a="copy">${t('Copy Link')}</button></div></div>`);
       info.querySelector('.net-code').textContent = net.code;
       const link = info.querySelector('.net-link');
       link.value = net.link;
       link.onclick = () => link.select();
       info.querySelector('[data-a=copy]').onclick = (e) => this.copyText(link, net.link, e.target);
-      const codeRow = el('<div class="join-row" style="justify-content:center"><button class="btn" data-a="copycode">Copy Code</button></div>');
+      const codeRow = el(`<div class="join-row" style="justify-content:center"><button class="btn" data-a="copycode">${t('Copy Code')}</button></div>`);
       codeRow.querySelector('button').onclick = (e) => this.copyText(link, net.code, e.target);
       info.append(codeRow);
       box.append(info);
@@ -1706,7 +1708,7 @@ export class UI {
       const opts = el('<div class="btn-row"></div>');
       const opt = (label, key, get) => {
         const b = el('<button class="btn"></button>');
-        const show = () => { b.textContent = `${label}: ${get() ? 'On' : 'Off'}`; };
+        const show = () => { b.textContent = `${t(label)}: ${t(get() ? 'On' : 'Off')}`; };
         b.onclick = () => { net.setOptions({ [key]: !get() }); show(); };
         show();
         opts.appendChild(b);
@@ -1716,18 +1718,18 @@ export class UI {
       opt('Team friendly fire (all)', 'ffa', () => net.friendlyFireAll);
       // how many players fit (2 to 8, the host included): lowering it never removes anybody who is here
       const mp = el('<button class="btn"></button>');
-      const showMp = () => { mp.textContent = `Max players: ${net.maxPlayers}`; };
+      const showMp = () => { mp.textContent = `${t('Max players')}: ${net.maxPlayers}`; };
       mp.onclick = () => { net.setOptions({ mp: net.maxPlayers >= MAX_PLAYERS ? 2 : net.maxPlayers + 1 }); showMp(); };
       showMp();
       opts.appendChild(mp);
       box.append(opts);
     } else {
       const info = el('<p class="sub"></p>');
-      info.textContent = `Playing in ${net.welcome.hostName}'s world as ${net.name}`;
+      info.textContent = t("Playing in {host}'s world as {name}", { host: net.welcome.hostName, name: net.name });
       box.append(info);
       if (net.code) {
         // the room code, to pass on to somebody else
-        const row = el('<div class="join-row"><input type="text" readonly class="net-link"><button class="btn" data-a="copycode">Copy Code</button></div>');
+        const row = el(`<div class="join-row"><input type="text" readonly class="net-link"><button class="btn" data-a="copycode">${t('Copy Code')}</button></div>`);
         const inp = row.querySelector('input');
         inp.value = net.code;
         inp.onclick = () => inp.select();
@@ -1740,11 +1742,11 @@ export class UI {
     const list = el('<div class="net-list"></div>');
     for (const r of net.playerRows()) {
       const row = el('<div class="net-row"><span class="nm"></span><span class="tm"></span></div>');
-      row.querySelector('.nm').textContent = r.name + (r.host ? ' (host)' : r.op ? ' (op)' : '') + (r.you ? ' - you' : '');
+      row.querySelector('.nm').textContent = r.name + (r.host ? ' ' + t('(host)') : r.op ? ' ' + t('(op)') : '') + (r.you ? ' - ' + t('you') : '');
       if (r.color) row.querySelector('.nm').style.color = r.color;
       row.querySelector('.tm').textContent = r.team ? `[${r.team}]` : '';
       if (can && !r.you && net.social.canKick(net.name, r.name, net.hostName())) {
-        const k = el('<button class="btn net-kick">Kick</button>');
+        const k = el(`<button class="btn net-kick">${t('Kick')}</button>`);
         k.onclick = () => { for (const l of [].concat(net.socialCommand(`/kick ${r.name}`))) this.game.chat.add(l); this.showPause(); };
         row.append(k);
       }
@@ -1756,7 +1758,7 @@ export class UI {
   /** Copy `text` to the clipboard (selecting `input` as a fallback) and say so on `button`. */
   copyText(input, text, button) {
     input.select();
-    const done = () => { const was = button.textContent; button.textContent = 'Copied'; setTimeout(() => { button.textContent = was; }, 1500); };
+    const done = () => { const was = button.textContent; button.textContent = t('Copied'); setTimeout(() => { button.textContent = was; }, 1500); };
     if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, () => { document.execCommand('copy'); done(); });
     else { document.execCommand('copy'); done(); }
   }
@@ -1958,12 +1960,12 @@ export class UI {
     this.clear();
     this.open = 'pause';
     const g = this.game, done = g.milestones.done;
-    const s = el(`<div class="screen pause-screen"><h2>Milestones (${done.size}/${MILESTONES.length})</h2><div class="milestone-list"></div><button class="btn">Back</button></div>`);
+    const s = el(`<div class="screen pause-screen"><h2>${t('Milestones')} (${done.size}/${MILESTONES.length})</h2><div class="milestone-list"></div><button class="btn">${t('Back')}</button></div>`);
     const list = s.querySelector('.milestone-list');
     for (const m of MILESTONES) {
       const row = el(`<div class="milestone-row ${done.has(m.id) ? 'done' : ''}"><img src="${iconURL(m.icon)}"><div><b></b><div class="d"></div></div></div>`);
-      row.querySelector('b').textContent = m.title;
-      row.querySelector('.d').textContent = m.desc;
+      row.querySelector('b').textContent = t(m.title);
+      row.querySelector('.d').textContent = t(m.desc);
       list.appendChild(row);
     }
     s.querySelector('button').onclick = () => this.showPause();
@@ -2086,13 +2088,13 @@ export class UI {
     this.clear();
     this.open = 'pause';
     const g = this.game, st = g.player.stats;
-    const s = el(`<div class="screen pause-screen stats-screen"><h2>Statistics</h2>
-      <div class="stats-body" tabindex="0" role="region" aria-label="Statistics">
-        <table class="stats-table"><caption class="world-head">General</caption><tbody class="stats-general"></tbody></table>
-        <table class="stats-table"><caption class="world-head">Field Guide</caption><tbody class="stats-guide"></tbody></table>
-        <table class="stats-table"><caption class="world-head">Defeated</caption><tbody class="stats-kills"></tbody></table>
+    const s = el(`<div class="screen pause-screen stats-screen"><h2>${t('Statistics')}</h2>
+      <div class="stats-body" tabindex="0" role="region" aria-label="${t('Statistics')}">
+        <table class="stats-table"><caption class="world-head">${t('General')}</caption><tbody class="stats-general"></tbody></table>
+        <table class="stats-table"><caption class="world-head">${t('Field Guide')}</caption><tbody class="stats-guide"></tbody></table>
+        <table class="stats-table"><caption class="world-head">${t('Defeated')}</caption><tbody class="stats-kills"></tbody></table>
       </div>
-      <button class="btn" data-a="back">Back</button></div>`);
+      <button class="btn" data-a="back">${t('Back')}</button></div>`);
     const fill = (tbody, rows) => {
       for (const [label, value] of rows) {
         const tr = document.createElement('tr'), th = document.createElement('th'), td = document.createElement('td'); // (a <tr> cannot go through el(): a div drops it)
@@ -2101,10 +2103,10 @@ export class UI {
         tbody.appendChild(tr);
       }
     };
-    fill(s.querySelector('.stats-general'), statRows(st));
-    fill(s.querySelector('.stats-guide'), guideRows(guideOf(st)));
+    fill(s.querySelector('.stats-general'), statRows(st).map(([l, v]) => [t(l), v]));
+    fill(s.querySelector('.stats-guide'), guideRows(guideOf(st)).map(([l, v]) => [l.startsWith('Field Guide: ') ? t('Field Guide') + ': ' + t(l.slice(13)) : t(l), v]));
     const kills = killRows(st, MOBS);
-    fill(s.querySelector('.stats-kills'), kills.length ? kills.map((k) => [tCreature(k.name), String(k.count)]) : [['Nothing yet', '0']]);
+    fill(s.querySelector('.stats-kills'), kills.length ? kills.map((k) => [tCreature(k.name), String(k.count)]) : [[t('Nothing yet'), '0']]);
     const back = s.querySelector('[data-a=back]');
     const body = s.querySelector('.stats-body');
     back.onclick = () => this.showPause();

@@ -257,7 +257,7 @@ describe('colour is never the only cue', () => {
   });
 
   it('reputation and trade level are spoken as text and a progress bar, not just a coloured bar', () => {
-    expect(SCREENS).toMatch(/Standing: \$\{st\.name\}/);
+    expect(SCREENS).toMatch(/Standing: \{name\}/);
     expect(SCREENS).toMatch(/role="progressbar"/);
     expect(SCREENS).toMatch(/aria-valuenow/);
   });
