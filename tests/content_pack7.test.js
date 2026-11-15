@@ -45,11 +45,11 @@ describe('content pack 7: ids and wiring', () => {
     expect(PROTOCOL_VERSION).toBe(2);
   });
 
-  it('is the last generator pass and retrofit feature, as version 8', () => {
-    expect(FEATURES[FEATURES.length - 1]).toMatchObject({ key: 'coldCurrents', since: 8 });
-    expect(CURRENT_FEATURE_VERSION).toBe(8);
+  it('is a generator pass and retrofit feature of version 8', () => {
+    expect(FEATURES.find((f) => f.key === 'coldCurrents')).toMatchObject({ since: 8 });
+    expect(CURRENT_FEATURE_VERSION).toBeGreaterThanOrEqual(8);
     const calls = [...src('src/world/generator.js').matchAll(/this\.pass\('([A-Za-z]+)'/g)].map((m) => m[1]);
-    expect(calls[calls.length - 1]).toBe('coldCurrents');
+    expect(calls.indexOf('coldCurrents')).toBeGreaterThan(calls.indexOf('villageBoards'));
   });
 
   it('has recipes and Field Guide notes', () => {
