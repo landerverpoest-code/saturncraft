@@ -9,6 +9,7 @@
 // it for a minute it digs back down and is gone. Simulated on the host.
 import { MOBS, MOB_KEYS, CATEGORY } from './mobTypes.js';
 import { MODELS, FACES } from './models.js';
+import { decorate, followDecor } from './modelKit.js';
 import { I } from '../world/items.js';
 import { B } from '../world/blocks.js';
 
@@ -158,7 +159,7 @@ function keeperRender(m, model, alpha, sec) {
 }
 
 MODELS.hushkeeper = {
-  parts: [
+  parts: decorate([
     ['legL', [6, 13, 6], [4, 13, 0], [0, -6.5, 0], '#0e2e34', { anim: 'legA' }],
     ['legR', [6, 13, 6], [-4, 13, 0], [0, -6.5, 0], '#0e2e34', { anim: 'legB' }],
     ['body', [18, 20, 11], [0, 13, 0], [0, 10, 0], '#123c44'],
@@ -169,13 +170,39 @@ MODELS.hushkeeper = {
     ['tendrilR', [8, 9, 1], [-8, 42, 0], [-4, 1, 0], '#4ae8dc', { emissive: '#126a66' }],
     ['armL', [7, 26, 7], [12.5, 32, 0], [0, -12, 0], '#103840', { anim: 'armSwing' }],
     ['armR', [7, 26, 7], [-12.5, 32, 0], [0, -12, 0], '#103840', { anim: 'armSwingB' }],
-  ],
+  ], {
+    body: [
+      ['bellyBand', [18.8, 2, 11.8], [0, -6, 0], '#0a2428'],
+      ['shoulder@', [8, 4, 12], [9, 8.5, 0], '#0a2428'],
+      ['spineRidge', [6, 14, 2], [0, 2, 6.2], '#0a2830'],
+      ['spineGlow', [2, 8, 0.8], [0, 3, 7.1], '#7ffff0', { emissive: '#30e8d8' }],
+      ['rune@', [1.6, 1.6, 0.6], [5.5, 4, -5.6], '#4ae8dc', { emissive: '#30e8d8' }],
+      ['runeB@', [1.6, 1.6, 0.6], [4.5, -2, -5.6], '#4ae8dc', { emissive: '#30e8d8' }],
+    ],
+    ribs: [['ribGap0', [14.6, 1, 1.4], [0, 2, 0], '#0c2c32'], ['ribGap1', [14.6, 1, 1.4], [0, -2, 0], '#0c2c32']],
+    head: [
+      ['browRidge', [16.8, 2.4, 10.8], [0, 3.4, 0], '#0a2428'],
+      ['jawSpike@', [1.6, 3, 1.6], [5.5, -5.5, -4.6], '#c8e0d8'],
+      ['cheekPlate@', [1, 5, 6], [8.3, -1.5, -0.5], '#1c4c54'],
+      ['crestSpike', [3, 4, 3], [0, 8, 0.5], '#0a2428'],
+    ],
+    'arm@': [
+      ['elbow@', [7.8, 5, 7.8], [0, -1, 0], '#0a2c32'],
+      ['claw@', [7.6, 4, 7.6], [0, -12, 0], '#c8e0d8'],
+      ['ember@', [1.2, 10, 0.6], [0, 4, -3.7], '#4ae8dc', { emissive: '#30e8d8' }],
+    ],
+    'leg@': [
+      ['foot@', [7, 3, 9], [0, -5.5, -1.5], '#0a2428'],
+      ['knee@', [6.6, 3, 6.6], [0, 1.5, 0], '#1c4c54'],
+    ],
+  }),
 };
 // blind: no eyes, only a wide dark jaw and a scatter of glowing specks
 FACES.hushkeeper = (c) => {
-  c.fillStyle = '#04161a'; c.fillRect(3, 10, 10, 3);
-  c.fillStyle = '#c8e0d8'; for (const x of [4, 6, 9, 11]) c.fillRect(x, 10, 1, 1);
-  c.fillStyle = '#4ef0e2'; for (const [x, y] of [[2, 3], [7, 2], [12, 4], [4, 6], [10, 7], [13, 1]]) c.fillRect(x, y, 1, 1);
+  c.fillStyle = '#04161a'; c.fillRect(2, 9, 12, 5);
+  c.fillStyle = '#c8e0d8'; for (const x of [3, 5, 7, 9, 11]) { c.fillRect(x, 9, 1, 2); c.fillRect(x + 1, 12, 1, 2); }
+  c.fillStyle = '#0a2c32'; c.fillRect(6, 6, 1, 2); c.fillRect(9, 6, 1, 2); c.fillRect(2, 4, 5, 1); c.fillRect(9, 4, 5, 1);
+  c.fillStyle = '#4ef0e2'; for (const [x, y] of [[2, 2], [7, 1], [12, 3], [4, 6], [11, 7], [13, 1], [3, 5], [9, 5]]) c.fillRect(x, y, 1, 1);
 };
 
 export const HUSHKEEPER_DEF = {
@@ -186,3 +213,6 @@ export const HUSHKEEPER_DEF = {
   drops: [{ id: B.HUSH_CATALYST, min: 1, max: 1 }, { id: I.HUSH_SHARD, min: 1, max: 2 }],
 };
 if (!MOBS.hushkeeper) { MOBS.hushkeeper = HUSHKEEPER_DEF; MOB_KEYS.push('hushkeeper'); }
+
+// detail boxes follow their host parts (head pitch, claws...)
+followDecor(HUSHKEEPER_DEF, 'hushkeeper');

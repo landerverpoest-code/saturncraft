@@ -11,6 +11,7 @@
 import * as THREE from 'three';
 import { MOBS, MOB_KEYS, CATEGORY } from './mobTypes.js';
 import { MODELS, FACES } from './models.js';
+import { decorate, followDecor } from './modelKit.js';
 import { ITEMS, maxStack } from '../world/items.js';
 import { B, SOLID, isFluid } from '../world/blocks.js';
 import { BIOMES } from '../world/biomes.js';
@@ -278,19 +279,37 @@ function hoverlingRender(m, model, alpha, sec) {
 }
 
 MODELS.hoverling = {
-  parts: [
+  parts: decorate([
     ['body', [4, 5, 3], [0, 3.5, 0], [0, 0, 0], '#4ab4f0', { emissive: '#103a5a' }],
     ['head', [5, 5, 5], [0, 6, 0], [0, 2.5, 0], '#7ad4ff', { face: 'hoverling' }],
     ['armL', [1, 4, 1], [2.5, 5.5, 0], [0, -2, 0], '#4ab4f0'],
     ['armR', [1, 4, 1], [-2.5, 5.5, 0], [0, -2, 0], '#4ab4f0'],
     ['wingL', [0.5, 5, 7], [1, 6, 1.5], [0, -0.5, 3.5], '#dff6ff', { alpha: 0.55 }],
     ['wingR', [0.5, 5, 7], [-1, 6, 1.5], [0, -0.5, 3.5], '#dff6ff', { alpha: 0.55 }],
-  ],
+  ], {
+    body: [['belly', [3, 3.4, 0.6], [0, -0.6, -1.6], '#e8fbff'], ['sash', [4.6, 1, 3.6], [0, 1.4, 0], '#2a84c0'], ['hem', [4.6, 0.8, 3.6], [0, -2.3, 0], '#7ad4ff']],
+    head: [
+      ['hairTuft', [3, 1.6, 3], [0, 3.1, 0.2], '#c8f0ff'],
+      ['hairLock', [1.4, 2.4, 1.4], [0, 3.6, 1.6], '#c8f0ff'],
+      ['earFin@', [1, 2.6, 1.6], [3, 0.6, 0.2], '#4ab4f0'],
+      ['cheek@', [1, 1, 0.5], [1.7, -0.8, -2.6], '#ffa8c8'],
+    ],
+    'arm@': [['hand@', [1.6, 1.4, 1.6], [0, -2.5, 0], '#7ad4ff']],
+    wingL: [['veinL', [0.7, 0.6, 6], [0, 0.8, 0], '#9ad8ff', { alpha: 0.8 }], ['wingTipL', [0.7, 2, 2.4], [0, -2.2, 3], '#bfe9ff', { alpha: 0.7 }]],
+    wingR: [['veinR', [0.7, 0.6, 6], [0, 0.8, 0], '#9ad8ff', { alpha: 0.8 }], ['wingTipR', [0.7, 2, 2.4], [0, -2.2, 3], '#bfe9ff', { alpha: 0.7 }]],
+    '*': [
+      ['footL', [1.4, 2.6, 1.4], [1, 1.6, 0], [0, -1.3, 0], '#3a94d0'],
+      ['footR', [1.4, 2.6, 1.4], [-1, 1.6, 0], [0, -1.3, 0], '#3a94d0'],
+      ['glowTail', [1.4, 2, 1.4], [0, 1.4, 1.4], [0, -0.6, 0.6], '#9ae8ff', { emissive: '#4ab4f0' }],
+    ],
+  }),
 };
 FACES.hoverling = (c) => {
-  c.fillStyle = '#0a2a4a'; c.fillRect(3, 6, 3, 3); c.fillRect(10, 6, 3, 3);
-  c.fillStyle = '#ffffff'; c.fillRect(4, 6, 1, 1); c.fillRect(11, 6, 1, 1);
-  c.fillStyle = '#3a8ac8'; c.fillRect(6, 11, 4, 1);
+  c.fillStyle = '#0a2a4a'; c.fillRect(2, 5, 4, 4); c.fillRect(10, 5, 4, 4);
+  c.fillStyle = '#3a9ae0'; c.fillRect(3, 6, 2, 2); c.fillRect(11, 6, 2, 2);
+  c.fillStyle = '#ffffff'; c.fillRect(3, 6, 1, 1); c.fillRect(11, 6, 1, 1);
+  c.fillStyle = '#3a8ac8'; c.fillRect(6, 11, 4, 1); c.fillRect(5, 10, 1, 1); c.fillRect(10, 10, 1, 1);
+  c.fillStyle = '#ffa8c8'; c.fillRect(1, 9, 2, 1); c.fillRect(13, 9, 2, 1);
 };
 
 export const HOVERLING = {
@@ -338,3 +357,6 @@ export function hollowSpawnTick(spawner) {
   spawner.spawnMob('hoverling', x + 0.5, y, z + 0.5);
   return 1;
 }
+
+// detail boxes follow their host parts (head pitch, claws...)
+followDecor(HOVERLING, 'hoverling');
