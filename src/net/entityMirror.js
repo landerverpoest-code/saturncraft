@@ -105,7 +105,7 @@ export class EntityMirror {
       e.headPitch = s.headPitch;
       e.target = s.target ? 'player' : null;
       e.angry = s.angry; e.sheared = s.sheared; e.tamed = s.tamed; e.sitting = s.sitting; e.enemy = s.enemy ? 'player' : null;
-      e.woolColor = s.woolColor; e.fuse = s.fuse; e.special = s.special; e.beam = s.beam; e.moving = s.moving; e.captain = s.captain; // Marauder Captains carry a banner
+      e.woolColor = s.woolColor; e.variant = s.variant | 0; e.fuse = s.fuse; e.special = s.special; e.beam = s.beam; e.moving = s.moving; e.captain = s.captain; // Marauder Captains carry a banner
       e.netDriver = s.driver; // who steers it (a player's id, -1 nobody)
       e.saddled = s.saddled; e.dancing = s.dancing; e.passengerId = s.passenger >= 0 ? s.passenger : null; e.heldItemId = ITEMS[s.heldItem] ? s.heldItem : 0; // Dune Striders, Hoverlings
       if (e.def && e.def.villager) { // a settler's trade (robe colour) follows the host's, including losing it; a new one shows the green burst

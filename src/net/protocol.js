@@ -189,7 +189,7 @@ export function unpackLeash(a) {
 export function packMob(m, playerIdOf = () => -1) {
   const f = (m.body && m.body.onGround ? MF.GROUND : 0) | (m.target ? MF.TARGET : 0) | (m.angry ? MF.ANGRY : 0) |
     (m.age < 0 ? MF.BABY : 0) | (m.sheared ? MF.SHEARED : 0) | (m.tamed ? MF.TAMED : 0) | (m.sitting ? MF.SITTING : 0) | (m.enemy ? MF.ENEMY : 0) | (m.special ? MF.SPECIAL : 0) | (m.captain ? MF.CAPTAIN : 0) | (m.mount ? MF.RIDING : 0);
-  return [m.id, m.type, r2(m.x), r2(m.y), r2(m.z), r2(m.yaw), r2(m.headPitch || 0), r2(m.health), m.hurtTime | 0, m.deathTime | 0, f, m.woolColor | 0, m.fuse | 0, m.profession || 0,
+  return [m.id, m.type, r2(m.x), r2(m.y), r2(m.z), r2(m.yaw), r2(m.headPitch || 0), r2(m.health), m.hurtTime | 0, m.deathTime | 0, f, ((m.woolColor | 0) & 255) | ((m.variant | 0) << 8), m.fuse | 0, m.profession || 0, // (woolColor in the low byte, the coat variant above it: mobs/variants.js)
     m.beam ? [r2(m.beam.x), r2(m.beam.y), r2(m.beam.z)] : 0, m.moving ? 1 : 0, // Deepeye beams (mobs/oceanMobs.js)
     m.customName || 0, packLeash(m.leashHolder, playerIdOf), m.emerging > 0 ? m.emerging | 0 : 0, m.digging > 0 ? m.digging | 0 : 0,
     equipIds(m.equip) || 0, // worn armour and held weapon (mobs/equipment.js)
@@ -203,7 +203,7 @@ export function unpackMob(a) {
     id: a[0], type: a[1], x: a[2], y: a[3], z: a[4], yaw: a[5], headPitch: a[6], health: a[7], hurtTime: a[8], deathTime: a[9],
     onGround: !!(f & MF.GROUND), target: !!(f & MF.TARGET), angry: !!(f & MF.ANGRY), baby: !!(f & MF.BABY),
     sheared: !!(f & MF.SHEARED), tamed: !!(f & MF.TAMED), sitting: !!(f & MF.SITTING), enemy: !!(f & MF.ENEMY), special: !!(f & MF.SPECIAL), captain: !!(f & MF.CAPTAIN), riding: !!(f & MF.RIDING),
-    woolColor: a[11] | 0, fuse: a[12] | 0, profession: TRADE_PROFESSIONS.includes(a[13]) || a[13] === 'peddler' ? a[13] : null, // (a Roving Peddler's trade, mobs/peddler.js)
+    woolColor: (a[11] | 0) & 255, variant: ((a[11] | 0) >> 8) & 255, fuse: a[12] | 0, profession: TRADE_PROFESSIONS.includes(a[13]) || a[13] === 'peddler' ? a[13] : null, // (a Roving Peddler's trade, mobs/peddler.js)
     beam: Array.isArray(a[14]) && a[14].length === 3 && a[14].every(Number.isFinite) ? { x: a[14][0], y: a[14][1], z: a[14][2] } : null, moving: !!a[15],
     name: cleanLabel(a[16]), leash: unpackLeash(a[17]), emerging: Math.max(0, a[18] | 0), digging: Math.max(0, a[19] | 0),
     equip: Array.isArray(a[20]) ? a[20].slice(0, 5).map((v) => (Number.isInteger(v) && v > 0 ? v : 0)) : null,

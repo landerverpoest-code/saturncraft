@@ -16,7 +16,8 @@ import { shouldDespawn, shouldBurnInSun } from './spawnRules.js';
 import { deathTipAngle } from './mobAnim.js';
 import { buildModel, animateModel, addCaptainBanner } from './models.js';
 import { entityGlow } from '../render/entityLight.js';
-import { randomSheepColor, WOOL_RGB } from '../world/colors.js';
+import { WOOL_RGB } from '../world/colors.js';
+import { hasVariants, rollVariant, inheritVariant, legacyVariant, variantCount, FLEECER_WOOL, HUT_CAT_VARIANT } from './variants.js'; // coat variants of the animals
 import { WOOL_ITEMS } from '../world/items.js';
 import { RESTOCK_TICKS, cleanLevel } from './trades.js';
 import { isVillageKey, villageKey } from './reputation.js';
@@ -63,10 +64,8 @@ function angleTo(dx, dz) { return Math.atan2(-dx, -dz); }
 function wrap(a) { while (a > Math.PI) a -= TAU; while (a < -Math.PI) a += TAU; return a; }
 function gaussian() { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(TAU * v); }
 
-/** The coat of the black Purrling living in each swamp hut (an index into CAT_COATS). */
-export const HUT_CAT_COAT = 2;
-/** Purrling coats: [fur, ears and tail] (ginger, tabby grey, black, white, calico-ish brown, siamese cream). */
-const CAT_COATS = [['#c8883a', '#a86a2a'], ['#8a8a86', '#5a5a56'], ['#2a2626', '#141212'], ['#ecebe6', '#c8c6c0'], ['#8a6040', '#3a2a1e'], ['#e8dcc0', '#5a4636']];
+/** The coat variant of the black Purrling living in each swamp hut (mobs/variants.js). */
+export const HUT_CAT_COAT = HUT_CAT_VARIANT;
 
 /** Blocks that knock a horn off a charging Cragbuck. */
 const HORN_BREAKERS = new Set([B.STONE, B.COBBLESTONE, B.OAK_LOG, B.BIRCH_LOG, B.SPRUCE_LOG, B.JUNGLE_LOG, B.ACACIA_LOG, B.DARK_OAK_LOG, B.BLOSSOM_LOG, B.MANGROVE_LOG, B.COAL_ORE, B.IRON_ORE, B.GOLD_ORE, B.DIAMOND_ORE, B.ICE, B.GRANITE].filter((id) => id !== undefined));
@@ -110,7 +109,8 @@ export class Mob {
     // breeding: age < 0 is a baby growing up, age > 0 a breeding cooldown
     this.age = 0; this.loveTicks = 0; this.breedTime = 0;
     this.sheared = false; this.eatTimer = 0;
-    this.woolColor = type === 'fleecer' ? randomSheepColor() : type === 'purrling' ? Math.floor(Math.random() * CAT_COATS.length) : type === 'squawklet' ? Math.floor(Math.random() * PARROT_COLORS.length) : type === 'gillnewt' ? (Math.random() < 1 / 120 ? 4 : Math.floor(Math.random() * 4)) : 0; // (Purrlings keep their coat here)
+    this.woolColor = type === 'squawklet' ? Math.floor(Math.random() * PARROT_COLORS.length) : type === 'gillnewt' ? (Math.random() < 1 / 120 ? 4 : Math.floor(Math.random() * 4)) : 0; // (Fleecers' wool follows their coat variant)
+    this.variant = 0; if (hasVariants(type)) this.setVariant(rollVariant(type, this.id)); // coat variant (mobs/variants.js); spawnMob rolls it again with the biome
     // settlers: profession, trade offers and the house they live in
     this.profession = null; this.trades = []; this.home = null; this.lastRestock = 0;
     this.jobSite = null; this.traded = false; // the job-site block it has claimed (mobs/jobSites.js); traded with: keeps its trade
@@ -119,7 +119,7 @@ export class Mob {
     // Howlers: tamed by the player (owner), sitting, current enemy
     this.tamed = false; this.sitting = false; this.enemy = null;
     // Gallopers: coat colour, temper (rises with every failed ride), saddle
-    if (type === 'galloper') { this.coat = Math.floor(Math.random() * 5); this.temper = 0; this.saddled = false; this.health = 15 + Math.floor(Math.random() * 16); this.maxHp = this.health; this.jumpPower = 0.5 + Math.random() * 0.2; this.seatY = 0.85; }
+    if (type === 'galloper') { this.temper = 0; this.saddled = false; this.health = 15 + Math.floor(Math.random() * 16); this.maxHp = this.health; this.jumpPower = 0.5 + Math.random() * 0.2; this.seatY = 0.85; }
     // Wobblers (slimes) come in three sizes
     if (type === 'wobbler') this.setSize([1, 2, 4][Math.floor(Math.random() * 3)]);
     // gear (mobs/equipment.js): { hand, armor: [helmet, chest, legs, boots] }; picked-up slots always drop
@@ -127,6 +127,13 @@ export class Mob {
     this.offhand = null; // the off-hand item (mobs/offhand.js): a Marauder's shield or charm, a Vixling's loot
     // chicken jockeys: the rider steers its mount
     this.mount = null; this.passenger = null;
+  }
+
+  /** Set the coat variant (an index into VARIANTS[type]); a Fleecer's undyed wool counts as the colour that coat is. */
+  setVariant(v) {
+    if (!hasVariants(this.type)) return;
+    this.variant = Math.max(0, Math.min(variantCount(this.type) - 1, v | 0));
+    if (this.type === 'fleecer') this.woolColor = FLEECER_WOOL[this.variant];
   }
 
   setSize(n) {
@@ -157,12 +164,16 @@ export class Mob {
   }
 
   /** State kept when the mob is saved with its chunk. */
-  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor, profession: this.profession, trades: this.trades, home: this.home, lastRestock: this.lastRestock, jobSite: this.jobSite || undefined, traded: this.traded || undefined, tradeCount: this.tradeCount || undefined, level: this.level > 1 ? this.level : undefined, village: this.village || undefined, lastGift: this.lastGift > -1e8 ? this.lastGift : undefined, size: this.size, coat: this.coat, temper: this.temper, saddled: this.saddled, maxHp: this.maxHp, playerMade: this.playerMade, tamed: this.tamed, sitting: this.sitting, ownerName: this.ownerName, horns: this.horns, hive: this.hive, nectar: this.nectar, beach: this.beach, pregnant: this.pregnant, captain: this.captain || undefined, raider: this.raider || undefined, raidId: this.raidId || undefined, customName: this.customName || undefined, leash: leashSaveData(this), offhand: this.offhand || undefined, equip: this.equip || undefined, equipPicked: this.equipPicked || undefined, canPickUp: this.canPickUp || undefined, ...(this.def.companion ? companionSave(this) : {}), ...(this.def.saveExtra ? this.def.saveExtra(this) : {}) }; }
+  saveData() { return { type: this.type, x: this.x, y: this.y, z: this.z, health: this.health, yaw: this.yaw, age: this.age, sheared: this.sheared, woolColor: this.woolColor, profession: this.profession, trades: this.trades, home: this.home, lastRestock: this.lastRestock, jobSite: this.jobSite || undefined, traded: this.traded || undefined, tradeCount: this.tradeCount || undefined, level: this.level > 1 ? this.level : undefined, village: this.village || undefined, lastGift: this.lastGift > -1e8 ? this.lastGift : undefined, size: this.size, variant: hasVariants(this.type) ? this.variant : undefined, temper: this.temper, saddled: this.saddled, maxHp: this.maxHp, playerMade: this.playerMade, tamed: this.tamed, sitting: this.sitting, ownerName: this.ownerName, horns: this.horns, hive: this.hive, nectar: this.nectar, beach: this.beach, pregnant: this.pregnant, captain: this.captain || undefined, raider: this.raider || undefined, raidId: this.raidId || undefined, customName: this.customName || undefined, leash: leashSaveData(this), offhand: this.offhand || undefined, equip: this.equip || undefined, equipPicked: this.equipPicked || undefined, canPickUp: this.canPickUp || undefined, ...(this.def.companion ? companionSave(this) : {}), ...(this.def.saveExtra ? this.def.saveExtra(this) : {}) }; }
   loadData(s) {
     this.health = s.health; this.yaw = s.yaw;
     if (s.age < 0) { this.setBaby(true); this.age = s.age; } else { if (this.age < 0) this.setBaby(false); this.age = s.age || 0; }
     this.sheared = !!s.sheared;
     if (s.woolColor !== undefined) this.woolColor = s.woolColor;
+    if (hasVariants(this.type)) {
+      if (s.variant !== undefined) this.variant = Math.max(0, Math.min(variantCount(this.type) - 1, s.variant | 0));
+      else { const lv = legacyVariant(this.type, s); if (lv !== undefined) this.variant = lv; } // a save from before coat variants
+    }
     if (s.horns !== undefined) this.horns = s.horns;
     if (s.hive) { this.hive = s.hive; this.nectar = !!s.nectar; }
     if (s.beach) { this.beach = s.beach; this.pregnant = !!s.pregnant; }
@@ -170,7 +181,7 @@ export class Mob {
     if (s.captain) this.captain = true; // Marauder Captains (and raiders) of patrols and raids, see raids.js
     if (s.raider) { this.raider = true; this.raidId = s.raidId || null; }
     if (s.size) { this.setSize(s.size); this.health = s.health; }
-    if (this.type === 'galloper') { if (s.coat !== undefined) this.coat = s.coat; this.temper = s.temper || 0; this.saddled = !!s.saddled; if (s.maxHp) this.maxHp = s.maxHp; }
+    if (this.type === 'galloper') { this.temper = s.temper || 0; this.saddled = !!s.saddled; if (s.maxHp) this.maxHp = s.maxHp; }
     if (s.maxHp && !this.maxHp) this.maxHp = s.maxHp; // boosted hit points of named guardians (world/rimekeep.js)
     if (s.tamed) { this.tamed = true; this.sitting = !!s.sitting; if (s.ownerName) this.ownerName = s.ownerName; }
     if (this.def.companion) companionLoad(this, s); // a Vixling's gift timer
@@ -334,6 +345,12 @@ export class Mob {
     const baby = g.spawner.spawnMob(this.type, (this.x + mate.x) / 2, Math.max(this.y, mate.y), (this.z + mate.z) / 2);
     baby.setBaby(true);
     baby.woolColor = Math.random() < 0.5 ? this.woolColor : mate.woolColor; // (the reference blends dye colours)
+    if (hasVariants(this.type)) { // the young wear one of their parents' coats, now and then a new one (mobs/variants.js)
+      const dyed = (m) => (this.type === 'fleecer' && m.woolColor !== FLEECER_WOOL[m.variant] ? m.woolColor : -1);
+      const w = baby.woolColor;
+      baby.setVariant(inheritVariant(this.type, this.variant, mate.variant, baby.id));
+      if (this.type === 'fleecer') baby.woolColor = w === dyed(this) || w === dyed(mate) ? w : FLEECER_WOOL[baby.variant];
+    }
     baby.yaw = this.yaw;
     baby.persistent = true; // young animals stay (ambient ones such as Dolphins and Gillnewts would otherwise despawn)
     if (this.def.onBreed) this.def.onBreed(baby, this, mate, g); // (Slagboars born to a bred pair are calm: mobs/cinderFauna.js)
@@ -1821,7 +1838,7 @@ export class Mob {
   }
 
   // ---------------------------------------------------------------------------
-  createMesh() { return buildModel(this.type); }
+  createMesh() { const m = buildModel(this.type, this.variant); return m; }
 
   /** Worn armour as shells over the body parts and the held weapon in the right hand (an archer's bow is part of its model). */
   renderEquip(m, L) {
@@ -1870,8 +1887,10 @@ export class Mob {
       parts.wool.visible = !this.sheared; parts.tuft.visible = !this.sheared;
       const rgb = WOOL_RGB[this.woolColor || 0], mat = parts.wool.children[0].material;
       if (mat.userData.color !== this.woolColor) {
+        if (!mat.userData.natural) mat.userData.natural = mat.userData.base.clone(); // the coat variant's own wool (undyed)
         mat.userData.color = this.woolColor;
-        mat.userData.base.setRGB(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255).convertSRGBToLinear();
+        if (this.woolColor) mat.userData.base.setRGB(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255).convertSRGBToLinear();
+        else mat.userData.base.copy(mat.userData.natural);
       }
     }
     const yaw = this.prevYaw + wrap(this.yaw - this.prevYaw) * alpha;
@@ -1888,13 +1907,6 @@ export class Mob {
     if (this.captain && !m.userData.banner) addCaptainBanner(m);
     if (m.userData.bannerFlag) m.userData.bannerFlag.rotation.x = -(0.12 + Math.sin(sec * 2.3 + this.id) * 0.06 + this.limbAmount * 0.25); // sways, streams out when walking
     if (parts && parts.saddle) {
-      if (m.userData.coat !== this.coat) {
-        m.userData.coat = this.coat;
-        const [body, mane] = [['#8a5a32', '#3a2414'], ['#e8e2d8', '#b8b0a4'], ['#2a2420', '#141210'], ['#a8682e', '#5a3418'], ['#7a7470', '#4a4440']][this.coat || 0];
-        const tint = (k, col) => { const mm = parts[k].children[0].material; (Array.isArray(mm) ? mm[0] : mm).userData.base.set(col); };
-        for (const k of ['body', 'neck', 'head', 'legFL', 'legFR', 'legBL', 'legBR']) tint(k, body);
-        for (const k of ['mane', 'tail']) tint(k, mane);
-      }
       parts.saddle.visible = !!this.saddled;
       parts.tail.rotation.x = 0.5 + Math.sin(sec * 3 + this.id) * 0.1;
     }
@@ -1937,13 +1949,6 @@ export class Mob {
     }
     if (parts && parts.collar) {
       parts.collar.visible = this.tamed;
-      if (this.type === 'purrling' && m.userData.coat !== this.woolColor) {
-        m.userData.coat = this.woolColor;
-        const [fur, dark] = CAT_COATS[this.woolColor % CAT_COATS.length];
-        const tint = (k, col) => { const mm = parts[k].children[0].material; for (const x of Array.isArray(mm) ? [mm[0], mm[5]] : [mm]) x.userData.base.set(col); };
-        for (const k of ['body', 'mane', 'head', 'legFL', 'legFR', 'legBL', 'legBR']) tint(k, fur);
-        for (const k of ['earL', 'earR', 'tail']) tint(k, dark);
-      }
       for (const k of ['snout', 'nose', 'earL', 'earR']) parts[k].rotation.x = parts.head.rotation.x;
       // sitting: hindquarters down, chest up, tail on the ground
       const sit = this.sitting && this.deathTime === 0;
