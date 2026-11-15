@@ -9,7 +9,7 @@
 // * Container fullness (reference formula): 0 when empty, otherwise
 //   floor(1 + 14 * (sum of count / max stack) / slots).
 // * Other blocks a comparator reads: a composter (its level), a jukebox (the
-//   disc), a cake (2 x the slices left), a lectern (the open page, world/books.js),
+//   disc), a cake (2 x the slices left), a lectern (the open page, world/books.js), a record shelf (world/recordShelf.js),
 //   an item frame (1 + the item's rotation; world/signalBlocks.js) and a pulsing
 //   Hush Sensor (the frequency of the vibration it heard; world/vibrations.js).
 // * Daylight Sensor: sky light at the sensor times the brightness of the three
@@ -18,6 +18,7 @@ import { B, isFurnace, isBox } from './blocks.js';
 import { maxStack } from './items.js';
 import { doubleChestHalves } from './chests.js';
 import { lecternSignal } from './books.js';
+import { shelfSignal } from './recordShelf.js';
 import { cakeSignal, frameSignal } from './signalBlocks.js';
 import { sensorFrequency } from './vibrations.js';
 
@@ -50,7 +51,7 @@ export function daylightLevel(sky, brightness, inverted = false) {
 export function isReadable(id) {
   return id === B.CHEST || id === B.BARREL || isBox(id) || id === B.HOPPER || id === B.DISPENSER || id === B.DROPPER || id === B.ASSEMBLER
     || id === B.BREWING_STAND || id === B.COMPOSTER || id === B.JUKEBOX || isFurnace(id)
-    || id === B.CAKE || id === B.LECTERN || id === B.ITEM_FRAME || id === B.HUSH_SENSOR || id === B.CALIBRATED_HUSH_SENSOR;
+    || id === B.CAKE || id === B.LECTERN || id === B.RECORD_SHELF || id === B.ITEM_FRAME || id === B.HUSH_SENSOR || id === B.CALIBRATED_HUSH_SENSOR;
 }
 
 // look the state up without creating it (getChest would roll a dungeon chest's loot)
@@ -68,6 +69,7 @@ export function containerSignal(game, x, y, z) {
   if (id === B.CAKE) return cakeSignal(w.getMeta(x, y, z) & 7);
   if (id === B.HUSH_SENSOR || id === B.CALIBRATED_HUSH_SENSOR) return sensorFrequency(w.getMeta(x, y, z));
   if (id === B.LECTERN) { const l = game.lecterns && game.lecterns.get(`${x},${y},${z}`); return l ? lecternSignal(l.book, l.page) : 0; }
+  if (id === B.RECORD_SHELF) return shelfSignal(game.shelves && game.shelves.get(`${x},${y},${z}`));
   if (id === B.ITEM_FRAME) return frameSignal(w.getMeta(x, y, z), !!(game.frames && game.frames.get(`${x},${y},${z}`)));
   const chestAt = (a, b, c) => peek(game.chests, game.getChest && ((p, q, r) => game.getChest(p, q, r)), a, b, c);
   if (id === B.CHEST) {

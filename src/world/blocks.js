@@ -899,7 +899,7 @@ def(B.CARTOGRAPHERS_TABLE, "Cartographer's Table", { hardness: 2.5, resistance: 
 // Content pack 7 (appended, no id shifts; world/coldCurrents.js): Driftsnow gives way under whoever steps on it and freezes
 // them, Scaldrock burns feet and drags still water down (Mournsand lifts it), the Echo Coffer opens its owner's own store
 // wherever it stands (player/echoCoffer.js).
-ext('DRIFTSNOW'); ext('SCALDROCK'); ext('ECHO_COFFER'); ext('ASSEMBLER'); ext('TIDE_HEART'); ext('EMBER_HEARTH'); ext('GLIMMERMOSS'); ext('DAWNFERN'); ext('DAWNFERN_PLANT'); for (const [key] of COLORS) ext(key.toUpperCase() + '_GLAZED_TILES'); ext('MITE_STONE'); ext('MITE_COBBLE'); ext('MITE_BRICKS');
+ext('DRIFTSNOW'); ext('SCALDROCK'); ext('ECHO_COFFER'); ext('ASSEMBLER'); ext('TIDE_HEART'); ext('EMBER_HEARTH'); ext('GLIMMERMOSS'); ext('DAWNFERN'); ext('DAWNFERN_PLANT'); for (const [key] of COLORS) ext(key.toUpperCase() + '_GLAZED_TILES'); ext('MITE_STONE'); ext('MITE_COBBLE'); ext('MITE_BRICKS'); ext('HANGING_SIGN'); ext('RECORD_SHELF');
 def(B.DRIFTSNOW, 'Driftsnow', { hardness: 0.25, resistance: 0.25, tool: TOOL.SHOVEL, solid: false, opaque: false, opacity: 2, sound: 'snow' });
 def(B.SCALDROCK, 'Scaldrock', { hardness: 0.5, resistance: 0.5, tool: TOOL.PICKAXE, tier: TIER.WOOD, emit: 3, hot: true });
 def(B.ECHO_COFFER, 'Echo Coffer', { hardness: 22.5, resistance: 600, tool: TOOL.PICKAXE, tier: TIER.WOOD, emit: 7, tex: { top: 'echo_coffer_top', bottom: 'echo_coffer_top', side: 'echo_coffer_side', front: 'echo_coffer_front' } });
@@ -937,6 +937,12 @@ for (const [key, name] of COLORS) {
 def(B.MITE_STONE, 'Mite-Riddled Stone', { hardness: 0.75, resistance: 0.75, tool: TOOL.PICKAXE, drops: null, sound: 'stone', tex: { all: 'stone' } });
 def(B.MITE_COBBLE, 'Mite-Riddled Cobblestone', { hardness: 0.75, resistance: 0.75, tool: TOOL.PICKAXE, drops: null, sound: 'stone', tex: { all: 'cobblestone' } });
 def(B.MITE_BRICKS, 'Mite-Riddled Stone Bricks', { hardness: 0.75, resistance: 0.75, tool: TOOL.PICKAXE, drops: null, sound: 'stone', tex: { all: 'stone_bricks' } });
+
+// Hanging Sign (world/hangingSigns.js): hangs on chains from under a solid block (meta bit 2 clear, bit 0 = board axis) or from a bracket on
+// a wall (bit 2 set, bits 0-1 = side of the wall); two lines of text per face live in game.signs. Drops itself.
+def(B.HANGING_SIGN, 'Hanging Sign', { hardness: 1, resistance: 1, tool: TOOL.AXE, sound: 'wood', flammable: true, solid: false, opaque: false, shape: SHAPE.BOXES, needsSupport: true, tex: { all: 'oak_planks' } });
+// Record Shelf (world/recordShelf.js): a bookshelf with six slots for books, maps and paper; meta bit n = slot n holds something (spines show in the texture)
+def(B.RECORD_SHELF, 'Record Shelf', { hardness: 1.5, resistance: 1.5, tool: TOOL.AXE, sound: 'wood', flammable: true, tex: { top: 'oak_planks', bottom: 'oak_planks', side: 'record_shelf_0' } });
 
 export const NUM_BLOCKS = BLOCKS.length;
 // Glazed blocks (the placing code records the facing in their meta; the mesher turns their top face by it)

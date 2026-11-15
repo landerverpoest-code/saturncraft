@@ -64,6 +64,8 @@ shaped(['SSS', 'SSS', 'SSS'], { S: I.MELON_SLICE }, B.MELON, 1);
 shapeless([B.PUMPKIN, I.EGG], I.PUMPKIN_PIE, 1);
 shapeless([I.PAPER, I.PAPER, I.PAPER, I.LEATHER], I.BOOK, 1);
 shaped(['PPP', 'BBB', 'PPP'], { P: 'planks', B: I.BOOK }, B.BOOKSHELF, 1);
+shaped(['PPP', 'B B', 'PPP'], { P: 'planks', B: I.BOOK }, B.RECORD_SHELF, 1); // a bookshelf with six slots (world/recordShelf.js)
+shaped(['S S', 'PPP', 'PPP'], { S: I.STICK, P: 'planks' }, B.HANGING_SIGN, 6); // a board on two stick chains (world/hangingSigns.js)
 shaped(['BB', 'BB'], { B: I.BRICK }, B.BRICKS, 1);
 shaped([' B ', 'DOD', 'OOO'], { B: I.BOOK, D: I.DIAMOND, O: B.OBSIDIAN }, B.ENCHANTING_TABLE, 1);
 shaped(['BBB', ' I ', 'III'], { B: B.IRON_BLOCK, I: I.IRON_INGOT }, B.ANVIL, 1);

@@ -48,6 +48,8 @@ import { FrameRenderer } from './render/frames.js';
 import { PotRenderer } from './render/pots.js';
 import { BrushSites, isSuspicious, cleanPotFaces } from './world/archaeology.js';
 import { cleanLectern, lecternMeta } from './world/books.js';
+import { hangingText } from './world/hangingSigns.js';
+import { cleanShelf, shelfMeta } from './world/recordShelf.js';
 import { cleanCamp, campTick } from './world/campfireCooking.js';
 import { projectileHit } from './world/signalBlocks.js';
 import { chimeSoundAt, pitchOf, noteName, noteColor } from './world/chimes.js';
@@ -161,6 +163,7 @@ export class Game {
     this.signs = new Map();       // "x,y,z" -> four lines of text
     this.frames = new Map();      // "x,y,z" -> the item stack in an item frame
     this.pots = new Map();        // "x,y,z" -> a Decorated Pot's four sides (world/archaeology.js)
+    this.shelves = new Map();     // "x,y,z" -> six slots of a Record Shelf (world/recordShelf.js)
     this.lecterns = new Map();    // "x,y,z" -> { book, page } of a Lectern (world/books.js)
     this.campfires = new Map();   // "x,y,z" -> { slots: [{ id, t } | null x4] } the foods cooking on a campfire (world/campfireCooking.js)
     this.archaeology = new BrushSites(); // digs being brushed (world/archaeology.js)
@@ -960,6 +963,12 @@ export class Game {
       if (st && this.net && this.net.isClient) this.setFrameItem(x, y, z, null, true); // the host drops it when it sees the edit
       else if (st) { this.setFrameItem(x, y, z, null); if (!this.player.creative) this.entities.spawnItem(x + 0.5, y + 0.5, z + 0.5, st); }
     }
+    if (id === B.RECORD_SHELF) {
+      // a broken shelf drops what it held (on a guest the host drops it when it sees the edit)
+      const sl = this.shelves.get(`${x},${y},${z}`);
+      if (sl && this.net && this.net.isClient) this.setShelf(x, y, z, null, true);
+      else if (sl) { this.setShelf(x, y, z, null); for (const st of sl) if (st) this.entities.spawnItem(x + 0.5, y + 0.5, z + 0.5, st); }
+    }
     if (id === B.LECTERN) {
       // a broken lectern drops its book (on a guest the host drops it when it sees the edit)
       const l = this.lecterns.get(`${x},${y},${z}`);
@@ -1179,6 +1188,18 @@ export class Game {
     }
   }
 
+  /** Put a Record Shelf's six slots in place (null empties it); shared in multiplayer. The host keeps the block's spine bits in step. */
+  setShelf(x, y, z, slots, fromNet = false) {
+    const k = `${x},${y},${z}`, s = cleanShelf(slots);
+    if (s) this.shelves.set(k, s); else this.shelves.delete(k);
+    const w = this.world;
+    if (!(this.net && this.net.isClient) && w.getBlock(x, y, z) === B.RECORD_SHELF) {
+      const m = shelfMeta(s); // the spines in the texture follow what the shelf holds
+      if (w.getMeta(x, y, z) !== m) w.setBlock(x, y, z, B.RECORD_SHELF, m);
+    }
+    if (!fromNet && this.net && this.net.sendShelf) this.net.sendShelf(x, y, z, s);
+  }
+
   /**
    * Put a book on a Lectern, take it off (null) or turn its page (state = { book, page });
    * shared in multiplayer. The host (or single player) keeps the block's book bit in step
@@ -1228,7 +1249,7 @@ export class Game {
 
   /** Write on a sign (shared with everyone in multiplayer). */
   setSignText(x, y, z, lines, fromNet = false) {
-    const clean = [0, 1, 2, 3].map((i) => String((lines && lines[i]) || '').slice(0, 15));
+    const clean = this.world.getBlock(x, y, z) === B.HANGING_SIGN ? hangingText(lines) : [0, 1, 2, 3].map((i) => String((lines && lines[i]) || '').slice(0, 15));
     this.signs.set(`${x},${y},${z}`, clean);
     if (!fromNet && this.net) this.net.sendSign ? this.net.sendSign(x, y, z, clean) : null;
   }

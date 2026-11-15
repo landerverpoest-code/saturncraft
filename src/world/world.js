@@ -23,6 +23,7 @@ import { potTick, isReady as potReady, BREW_STAGE_TICKS } from './cookingPot.js'
 import { SETTLE_TICKS } from './composter.js';
 import { CURRENT_FEATURE_VERSION } from './retrofit.js';
 import { mossSupported } from './glimmermoss.js';
+import { hangingSupported } from './hangingSigns.js';
 import { SIDE_DIRS, selectionBox, collisionBoxes, SHAPED_COLLISION, DOOR_UPPER, BED_HEAD } from './shapes.js';
 
 export function chunkKey(cx, cz) { return (cx + 32768) * 65536 + (cz + 32768); }
@@ -326,6 +327,7 @@ export class World {
     if (id === B.ITEM_FRAME) { const [dx, , dz] = SIDE_DIRS[(metaIn ?? this.getMeta(x, y, z)) & 3]; return !!SOLID[this.getBlock(x + dx, y, z + dz)]; }
     if (id === B.OAK_WALL_SIGN) { const [dx, , dz] = SIDE_DIRS[(metaIn ?? this.getMeta(x, y, z)) & 3]; return !!SOLID[this.getBlock(x + dx, y, z + dz)]; }
     if (id === B.OAK_SIGN) return !!SOLID[below];
+    if (id === B.HANGING_SIGN) return hangingSupported((a, b, c) => this.getBlock(a, b, c), x, y, z, metaIn ?? this.getMeta(x, y, z));
     if (id === B.PAINTING || id === B.PAINTING_B) return paintingIntact(this, x, y, z, id, metaIn ?? this.getMeta(x, y, z));
     if (BLOCKS[id].carpet || BLOCKS[id].candle || id === B.CAKE) return !!SOLID[below];
     if (id === B.SNOW_LAYER) return (!!SOLID[below] && !!OPAQUE[below]) || LEAVES_SET.has(below) || (below === B.SNOW_LAYER && (this.getMeta(x, y - 1, z) & 7) === 7);

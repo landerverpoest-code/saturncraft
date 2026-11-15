@@ -63,6 +63,8 @@ import { brushPlateback, equipBarding, removeBarding } from '../mobs/pack7Mobs.j
 import { galeLeap } from '../mobs/gustling.js';
 import { summonColossus } from '../mobs/slagColossus.js';
 import { isBook } from '../world/books.js';
+import { hangingPlaceMeta } from '../world/hangingSigns.js';
+import { slotFromHit, useShelf, canShelve } from '../world/recordShelf.js';
 import { carveFacing, CARVE_SEEDS } from '../mobs/pumpkins.js';
 import { CAKE_SLICES, CAKE_FOOD } from '../world/signalBlocks.js';
 import { hearthCharges, canCharge, chargeUp, canSet, HEARTH_MAX_CHARGES, HEARTH_DIMENSION } from '../world/emberHearth.js';
@@ -91,7 +93,7 @@ const ORE_XP = {
 };
 const BREAK_DELAY = 5;
 /** Blocks that right-click opens / toggles instead of using the held item. */
-const USABLE_BLOCKS = new Set([B.CARTOGRAPHERS_TABLE, B.ECHO_COFFER, B.EMBER_HEARTH, B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.CHEST, B.BARREL, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL, B.BREWING_STAND, B.GLOOMSHELL_BOX, B.HOPPER, B.COMPOSTER, B.SWEET_BERRY_BUSH, B.DEWBERRY_BRAMBLE, B.COOKING_POT, B.COOKING_POT_BREW, B.JUKEBOX, B.CAVE_VINES_LIT, B.FLOWER_POT, B.BEACON, B.DISPENSER, B.DROPPER, B.ASSEMBLER, B.GRINDSTONE, B.STONECUTTER, B.LECTERN, B.CAKE, B.LOOM, B.BOUNTY_BOARD, B.HAG_CAULDRON, ...BOX_COLORS, B.VAULT]);
+const USABLE_BLOCKS = new Set([B.CARTOGRAPHERS_TABLE, B.RECORD_SHELF, B.HANGING_SIGN, B.ECHO_COFFER, B.EMBER_HEARTH, B.WORKBENCH, B.FURNACE, B.FURNACE_LIT, B.SMOKER, B.SMOKER_LIT, B.BLAST_FURNACE, B.BLAST_FURNACE_LIT, B.CHEST, B.BARREL, B.DOOR, B.BED, B.ENCHANTING_TABLE, B.ANVIL, B.BREWING_STAND, B.GLOOMSHELL_BOX, B.HOPPER, B.COMPOSTER, B.SWEET_BERRY_BUSH, B.DEWBERRY_BRAMBLE, B.COOKING_POT, B.COOKING_POT_BREW, B.JUKEBOX, B.CAVE_VINES_LIT, B.FLOWER_POT, B.BEACON, B.DISPENSER, B.DROPPER, B.ASSEMBLER, B.GRINDSTONE, B.STONECUTTER, B.LECTERN, B.CAKE, B.LOOM, B.BOUNTY_BOARD, B.HAG_CAULDRON, ...BOX_COLORS, B.VAULT]);
 const CIRCUIT_USE = new Set([B.LEVER, B.STONE_BUTTON, B.REPEATER, B.CHIME_BLOCK, B.COMPARATOR, B.DAYLIGHT_SENSOR, B.PULSE_GATE]);
 const CIRCUIT_PLACE = new Set([B.LEVER, B.STONE_BUTTON, B.CINNABAR_WIRE, B.REPEATER, B.WOODEN_PRESSURE_PLATE, B.STONE_PRESSURE_PLATE, B.LIGHT_WEIGHTED_PLATE, B.HEAVY_WEIGHTED_PLATE, B.PISTON, B.STICKY_PISTON, B.COMPARATOR, B.OBSERVER, B.DAYLIGHT_SENSOR, B.PULSE_GATE, B.SNARE_POST, B.SNARE_CORD]);
 const USE_DELAY = 4;
@@ -125,6 +127,7 @@ export class Interaction {
     const [ex, ey, ez] = p.eyePos();
     const [dx, dy, dz] = p.lookDir();
     this.target = g.world.raycast(ex, ey, ez, dx, dy, dz, PHYS.REACH);
+    if (this.target) this.target.hit = [ex + dx * this.target.dist, ey + dy * this.target.dist, ez + dz * this.target.dist]; // the exact point aimed at
     this.mobTarget = g.entities ? g.entities.raycastMob(ex, ey, ez, dx, dy, dz, reachOf(p.inventory.selectedStack)) : null; // (a Glaive reaches 4.5, a Dagger 2.5)
     if (this.mobTarget && this.target && this.target.dist < this.mobTarget.dist) this.mobTarget = null;
     if (g.net) {
@@ -1118,7 +1121,8 @@ export class Interaction {
     // Interactive blocks
     if (!p.sneaking || !st) {
       if (t.id === B.WORKBENCH) { g.ui.openWorkbench(); return true; }
-      if (t.id === B.OAK_SIGN || t.id === B.OAK_WALL_SIGN) { g.ui.openSignEditor(t.x, t.y, t.z); return true; }
+      if (t.id === B.OAK_SIGN || t.id === B.OAK_WALL_SIGN || t.id === B.HANGING_SIGN) { g.ui.openSignEditor(t.x, t.y, t.z); return true; }
+      if (t.id === B.RECORD_SHELF && this.useShelf(t, st)) { this.swing = SWING_TICKS; return true; }
       if (t.id === B.ITEM_FRAME) {
         // put the held item in, or turn the item that is there
         const k = `${t.x},${t.y},${t.z}`, m = w.getMeta(t.x, t.y, t.z);
@@ -1341,6 +1345,7 @@ export class Interaction {
       meta = s | (upper && pshape === SHAPE.STAIRS ? STAIRS_UPSIDE : 0);
     }
     if (placeId === B.LANTERN) meta = t.face[1] === -1 ? 1 : 0;
+    if (placeId === B.HANGING_SIGN) { meta = hangingPlaceMeta(t.face, ldx, ldz); if (meta < 0) return false; } // under a block or on a wall bracket
     if (placeId === B.MANGROVE_PROPAGULE && t.face[1] === -1) meta = PROPAGULE_HANGING | 3; // hung back under leaves (ripe) // hangs when placed under a block
     if (pshape === SHAPE.TRAPDOOR) {
       // hinged on the clicked wall, or on the far side from the player on floors and ceilings; upper half when placed high
@@ -1396,6 +1401,7 @@ export class Interaction {
     if (lift) { p.body.y = py + 1; p.body.vy = Math.max(p.body.vy, 0); }
     if (chestPair) w.setBlockUrgent(chestPair.x, chestPair.y, chestPair.z, B.CHEST, chestPair.meta);
     if (isBox(placeId) && g.onBoxPlaced) g.onBoxPlaced(px, py, pz, st); // the box unpacks what it carried
+    if (placeId === B.HANGING_SIGN) g.ui.openSignEditor(px, py, pz); // then write on it
     if (placeId === B.DECORATED_POT) g.setPot(px, py, pz, st.sherds || null); // the pot keeps its sherds
     if (CROPS.has(placeId) && g.milestones) g.milestones.event('plant');
     if (isFluid(placeId)) w.scheduleTick(px, py, pz, 5);
@@ -1410,6 +1416,21 @@ export class Interaction {
       p.inventory.changed();
     } else p.inventory.removeFromSlot(p.inventory.selected, 1);
     this.swing = SWING_TICKS;
+    return true;
+  }
+
+  /** Right-click on a Record Shelf: put the held book, map or paper in the slot aimed at, or take one out with an empty hand. */
+  useShelf(t, st) {
+    const g = this.game, p = g.player, k = `${t.x},${t.y},${t.z}`;
+    const h = t.hit || [t.x + 0.5, t.y + 0.5, t.z + 0.5];
+    const slot = slotFromHit(t.face, h[0] - t.x, h[1] - t.y, h[2] - t.z);
+    if (st && !canShelve(st)) return false;
+    const r = useShelf(g.shelves.get(k), slot, st || null);
+    if (!r) return false;
+    g.setShelf(t.x, t.y, t.z, r.slots);
+    if (r.put !== null) { if (!p.creative) p.inventory.removeFromSlot(p.inventory.selected, 1); }
+    else if (r.took) { const back = { ...r.took }; if (p.inventory.add(back)) g.entities.spawnItem(p.x, p.y + 1, p.z, back); }
+    g.audio.play('page', [t.x + 0.5, t.y + 0.5, t.z + 0.5]);
     return true;
   }
 

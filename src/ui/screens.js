@@ -1801,14 +1801,15 @@ export class UI {
     this.open = 'sign';
     const g = this.game, k = `${x},${y},${z}`;
     g.input.unlock();
-    const lines = (g.signs.get(k) || ['', '', '', '']).slice();
+    const n = g.world.getBlock(x, y, z) === B.HANGING_SIGN ? 2 : 4; // a hanging sign has two lines
+    const lines = Array.from({ length: n }, (_, i) => (g.signs.get(k) || [])[i] || '');
     const s = el('<div class="screen"><h2>Edit Sign</h2><div class="sign-edit"></div><button class="btn">Done</button></div>');
     const box = s.querySelector('.sign-edit');
     const inputs = lines.map((l, i) => {
       const inp = el('<input maxlength="15" spellcheck="false">');
       inp.value = l;
       inp.oninput = () => { lines[i] = inp.value; g.setSignText(x, y, z, lines); };
-      inp.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') { if (i < 3) inputs[i + 1].focus(); else done(); } if (e.key === 'Escape') done(); };
+      inp.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') { if (i < n - 1) inputs[i + 1].focus(); else done(); } if (e.key === 'Escape') done(); };
       box.appendChild(inp);
       return inp;
     });
