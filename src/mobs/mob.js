@@ -1930,7 +1930,7 @@ export class Mob {
       if (sit) {
         const cfg = this.def.companion;
         m.position.y = py - (cfg.sitDrop ?? 0.14) * m.scale.y;
-        for (const k of ['legFL', 'legFR', 'legBL', 'legBR']) parts[k].rotation.x = cfg.kneel ? 1.45 : (k.startsWith('legB') ? 1.3 : -0.25);
+        for (const k of ['legFL', 'legFR', 'legBL', 'legBR']) if (parts[k]) parts[k].rotation.x = cfg.kneel ? 1.45 : (k.startsWith('legB') ? 1.3 : -0.25);
         if (parts.tail) parts.tail.rotation.x = 0.9;
       }
     }

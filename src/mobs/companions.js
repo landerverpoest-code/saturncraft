@@ -11,6 +11,9 @@
 //                        (potatoes, beetroot, mushrooms, an apple snouted out of the ground).
 //   * Frostbear:         offer raw redfin (1 in 3). Perk 'guard': a tame bear mauls monsters that
 //                        come within reach of its owner (5 damage). Raw silverfin still breeds it.
+//   * Gloamlynx, Dustmole, Tarnling (taming round, mobs/tamingRound.js): perks 'pouncer' (hunts Stone Mites, curls up on its
+//                        owner's bed at night), 'digger' (digs up one find every 4-6 minutes) and 'collector' (fetches loose metal
+//                        and ore within 8 blocks and brings it to the owner).
 // A tame companion sits and stands on a right-click (empty hand, owner only), follows its owner
 // (teleporting when over 12 blocks behind), fights what hurt the owner or what the owner hit, heals
 // and breeds with its usual food (young of tame parents are tame and keep the owner), and is saved
@@ -21,6 +24,7 @@
 import { CATEGORY } from './mobTypes.js';
 import { I } from '../world/items.js';
 import { B } from '../world/blocks.js';
+import { nextDigDelay, pickDig, digReady, pickCollectTarget, pickPest, findBedNear, isNightLight, COLLECT_REACH, DELIVER_REACH } from './tamingRound.js';
 
 export const TAME_CHANCE = 1 / 3;        // per offered item
 export const FOLLOW_DISTANCE = 6;        // walk to the owner beyond this
@@ -29,6 +33,7 @@ export const GUARD_RADIUS = 10;          // guard perk: monsters this close to t
 export const GUARD_LEASH = 16;           // ... and this close to the Cragbuck itself
 export const RAM_COOLDOWN = 40;
 export const GIFT_DELAY = [6000, 6000];  // forager perk: 5-10 minutes between gifts [base, spread]
+export const DIG_DELAY_MAX = 7200;       // a dig timer never loads above this
 export const GIFT_RANGE = 8;             // the owner must be this close for a gift
 
 /** Is this a mob type that can be tamed as a companion? */
@@ -91,6 +96,11 @@ export function guardWants(self, owner, e) {
 /** Pick what to fight: whatever hurt the owner, then whatever the owner hit, then (guard perk) the nearest monster. */
 export function pickFoe(self, owner, entities, alive = () => true) {
   for (const e of [owner.lastHurtBy, owner.lastAttacked]) if (canFight(self, e) && alive(e)) return e;
+  if (self.def.companion && self.def.companion.perk === 'pouncer') {
+    const pest = pickPest(self, entities);
+    if (pest && alive(pest)) return pest;
+    return null;
+  }
   if (self.def.companion && self.def.companion.perk === 'guard') {
     let best = null, bd = Infinity;
     for (const e of entities) {
@@ -160,6 +170,9 @@ export function companionAI(m, g, p, pdist) {
   if (!ownerAlive(p)) { m.wanderAI(g, 0.8); return; }
   if (pdist > TELEPORT_DISTANCE) { if (m.teleportTo(g, p.x + (Math.random() - 0.5) * 3, p.z + (Math.random() - 0.5) * 3, p.y + 2)) return; }
   if (cfg.perk === 'forager') forage(m, g, p, pdist);
+  else if (cfg.perk === 'digger') digUp(m, g, p, pdist);
+  else if (cfg.perk === 'collector' && collect(m, g, p, pdist)) return;
+  else if (cfg.perk === 'pouncer' && curlUpOnBed(m, g, p)) return;
   if (pdist > FOLLOW_DISTANCE) { m.chase(g, p, 1.3); return; }
   if (m.tempted(g)) { faceTowards(m, p.x, p.z); m.headPitch = -0.3; return; }
   if (pdist < 2.5) { m.wander = null; m.path = null; return; }
@@ -178,6 +191,62 @@ function forage(m, g, p, pdist) {
   g.audio.play(m.def.sound, [m.x, m.y + 0.5, m.z], 0.6);
 }
 
+/** The digger perk: a Dustmole turns up one find near its owner every 4 to 6 minutes. */
+function digUp(m, g, p, pdist) {
+  if (m.digIn === undefined) m.digIn = nextDigDelay();
+  m.digIn--;
+  if (!digReady(m.digIn, { ownerDist: pdist, onGround: m.body.onGround, baby: m.baby })) return;
+  m.digIn = nextDigDelay();
+  const d = Math.hypot(p.x - m.x, p.z - m.z) || 1;
+  g.entities.spawnItem(m.x, m.y + 0.4, m.z, pickDig(Math.random), [(p.x - m.x) / d * 0.1, 0.2, (p.z - m.z) / d * 0.1]);
+  m.hearts(g, 2, true);
+  if (m.def.digDust) m.def.digDust(m, g);
+  g.audio.play(m.def.sound, [m.x, m.y + 0.3, m.z], 0.6);
+}
+
+/** The collector perk: fetch loose metal and ore, hand it to the owner. Returns true while it is busy (so it does not wander off). */
+function collect(m, g, p, pdist) {
+  if (m.baby) return false;
+  if (m.carry) {
+    if (pdist > DELIVER_REACH) { m.chase(g, p, 1.2); return pdist <= 24; }
+    const e = g.entities.spawnItem(m.x, m.y + 0.3, m.z, m.carry, [(p.x - m.x) / (pdist || 1) * 0.1, 0.18, (p.z - m.z) / (pdist || 1) * 0.1]);
+    if (e) e.noFetch = true; // (it must not fetch its own delivery again)
+    m.carry = null; m.fetch = null;
+    m.hearts(g, 2, true);
+    g.audio.play(m.def.sound, [m.x, m.y + 0.3, m.z], 0.7);
+    return true;
+  }
+  if (m.fetch && (m.fetch.dead || m.fetch.noFetch)) m.fetch = null;
+  if (!m.fetch && g.ticks % 10 === m.id % 10) m.fetch = pickCollectTarget(m, p, g.entities.list.filter((e) => e.kind === 'item'));
+  const t = m.fetch;
+  if (!t) return false;
+  if (Math.hypot(t.x - m.x, t.z - m.z) > COLLECT_REACH || Math.abs(t.y - m.y) > 1.5) { m.chase(g, t, 1.2); return true; }
+  m.carry = { id: t.stack.id, count: t.stack.count, damage: t.stack.damage || 0 };
+  t.dead = true;
+  g.audio.play('pop', [m.x, m.y + 0.3, m.z], 0.6);
+  return true;
+}
+
+/** The pouncer's night habit: a Gloamlynx curls up on its owner's bed (a bed within a few blocks of the owner). */
+function curlUpOnBed(m, g, p) {
+  if (!g.sky || !g.sky.state || !isNightLight(g.sky.state.combined) || m.enemy || m.baby) { m.bedSpot = null; return false; }
+  if (g.ticks % 60 === m.id % 60 || m.bedSpot === undefined) m.bedSpot = findBedNear((x, y, z) => g.world.getBlock(x, y, z), p);
+  const bed = m.bedSpot;
+  if (!bed) return false;
+  const d = Math.hypot(bed.x - m.x, bed.z - m.z);
+  if (d > 0.9) { m.steer(bed.x, bed.z, 1); return true; }
+  m.move = null; m.path = null; m.wander = null;
+  return true;
+}
+
 /** Hooks for the mob definitions: the gift timer survives a save. */
-export const companionSave = (m) => (m.giftIn !== undefined && m.def.companion.perk === 'forager' ? { giftIn: m.giftIn | 0 } : {});
-export const companionLoad = (m, s) => { if (Number.isFinite(s.giftIn)) m.giftIn = Math.max(1, Math.min(GIFT_DELAY[0] + GIFT_DELAY[1], s.giftIn | 0)); };
+export const companionSave = (m) => ({
+  ...(m.giftIn !== undefined && m.def.companion.perk === 'forager' ? { giftIn: m.giftIn | 0 } : {}),
+  ...(m.digIn !== undefined && m.def.companion.perk === 'digger' ? { digIn: m.digIn | 0 } : {}),
+  ...(m.carry && m.def.companion.perk === 'collector' ? { carry: { id: m.carry.id, count: m.carry.count, damage: m.carry.damage || 0 } } : {}),
+});
+export const companionLoad = (m, s) => {
+  if (Number.isFinite(s.giftIn)) m.giftIn = Math.max(1, Math.min(GIFT_DELAY[0] + GIFT_DELAY[1], s.giftIn | 0));
+  if (Number.isFinite(s.digIn)) m.digIn = Math.max(1, Math.min(DIG_DELAY_MAX, s.digIn | 0));
+  if (s.carry && Number.isFinite(s.carry.id) && s.carry.count > 0) m.carry = { id: s.carry.id | 0, count: Math.min(64, s.carry.count | 0), damage: s.carry.damage | 0 };
+};

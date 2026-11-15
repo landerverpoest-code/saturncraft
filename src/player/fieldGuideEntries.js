@@ -120,7 +120,7 @@ export function dropIds(def) {
 
 function foodOf(def) {
   const feeds = named(def.food || []);
-  let tames = named([...(def.tameFood || []), ...((def.companion && def.companion.tameFood) || [])]);
+  let tames = named([...(def.tameFood || []), ...((def.companion && def.companion.tameFood) || []), ...((def.mount && def.mount.tameFood) || [])]);
   if (!tames.length && def.tameable && I.BONE !== undefined) tames = [I.BONE]; // Howlers are won over with a bone
   return { feeds, tames };
 }
