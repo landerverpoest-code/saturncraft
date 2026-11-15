@@ -1,5 +1,6 @@
 // Player interaction with the world: mining (with break progress), placing,
 // attacking with the attack cooldown, eating, buckets and containers.
+import { eatBroth, brothEffectText, TASTE_GOAL } from '../world/wandererBroth.js';
 import { useEgg } from '../mobs/creatureEggs.js';
 import { rule } from '../world/gameRules.js';
 import { Mob } from '../mobs/mob.js';
@@ -584,6 +585,10 @@ export class Interaction {
     this.shake('eat', p.x - 0.5, p.y + 0.5, p.z - 0.5);
     if (f.effect && Math.random() < f.effect.chance) p.addEffect(f.effect.type, f.effect.ticks);
     for (const [type, ticks, amp] of f.effects || []) p.addEffect(type, ticks, amp); // a Gilded Apple's sure effects
+    if (f.broth) { // Wanderer's Broth: the flower's effect, and the blend is learned
+      const r = eatBroth(p, st);
+      if (r.isNew) g.hud.toast(`Tasted a new blend: ${brothEffectText(r.key)} (${Math.min(r.count, TASTE_GOAL)}/${TASTE_GOAL})`, 2600);
+    }
     p.inventory.removeFromSlot(p.inventory.selected, 1);
     if (f.leaves) p.inventory.add({ id: f.leaves === 'vial' ? I.GLASS_VIAL : I.BOWL, count: 1, damage: 0 }); // soup leaves its bowl, honey its vial
     if (f.cures && p.effects[f.cures]) { delete p.effects[f.cures]; for (const fn of p.listeners.effect || []) fn(null); }

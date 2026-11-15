@@ -22,6 +22,7 @@ import { isleNear } from '../world/skyIsles.js';
 import { icebergsNear, hulksNear } from '../world/frozenDeep.js';
 import { inGreatRift } from '../world/carvers.js';
 import { inMagmaLake } from '../world/magmaLakes.js';
+import { TASTE_GOAL } from '../world/wandererBroth.js';
 import { tabComplete } from './fieldGuideEntries.js';
 
 const has = (g, ...ids) => ids.some((id) => g.player.inventory.count(id) > 0);
@@ -45,6 +46,7 @@ export const MILESTONES = [
   { id: 'iron', title: 'Forged in Fire', desc: 'Get an iron ingot', icon: I.IRON_INGOT, inv: (g) => has(g, I.IRON_INGOT) },
   { id: 'armor', title: 'Dressed for Battle', desc: 'Wear a piece of armour', icon: I.IRON_CHESTPLATE, inv: (g) => g.player.inventory.armor.some(Boolean) },
   { id: 'diamond', title: 'Glittering Find', desc: 'Get a diamond', icon: I.DIAMOND, inv: (g) => has(g, I.DIAMOND) },
+  { id: 'taste_tester', title: 'Taste Tester', desc: "Taste five different blends of Wanderer's Broth", icon: I.WANDERERS_BROTH, tick: (g) => (g.player.broths || []).length >= TASTE_GOAL },
   { id: 'bread', title: 'Daily Bread', desc: 'Bake bread from wheat', icon: I.BREAD, inv: (g) => has(g, I.BREAD) },
   { id: 'plant', title: 'Green Fingers', desc: 'Plant a crop on farmland', icon: I.WHEAT_SEEDS, event: 'plant' },
   { id: 'kill', title: 'First Blood', desc: 'Defeat a monster', icon: I.IRON_SWORD, event: 'kill' },

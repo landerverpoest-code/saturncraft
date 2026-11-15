@@ -216,6 +216,7 @@ function itemEntries() {
   for (const k of PACK6_BLOCKS) if (B[k] !== undefined) add(B[k], PACK6_WHY[k]); // the Frozen Deep's ice and the Cartographer's Table
   for (const k of Object.keys(PACK7_WHY)) if (B[k] !== undefined) add(B[k], PACK7_WHY[k]); // Driftsnow, Scaldrock and the Echo Coffer
   add(I.DAWNFERN_SEEDS, 'Rootsnout (it roots them up every few minutes)'); add(I.PLATE_SCALE, 'Plateback (brushed with a Brush, or shed)'); add(I.HOWLER_BARDING, 'Crafting (six Plate Scales)'); // (Pack 7 creatures)
+  add(I.WANDERERS_BROTH, 'Crafting (a Bowl, a flower and a mushroom; the flower decides the effect)');
   for (const d of DISHES) add(d.id, 'Cooking Pot'); // every dish the Cooking Pot can make (world/cookingPot.js), so a new recipe joins the guide by itself
   return [...sources.entries()].sort((a, b) => a[0] - b[0]).map(([id, from]) => ({ key: String(id), id, name: itemName(id), from }));
 }

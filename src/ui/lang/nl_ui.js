@@ -81,6 +81,7 @@ export default {
   'Sand in Everything': 'Zand overal', 'Be caught out in a dust storm': 'Word overvallen door een zandstorm',
   'Into the Mist': 'De mist in', 'Walk through the ground fog of a swamp or forest at dawn': 'Loop bij zonsopgang door de grondmist van een moeras of bos',
   'Festival of Lanterns': 'Lantaarnfeest', 'Join a village for its Lantern Festival': 'Doe mee met het Lantaarnfeest van een dorp',
+  'Taste Tester': 'Smaakproever', "Taste five different blends of Wanderer's Broth": "Proef vijf verschillende mengsels van Zwerversbouillon",
   'Hold Your Breath': 'Houd je adem in', 'Spend a Hush Night under the aurora': 'Beleef een Stille Nacht onder het noorderlicht',
 
   // ---- toasts and notices (game.js) ----

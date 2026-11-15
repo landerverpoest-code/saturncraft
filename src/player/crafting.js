@@ -7,6 +7,7 @@ import { bookCopy } from '../world/books.js';
 import { COLOR } from '../world/colors.js';
 import { fireworkRecipe } from '../world/fireworks.js';
 import { inlayRecipe, STENCIL_IDS } from './inlays.js';
+import { brothFromGrid } from '../world/wandererBroth.js';
 
 export const TAGS = {
   planks: [B.BAMBOO_PLANKS, B.OAK_PLANKS, B.SPRUCE_PLANKS, B.BIRCH_PLANKS, B.JUNGLE_PLANKS, B.ACACIA_PLANKS, B.DARK_OAK_PLANKS, B.BLOSSOM_PLANKS, B.MANGROVE_PLANKS],
@@ -213,6 +214,8 @@ export function craft(grid, w) {
   if (copy) return copy.result;
   const inlay = inlayRecipe(grid); // an armour piece + a stencil + a material: the piece with that inlay (player/inlays.js)
   if (inlay) return inlay.result;
+  const broth = brothFromGrid(grid, I.BOWL); // a bowl, a flower and a mushroom: Wanderer's Broth of that flower (world/wandererBroth.js)
+  if (broth) return { id: I.WANDERERS_BROTH, count: 1, broth };
   const fw = fireworkRecipe(grid.filter(Boolean)); // stars of several colours, shapes and effects; rockets with several stars (world/fireworks.js)
   if (fw) return fw;
   const h = grid.length / w;

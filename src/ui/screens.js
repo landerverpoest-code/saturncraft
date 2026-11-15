@@ -4,7 +4,7 @@ import { assemblerPattern, assemblerResult } from '../world/assembler.js';
 import { echoStore } from '../player/echoCoffer.js';
 import { doubleChestHalves, doubleChestView } from '../world/chests.js';
 import { createLazyRenderer } from './lazyIcons.js';
-import { iconURL, stackHTML, stackIconURL, tooltipHTML, effectIconURL, setWornArmor } from './icons.js';
+import { iconURL, stackHTML, stackIconURL, tooltipHTML, effectIconURL, setWornArmor, setLearnedBroths } from './icons.js';
 import { EFFECTS, effectLabel, formatTicks } from '../player/effects.js';
 import { isIngredient, isVial, VIAL_SLOTS, INGREDIENT_SLOT, FUEL_SLOT, BREW_TICKS, BREWS_PER_POWDER } from '../world/brewing.js';
 import { ITEMS, I, maxStack } from '../world/items.js';
@@ -78,7 +78,7 @@ export class UI {
     this.craftW = 2;
     this.cursorEl = el('<div class="cursor-stack hidden"></div>');
     this.tooltipEl = el('<div class="tooltip hidden"></div>');
-    setWornArmor(() => this.game.player.inventory.armor); // (set-bonus tooltips read what is worn)
+    setWornArmor(() => this.game.player.inventory.armor); setLearnedBroths(() => this.game.player.broths || []); // (set-bonus tooltips read what is worn)
     document.body.appendChild(this.cursorEl);
     document.body.appendChild(this.tooltipEl);
     // Enter, Space and the gamepad's A press a button with a click that has no mouse position (detail 0); many screens act on

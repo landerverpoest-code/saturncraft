@@ -11,6 +11,7 @@ import { cleanPotFaces } from './archaeology.js';
 import { copyBookFields, sameBook } from './books.js';
 import { cleanFw, sameFw } from './fireworks.js';
 import { cleanInlay, sameInlay } from '../player/inlays.js';
+import { cleanBroth } from './wandererBroth.js';
 
 const lin = (base, per) => (l) => base + (l - 1) * per;
 
@@ -139,7 +140,7 @@ export function sameEnch(a, b) {
 
 /** Can two stacks be merged into one? Never for durability items, nor enchanted with plain. */
 export function canStack(a, b) {
-  return !!a && !!b && a.id === b.id && !(ITEMS[a.id] && ITEMS[a.id].durability) && sameEnch(a.ench, b.ench) && (a.rw | 0) === (b.rw | 0) && a.map === b.map && (a.label || '') === (b.label || '') && String(a.sherds || '') === String(b.sherds || '') && sameFw(a.fw, b.fw) && sameInlay(a.inlay, b.inlay) && sameBook(a, b);
+  return !!a && !!b && a.id === b.id && !(ITEMS[a.id] && ITEMS[a.id].durability) && sameEnch(a.ench, b.ench) && (a.rw | 0) === (b.rw | 0) && a.map === b.map && (a.label || '') === (b.label || '') && String(a.sherds || '') === String(b.sherds || '') && sameFw(a.fw, b.fw) && sameInlay(a.inlay, b.inlay) && (a.broth || '') === (b.broth || '') && sameBook(a, b);
 }
 
 /** A cleaned copy of an enchantment map from untrusted data (network, saves). */
@@ -171,6 +172,8 @@ export function withExtras(dst, src) {
   if (fw) dst.fw = fw;
   const inlay = src && src.inlay && cleanInlay(src.inlay); // an armour piece's cosmetic inlay (player/inlays.js)
   if (inlay) dst.inlay = inlay;
+  const broth = src && cleanBroth(src.broth); // a Wanderer's Broth's blend (world/wandererBroth.js)
+  if (broth) dst.broth = broth;
   copyBookFields(dst, src); // a book's pages, title and author (world/books.js)
   return dst;
 }
@@ -201,6 +204,8 @@ export function cleanBundle(list) {
     if (fw) st.fw = fw;
     const inlay = cleanInlay(s.inlay);
     if (inlay) st.inlay = inlay;
+    const broth = cleanBroth(s.broth);
+    if (broth) st.broth = broth;
     copyBookFields(st, s); // a book keeps its text
     out.push(st);
   }
@@ -228,6 +233,8 @@ export function cleanContents(list) {
     if (fw) st.fw = fw;
     const inlay = cleanInlay(s.inlay);
     if (inlay) st.inlay = inlay;
+    const broth = cleanBroth(s.broth);
+    if (broth) st.broth = broth;
     copyBookFields(st, s); // a book keeps its text
     out[i] = st; any = true;
   }

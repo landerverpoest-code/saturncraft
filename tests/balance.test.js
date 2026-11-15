@@ -106,6 +106,7 @@ describe('crafting graph', () => {
     DAWNFERN_SEEDS: 'a Rootsnout roots them up every few minutes (mobs/pack7Mobs.js)',
     SMOKE_GLAND: 'a Smokeray drops it (mobs/cinderFauna.js)',
     RAW_SLAGBOAR_CHOP: 'a Slagboar drops it (mobs/cinderFauna.js)',
+    WANDERERS_BROTH: 'a Bowl, a flower and a mushroom in any grid (player/crafting.js brothFromGrid, world/wandererBroth.js)',
     PLATE_SCALE: 'brushing a Plateback with a Brush, or one sheds it (mobs/pack7Mobs.js)',
   };
   const extra = new Set([
@@ -336,7 +337,7 @@ describe('hunger and food', () => {
   });
 
   it('only the golden foods fill without hunger and nothing raw is above 4 hunger', () => {
-    for (const f of list) if (f.always) expect(['gilded_apple', 'hushfruit'], f.name).toContain(f.key);
+    for (const f of list) if (f.always) expect(['gilded_apple', 'hushfruit', 'wanderers_broth'], f.name).toContain(f.key);
     for (const f of list) if (f.key.startsWith('raw_')) expect(f.hunger, f.name).toBeLessThanOrEqual(4);
   });
 });

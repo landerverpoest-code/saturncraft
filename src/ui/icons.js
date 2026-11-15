@@ -15,6 +15,7 @@ import * as W from '../world/weaponStats.js';
 import { trinketLines } from '../player/trinkets.js';
 import { cleanInlay, inlayLine, inlayMask, INLAY_MATERIALS } from '../player/inlays.js';
 import { setLines } from '../player/setBonuses.js';
+import { brothLine, cleanBroth, brothIsGood } from '../world/wandererBroth.js';
 import { tName, tCreature } from './i18n.js';
 import { TOOL_TEMPLATES, GEAR_TEMPLATES, paintTemplate, materialRamp, ramp, WOOD_HANDLE } from './toolArt.js';
 
@@ -418,6 +419,9 @@ export function stackHTML(st) {
   return h;
 }
 
+let learnedBroths = () => [];
+/** The blends of Wanderer's Broth the player has tasted (screens.js sets it; tests may leave it). */
+export const setLearnedBroths = (fn) => { learnedBroths = fn; };
 /** Armour worn by the player, read for set-bonus tooltips (screens.js sets it; tests may leave it). */
 let wornArmor = () => [];
 export function setWornArmor(fn) { wornArmor = fn; }
@@ -464,6 +468,7 @@ export function tooltipHTML(st, extra = '') {
     h += `<div class="tt-dura">${Math.round(bundleWeight(list))}/${BUNDLE_CAPACITY}</div>`;
   }
   for (const l of lines) h += `<div class="tt-ench">${esc(l)}</div>`;
+  if (d.food && d.food.broth) { const k = cleanBroth(st.broth); h += `<div class="${k && learnedBroths().includes(k) ? (brothIsGood(k) ? 'tt-good' : 'tt-bad') : 'tt-dura'}">${esc(brothLine(st, learnedBroths()))}</div>`; } // Wanderer's Broth: unknown until tasted
   const inl = inlayLine(st); // Armour Inlays: "Three Suns inlay in Beryl"
   if (inl) h += `<div class="tt-dura">${esc(inl)}</div>`;
   const dur = d.durability;

@@ -639,3 +639,6 @@ for (const [key, name, h, H] of [
 item('smoke_gland', 'Smoke Gland', { iconStyle: ['lump', { h: '#7a7484', H: '#c8c0d4' }] });
 item('raw_slagboar_chop', 'Raw Slagboar Chop', { food: { hunger: 3, saturation: 1.8 }, iconStyle: ['meat', { h: '#a8342a', w: '#f0d8c8' }] });
 item('seared_slagboar_chop', 'Seared Slagboar Chop', { food: { hunger: 8, saturation: 12.8 }, iconStyle: ['meat', { h: '#7a3a22', w: '#e8c8a0' }] });
+
+// Wanderer's Broth (world/wandererBroth.js; appended, so no item id shifts): bowl + a wild flower + a mushroom; the flower decides the effect (stack.broth).
+item('wanderers_broth', "Wanderer's Broth", { stack: 1, food: { hunger: 6, saturation: 7.2, always: true, leaves: 'bowl', broth: true }, iconStyle: ['bowl', { h: '#8a6034', H: '#a87a48', w: '#b8884a' }] });
