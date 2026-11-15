@@ -107,6 +107,7 @@ describe('crafting graph', () => {
     SMOKE_GLAND: 'a Smokeray drops it (mobs/cinderFauna.js)',
     RAW_SLAGBOAR_CHOP: 'a Slagboar drops it (mobs/cinderFauna.js)',
     WANDERERS_BROTH: 'a Bowl, a flower and a mushroom in any grid (player/crafting.js brothFromGrid, world/wandererBroth.js)',
+    RAW_MUDCARP: 'fishing in swamps (world/angling.js)', RAW_FROSTPERCH: 'fishing in cold waters or through ice (world/angling.js)', RAW_GLIMMEREEL: 'fishing at night or in dark water (world/angling.js)', RAW_SUNSCALE: 'fishing in warm oceans (world/angling.js)',
     PLATE_SCALE: 'brushing a Plateback with a Brush, or one sheds it (mobs/pack7Mobs.js)',
   };
   const extra = new Set([
