@@ -21,6 +21,7 @@ import { rimekeepsNear, nearestRimekeep } from './rimekeep.js';
 import { sporehallsNear, nearestSporehall } from './sporehall.js';
 import { lighthousesNear, nearestLighthouse } from './lighthouse.js';
 import { beaconsNear, nearestBeacon } from './beaconHouse.js';
+import { librariesNear, nearestLibrary } from './buriedLibrary.js';
 import { mireShrinesNear, nearestMireShrine } from './mireShrine.js';
 import { observatoriesNear, nearestObservatory } from './observatory.js';
 import { sandvaultsNear, nearestSandvault } from './sandvault.js';
@@ -61,6 +62,7 @@ const FINDERS = {
   iceberg: { near: icebergsNear, nearest: nearestIceberg },
   hulk: { near: hulksNear, nearest: nearestHulk },
   beaconhouse: { near: beaconsNear, nearest: nearestBeacon },
+  library: { near: librariesNear, nearest: nearestLibrary },
   // other dimensions (their generators have `dimension`; the overworld's does not)
   cinderforge: { near: forgesNear, nearest: nearestForge },
   wyrmribs: { near: wyrmRibsNear, nearest: nearestWyrmRibs },

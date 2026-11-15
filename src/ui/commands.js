@@ -19,6 +19,7 @@ import { nearestRimekeep } from '../world/rimekeep.js';
 import { nearestSporehall } from '../world/sporehall.js';
 import { nearestLighthouse } from '../world/lighthouse.js';
 import { nearestBeacon } from '../world/beaconHouse.js';
+import { nearestLibrary } from '../world/buriedLibrary.js';
 import { nearestMireShrine } from '../world/mireShrine.js';
 import { nearestObservatory } from '../world/observatory.js';
 import { nearestSandvault } from '../world/sandvault.js';
@@ -118,7 +119,7 @@ export const HELP = [
   '/summon <mob> [x y z]',
   '/waymark [here [name]|clear]  (where a Waymark Compass points)',
   '/xp <amount> [levels]',
-  '/locate <village|temple|igloo|outpost|shipwreck|monument|mineshaft|sanctum|bastion|hut|ruin|buried|vaults|sunken|tomb|skywatch|rimekeep|sporehall|grotto|isle|lighthouse|mire|observatory|sandvault|canyon|haghut|beacon|iceberg|hulk|city|gate|forge|ribs> or /locate biome <name>',
+  '/locate <village|temple|igloo|outpost|shipwreck|monument|mineshaft|sanctum|bastion|hut|ruin|buried|vaults|sunken|tomb|skywatch|rimekeep|sporehall|grotto|isle|lighthouse|mire|observatory|sandvault|canyon|haghut|beacon|library|iceberg|hulk|city|gate|forge|ribs> or /locate biome <name>',
   '/dimension <overworld|cinderdeep|hollow>',
   '/retrofit  (status),  /retrofit dry [chunks],  /retrofit apply [chunks]  (host: add features newer than a saved world to its edited chunks without touching anything you built; see the README)',
   '/effect give <effect> [seconds] [level],  /effect clear  (effects: ' + EFFECT_KEYS.join(', ') + ')',
@@ -444,6 +445,7 @@ export function runCommand(game, text) {
         [['rimekeep', 'icekeep', 'ice_keep', 'frostkeep'], 'Rimekeep', null, nearestRimekeep],
         [['sporehall', 'spore', 'fungal', 'overgrown'], 'Sporehall', null, nearestSporehall, (t) => `, ${t.style}`],
         [['beacon', 'beaconhouse', 'keeper', 'coast'], 'Beacon Lighthouse', null, nearestBeacon],
+        [['library', 'buried_library', 'archive', 'stacks'], 'Buried Library', null, nearestLibrary],
         [['lighthouse', 'hermit', 'beacon_tower', 'light'], "Hermit's Lighthouse", null, nearestLighthouse],
         [['mire', 'mireshrine', 'mire_shrine', 'shrine', 'bog'], 'Mire Shrine', null, nearestMireShrine],
         [['observatory', 'stargazer', 'star', 'dome'], "Stargazer's Observatory", null, nearestObservatory],

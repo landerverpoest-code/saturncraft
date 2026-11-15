@@ -26,6 +26,7 @@ import { stampSunkenRuins } from './sunkenRuins.js';
 import { stampSunTombs } from './sunTombs.js';
 import { stampSkywatches } from './skywatch.js';
 import { stampBeacons } from './beaconHouse.js';
+import { stampLibraries } from './buriedLibrary.js';
 import { stampRimekeeps } from './rimekeep.js';
 import { stampSporehalls } from './sporehall.js';
 import { stampLighthouses } from './lighthouse.js';
@@ -549,6 +550,7 @@ export class TerrainGenerator {
     this.pass('villageBoards', blocks, meta, biomes, () => stampVillageBoards(this, blocks, meta, cx, cz)); // the Bounty Board beside each village's well (world/villages.js), a pass of its own so old saves can be given one
     this.pass('coldCurrents', blocks, meta, biomes, () => stampColdCurrents(this, blocks, meta, cx, cz, biomes)); // Driftsnow hollows, Scald Vents and Upwells (world/coldCurrents.js)
     this.pass('beaconHouse', blocks, meta, biomes, () => stampBeacons(this, blocks, meta, cx, cz)); // Beacon Lighthouses on shores (world/beaconHouse.js)
+    this.pass('library', blocks, meta, biomes, () => stampLibraries(this, blocks, meta, cx, cz)); // Buried Libraries under the hills (world/buriedLibrary.js)
 
     stampMiteStone(this, blocks, meta, cx, cz, heightmap, biomes); // (not a retrofit pass: old chunks keep their plain stone) clusters of Mite-Riddled Stone in the mountains (world/stoneMiteGen.js)
 

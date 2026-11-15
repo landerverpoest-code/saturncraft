@@ -8,6 +8,7 @@ import { hollowCityLoot, LOOT_CITY, LOOT_SHIP } from '../world/dimensions/hollow
 import { VAULTS_CHEST } from '../world/provingLoot.js';
 import { VAULTS_LOOT } from '../world/provingVaults.js';
 import { BEACON_LOOT } from '../world/beaconHouse.js';
+import { LIBRARY_LOOT } from '../world/buriedLibrary.js';
 
 export const SPAWNER_TYPES = ['shambler', 'rattler', 'skitterer'];
 export const SPAWNER_RANGE = 16, SPAWN_COUNT = 4, MAX_NEARBY = 6;
@@ -107,6 +108,10 @@ STRUCTURE_LOOT[VAULTS_LOOT] = VAULTS_CHEST;
 // supplies kind and game.getChest swaps in this table (beaconLootKind)
 LOOT.LIGHTHOUSE = BEACON_LOOT;
 STRUCTURE_LOOT[BEACON_LOOT] = [[[I.COAL, 2, 6, 14], [I.BREAD, 1, 4, 14], [I.DRIED_KELP, 2, 6, 10], [I.PAPER, 1, 5, 12], [I.COMPASS, 1, 1, 4], [I.CLOCK, 1, 1, 3], [I.EMPTY_MAP, 1, 1, 8], [I.FISHING_ROD, 1, 1, 6], [I.STRING, 1, 4, 8], [I.IRON_INGOT, 1, 3, 8], [I.BERYL, 1, 2, 6], [B.LANTERN, 1, 2, 6], [B.TORCH, 4, 10, 14], [I.LANTERN_CHARM, 1, 1, 2], [I.BOOK, 1, 2, 5], [I.COOKED_LANTERNFIN, 1, 3, 8], [I.FLINT_AND_STEEL, 1, 1, 3]], 3, 6, [[B.TORCH, 3, 6]]];
+
+// the chests of the Buried Libraries (world/buriedLibrary.js), swapped in by game.getChest like the lighthouse table
+LOOT.LIBRARY = LIBRARY_LOOT;
+STRUCTURE_LOOT[LIBRARY_LOOT] = [[[I.PAPER, 2, 8, 22], [I.BOOK, 1, 4, 16], [I.WRITABLE_BOOK, 1, 1, 6], [I.EMPTY_MAP, 1, 1, 8], [I.INK_SAC, 1, 4, 12], [I.FEATHER, 1, 4, 12], [B.CANDLE, 1, 3, 8], [B.BOOKSHELF, 1, 2, 4], [I.COMPASS, 1, 1, 3], [I.BONE, 1, 3, 4], [I.DIAMOND, 1, 1, 2]], 3, 6, [[I.PAPER, 1, 3]]];
 
 export function dungeonLoot(rng = Math.random, kind = LOOT.DUNGEON) {
   if (kind === LOOT.HOLLOW_CITY || kind === LOOT.HOLLOW_SHIP) return hollowCityLoot(rng, kind === LOOT.HOLLOW_SHIP); // enchanted gear, Voidwing

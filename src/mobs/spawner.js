@@ -28,6 +28,7 @@ import { sunkenRuinsNear, sunkenGuardSpots } from '../world/sunkenRuins.js';
 import { sunTombsNear, tombGuardSpots } from '../world/sunTombs.js';
 import { skywatchesNear, skywatchGuards } from '../world/skywatch.js';
 import { beaconsNear, beaconKeepers } from '../world/beaconHouse.js';
+import { librariesNear, libraryGuards } from '../world/buriedLibrary.js';
 import { rimekeepsNear, rimekeepGuards, RIMEKEEP_WARDEN } from '../world/rimekeep.js';
 import { sporehallsNear, sporehallGuards } from '../world/sporehall.js';
 import { lighthousesNear, lighthouseGuards } from '../world/lighthouse.js';
@@ -421,6 +422,7 @@ export class MobSpawner {
       for (const t of skywatchesNear(gen, X0, Z0, X0 + 15, Z0 + 15)) for (const g of skywatchGuards(t)) guard(g.type, g.x, g.y, g.z);
       for (const t of rimekeepsNear(gen, X0, Z0, X0 + 15, Z0 + 15)) for (const g of rimekeepGuards(t)) guard(g.type, g.x, g.y, g.z, !!g.warden);
       for (const t of sporehallsNear(gen, X0, Z0, X0 + 15, Z0 + 15)) for (const g of sporehallGuards(t)) guard(g.type, g.x, g.y, g.z);
+      for (const t of librariesNear(gen, X0 - 16, Z0 - 16, X0 + 31, Z0 + 31)) for (const g of libraryGuards(t)) guard(g.type, g.x, g.y, g.z);
       for (const t of lighthousesNear(gen, X0, Z0, X0 + 15, Z0 + 15)) for (const g of lighthouseGuards(t)) guard(g.type, g.x, g.y, g.z);
       for (const t of mireShrinesNear(gen, X0, Z0, X0 + 15, Z0 + 15)) for (const g of mireGuards(t)) guard(g.type, g.x, g.y, g.z);
       for (const t of hagHutsNear(gen, X0, Z0, X0 + 15, Z0 + 15)) for (const g of hagGuards(t)) guard(g.type, g.x, g.y, g.z);

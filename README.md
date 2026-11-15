@@ -655,6 +655,12 @@ poison from eyes) follow the documented table.
 
 * Large structures beyond villages, temples, wrecks, Tide Citadels, Sunken Ruins, Sun Tombs, Skywatch Towers, Rimekeeps, Sporehalls, Beacon Lighthouses, outposts, ruined rifts, dungeons, sanctums, bastions, Cinderforges, Hollow Cities and Wyrm Ribs
 * Taming of animals other than Howlers, Purrlings, Squawklets, Gallopers, Vixlings, Cragbucks, Hoppers, Bristlebacks, Frostbears, Thistlehorns, Dustmoles, Gloamlynxes and Tarnlings (Packhorns, Dune Striders, Gillnewts and the rest stay wild)
+* **Buried Libraries** (`src/world/buriedLibrary.js`, about three 400 × 400 regions in five, under plains, forests and mountains but never the sea, planned from the seed alone and stamped chunk by chunk like the other site structures): a sunken stone-brick hall (21 × 15, vaulted ceiling) at y 20 to 45 with rows of Record Shelves and bookshelves under cobwebs, a reading table with a lectern in the middle, four side alcoves with chests and light only from two hanging lanterns and a few candles. A Monster Spawner and three Shamblers keep the stacks; two bookshelves on the west wall hide a pocket of dripping lava over a bait chest. The way in is a spiral stair of loose bricks up a shaft at the east end, sealed at the surface by a Mossy Cobblestone cap. The six chests use the new `library` loot table (paper, books, Writable Books, maps, Ink Sacs, feathers, candles and, rarely, a diamond). `/locate library` finds the nearest, it has its own Field Guide landmark and map glyph, the *Quiet Please* milestone is earned for stepping inside, and it is feature version 10 of the retrofit list.
+
+**Not yet implemented**
+
+* Large structures beyond villages, temples, wrecks, Tide Citadels, Sunken Ruins, Sun Tombs, Skywatch Towers, Rimekeeps, Sporehalls, Beacon Lighthouses, Buried Libraries, outposts, ruined rifts, dungeons, sanctums, bastions, Cinderforges, Hollow Cities and Wyrm Ribs
+* Taming of animals other than Howlers, Purrlings, Squawklets, Gallopers, Vixlings, Cragbucks, Hoppers, Bristlebacks and Frostbears (Packhorns, Dune Striders, Gillnewts and the rest stay wild)
 * Baby mobs other than Shambler-kin, spiderlings, Fizzlets, Brute cubs and the animals that breed (the other monsters, fish, Inklings, Flitters, Hoverlings and the golems have no young; Hoverlings and Frostlings are made, not born)
 
 ## Other dimensions

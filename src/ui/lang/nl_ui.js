@@ -36,6 +36,7 @@ export default {
   'Eyes on the Horizon': 'Ogen op de horizon', 'Find a Skywatch Tower': 'Vind een Hemelwachttoren',
   'Frozen Halls': 'Bevroren zalen', 'Find a Rimekeep': 'Vind een Rijpburcht',
   'Heart of the Spores': 'Hart van de sporen', 'Find a Sporehall': 'Vind een Sporenzaal',
+  'Quiet Please': 'Stilte alstublieft', 'Step into a Buried Library': 'Stap een Begraven Bibliotheek binnen',
   'Keeper of the Coast': 'Hoeder van de kust', 'Find a Beacon Lighthouse': 'Vind een Bakenvuurtoren',
   'Keeper of the Light': 'Hoeder van het licht', "Find a Hermit's Lighthouse": 'Vind de Vuurtoren van een Kluizenaar',
   'Sunken Devotion': 'Verzonken toewijding', 'Find a Mire Shrine': 'Vind een Moerasschrijn',
