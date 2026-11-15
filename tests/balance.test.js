@@ -105,6 +105,7 @@ describe('crafting graph', () => {
     CREATURE_EGG: 'the creative inventory only (mobs/creatureEggs.js)',
     DAWNFERN_SEEDS: 'a Rootsnout roots them up every few minutes (mobs/pack7Mobs.js)',
     SMOKE_GLAND: 'a Smokeray drops it (mobs/cinderFauna.js)',
+    RAW_SLAGBOAR_CHOP: 'a Slagboar drops it (mobs/cinderFauna.js)',
     PLATE_SCALE: 'brushing a Plateback with a Brush, or one sheds it (mobs/pack7Mobs.js)',
   };
   const extra = new Set([

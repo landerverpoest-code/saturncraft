@@ -138,7 +138,8 @@ function spitGlob(g, m, p) {
 
 function smokerayAI(m, g, p, pdist) {
   const b = m.body;
-  if (m.swell === undefined) { m.swell = 0; m.cool = 40; }
+  if (m.swell === undefined) m.swell = 0;
+  if (m.cool === undefined) m.cool = 40;
   const live = !p.dead && !p.creative;
   if (live && pdist < SMOKE.RANGE) { if (g.ticks % 2 === m.id % 2 || m._sees === undefined) m._sees = m.canSee(g, p.x, p.y + p.eyeHeight, p.z); } else m._sees = false;
   const sees = live && !!m._sees;

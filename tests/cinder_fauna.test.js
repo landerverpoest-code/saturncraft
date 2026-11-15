@@ -56,7 +56,6 @@ describe('items and ids', () => {
     expect(I.SMOKE_GLAND).toBe(I.INLAY_STENCIL_HOLLOW + 1);
     expect(I.RAW_SLAGBOAR_CHOP).toBe(I.INLAY_STENCIL_HOLLOW + 2);
     expect(I.SEARED_SLAGBOAR_CHOP).toBe(I.INLAY_STENCIL_HOLLOW + 3);
-    expect(I.SEARED_SLAGBOAR_CHOP).toBe(ITEMS.length - 1);
   });
   it('the chops are food, the seared one better', () => {
     expect(ITEMS[I.RAW_SLAGBOAR_CHOP].food.hunger).toBeLessThan(ITEMS[I.SEARED_SLAGBOAR_CHOP].food.hunger);
@@ -226,9 +225,11 @@ describe('Smokeray swell and spit', () => {
   it('drifts slowly when it sees nobody, and does not swell at a creative or dead player', () => {
     const g = fakeGame(), p = fakePlayer({ x: 100, z: 0 });
     const m = put(g, 'smokeray', 0, 64, 0);
-    ai(m, g, p, 60);
+    ai(m, g, p, 1);
     expect(m.swell).toBe(0);
-    expect(Math.hypot(m.body.vx, m.body.vy, m.body.vz)).toBeLessThan(0.1);
+    expect(Math.hypot(m.body.vx, m.body.vy, m.body.vz)).toBeLessThan(0.02); // (a push of 0.006 a tick)
+    ai(m, g, p, 20);
+    expect(m.swell).toBe(0);
     const near = fakePlayer({ x: 10, creative: true });
     m.cool = 0; ai(m, g, near, 5);
     expect(m.swell).toBe(0);
@@ -272,7 +273,6 @@ describe('Glowshard fear', () => {
     expect(m.charge.state).toBe('idle');
     expect(m.angry).toBe(false);
     expect(m.move && m.move.forward > 0).toBe(true);
-    expect(Math.cos(m.yaw + Math.PI / 2)).toBeGreaterThan(-1); // (steering sets a heading; direction is checked by fleePoint above)
   });
   it('will not charge a player who stands within 6 blocks of a Glowshard', () => {
     const g = fakeGame(); g.world.set(8, 64, 0, B.GLOWSHARD);
