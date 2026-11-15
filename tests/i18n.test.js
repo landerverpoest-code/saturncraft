@@ -94,6 +94,27 @@ function fakeEl(attrs = {}, text = '', kids = []) {
   return el;
 }
 
+describe('Dutch coverage of milestones and screens', () => {
+  it('translates every milestone title and description', async () => {
+    const { MILESTONES } = await import('../src/player/milestones.js');
+    for (const m of MILESTONES) { expect(nl[m.title], m.title).toBeTruthy(); expect(nl[m.desc], m.desc).toBeTruthy(); }
+    setLanguage('nl');
+    expect(t(MILESTONES[0].title)).toBe(nl[MILESTONES[0].title]);
+    expect(MILESTONES[0].title).toBe('Timber!'); // the data stays English
+  });
+
+  it('translates screen titles, control labels and settings', async () => {
+    const { ACTIONS, GROUPS } = await import('../src/ui/bindings.js');
+    for (const k of ['Inventory', 'Workbench', 'Furnace', 'Chest', 'Large Chest', 'Barrel', 'Hopper', 'Brewing Alembic', 'Enchant', 'Beacon', 'Creative Inventory', 'Echo Coffer', 'Repair &amp; Enchant']) expect(nl[k], k).toBeTruthy();
+    for (const a of ACTIONS) if (!/^slot\d$/.test(a.id)) expect(nl[a.label], a.label).toBeTruthy();
+    for (const g of GROUPS) expect(nl[g], g).toBeTruthy();
+    setLanguage('nl');
+    expect(t('Workbench')).toBe('Werkbank');
+    expect(t('Hotbar slot {n}', { n: 3 })).toBe('Snelbalkvak 3');
+    expect(t('Shaders on (F7)')).toBe('Shaders aan (F7)');
+  });
+});
+
 describe('translateDom', () => {
   it('translates text and attributes and round-trips back to English', () => {
     const btn = fakeEl({ 'data-i18n': '' }, 'Create New World');

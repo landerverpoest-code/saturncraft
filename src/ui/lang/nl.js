@@ -1,6 +1,8 @@
 // Dutch (Nederlands): English -> Dutch, informal "je". The key is the English text exactly as it appears in the source
 // (tests/i18n.test.js checks that every key still does). `{name}` placeholders must be kept. Block, item and creature
 // names, the help topics, the Field Guide, quests and chat commands are not translated (yet): they stay English.
+import more from './nl_ui.js';
+
 export default {
   // ---- title screen (index.html) ----
   'Three suns. One ringed giant. Survive.': 'Drie zonnen. Eén reus met ringen. Overleef.',
@@ -295,4 +297,5 @@ export default {
   'left click': 'linkermuisklik',
   'right click': 'rechtermuisklik',
   'its key': 'de bijbehorende toets',
+  ...more,
 };

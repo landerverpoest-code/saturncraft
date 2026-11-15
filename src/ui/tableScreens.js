@@ -1,6 +1,7 @@
 // The Cartographer's Table screen (player/cartographer.js): a chart of the 8 x 8 chunks of the map square the table stands in, inked
 // where you have been, and two jobs: draw a map of the explored ground (a Paper; the Compass is kept) or copy the map in your hand.
 import { SQUARE_CHUNKS, tableOffers, surveyAtTable, copyHeldMap } from '../player/cartographer.js';
+import { t } from './i18n.js';
 
 function el(html) { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstChild; }
 const txt = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; e.textContent = text; return e; };
@@ -30,29 +31,29 @@ export function openCartographersTable(ui, x, y, z) {
   g.input.unlock();
   ui.clear();
   ui.open = 'pause';
-  const s = el(`<div class="screen pause-screen quest-screen table-screen"><h2>Cartographer's Table</h2><div class="quest-sub"></div>
+  const s = el(`<div class="screen pause-screen quest-screen table-screen"><h2>${t("Cartographer's Table")}</h2><div class="quest-sub"></div>
     <canvas class="table-chart" width="192" height="192" role="img"></canvas>
-    <div class="quest-body table-body" tabindex="0"></div><button class="btn" data-a="back">Back</button></div>`);
+    <div class="quest-body table-body" tabindex="0"></div><button class="btn" data-a="back">${t('Back')}</button></div>`);
   const sub = s.querySelector('.quest-sub'), canvas = s.querySelector('canvas'), body = s.querySelector('.table-body');
   const leave = () => { ui.open = null; ui.clear(); g.onUIClosed(); };
   const render = (note) => {
     const offers = tableOffers(g, x, z), dim = g.world.dimension, p = g.player;
     const total = g.explored ? g.explored.count(dim) : 0;
-    sub.textContent = `Square ${offers.here.x0} to ${offers.here.x0 + 127}, ${offers.here.z0} to ${offers.here.z0 + 127} · ${offers.chunks} of ${SQUARE_CHUNKS * SQUARE_CHUNKS} chunks explored · ${total} chunk${total === 1 ? '' : 's'} charted in all`;
-    canvas.setAttribute('aria-label', `Chart of the map square: ${offers.chunks} of ${SQUARE_CHUNKS * SQUARE_CHUNKS} chunks explored`);
+    sub.textContent = t('Square {x0} to {x1}, {z0} to {z1} · {n} of {all} chunks explored · {total} charted in all', { x0: offers.here.x0, x1: offers.here.x0 + 127, z0: offers.here.z0, z1: offers.here.z0 + 127, n: offers.chunks, all: SQUARE_CHUNKS * SQUARE_CHUNKS, total });
+    canvas.setAttribute('aria-label', t('Chart of the map square: {n} of {all} chunks explored', { n: offers.chunks, all: SQUARE_CHUNKS * SQUARE_CHUNKS }));
     if (g.explored) drawChart(canvas, g.explored, dim, offers.here.x0, offers.here.z0, { x, z }, p);
     body.replaceChildren();
     const job = (title, desc, label, reason, fn) => {
       const c = document.createElement('div'); c.className = 'quest-card' + (reason ? '' : ' ready');
       const info = document.createElement('div'); info.className = 'quest-info';
-      info.append(txt('b', '', title), txt('div', 'd', desc), ...(reason ? [txt('div', 'd', reason)] : []));
+      info.append(txt('b', '', t(title)), txt('div', 'd', t(desc)), ...(reason ? [txt('div', 'd', t(reason))] : []));
       const acts = document.createElement('div'); acts.className = 'quest-acts';
-      const b = document.createElement('button'); b.className = 'btn small'; b.type = 'button'; b.textContent = label; b.disabled = !!reason; b.onclick = fn;
+      const b = document.createElement('button'); b.className = 'btn small'; b.type = 'button'; b.textContent = t(label); b.disabled = !!reason; b.onclick = fn;
       acts.appendChild(b); c.append(info, acts); body.appendChild(c);
     };
-    job('Draw a map of where you have been', 'Costs a Paper and needs a Compass in your bag (the Compass is kept). Only the explored chunks are inked in: ground you have since left is charted from the lay of the land, and what you never visited stays blank.', 'Draw map', offers.survey, () => { const r = surveyAtTable(g, x, z); g.hud.toast(r.msg, 2600); render(); });
-    job('Copy the map in your hand', 'Costs a Paper. The copy shows the same picture: what either one fills in later shows on both.', 'Copy map', offers.copy, () => { const r = copyHeldMap(g, x, z); g.hud.toast(r.msg, 2200); render(); });
-    body.appendChild(txt('div', 'd quest-note', note || 'Walk the land to explore it: every chunk you pass within three chunks of is remembered. The red frame is this table\'s chunk, the white dot is you.'));
+    job('Draw a map of where you have been', 'Costs a Paper and needs a Compass in your bag (the Compass is kept). Only the explored chunks are inked in: ground you have since left is charted from the lay of the land, and what you never visited stays blank.', 'Draw map', offers.survey, () => { const r = surveyAtTable(g, x, z); g.hud.toast(t(r.msg), 2600); render(); });
+    job('Copy the map in your hand', 'Costs a Paper. The copy shows the same picture: what either one fills in later shows on both.', 'Copy map', offers.copy, () => { const r = copyHeldMap(g, x, z); g.hud.toast(t(r.msg), 2200); render(); });
+    body.appendChild(txt('div', 'd quest-note', note ? t(note) : t("Walk the land to explore it: every chunk you pass within three chunks of is remembered. The red frame is this table's chunk, the white dot is you.")));
   };
   s.querySelector('[data-a=back]').onclick = leave;
   s.addEventListener('keydown', (e) => { if (e.key === 'Backspace') { e.preventDefault(); leave(); } });
