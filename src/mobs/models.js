@@ -1,5 +1,6 @@
 // Original box models for every mob (units: 1/16 block, facing -Z), with
 // procedurally painted textures and simple limb animation.
+import { breathe, blinkClosed, earTwitch, headTurn, idleLook, tailWag, hurtLean, walkBob, deathSink, wrapPi, ANIM_RANGE, LOOK_RANGE } from './mobAnim.js';
 import * as THREE from 'three';
 
 const noiseTexCache = new Map();
@@ -1320,6 +1321,84 @@ export function buildModel(type) {
   return root;
 }
 
+// A closed-eyes copy of a face texture (the bright eye pixels become skin with a dark lid line), cached per source texture.
+const closedCache = new WeakMap();
+function closedFace(tex) {
+  let c = closedCache.get(tex);
+  if (c) return c;
+  const src = tex.image;
+  const cv = document.createElement('canvas'); cv.width = src.width; cv.height = src.height;
+  const ctx = cv.getContext('2d'); ctx.drawImage(src, 0, 0);
+  const W = cv.width, H = cv.height, sc = W / 16, d = ctx.getImageData(0, 0, W, H), a = d.data;
+  let y0 = H, y1 = -1;
+  const bright = (i) => a[i] > 200 && a[i + 1] > 190 && a[i + 2] > 170;
+  for (let y = 2 * sc; y < 11 * sc; y++) for (let x = 0; x < W; x++) { if (bright((y * W + x) * 4)) { if (y < y0) y0 = y; if (y > y1) y1 = y; } }
+  if (y1 >= 0) {
+    const mid = Math.floor((y0 + y1) / 2);
+    // paint every pixel in the eye rows that sits in a bright run's column band (pupils included); the lid is the middle row
+    const cols = new Uint8Array(W);
+    for (let y = y0; y <= y1; y++) for (let x = 0; x < W; x++) if (bright((y * W + x) * 4)) cols[x] = 1;
+    for (let y = y0; y <= y1; y++) for (let x = 0; x < W; x++) {
+      if (!cols[x]) continue;
+      const i = (y * W + x) * 4, j = (Math.max(0, y0 - 1) * W + x) * 4;
+      if (y === mid) { a[i] = 24; a[i + 1] = 18; a[i + 2] = 16; } else { a[i] = a[j]; a[i + 1] = a[j + 1]; a[i + 2] = a[j + 2]; }
+    }
+  }
+  ctx.putImageData(d, 0, 0);
+  c = new THREE.CanvasTexture(cv);
+  c.magFilter = THREE.NearestFilter; c.minFilter = THREE.NearestFilter; c.colorSpace = THREE.SRGBColorSpace;
+  closedCache.set(tex, c);
+  return c;
+}
+
+/** The generic life layer: additive deltas on parts that no module poses by name; customRender hooks run after and may override. */
+function animateLife(root, mob, parts, alpha, sec, amt) {
+  const g = mob._game;
+  if (!g || !g.player || !mob.def || typeof mob.id !== 'number') return;
+  const pl = g.player, dx = pl.x - mob.x, dz = pl.z - mob.z, d2 = dx * dx + dz * dz;
+  const calm = !!(g.settings && g.settings.reduceMotion);
+  const dead = mob.deathTime > 0;
+  if (dead) {
+    root.position.y -= deathSink(mob.deathTime, alpha, mob.height || 1);
+    return;
+  }
+  if (d2 > ANIM_RANGE * ANIM_RANGE) return;
+  const id = mob.id, idle = amt < 0.1;
+  if (mob.hurtTime > 0 && !calm) { root.rotation.order = 'YXZ'; root.rotation.x = hurtLean(mob.hurtTime - alpha + 1); }
+  if (amt > 0.05 && (parts.legFL || parts.legL)) root.position.y += walkBob(mob.limbSwing, amt) * (root.scale.y || 1);
+  const body = parts.body;
+  if (body && body.userData.anim === undefined && !mob.def.flying) body.scale.y = 1 + (breathe(id, sec) - 1) * (calm ? 0.4 : 1);
+  if (calm) return;
+  const head = parts.head;
+  if (head && !head.userData.anim && !mob.sitting) {
+    let ty, tp = 0;
+    if (d2 < LOOK_RANGE * LOOK_RANGE && !pl.dead) {
+      const r = headTurn(wrapPi(Math.atan2(-dx, -dz) - mob.yaw), pl.y + (pl.eyeHeight || 1.6) - (mob.eyeY || mob.y + 1), Math.sqrt(d2));
+      ty = r[0]; tp = mob.headPitch ? 0 : r[1];
+    } else ty = idle ? idleLook(id, sec) : 0;
+    const k = head.userData;
+    k.lookY = (k.lookY || 0) + (ty - (k.lookY || 0)) * 0.12;
+    k.lookP = (k.lookP || 0) + (tp - (k.lookP || 0)) * 0.12;
+    head.rotation.y = k.lookY;
+    head.rotation.x += k.lookP;
+    // blink: swap the head's face map for a closed-eyes copy
+    const mesh = head.children[0], mat = mesh && Array.isArray(mesh.material) ? mesh.material[5] : null;
+    if (mat && mat.map) {
+      const ud = mat.userData;
+      if (!ud.openMap) ud.openMap = mat.map;
+      const want = blinkClosed(id, sec) ? (ud.closedMap || (ud.closedMap = closedFace(ud.openMap))) : ud.openMap;
+      if (mat.map !== want) mat.map = want;
+    }
+  }
+  const happy = !!(mob.tamed || mob.loveTicks > 0);
+  for (const name in parts) {
+    const part = parts[name];
+    if (part.userData.anim) continue;
+    if (name.charCodeAt(0) === 116 && name.startsWith('tail')) { if (idle && !happy) part.rotation.y = 0; else part.rotation.y = tailWag(id, sec, happy, !idle); }
+    else if (name.startsWith('ear')) part.rotation.z = earTwitch(id, sec, name.endsWith('R') ? -1 : 1);
+  }
+}
+
 export function animateModel(root, mob, alpha, L, sec, glow = null) {
   const { parts, mats } = root.userData;
   const swing = mob.limbSwing * 0.6662;
@@ -1366,7 +1445,8 @@ export function animateModel(root, mob, alpha, L, sec, glow = null) {
       }
     }
   }
-  if (parts.head) parts.head.rotation.x = mob.headPitch || 0;
+  if (parts.head) { parts.head.rotation.x = mob.headPitch || 0; }
+  animateLife(root, mob, parts, alpha, sec, amt);
   // fuse swelling + flashing
   let flash = 0;
   if (mob.type === 'fizzler') {

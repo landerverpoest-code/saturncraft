@@ -13,6 +13,7 @@ import { BIOMES } from '../world/biomes.js';
 import { rollDrops } from './drops.js';
 import { findPath } from './pathfinding.js';
 import { shouldDespawn, shouldBurnInSun } from './spawnRules.js';
+import { deathTipAngle } from './mobAnim.js';
 import { buildModel, animateModel, addCaptainBanner } from './models.js';
 import { entityGlow } from '../render/entityLight.js';
 import { randomSheepColor, WOOL_RGB } from '../world/colors.js';
@@ -1875,7 +1876,7 @@ export class Mob {
     }
     const yaw = this.prevYaw + wrap(this.yaw - this.prevYaw) * alpha;
     m.rotation.set(0, yaw, 0);
-    if (this.deathTime > 0) m.rotation.z = Math.min(1, (this.deathTime + alpha) / 10) * Math.PI / 2;
+    if (this.deathTime > 0) m.rotation.z = deathTipAngle(this.deathTime, alpha);
     else if (this.special && this.def.convertsTo) m.rotation.y += Math.sin(sec * 40) * 0.12; // shaking: about to convert
     animateModel(m, this, alpha, L, sec, this._game ? entityGlow(this._game, this.x, this.y + this.height * 0.6, this.z) : null);
     if (this.roosting) { m.rotation.z = Math.PI; m.position.y += this.height; } // hanging upside down
