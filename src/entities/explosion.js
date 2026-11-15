@@ -4,6 +4,7 @@ import { rule } from '../world/gameRules.js';
 import { canLight } from '../world/fire.js';
 import { B, BLOCKS, isFluid, isFurnace, isBox } from '../world/blocks.js';
 import { igniteTNT } from './tnt.js';
+import { isRiddled, releaseMite } from '../mobs/stoneMites.js';
 import { blockDrops } from '../world/mining.js';
 
 /** Damage dealt to an entity at normalised distance d (0..1) with exposure e. */
@@ -91,6 +92,7 @@ export function explode(game, x, y, z, power, source) {
       const ideal = { type: BLOCKS[id].tool, tier: 99, speed: 1 };
       for (const st of blockDrops(id, ideal, Math.random, meta)) game.entities.spawnItem(bx + 0.5, by + 0.5, bz + 0.5, st);
     }
+    if (isRiddled(id)) releaseMite(game, bx, by, bz); // the mites inside come out with the blast (mobs/stoneMites.js)
     if (isFurnace(id) || id === B.CHEST || id === B.BARREL || id === B.BREWING_STAND || isBox(id) || id === B.LECTERN || id === B.HOPPER || id === B.DISPENSER || id === B.DROPPER || id === B.ASSEMBLER || id === B.CAMPFIRE) game.onBlockBroken(bx, by, bz, id, meta);
   }
   // blastsLightFires: a third of the emptied cells over something solid catch fire

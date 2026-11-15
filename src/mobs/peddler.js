@@ -14,6 +14,7 @@
 // mob definitions are registered here.
 import { MOBS, MOB_KEYS, CATEGORY } from './mobTypes.js';
 import { MODELS, FACES } from './models.js';
+import { decorate, followDecor } from './modelKit.js';
 import { I } from '../world/items.js';
 import { B, SOLID, isFluid } from '../world/blocks.js';
 import { makeTrades } from './trades.js';
@@ -192,7 +193,7 @@ function packhornRender(m, mesh, alpha, sec) {
 }
 
 MODELS.peddler = {
-  parts: [
+  parts: decorate([
     ['head', [8, 10, 8], [0, 24, 0], [0, 5, 0], '#b8835a', { face: 'peddler' }],
     ['hood', [9, 4, 9], [0, 24, 0], [0, 10.5, 0.4], '#2a5a7e'],
     ['nose', [2, 4, 2], [0, 24, 0], [0, 2, -5], '#a87350'],
@@ -202,17 +203,40 @@ MODELS.peddler = {
     ['arms', [8, 4, 4], [0, 20, -1], [0, -1, -3.5], '#244e6a'],
     ['legR', [4, 11, 4], [2, 11, 0], [0, -5.5, 0], '#4a3220', { anim: 'legB' }],
     ['legL', [4, 11, 4], [-2, 11, 0], [0, -5.5, 0], '#4a3220', { anim: 'legA' }],
-  ],
+  ], {
+    head: [
+      ['ear@', [1, 2.4, 1.6], [4.4, 0, 0], '#a87350'],
+      ['moustache', [5.4, 1.4, 0.8], [0, -1.6, -4.3], '#6a4a2a'],
+      ['beard', [5, 3, 0.8], [0, -3.6, -4.2], '#7a5a38'],
+    ],
+    hood: [['hoodPoint', [3, 3, 3], [0, 2.8, 2.6], '#1e4a68'], ['hoodTrim', [9.4, 0.8, 9.4], [0, -2.2, 0], '#d8b84a']],
+    cloak: [
+      ['trim', [9.4, 1.2, 7.4], [0, -7, 0], '#d8b84a'],
+      ['clasp', [2.2, 2.2, 1], [0, 6.2, -3.8], '#d8b84a'],
+      ['fold@', [1, 13, 7.4], [4.6, -1, 0], '#22506e'],
+      ['patch', [3, 3, 0.6], [-1.5, -2, -3.6], '#b04a3a'],
+    ],
+    pack: [
+      ['packFlap', [8.4, 3, 4.4], [0, 3, 0], '#6a4420'],
+      ['strap@', [1, 9.4, 4.4], [2.5, 0, 0], '#4a3220'],
+      ['pot', [3, 3, 3], [-2, -5.5, 0.6], '#7a7a82'],
+      ['lantern', [2, 3, 2], [4.6, -2, 0], '#d8b84a', { emissive: '#8a6a1a' }],
+    ],
+    arms: [['hand@', [2.4, 2.6, 2.4], [2.6, 0, -2.4], '#b8835a'], ['cuff', [8.6, 1.4, 4.4], [0, 0.2, 0], '#d8b84a']],
+    'leg@': [['boot@', [4.6, 3.4, 5.4], [0, -4, -0.6], '#2e2014'], ['legCuff@', [4.4, 1, 4.4], [0, -1.8, 0], '#d8b84a']],
+  }),
 };
 FACES.peddler = (c) => {
-  c.fillStyle = '#3a2a1a'; c.fillRect(1, 3, 14, 1);
+  c.fillStyle = '#3a2a1a'; c.fillRect(1, 3, 14, 1); c.fillRect(2, 4, 4, 1); c.fillRect(10, 4, 4, 1);
   c.fillStyle = '#ffffff'; c.fillRect(3, 5, 3, 2); c.fillRect(10, 5, 3, 2);
   c.fillStyle = '#7a4a1a'; c.fillRect(4, 5, 2, 2); c.fillRect(11, 5, 2, 2);
-  c.fillStyle = '#5a4a3a'; c.fillRect(4, 11, 8, 2); c.fillRect(5, 13, 6, 1); // a bristly chin
+  c.fillStyle = '#1a1008'; c.fillRect(5, 5, 1, 2); c.fillRect(12, 5, 1, 2);
+  c.fillStyle = '#c89a78'; c.fillRect(1, 8, 2, 2); c.fillRect(13, 8, 2, 2);
+  c.fillStyle = '#5a4a3a'; c.fillRect(4, 11, 8, 2); c.fillRect(5, 13, 6, 1);
 };
 
 MODELS.packhorn = {
-  parts: [
+  parts: decorate([
     ['body', [10, 10, 18], [0, 19, 2], [0, 0, 0], '#d8cdb4'],
     ['blanket', [11, 2, 9], [0, 19, 2], [0, 5.5, -1], '#b04a3a'],
     ['neck', [4, 14, 4], [0, 22, -6], [0, 6, -1], '#d8cdb4'],
@@ -224,11 +248,31 @@ MODELS.packhorn = {
     ['legBL', [3, 13, 3], [3, 13, 9], [0, -6.5, 0], '#b8a888', { anim: 'legB' }],
     ['legBR', [3, 13, 3], [-3, 13, 9], [0, -6.5, 0], '#b8a888', { anim: 'legA' }],
     ['tail', [2, 5, 2], [0, 22, 11], [0, -2, 0], '#b8a888'],
-  ],
+  ], {
+    body: [
+      ['belly', [8, 2, 16], [0, -4.4, 0], '#e8dfc8'],
+      ['woolRump', [10.6, 6, 5], [0, 1.5, 6], '#e4dac0'],
+      ['chestWool', [8, 6, 2.4], [0, 0.5, -9.4], '#e4dac0'],
+    ],
+    blanket: [
+      ['stripe0', [11.4, 2.3, 1.6], [0, 0, -2.2], '#e8c04a'],
+      ['stripe1', [11.4, 2.3, 1.6], [0, 0, 1.8], '#e8c04a'],
+      ['hang@', [0.8, 4, 8], [5.6, -3, 0], '#b04a3a'],
+      ['bag@', [2.4, 5, 5], [6.6, -6.5, 0], '#8a5a2a'],
+    ],
+    neck: [['neckWool', [5.4, 10, 5.4], [0, 1, 0.4], '#e4dac0']],
+    head: [['woolTop', [5.6, 2.4, 5], [0, 3.2, 1], '#e8dfc8'], ['earIn@', [0.8, 2, 0.6], [1.8, 3.5, -0.8], '#d8a8a0'], ['cheek@', [0.6, 2, 3], [2.7, -1, -1], '#e8dfc8']],
+    'legF@': [['hoof@', [3.4, 1.6, 3.4], [0, -5.8, 0], '#4a3a2a'], ['sock@', [3.4, 4, 3.4], [0, -3, 0], '#e8dfc8']],
+    'legB@': [['hoof@', [3.4, 1.6, 3.4], [0, -5.8, 0], '#4a3a2a'], ['sock@', [3.4, 4, 3.4], [0, -3, 0], '#e8dfc8']],
+    tail: [['tailTuft', [2.8, 3, 2.8], [0, -2.8, 0.2], '#e4dac0']],
+  }),
 };
 FACES.packhorn = (c) => {
-  c.fillStyle = '#141210'; c.fillRect(1, 5, 2, 2); c.fillRect(13, 5, 2, 2);
-  c.fillStyle = '#6a5a48'; c.fillRect(5, 11, 6, 3); c.fillStyle = '#2a2018'; c.fillRect(6, 12, 1, 1); c.fillRect(9, 12, 1, 1);
+  c.fillStyle = '#141210'; c.fillRect(1, 4, 3, 3); c.fillRect(12, 4, 3, 3);
+  c.fillStyle = '#e8dfc8'; c.fillRect(2, 4, 1, 1); c.fillRect(13, 4, 1, 1);
+  c.fillStyle = '#e8dfc8'; c.fillRect(0, 0, 16, 3);
+  c.fillStyle = '#6a5a48'; c.fillRect(5, 10, 6, 4); c.fillStyle = '#2a2018'; c.fillRect(6, 11, 1, 1); c.fillRect(9, 11, 1, 1);
+  c.fillStyle = '#3a2a1c'; c.fillRect(6, 13, 4, 1);
 };
 
 export const PEDDLER = {
@@ -321,3 +365,7 @@ export function caravanTick(spawner, rng = Math.random) {
   }
   return null;
 }
+
+// detail boxes follow their host parts (head pitch, claws...)
+followDecor(PEDDLER, 'peddler');
+followDecor(PACKHORN, 'packhorn');

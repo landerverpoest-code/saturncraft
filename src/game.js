@@ -96,6 +96,7 @@ import { isQuotaError } from './world/saveFormat.js';
 import { hearthCharges, hearthSpot, spendCharge, HEARTH_DIMENSION } from './world/emberHearth.js';
 import { DimensionManager } from './world/dimensions/manager.js';
 import { DIMENSIONS } from './world/dimensions/dims.js';
+import { buildPortalYard } from './world/dimensions/portal.js';
 import { EnchantBooks } from './render/enchantBooks.js';
 import { newStand, tickStand } from './world/brewing.js';
 import { effectsColor, effectSwirl } from './player/effects.js';
@@ -607,6 +608,18 @@ export class Game {
     if (this.net && this.net.beginDeathCam) this.net.beginDeathCam(cause); // watch a friend while the respawn button counts down (net/session.js)
     this.input.unlock();
     this.ui.showDeath(cause);
+  }
+
+  /** A flat test yard beside the player with the Rift portal and the Hollow Gate both open (the /portalyard command and the "Portal test yard" world option). */
+  buildPortalYard() {
+    const p = this.player, w = this.world;
+    if (w.dimension !== 'overworld') return 'Only in the overworld';
+    const x = Math.floor(p.x) + 6, z = Math.floor(p.z), y = Math.max(w.heightAt(Math.floor(p.x), z) + 6, 70);
+    const yard = buildPortalYard(w, x, y, z, (a, b, c, id, m = 0) => w.setBlockUrgent(a, b, c, id, m, false));
+    p.setPosition(yard.stand.x, yard.stand.y, yard.stand.z);
+    p.yaw = -Math.PI / 2; // facing +x, towards the portals
+    if (p.gamemode === 'survival') p.setGamemode('creative');
+    return 'Portal yard built: the Rift portal (Cinderdeep) on the left, the Hollow Gate on the right';
   }
 
   respawn() {
