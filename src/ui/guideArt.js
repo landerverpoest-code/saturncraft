@@ -3,6 +3,7 @@
 //  * a structure's map glyph in its map colour (world/landmarkKinds.js)
 // Undiscovered entries are shown as silhouettes by the stylesheet (a brightness filter on the image).
 import { MODELS } from '../mobs/models.js';
+import { hasVariants, paintParts } from '../mobs/variants.js';
 
 const SIZE = 56;
 
@@ -44,7 +45,8 @@ function canvasUrl(key, draw) {
 export function creatureIcon(type, def) {
   return canvasUrl('mob:' + type, (ctx) => {
     const pad = 4, area = SIZE - pad * 2;
-    let rects = modelRects(MODELS[type]);
+    const spec = MODELS[type];
+    let rects = modelRects(spec && hasVariants(type) ? { parts: paintParts(spec.parts, type, 0) } : spec); // the common coat of an animal with variants
     if (!rects.length) {
       const w = (def && def.width) || 0.8, h = (def && def.height) || 0.8, m = Math.max(w, h);
       rects = [{ x: (1 - w / m) / 2, y: 1 - h / m, w: w / m, h: h / m, color: '#8a8a8a', alpha: 1 }];

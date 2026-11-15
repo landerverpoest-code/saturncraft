@@ -20,6 +20,7 @@ import './cinderMobs.js'; // registers the Capwalker and the Dirge Wailer (Cinde
 import './slagColossus.js'; // registers the Slag Colossus, the Cinderforge boss
 import './cinderFauna.js'; // registers the Smokeray and the Slagboar and adds them to the Cinderdeep spawn tables
 import { BIOMES } from '../world/biomes.js';
+import { hasVariants, rollVariant } from './variants.js';
 import { outpostsNear } from '../world/temples.js';
 import { hutsNear, hutAt } from '../world/swampHuts.js';
 import { seasonalCreatureCap } from '../world/seasons.js';
@@ -126,6 +127,7 @@ export class MobSpawner {
     m._game = this.game;
     if (fresh && m.def.babyChance && Math.random() < m.def.babyChance) { m.setBaby(true); if (m.def.babyStats) m.health = babyHealth(m.def); } // 5 % of Shamblers are babies (for good); so are some spiderlings, Fizzlets and Brute cubs
     if (m.def.onSpawn) m.def.onSpawn(m);
+    if (fresh && hasVariants(type)) { const b = this.game.world && this.game.world.biomeAt ? BIOMES[this.game.world.biomeAt(Math.floor(x), Math.floor(z))] : null; m.setVariant(rollVariant(type, m.id, b ? b.key : '')); } // its coat, weighted by the biome (mobs/variants.js)
     if (fresh && EQUIP_KINDS[type]) {
       // armour and weapons, likelier the longer the world has run and players have stayed here (mobs/equipment.js)
       const clamped = clampedDifficulty(this.localDifficulty(x, z));
@@ -386,7 +388,7 @@ export class MobSpawner {
     for (const h of hutsNear(this.game.world.gen, cx * 16, cz * 16, cx * 16 + 15, cz * 16 + 15)) {
       if (Math.floor(h.cx / 16) !== cx || Math.floor(h.cz / 16) !== cz) continue;
       const cat = this.spawnMob('purrling', h.cx - 1.5, h.y, h.cz + 0.5);
-      if (cat) { cat.woolColor = HUT_CAT_COAT; cat.persistent = true; }
+      if (cat) { cat.setVariant(HUT_CAT_COAT); cat.persistent = true; }
     }
     // a settler is kept in the cell of every igloo basement
     for (const g of igloosNear(this.game.world.gen, cx * 16, cz * 16, cx * 16 + 15, cz * 16 + 15)) {

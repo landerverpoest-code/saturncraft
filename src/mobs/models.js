@@ -2,6 +2,7 @@
 // procedurally painted textures and simple limb animation.
 import { breathe, blinkClosed, earTwitch, headTurn, idleLook, tailWag, hurtLean, walkBob, deathSink, wrapPi, ANIM_RANGE, LOOK_RANGE } from './mobAnim.js';
 import * as THREE from 'three';
+import { hasVariants, paintParts, variantOverlays } from './variants.js';
 
 const noiseTexCache = new Map();
 function noiseTexture(key, contrast = 0.18) {
@@ -1277,8 +1278,9 @@ const FACES = {
     px(c, '#3a2a6a', [[5, 2], [11, 3], [8, 13], [7, 4, 1, 2]]);
   },
 };
-export function buildModel(type) {
+export function buildModel(type, variant = 0) {
   const spec = MODELS[type];
+  const partList = hasVariants(type) ? paintParts(spec.parts, type, variant) : spec.parts; // a coat variant's colours (mobs/variants.js)
   const root = new THREE.Group();
   const parts = {};
   const mats = [];
@@ -1292,7 +1294,7 @@ export function buildModel(type) {
     matCache.set(k, m); mats.push(m);
     return m;
   };
-  for (const [name, size, pivot, offset, color, opts = {}] of spec.parts) {
+  for (const [name, size, pivot, offset, color, opts = {}] of partList) {
     const pivotGroup = new THREE.Group();
     pivotGroup.position.set(pivot[0] / 16, pivot[1] / 16, pivot[2] / 16);
     const geo = new THREE.BoxGeometry(size[0] / 16, size[1] / 16, size[2] / 16);
@@ -1315,7 +1317,21 @@ export function buildModel(type) {
     root.add(pivotGroup);
     parts[name] = pivotGroup;
   }
+  if (hasVariants(type)) {
+    // spots, stripes and patches: thin boxes inside the host part's pivot, so they move with it
+    for (const [host, size, off, color] of variantOverlays(type, variant)) {
+      const hp = parts[host], hs = partList.find((q) => q[0] === host);
+      if (!hp || !hs) continue;
+      const geo = new THREE.BoxGeometry(size[0] / 16, size[1] / 16, size[2] / 16);
+      shadeBox(geo);
+      const mesh = new THREE.Mesh(geo, matFor(color, {}, 'body'));
+      mesh.position.set((hs[3][0] + off[0]) / 16, (hs[3][1] + off[1]) / 16, (hs[3][2] + off[2]) / 16);
+      mesh.castShadow = true;
+      hp.add(mesh);
+    }
+  }
   root.userData.parts = parts;
+  root.userData.variant = variant;
   root.userData.mats = mats;
   root.userData.dispose = () => { root.traverse((o) => { if (o.geometry) o.geometry.dispose(); }); for (const m of mats) m.dispose(); };
   return root;
