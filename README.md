@@ -640,6 +640,9 @@ poison from eyes) follow the documented table.
 
 - **Mob graphics pass**: every creature's box skin is now shaded (light tops, dark undersides, a darker rim, flecks, dark paws and a paler belly), heads without a painted face get eyes automatically, and nearly all models gained detail parts (ears, muzzles, horns, stripes, claws, hooves, fins, tails) and repainted faces; models outside `models.js` share the `src/mobs/modelKit.js` helper for added detail boxes that follow their host part's pose.
 
+- **The Smokeray** (`src/mobs/cinderFauna.js`) is a huge, slow ray of smoke and cinders that drifts through the open caverns of the Cinderdeep (rarely, in a 5 x 5 x 5 pocket of air, at most two near you). One that sees you within 48 blocks hovers, swells for a second with a glowing mouth, then spits a slow Slag Glob that bursts on impact (power 1, so mobGriefing applies). It drops Blast Powder and Smoke Gland, which brews Slow Falling like a Feather.
+- **The Slagboar** is a stocky, tusked, fire-immune beast with a cracked glowing hide that roams the Cinderdeep in herds of two to four. It charges anything within 10 blocks (short wind-up, fast straight dash, hit for 6 and thrown up, then 3 s of rest) and fears Glowshard (it will not charge you within 6 blocks of one). It drops Raw Slagboar Chops, which cook in a furnace, smoker or campfire, and Leather. Feed two Cinderroot to breed them; the young of a bred pair are calm for life.
+
 **Not yet implemented**
 
 * Large structures beyond villages, temples, wrecks, Tide Citadels, Sunken Ruins, Sun Tombs, Skywatch Towers, Rimekeeps, Sporehalls, outposts, ruined rifts, dungeons, sanctums, bastions, Cinderforges, Hollow Cities and Wyrm Ribs
