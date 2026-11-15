@@ -7,6 +7,7 @@ import { I, DISCS, SHERD_ITEMS, CHARTS } from '../world/items.js';
 import { hollowCityLoot, LOOT_CITY, LOOT_SHIP } from '../world/dimensions/hollowCity.js';
 import { VAULTS_CHEST } from '../world/provingLoot.js';
 import { VAULTS_LOOT } from '../world/provingVaults.js';
+import { BEACON_LOOT } from '../world/beaconHouse.js';
 
 export const SPAWNER_TYPES = ['shambler', 'rattler', 'skitterer'];
 export const SPAWNER_RANGE = 16, SPAWN_COUNT = 4, MAX_NEARBY = 6;
@@ -101,6 +102,11 @@ STRUCTURE_LOOT[LOOT.SUNKEN] = [[[I.TIDE_CRYSTAL, 1, 4, 20], [I.TIDE_SHARD, 2, 6,
 // the store rooms and galleries of the Proving Vaults (world/provingVaults.js)
 LOOT.PROVING_VAULTS = VAULTS_LOOT;
 STRUCTURE_LOOT[VAULTS_LOOT] = VAULTS_CHEST;
+
+// the chests of the Beacon Lighthouses (world/beaconHouse.js): the chest meta has no free kind left, so they carry the shipwreck
+// supplies kind and game.getChest swaps in this table (beaconLootKind)
+LOOT.LIGHTHOUSE = BEACON_LOOT;
+STRUCTURE_LOOT[BEACON_LOOT] = [[[I.COAL, 2, 6, 14], [I.BREAD, 1, 4, 14], [I.DRIED_KELP, 2, 6, 10], [I.PAPER, 1, 5, 12], [I.COMPASS, 1, 1, 4], [I.CLOCK, 1, 1, 3], [I.EMPTY_MAP, 1, 1, 8], [I.FISHING_ROD, 1, 1, 6], [I.STRING, 1, 4, 8], [I.IRON_INGOT, 1, 3, 8], [I.BERYL, 1, 2, 6], [B.LANTERN, 1, 2, 6], [B.TORCH, 4, 10, 14], [I.LANTERN_CHARM, 1, 1, 2], [I.BOOK, 1, 2, 5], [I.COOKED_LANTERNFIN, 1, 3, 8], [I.FLINT_AND_STEEL, 1, 1, 3]], 3, 6, [[B.TORCH, 3, 6]]];
 
 export function dungeonLoot(rng = Math.random, kind = LOOT.DUNGEON) {
   if (kind === LOOT.HOLLOW_CITY || kind === LOOT.HOLLOW_SHIP) return hollowCityLoot(rng, kind === LOOT.HOLLOW_SHIP); // enchanted gear, Voidwing

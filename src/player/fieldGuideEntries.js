@@ -170,6 +170,7 @@ const STRUCTURE_NOTES = {
   skywatch: 'A tower that looks out over the land.',
   rimekeep: 'A frozen fortress in the cold.',
   sporehall: 'A hall grown among giant mushrooms.',
+  beaconhouse: 'A tall stone lighthouse on the shore, its lamp room glowing over the sea, with a keeper\'s hut and chests inland of it.',
   lighthouse: 'A red-and-white tower on a beach point, its lens still waiting for a keeper.',
   mireshrine: 'A shrine sunk knee-deep in the bog, with a rose window and a flooded crypt.',
   observatory: 'A domed star-watching house on the hills, its glass mostly fallen.',

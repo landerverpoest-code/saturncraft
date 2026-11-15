@@ -27,6 +27,7 @@ import { igloosNear, basementLayout } from '../world/igloos.js';
 import { sunkenRuinsNear, sunkenGuardSpots } from '../world/sunkenRuins.js';
 import { sunTombsNear, tombGuardSpots } from '../world/sunTombs.js';
 import { skywatchesNear, skywatchGuards } from '../world/skywatch.js';
+import { beaconsNear, beaconKeepers } from '../world/beaconHouse.js';
 import { rimekeepsNear, rimekeepGuards, RIMEKEEP_WARDEN } from '../world/rimekeep.js';
 import { sporehallsNear, sporehallGuards } from '../world/sporehall.js';
 import { lighthousesNear, lighthouseGuards } from '../world/lighthouse.js';
@@ -393,6 +394,14 @@ export class MobSpawner {
       if (Math.floor(c.x / 16) !== cx || Math.floor(c.z / 16) !== cz) continue;
       const m = this.spawnMob('settler', c.x + 0.5, c.y, c.z + 0.5);
       if (m) { m.profession = 'cleric'; m.home = { x: c.x + 0.5, y: c.y, z: c.z + 0.5 }; m.trades = makeTrades('cleric'); m.lastRestock = this.game.time; m.persistent = true; }
+    }
+    // the keepers of every Beacon Lighthouse: a settler in the hut and one in the tower (world/beaconHouse.js)
+    for (const t of beaconsNear(this.game.world.gen, cx * 16, cz * 16, cx * 16 + 15, cz * 16 + 15)) {
+      for (const k of beaconKeepers(t)) {
+        if (Math.floor(k.x / 16) !== cx || Math.floor(k.z / 16) !== cz) continue;
+        const m = this.spawnMob('settler', k.x + 0.5, k.y, k.z + 0.5);
+        if (m) { m.profession = k.profession; m.home = { x: k.x + 0.5, y: k.y, z: k.z + 0.5 }; m.trades = makeTrades(k.profession); m.lastRestock = this.game.time; m.persistent = true; }
+      }
     }
     // guards of the large structures (world/sunkenRuins.js, sunTombs.js, skywatch.js, rimekeep.js, sporehall.js), placed once with the chunk that holds their spot
     if (this.hostileEnabled()) {
