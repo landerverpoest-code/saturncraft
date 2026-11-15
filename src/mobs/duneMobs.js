@@ -15,6 +15,7 @@
 // sees them through the ordinary mob snapshots, whose 25 fields are unchanged.
 import { MOBS, MOB_KEYS, CATEGORY } from './mobTypes.js';
 import { MODELS, FACES } from './models.js';
+import { decorate, followDecor } from './modelKit.js';
 import { I } from '../world/items.js';
 import { B, SOLID, isWaterish } from '../world/blocks.js';
 import { BIOMES } from '../world/biomes.js';
@@ -139,7 +140,7 @@ function snapperRender(m, model, alpha, sec) {
 }
 
 MODELS.sandsnapper = {
-  parts: [
+  parts: decorate([
     ['body', [8, 4, 10], [0, 3, 1], [0, 0, 0], '#b88a4a'],
     ['plates', [7, 1.4, 8], [0, 5.4, 1], [0, 0, 0], '#8a6232'],
     ['head', [6, 4, 5], [0, 3.2, -5], [0, 0, -2], '#fffffc', { face: 'sandsnapper' }],
@@ -150,13 +151,42 @@ MODELS.sandsnapper = {
       [`legL${k}`, [1.4, 3, 1.4], [4.4, 3, z], [0, -1.5, 0], '#7a5628', { anim: a }],
       [`legR${k}`, [1.4, 3, 1.4], [-4.4, 3, z], [0, -1.5, 0], '#7a5628', { anim: a === 'legA' ? 'legB' : 'legA' }],
     ]),
-  ],
+  ], {
+    body: [
+      ['belly', [7, 1, 9], [0, -2.1, 0], '#e6d4a0'],
+      ['hindBand', [8.4, 4.4, 1.4], [0, 0, 3], '#9a6e38'],
+    ],
+    plates: [
+      ['spike0', [1.2, 1.6, 1.2], [0, 1.3, -3], '#d8b878'],
+      ['spike1', [1.2, 1.6, 1.2], [0, 1.3, 0], '#d8b878'],
+      ['spike2', [1.2, 1.6, 1.2], [0, 1.3, 3], '#d8b878'],
+      ['plateL', [1.4, 1, 6], [2.6, 0.2, 0], '#a87a40'],
+      ['plateR', [1.4, 1, 6], [-2.6, 0.2, 0], '#a87a40'],
+    ],
+    head: [
+      ['brow@', [2.2, 1, 3], [1.8, 2.4, -0.4], '#8a6232'],
+      ['nostril@', [0.8, 0.8, 0.8], [1.2, 0.8, -2.8], '#2a1608'],
+    ],
+    jawL: [['toothL', [0.6, 0.9, 0.6], [-0.5, 1.2, -2.4], '#fdf6e0'], ['toothL2', [0.6, 0.9, 0.6], [-0.5, 1.2, -0.6], '#fdf6e0']],
+    jawR: [['toothR', [0.6, 0.9, 0.6], [0.5, 1.2, -2.4], '#fdf6e0'], ['toothR2', [0.6, 0.9, 0.6], [0.5, 1.2, -0.6], '#fdf6e0']],
+    tail: [['sting', [1.2, 1.2, 2.6], [0, 0.4, 4.4], '#3a2410'], ['tailBand', [2.4, 2.4, 1.2], [0, 0, 0.6], '#d8b878']],
+    legL0: [['clawL0', [1.8, 0.8, 2.4], [0, -1.7, -0.5], '#e6d8b8']],
+    legR0: [['clawR0', [1.8, 0.8, 2.4], [0, -1.7, -0.5], '#e6d8b8']],
+    legL1: [['clawL1', [1.8, 0.8, 2.4], [0, -1.7, -0.5], '#e6d8b8']],
+    legR1: [['clawR1', [1.8, 0.8, 2.4], [0, -1.7, -0.5], '#e6d8b8']],
+    legL2: [['clawL2', [1.8, 0.8, 2.4], [0, -1.7, -0.5], '#e6d8b8']],
+    legR2: [['clawR2', [1.8, 0.8, 2.4], [0, -1.7, -0.5], '#e6d8b8']],
+  }),
 };
 // two small yellow eyes on stalks' bases, a dark mouth ringed with teeth
 FACES.sandsnapper = (c) => {
+  c.fillStyle = '#6a4a22'; c.fillRect(1, 2, 5, 1); c.fillRect(10, 2, 5, 1);
   c.fillStyle = '#17110a'; c.fillRect(2, 3, 3, 3); c.fillRect(11, 3, 3, 3);
-  c.fillStyle = '#ffd24a'; c.fillRect(3, 4, 1, 1); c.fillRect(12, 4, 1, 1);
+  c.fillStyle = '#ffd24a'; c.fillRect(2, 3, 3, 3); c.fillRect(11, 3, 3, 3);
+  c.fillStyle = '#17110a'; c.fillRect(3, 3, 1, 3); c.fillRect(12, 3, 1, 3);
+  c.fillStyle = '#fff6c0'; c.fillRect(2, 3, 1, 1); c.fillRect(11, 3, 1, 1);
   c.fillStyle = '#2a1608'; c.fillRect(4, 9, 8, 5);
+  c.fillStyle = '#c85a4a'; c.fillRect(6, 11, 4, 2);
   c.fillStyle = '#f4ecd8'; for (let x = 4; x < 12; x += 2) { c.fillRect(x, 9, 1, 2); c.fillRect(x + 1, 12, 1, 2); }
 };
 
@@ -207,7 +237,7 @@ function lurkerRender(m, model, alpha, sec) {
 }
 
 MODELS.peat_lurker = {
-  parts: [
+  parts: decorate([
     ['body', [7, 4, 14], [0, 3, 1], [0, 0, 0], '#4a5a2e'],
     ['ridge', [3, 1.4, 11], [0, 5.4, 1], [0, 0, 0], '#2e3a1e'],
     ['head', [6, 3.4, 6], [0, 3.4, -7], [0, 0, -2.4], '#fffffc', { face: 'peat_lurker' }],
@@ -219,15 +249,34 @@ MODELS.peat_lurker = {
       [`legL${k}`, [2, 2.6, 2.4], [x, 2.6, z], [0, -1.3, 0], '#34401e', { anim: a }],
       [`legR${k}`, [2, 2.6, 2.4], [-x, 2.6, z], [0, -1.3, 0], '#34401e', { anim: a === 'legA' ? 'legB' : 'legA' }],
     ]),
-  ],
+  ], {
+    body: [
+      ['belly', [5.4, 1, 12], [0, -1.8, 0], '#a8a868'],
+      ['stripeA', [7.6, 4.2, 1], [0, 0, -4], '#3a4824'],
+      ['stripeB', [7.6, 4.2, 1], [0, 0, 0], '#3a4824'],
+      ['stripeC', [7.6, 4.2, 1], [0, 0, 4], '#3a4824'],
+    ],
+    ridge: [['bump0', [2, 1.4, 1.6], [0, 1, -3.5], '#222c16'], ['bump1', [2, 1.4, 1.6], [0, 1, -0.5], '#222c16'], ['bump2', [2, 1.4, 1.6], [0, 1, 2.5], '#222c16']],
+    head: [['nostril@', [0.8, 0.8, 0.8], [0.8, 1.9, -2.8], '#10140a'], ['brow@', [2.2, 0.8, 2.2], [2.2, 1.9, 0.4], '#2e3a1e']],
+    jaw: [['tooth@', [0.6, 0.9, 0.6], [1.8, 0.9, -2.4], '#e8e0c4'], ['tooth2@', [0.6, 0.9, 0.6], [1.8, 0.9, -0.6], '#e8e0c4']],
+    tail: [['tailTip', [2.4, 2, 3.4], [0, -0.3, 4.6], '#34401e'], ['tailBand', [4.4, 3.4, 1], [0, 0, 0], '#2a361a']],
+    'legL0': [['clawL0', [2.4, 0.8, 3], [0, -1.5, -0.6], '#d8cc9a']],
+    'legR0': [['clawR0', [2.4, 0.8, 3], [0, -1.5, -0.6], '#d8cc9a']],
+    'legL1': [['clawL1', [2.4, 0.8, 3], [0, -1.5, -0.6], '#d8cc9a']],
+    'legR1': [['clawR1', [2.4, 0.8, 3], [0, -1.5, -0.6], '#d8cc9a']],
+  }),
 };
 // a long dark snout: nostrils on top, a line of teeth under the jaw
 FACES.peat_lurker = (c) => {
   c.fillStyle = '#1c2610'; c.fillRect(0, 0, 16, 5);
+  c.fillStyle = '#2e3a1e'; c.fillRect(1, 5, 4, 1); c.fillRect(11, 5, 4, 1);
   c.fillStyle = '#d8cc40'; c.fillRect(2, 5, 3, 2); c.fillRect(11, 5, 3, 2);
   c.fillStyle = '#10140a'; c.fillRect(3, 5, 1, 2); c.fillRect(12, 5, 1, 2);
-  c.fillStyle = '#10140a'; c.fillRect(7, 3, 2, 1);
+  c.fillStyle = '#fff8a0'; c.fillRect(2, 5, 1, 1); c.fillRect(11, 5, 1, 1);
+  c.fillStyle = '#10140a'; c.fillRect(6, 2, 1, 1); c.fillRect(9, 2, 1, 1);
+  c.fillStyle = '#10140a'; c.fillRect(1, 10, 14, 1);
   c.fillStyle = '#e8e0c4'; for (let x = 2; x < 14; x += 2) c.fillRect(x, 11, 1, 2);
+  c.fillStyle = '#8a8a50'; c.fillRect(4, 14, 8, 2);
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -280,7 +329,7 @@ function kiteRender(m, model, alpha, sec) {
 }
 
 MODELS.cliffkite = {
-  parts: [
+  parts: decorate([
     ['body', [4, 3, 9], [0, 4, 0], [0, 0, 0], '#8a4a2a'],
     ['chest', [3.2, 1.6, 6], [0, 2.8, -0.5], [0, 0, 0], '#e8d8b8'],
     ['head', [3.6, 3.2, 3.6], [0, 4.4, -5.4], [0, 0, -1.2], '#fffffc', { face: 'cliffkite' }],
@@ -290,14 +339,29 @@ MODELS.cliffkite = {
     ['tipL', [4, 0.8, 4.4], [16, 4.8, -0.5], [2, 0, 0.4], '#2e2018'],
     ['tipR', [4, 0.8, 4.4], [-16, 4.8, -0.5], [-2, 0, 0.4], '#2e2018'],
     ['tail', [3.6, 0.6, 6], [0, 4.4, 4.6], [0, 0, 3], '#c8662e'],
-  ],
+  ], {
+    body: [['mantle', [4.6, 1.2, 6], [0, 1.4, 0.4], '#6a3820'], ['barring', [4.2, 3.4, 0.8], [0, 0, 2.4], '#2e2018']],
+    chest: [['streak0', [3.4, 1.8, 0.6], [0, 0, -1.6], '#8a4a2a'], ['streak1', [3.4, 1.8, 0.6], [0, 0, 0.6], '#8a4a2a']],
+    head: [['crest', [2, 1.2, 3], [0, 2.1, 0.4], '#6a3820'], ['browL', [1.2, 0.6, 1.8], [1.2, 1.7, -1.4], '#2e2018'], ['browR', [1.2, 0.6, 1.8], [-1.2, 1.7, -1.4], '#2e2018']],
+    beak: [['hook', [1.2, 0.8, 1], [0, -1, -1.2], '#a07818'], ['cere', [1.6, 1.2, 0.8], [0, 0.5, 1.2], '#f0c030']],
+    wingL: [['featherL0', [2.2, 0.8, 3.4], [4.6, 0, 4.4], '#5a2e1a'], ['featherL1', [3.2, 0.8, 3.4], [-2.4, 0, 4.4], '#8a4a2a'], ['bandL', [1.4, 0.9, 6.2], [2, 0.05, 0], '#e8d8b8']],
+    wingR: [['featherR0', [2.2, 0.8, 3.4], [-4.6, 0, 4.4], '#5a2e1a'], ['featherR1', [3.2, 0.8, 3.4], [2.4, 0, 4.4], '#8a4a2a'], ['bandR', [1.4, 0.9, 6.2], [-2, 0.05, 0], '#e8d8b8']],
+    tail: [['tailBandA', [3.8, 0.7, 1], [0, 0, -0.6], '#2e2018'], ['tailBandB', [3.8, 0.7, 1], [0, 0, 1.6], '#2e2018'], ['tailTip', [3.8, 0.7, 0.8], [0, 0, 3], '#e8d8b8']],
+    '*': [
+      ['talonL', [0.8, 1.6, 0.8], [0.9, 2.4, -1], [0, -0.8, 0], '#e0b030'],
+      ['talonR', [0.8, 1.6, 0.8], [-0.9, 2.4, -1], [0, -0.8, 0], '#e0b030'],
+    ],
+  }),
 };
 // a fierce yellow eye with a dark brow, a pale cheek
 FACES.cliffkite = (c) => {
   c.fillStyle = '#e8d8b8'; c.fillRect(0, 8, 16, 8);
+  c.fillStyle = '#6a3820'; c.fillRect(0, 0, 16, 3);
   c.fillStyle = '#2e2018'; c.fillRect(1, 3, 5, 2); c.fillRect(10, 3, 5, 2);
   c.fillStyle = '#f0c030'; c.fillRect(2, 5, 3, 3); c.fillRect(11, 5, 3, 3);
   c.fillStyle = '#17110a'; c.fillRect(3, 6, 1, 1); c.fillRect(12, 6, 1, 1);
+  c.fillStyle = '#fff6c0'; c.fillRect(2, 5, 1, 1); c.fillRect(11, 5, 1, 1);
+  c.fillStyle = '#b8a888'; c.fillRect(6, 10, 4, 1); c.fillRect(1, 9, 1, 3); c.fillRect(14, 9, 1, 3);
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -391,3 +455,8 @@ export function duneChunkSpawn(spawner, cx, cz) {
     }
   }
 }
+
+// detail boxes follow their host parts (head pitch, claws...)
+followDecor(SANDSNAPPER, 'sandsnapper');
+followDecor(PEAT_LURKER, 'peat_lurker');
+followDecor(CLIFFKITE, 'cliffkite');

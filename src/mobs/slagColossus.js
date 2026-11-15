@@ -17,6 +17,7 @@
 // shielded = `special`) are drawn from those flags on every screen (customRender), including the warning flames.
 import { MOBS, MOB_KEYS, CATEGORY } from './mobTypes.js';
 import { MODELS, FACES } from './models.js';
+import { decorate, followDecor } from './modelKit.js';
 import { I } from '../world/items.js';
 import { Fireball } from '../entities/fireball.js';
 import { faceTowards, groundBelow } from './dimensionMobs.js';
@@ -339,7 +340,7 @@ export function colossusDeath(m, g, killedByPlayer) {
 
 // ---- looks ----------------------------------------------------------------------------
 MODELS.slag_colossus = {
-  parts: [
+  parts: decorate([
     ['legL', [12, 28, 12], [8, 28, 0], [0, -14, 0], '#3a2c30', { anim: 'legA' }],
     ['legR', [12, 28, 12], [-8, 28, 0], [0, -14, 0], '#3a2c30', { anim: 'legB' }],
     ['hips', [24, 8, 15], [0, 32, 0], [0, 0, 0], '#4a3a40'],
@@ -352,14 +353,48 @@ MODELS.slag_colossus = {
     ['hornR', [3, 9, 3], [6, 85, -1], [0, 0, 0], '#2e2428'],
     ['armL', [12, 40, 12], [22, 66, 0], [0, -17, 0], '#4a3a40', { anim: 'armSwing' }],
     ['armR', [12, 40, 12], [-22, 66, 0], [0, -17, 0], '#4a3a40', { anim: 'armSwingB' }],
-  ],
+  ], {
+    hips: [['belt', [24.6, 2.4, 15.6], [0, 2.4, 0], '#2e2226'], ['buckle', [8, 6, 1.2], [0, 0, -8], '#8a4a1c', { emissive: '#c8641c' }]],
+    body: [
+      ['plate0', [33, 2, 20], [0, 8, 0], '#2e2226'],
+      ['plate1', [33, 2, 20], [0, -9, 0], '#2e2226'],
+      ['seamV@', [1.2, 22, 0.6], [11, 0, -9.8], '#ff8a2a', { emissive: '#e8741a' }],
+      ['seamH', [10, 1.2, 0.6], [-10, -6, -9.8], '#ff8a2a', { emissive: '#e8741a' }],
+      ['seamH2', [8, 1.2, 0.6], [10, 5, -9.8], '#ff8a2a', { emissive: '#e8741a' }],
+      ['pipe@', [4, 18, 4], [9, 6, 10.5], '#3a2c30'],
+      ['pipeGlow@', [3, 1.2, 3], [9, 15.4, 10.5], '#ffb43a', { emissive: '#e8741a' }],
+      ['shoulder@', [14, 5, 22], [18, 14, 0], '#3a2c30'],
+    ],
+    furnace: [['rim', [18.4, 16.4, 1.6], [0, 0, 0.5], '#2e2226'], ['grateA', [1, 14.6, 0.8], [-4, 0, -1.2], '#2e2226'], ['grateB', [1, 14.6, 0.8], [0, 0, -1.2], '#2e2226'], ['grateC', [1, 14.6, 0.8], [4, 0, -1.2], '#2e2226']],
+    'vent@': [['ventRim@', [6.4, 1.4, 6.4], [0, 3.6, 0], '#2e2226']],
+    head: [
+      ['jawPlate', [16.6, 3, 15.6], [0, -6, 0], '#3e3036'],
+      ['brow', [17, 2.6, 16], [0, 5, 0], '#2e2428'],
+      ['tusk@', [2, 4, 2], [5, -6.5, -7.8], '#c8b8a0'],
+      ['crack', [1, 6, 0.6], [-5, 2, -7.6], '#ff8a2a', { emissive: '#e8741a' }],
+    ],
+    'horn@': [['hornRing@', [4.2, 1.6, 4.2], [0, -2.4, 0], '#6a4a40'], ['hornTip@', [2, 5, 2], [0, 6.5, 0], '#d8742a', { emissive: '#8a3a10' }]],
+    'arm@': [
+      ['vambrace@', [13, 6, 13], [0, 2, 0], '#2e2226'],
+      ['fist@', [14, 12, 14], [0, -17.5, 0], '#3a2c30'],
+      ['crack@', [1.2, 14, 0.6], [0, 8, -6.3], '#ff8a2a', { emissive: '#e8741a' }],
+      ['knuckle@', [12, 2, 3], [0, -22.5, -6], '#2e2226'],
+    ],
+    'leg@': [
+      ['knee@', [13, 4, 13], [0, 7, 0], '#2e2226'],
+      ['foot@', [14, 5, 17], [0, -11.5, -2], '#2e2226'],
+      ['ankleGlow@', [12.6, 1.2, 12.6], [0, -8, 0], '#c8641c', { emissive: '#c8641c' }],
+    ],
+  }),
 };
 FACES.slag_colossus = (c) => {
-  c.fillStyle = '#1c1416'; c.fillRect(2, 4, 12, 5);
+  c.fillStyle = '#1c1416'; c.fillRect(1, 3, 14, 6);
   c.fillStyle = '#ffb43a'; c.fillRect(3, 5, 3, 3); c.fillRect(10, 5, 3, 3);
   c.fillStyle = '#fff0b0'; c.fillRect(4, 6, 1, 1); c.fillRect(11, 6, 1, 1);
-  c.fillStyle = '#1c1416'; c.fillRect(4, 11, 8, 3);
-  c.fillStyle = '#c8641c'; c.fillRect(5, 12, 6, 1);
+  c.fillStyle = '#1c1416'; c.fillRect(2, 2, 5, 1); c.fillRect(9, 2, 5, 1); c.fillRect(7, 4, 2, 5);
+  c.fillStyle = '#1c1416'; c.fillRect(3, 10, 10, 5);
+  c.fillStyle = '#c8641c'; c.fillRect(4, 12, 8, 2); c.fillStyle = '#ffb43a'; c.fillRect(6, 13, 4, 1);
+  c.fillStyle = '#c8b8a0'; for (const x of [3, 5, 10, 12]) c.fillRect(x, 10, 1, 2);
 };
 
 /** Poses from the mirrored flags, so every screen sees them: arms up while it winds up, a drooping head when stunned. */
@@ -392,3 +427,6 @@ export const SLAG_COLOSSUS = {
   ],
 };
 if (!MOBS.slag_colossus) { MOBS.slag_colossus = SLAG_COLOSSUS; MOB_KEYS.push('slag_colossus'); }
+
+// detail boxes follow their host parts (head pitch, claws...)
+followDecor(SLAG_COLOSSUS, 'slag_colossus');

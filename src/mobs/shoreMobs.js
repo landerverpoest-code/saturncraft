@@ -13,6 +13,7 @@
 // builds them from the type alone (net/entityMirror.js). Everything here is simulated on the host.
 import { MOBS, MOB_KEYS, CATEGORY } from './mobTypes.js';
 import { MODELS, FACES } from './models.js';
+import { decorate, followDecor } from './modelKit.js';
 import { I } from '../world/items.js';
 import { B } from '../world/blocks.js';
 
@@ -106,7 +107,7 @@ function crabRender(m, model, alpha, sec) {
 }
 
 MODELS.brinecrab = {
-  parts: [
+  parts: decorate([
     ['body', [10, 3.6, 8], [0, 3.6, 0], [0, 0, 0], '#d8602e'],
     ['shell', [8.4, 1.4, 6.4], [0, 5.9, 0.2], [0, 0, 0], '#ec8650'],
     ['face', [6, 2.6, 1], [0, 5.2, -4.4], [0, 0, 0], '#fffffa', { face: 'brinecrab' }],
@@ -118,13 +119,38 @@ MODELS.brinecrab = {
       [`legL${n}`, [3.4, 1, 1], [6, 2.6, z], [1.2, -1, 0], '#d8602e', { anim: a }],
       [`legR${n}`, [3.4, 1, 1], [-6, 2.6, z], [-1.2, -1, 0], '#d8602e', { anim: a === 'legA' ? 'legB' : 'legA' }],
     ]),
-  ],
+  ], {
+    body: [
+      ['belly', [8.4, 0.6, 6.4], [0, -1.9, 0], '#f0d8a8'],
+      ['sideBand', [10.4, 1, 6]  , [0, 0.2, 0.5], '#b84a22'],
+    ],
+    shell: [
+      ['ridgeA', [5.4, 0.8, 1], [0, 1, -1.8], '#f6a070'],
+      ['ridgeB', [6.4, 0.8, 1], [0, 1, 0.2], '#f6a070'],
+      ['ridgeC', [5, 0.8, 1], [0, 1, 2.2], '#f6a070'],
+      ['spike@', [0.9, 1.4, 0.9], [3.2, 1.2, -2.4], '#fde0b0'],
+      ['spikeB@', [0.9, 1.2, 0.9], [3.2, 1.1, 1.4], '#fde0b0'],
+    ],
+    face: [
+      ['eyeStalk@', [0.8, 1.6, 0.8], [2, 1.6, 0.2], '#d8602e'],
+      ['eyeBall@', [1.6, 1.6, 1.6], [2, 2.8, 0.2], '#17110a'],
+      ['eyeGlint@', [0.6, 0.6, 0.6], [2.1, 3.1, -0.7], '#fff4d8'],
+    ],
+    'claw@': [['knuckle@', [2.8, 0.8, 2.2], [0, 1.1, -0.6], '#ec8650'], ['wrist@', [1.6, 1.4, 1.8], [-0.4, 0, 2.2], '#b84a22']],
+    'pinch@': [['tooth@', [0.8, 0.8, 1.6], [-0.9, 0.8, -1.4], '#fff4d8']],
+    'legL1': [['kneeL1', [1.2, 1.4, 1.2], [1.8, 0.2, 0], '#b84a22']],
+    'legR1': [['kneeR1', [1.2, 1.4, 1.2], [-1.8, 0.2, 0], '#b84a22']],
+    'legL2': [['kneeL2', [1.2, 1.4, 1.2], [1.8, 0.2, 0], '#b84a22']],
+    'legR2': [['kneeR2', [1.2, 1.4, 1.2], [-1.8, 0.2, 0], '#b84a22']],
+    'legL3': [['kneeL3', [1.2, 1.4, 1.2], [1.8, 0.2, 0], '#b84a22']],
+    'legR3': [['kneeR3', [1.2, 1.4, 1.2], [-1.8, 0.2, 0], '#b84a22']],
+  }),
 };
 // two black stalk eyes with a glint, a small mouth
 FACES.brinecrab = (c) => {
-  c.fillStyle = '#17110a'; c.fillRect(2, 2, 4, 5); c.fillRect(10, 2, 4, 5);
-  c.fillStyle = '#fff4d8'; c.fillRect(3, 3, 1, 1); c.fillRect(11, 3, 1, 1);
-  c.fillStyle = '#7a2a16'; c.fillRect(6, 10, 4, 2);
+  c.fillStyle = '#7a2a16'; c.fillRect(5, 9, 6, 3);
+  c.fillStyle = '#17110a'; c.fillRect(6, 10, 4, 1);
+  c.fillStyle = '#fff4d8'; c.fillRect(6, 9, 1, 1); c.fillRect(9, 9, 1, 1);
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -164,7 +190,7 @@ function wicklingRender(m, model, alpha, sec) {
 }
 
 MODELS.wickling = {
-  parts: [
+  parts: decorate([
     ['legL', [3, 7, 3], [2, 7, 0], [0, -3.5, 0], '#5e4e3a', { anim: 'legA' }],
     ['legR', [3, 7, 3], [-2, 7, 0], [0, -3.5, 0], '#5e4e3a', { anim: 'legB' }],
     ['body', [7, 8, 4], [0, 11, 0], [0, 0, 0], '#7a6850'],
@@ -175,13 +201,31 @@ MODELS.wickling = {
     ['wick', [1, 2, 1], [0, 20.6, 0], [0, 1, 0], '#2a2420'], // stands on the crown of the head (the head spans 15 to 21)
     ['flame', [3.4, 4.6, 3.4], [0, 21.4, 0], [0, 2.3, 0], '#ffb030', { emissive: '#ff8a20' }],
     ['flameCore', [1.6, 3, 1.6], [0, 21.8, 0], [0, 1.5, 0], '#fff0a0', { emissive: '#fff0a0' }],
-  ],
+  ], {
+    body: [
+      ['belt', [7.6, 1.2, 4.6], [0, 0.6, 0], '#3a2e20'],
+      ['buckle', [1.6, 1.2, 0.6], [0, 0.6, -2.4], '#d8b84a'],
+      ['hem', [8, 2, 5], [0, -4.6, 0], '#5a4a38'],
+      ['sash', [3, 5, 0.6], [-1.5, -1, -2.2], '#b0a078'],
+    ],
+    head: [
+      ['pool', [6.6, 1.2, 6.6], [0, 3.1, 0], '#f2e6c0'],
+      ['wax@', [1.2, 3.2, 1.2], [3.1, 1.2, -1.4], '#f2e6c0'],
+      ['waxB', [1.2, 2, 1.2], [1, -3.6, -3.1], '#f2e6c0'],
+      ['hood', [6.6, 1.6, 6.6], [0, 1.2, 0.2], '#8a7a5c'],
+    ],
+    'arm@': [['cuff@', [3, 2, 3], [0, -2.6, 0], '#a08a68'], ['hand@', [2.6, 2, 2.6], [0, -4.4, 0], '#e8dcb0']],
+    'leg@': [['boot@', [3.8, 2.2, 4.6], [0, -2.6, -0.4], '#3a2e20']],
+  }),
 };
 // two hollow, glowing eyes and a gaping mouth sagging in the wax
 FACES.wickling = (c) => {
-  c.fillStyle = '#2a2014'; c.fillRect(3, 5, 3, 4); c.fillRect(10, 5, 3, 4);
-  c.fillStyle = '#ffd24a'; c.fillRect(4, 6, 1, 2); c.fillRect(11, 6, 1, 2);
-  c.fillStyle = '#2a2014'; c.fillRect(6, 11, 4, 3);
+  c.fillStyle = '#2a2014'; c.fillRect(2, 4, 4, 5); c.fillRect(10, 4, 4, 5);
+  c.fillStyle = '#ffd24a'; c.fillRect(3, 5, 2, 3); c.fillRect(11, 5, 2, 3);
+  c.fillStyle = '#fff6c0'; c.fillRect(3, 5, 1, 1); c.fillRect(11, 5, 1, 1);
+  c.fillStyle = '#2a2014'; c.fillRect(6, 11, 4, 3); c.fillRect(5, 10, 1, 2); c.fillRect(10, 10, 1, 2);
+  c.fillStyle = '#7a5a1a'; c.fillRect(7, 12, 2, 1);
+  c.fillStyle = '#f2e6c0'; c.fillRect(0, 2, 2, 4); c.fillRect(14, 3, 2, 5);
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -204,3 +248,7 @@ export const WICKLING = {
 for (const [k, d] of [['brinecrab', BRINECRAB], ['wickling', WICKLING]]) {
   if (!MOBS[k]) { MOBS[k] = d; MOB_KEYS.push(k); }
 }
+
+// detail boxes follow their host parts (head pitch, claws...)
+followDecor(BRINECRAB, 'brinecrab');
+followDecor(WICKLING, 'wickling');

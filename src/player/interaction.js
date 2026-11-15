@@ -21,6 +21,7 @@ import { ITEMS, I, toolOf, isBlockItem, WOOL_ITEMS, POTION_ITEM, isArrow, DISCS 
 import { POTIONS } from '../world/potions.js';
 import { breathCloudNear } from '../entities/areaCloud.js';
 import { breakProgressPerTick, blockDrops, canHarvest } from '../world/mining.js';
+import { isRiddled, releaseMite } from '../mobs/stoneMites.js';
 import { enchLevel, meleeBonus, silkDropsSelf, canSurge, surgeVelocity } from '../world/enchantments.js';
 import { spearDamage } from '../entities/tidespear.js';
 import { ReturningDisc } from '../entities/disc.js';
@@ -475,6 +476,7 @@ export class Interaction {
     g.particles && g.particles.blockBreak(x, y, z, id, particleLight(g, x + 0.5, y + 0.5, z + 0.5));
     const held = p.inventory.selectedStack, ench = tool.type && held && held.ench ? held.ench : null;
     const silk = !!(ench && ench.gentle_hand && silkDropsSelf(id));
+    if (isRiddled(id) && !silk) releaseMite(g, x, y, z); // a Stone Mite scurries out (mobs/stoneMites.js)
     const xp = p.creative || silk ? null : ORE_XP[id];
     const gearNow = gearBonuses(p.inventory);
     if (xp && canHarvest(id, tool)) g.entities.spawnXp(x + 0.5, y + 0.5, z + 0.5, Math.round((xp[0] + Math.floor(Math.random() * (xp[1] - xp[0] + 1))) * (1 + gearNow.oreXp)));

@@ -14,6 +14,7 @@
 // once when their chunks are made. Everything is simulated on the host; guests see the mobs through the ordinary snapshots.
 import { MOBS, MOB_KEYS, CATEGORY } from './mobTypes.js';
 import { MODELS, FACES } from './models.js';
+import { decorate, followDecor } from './modelKit.js';
 import { I } from '../world/items.js';
 import { lampLevel } from '../player/diving.js';
 import { B, SOLID, isWaterish } from '../world/blocks.js';
@@ -107,7 +108,7 @@ function mawRender(m, mesh, alpha, sec) {
 }
 
 MODELS.trenchmaw = {
-  parts: [
+  parts: decorate([
     ['head', [6, 5, 7], [0, 5, -11], [0, 0, 0], '#2c2f45', { face: 'trenchmaw' }],
     ['jaw', [5, 1.6, 6], [0, 3.2, -9], [0, 0, -3], '#3a3d58'],
     ['body', [6, 6, 10], [0, 5, -4], [0, 0, 0], '#2c2f45'],
@@ -116,13 +117,31 @@ MODELS.trenchmaw = {
     ['tail', [1.6, 5, 8], [0, 5, 22], [0, 0, 4], '#26283a'],
     ['fin', [1, 3, 14], [0, 9, -2], [0, 0, 0], '#4a4e72'],
     ['belly', [5, 1, 9], [0, 2.2, -4], [0, 0, 0], '#8a8aa8'],
-  ],
+  ], {
+    head: [
+      ['brow@', [2.2, 1, 3], [1.8, 2.9, -1.2], '#1c1e30'],
+      ['snoutRidge', [2.4, 1, 4], [0, 2.9, -1.4], '#4a4e72'],
+      ['cheek@', [0.8, 3, 3.6], [3.3, -0.4, 0.8], '#3a3d58'],
+    ],
+    jaw: [
+      ['toothA@', [0.6, 1.2, 0.6], [1.8, 1, -4.2], '#f0ecd8'],
+      ['toothB@', [0.6, 1.2, 0.6], [1.8, 1, -2.2], '#f0ecd8'],
+      ['chinBarb', [0.8, 2.4, 0.8], [0, -1.8, -4], '#8a8aa8'],
+    ],
+    body: [['dorsal0', [1, 2.2, 8], [0, 4, 0], '#4a4e72'], ['pectoral@', [3, 0.8, 2.4], [4.2, -2, -2], '#4a4e72'], ['spots0', [6.4, 0.8, 2], [0, 1.4, -3], '#3a3d58']],
+    body2: [['dorsal1', [1, 2.2, 8], [0, 3.8, 0], '#4a4e72'], ['belly2', [4, 1, 10], [0, -2.6, 0], '#8a8aa8'], ['spots1', [5.4, 0.8, 2], [0, 2.7, 2], '#3a3d58']],
+    body3: [['dorsal2', [0.8, 2, 7], [0, 3, 0], '#4a4e72'], ['belly3', [3, 1, 9], [0, -2.1, 0], '#8a8aa8']],
+    tail: [['tailFinTop', [0.8, 3, 5], [0, 3.6, 1.5], '#4a4e72'], ['tailFinBot', [0.8, 3, 5], [0, -3.6, 1.5], '#4a4e72'], ['tailTip', [1, 6, 2], [0, 0, 4.4], '#4a4e72']],
+  }),
 };
 // small cold yellow eyes, a wide mouth full of teeth
 FACES.trenchmaw = (c) => {
+  c.fillStyle = '#1c1e30'; c.fillRect(1, 2, 5, 1); c.fillRect(10, 2, 5, 1);
   c.fillStyle = '#ffd84a'; c.fillRect(2, 3, 3, 3); c.fillRect(11, 3, 3, 3);
-  c.fillStyle = '#100c0c'; c.fillRect(3, 4, 1, 2); c.fillRect(12, 4, 1, 2);
-  c.fillStyle = '#100c0c'; c.fillRect(2, 9, 12, 4);
+  c.fillStyle = '#100c0c'; c.fillRect(3, 3, 1, 3); c.fillRect(12, 3, 1, 3);
+  c.fillStyle = '#fff4b0'; c.fillRect(2, 3, 1, 1); c.fillRect(11, 3, 1, 1);
+  c.fillStyle = '#3a3d58'; c.fillRect(7, 6, 1, 1); c.fillRect(8, 6, 1, 1);
+  c.fillStyle = '#100c0c'; c.fillRect(2, 9, 12, 4); c.fillStyle = '#8a2a3a'; c.fillRect(4, 11, 8, 2);
   c.fillStyle = '#f0ecd8'; for (let x = 2; x < 14; x += 2) { c.fillRect(x, 9, 1, 2); c.fillRect(x + 1, 11, 1, 2); }
 };
 
@@ -148,7 +167,7 @@ function finRender(m, mesh, alpha, sec) {
 }
 
 MODELS.lanternfin = {
-  parts: [
+  parts: decorate([
     ['body', [5, 5, 8], [0, 4, 0], [0, 0, 0], '#27405a'],
     ['head', [5, 5, 4], [0, 4, -4], [0, 0, -2], '#2d4a68', { face: 'lanternfin' }],
     ['stalk', [0.8, 0.8, 5], [0, 7, -5], [0, 1, -2.5], '#1c2e42'],
@@ -156,13 +175,26 @@ MODELS.lanternfin = {
     ['tail', [1, 4, 4], [0, 4, 4], [0, 0, 2], '#27405a'],
     ['finL', [3, 1, 2], [2.5, 3, 0], [1.5, 0, 0], '#3a5c7e'],
     ['finR', [3, 1, 2], [-2.5, 3, 0], [-1.5, 0, 0], '#3a5c7e'],
-  ],
+  ], {
+    body: [
+      ['belly', [4, 1, 6], [0, -2.6, 0], '#9fb4d8'],
+      ['dorsal', [0.8, 2, 5], [0, 3.4, 0], '#3a5c7e'],
+      ['stripe0', [5.4, 1, 1], [0, 1, -1.8], '#3a5c7e'],
+      ['stripe1', [5.4, 1, 1], [0, 1, 0.6], '#3a5c7e'],
+      ['stripe2', [5.4, 1, 1], [0, 1, 3], '#3a5c7e'],
+    ],
+    head: [['jaw', [4, 1.2, 3.4], [0, -2.5, -0.2], '#1c2e42'], ['brow@', [1.8, 0.6, 2], [1.5, 2.8, -0.5], '#1c2e42']],
+    bulb: [['bulbGlow', [3.6, 3.6, 3.6], [0, 0, 0], '#fff0a0', { emissive: '#ffd24a', alpha: 0.4 }]],
+    tail: [['tailFin', [0.8, 6, 2.6], [0, 0, 2.4], '#3a5c7e'], ['tailTip', [0.8, 3, 1.4], [0, 0, 3.8], '#ffe27a', { emissive: '#c8a020' }]],
+    'fin@': [['finTip@', [1.6, 0.8, 3], [1.4, 0, 0.5], '#27405a']],
+  }),
 };
 FACES.lanternfin = (c) => {
-  c.fillStyle = '#f4f0d0'; c.fillRect(2, 4, 3, 3); c.fillRect(11, 4, 3, 3);
-  c.fillStyle = '#0a0e14'; c.fillRect(3, 5, 1, 2); c.fillRect(12, 5, 1, 2);
-  c.fillStyle = '#0a0e14'; c.fillRect(3, 10, 10, 2);
-  c.fillStyle = '#e8e8dc'; for (let x = 3; x < 13; x += 2) c.fillRect(x, 10, 1, 1);
+  c.fillStyle = '#f4f0d0'; c.fillRect(1, 3, 4, 4); c.fillRect(11, 3, 4, 4);
+  c.fillStyle = '#0a0e14'; c.fillRect(2, 4, 2, 3); c.fillRect(12, 4, 2, 3);
+  c.fillStyle = '#ffffff'; c.fillRect(2, 4, 1, 1); c.fillRect(12, 4, 1, 1);
+  c.fillStyle = '#0a0e14'; c.fillRect(3, 10, 10, 3);
+  c.fillStyle = '#e8e8dc'; for (let x = 3; x < 13; x += 2) { c.fillRect(x, 10, 1, 2); c.fillRect(x + 1, 12, 1, 1); }
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -201,19 +233,32 @@ function rayRender(m, mesh, alpha, sec) {
 }
 
 MODELS.skyray = {
-  parts: [
+  parts: decorate([
     ['body', [8, 2.5, 12], [0, 4, 0], [0, 0, 0], '#e6ecf8'],
     ['belly', [6, 0.6, 10], [0, 2.8, 0], [0, 0, 0], '#9fb4d8'],
     ['head', [5, 2.5, 4], [0, 4, -7], [0, 0, -1], '#f4f6fc', { face: 'skyray' }],
     ['wingL', [12, 0.9, 14], [4, 4, 0], [6, 0, 1], '#d4def2'],
     ['wingR', [12, 0.9, 14], [-4, 4, 0], [-6, 0, 1], '#d4def2'],
     ['tail', [1, 1, 14], [0, 4, 6], [0, 0, 7], '#c4d0ea'],
-  ],
+  ], {
+    body: [
+      ['spine', [1, 0.8, 7], [0, 1.5, 0.5], '#c4d0ea'],
+      ['spotA', [1.6, 0.4, 2], [-2, 1.3, -2.5], '#8aa0c8'], ['spotB', [1.6, 0.4, 2], [2, 1.3, 0], '#8aa0c8'],
+      ['spotC', [1.6, 0.4, 2], [-1.8, 1.3, 3], '#8aa0c8'], ['spotD', [1.4, 0.4, 1.6], [1.8, 1.3, 4], '#8aa0c8'],
+      ['gillBar', [5, 0.6, 1], [0, -1.5, -3.5], '#7a90b8'],
+    ],
+    head: [['cephalic@', [1, 0.8, 3.4], [2.2, 0, -2.6], '#d4def2'], ['eyeRidge@', [1.8, 0.6, 1.6], [1.6, 1.4, -0.4], '#9fb4d8']],
+    wingL: [['edgeL', [12.4, 1.1, 1.4], [0, 0, -6.4], '#f4f6fc'], ['tipL', [3.6, 1.1, 8], [4.2, 0, 2.4], '#7a90b8'], ['spotL', [3, 1, 3], [-1.5, 0, 0], '#9fb4d8']],
+    wingR: [['edgeR', [12.4, 1.1, 1.4], [0, 0, -6.4], '#f4f6fc'], ['tipR', [3.6, 1.1, 8], [-4.2, 0, 2.4], '#7a90b8'], ['spotR', [3, 1, 3], [1.5, 0, 0], '#9fb4d8']],
+    tail: [['band0', [1.5, 1.5, 2], [0, 0, -2.5], '#5a6a8a'], ['band1', [1.4, 1.4, 2], [0, 0, 2.5], '#5a6a8a'], ['stinger', [0.8, 0.8, 3], [0, 0, 7.4], '#3a4660']],
+  }),
 };
 FACES.skyray = (c) => {
+  c.fillStyle = '#7a90b8'; c.fillRect(1, 4, 5, 1); c.fillRect(10, 4, 5, 1);
   c.fillStyle = '#1a2238'; c.fillRect(2, 5, 3, 3); c.fillRect(11, 5, 3, 3);
   c.fillStyle = '#ffffff'; c.fillRect(2, 5, 1, 1); c.fillRect(11, 5, 1, 1);
-  c.fillStyle = '#9fb4d8'; c.fillRect(6, 11, 4, 1);
+  c.fillStyle = '#9fb4d8'; c.fillRect(5, 11, 6, 1); c.fillRect(4, 10, 1, 1); c.fillRect(11, 10, 1, 1);
+  c.fillStyle = '#c4d0ea'; c.fillRect(7, 8, 2, 1);
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -313,3 +358,8 @@ export function oceanSkyChunkSpawn(spawner, cx, cz) {
     if (m) m.home = { x: s.cx, y: s.y, z: s.cz };
   }
 }
+
+// detail boxes follow their host parts (head pitch, claws...)
+followDecor(TRENCHMAW, 'trenchmaw');
+followDecor(LANTERNFIN, 'lanternfin');
+followDecor(SKYRAY, 'skyray');

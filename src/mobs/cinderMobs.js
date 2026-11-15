@@ -11,6 +11,7 @@
 // Both bring their own box models, faces, voices (captioned) and spawn tables (dimensionMobs.js).
 import { MOBS, MOB_KEYS, CATEGORY } from './mobTypes.js';
 import { MODELS, FACES } from './models.js';
+import { decorate, followDecor } from './modelKit.js';
 import { I } from '../world/items.js';
 import { SPAWNER_TYPES } from './spawnerBlocks.js';
 import { flyTowards, faceTowards, wrap } from './dimensionMobs.js';
@@ -53,7 +54,7 @@ function capwalkerHurt(m, dmg, source, attacker) {
 }
 
 MODELS.capwalker = {
-  parts: [
+  parts: decorate([
     ['legL', [3, 6, 3], [2, 6, 0], [0, -3, 0], '#cfc7ac', { anim: 'legA' }],
     ['legR', [3, 6, 3], [-2, 6, 0], [0, -3, 0], '#cfc7ac', { anim: 'legB' }],
     ['body', [7, 8, 5], [0, 10, 0], [0, 0, 0], '#ded7bd'],
@@ -62,12 +63,35 @@ MODELS.capwalker = {
     ['capTop', [11, 3, 11], [0, 24, 0], [0, 1.5, 0], '#58e8c4', { emissive: '#1f9a80' }],
     ['spotA', [3, 1, 3], [-3, 27, 2], [0, 0.5, 0], '#d8fff0', { emissive: '#7ae0c0' }],
     ['spotB', [2, 1, 2], [3, 27, -2], [0, 0.5, 0], '#d8fff0', { emissive: '#7ae0c0' }],
-  ],
+  ], {
+    cap: [
+      ['gills', [14, 1.6, 14], [0, -1.8, 0], '#127a68'],
+      ['capRim', [17.8, 1.2, 17.8], [0, -1.2, 0], '#1b8f7a'],
+      ['spotC', [3.4, 1.2, 3.4], [-4.5, 2.1, 3.5], '#d8fff0', { emissive: '#7ae0c0' }],
+      ['spotD', [2.4, 1.2, 2.4], [4.5, 2.1, 3.5], '#b8f6e0', { emissive: '#5ac8a8' }],
+      ['spotE', [2.6, 1.2, 2.6], [-2, 2.1, -5], '#d8fff0', { emissive: '#7ae0c0' }],
+      ['spotF', [3.4, 1, 3.4], [8.7, -0.2, 0], '#9ae8d0', { emissive: '#3ab090' }],
+      ['spotG', [3.4, 1, 3.4], [-8.7, 0.4, -2], '#9ae8d0', { emissive: '#3ab090' }],
+    ],
+    body: [
+      ['neckBand', [8, 1.6, 6], [0, 3.8, 0], '#b9b095'],
+      ['bellyPatch', [4.6, 5, 0.6], [0, -0.6, -2.6], '#f4eed8'],
+      ['stemBand', [7.4, 1, 5.4], [0, -2.2, 0], '#c4bca0'],
+    ],
+    'leg@': [['foot@', [3.8, 1.6, 5], [0, -2.6, -1], '#b9b095']],
+    '*': [
+      ['armL', [2, 6, 2], [4.5, 13, 0], [0, -2.6, 0], '#d6cfb4', { anim: 'armSwing' }],
+      ['armR', [2, 6, 2], [-4.5, 13, 0], [0, -2.6, 0], '#d6cfb4', { anim: 'armSwingB' }],
+    ],
+  }),
 };
 FACES.capwalker = (c) => {
-  c.fillStyle = '#16231f'; c.fillRect(3, 5, 3, 4); c.fillRect(10, 5, 3, 4);
-  c.fillStyle = '#7affd0'; c.fillRect(4, 6, 1, 2); c.fillRect(11, 6, 1, 2);
-  c.fillStyle = '#6a5a48'; c.fillRect(6, 11, 4, 1);
+  c.fillStyle = '#16231f'; c.fillRect(3, 4, 3, 5); c.fillRect(10, 4, 3, 5);
+  c.fillStyle = '#7affd0'; c.fillRect(4, 5, 2, 3); c.fillRect(11, 5, 2, 3);
+  c.fillStyle = '#e8fff8'; c.fillRect(4, 5, 1, 1); c.fillRect(11, 5, 1, 1);
+  c.fillStyle = '#16231f'; c.fillRect(3, 3, 3, 1); c.fillRect(10, 3, 3, 1);
+  c.fillStyle = '#6a5a48'; c.fillRect(6, 11, 4, 1); c.fillRect(5, 10, 1, 1); c.fillRect(10, 10, 1, 1);
+  c.fillStyle = '#e8a8a0'; c.fillRect(1, 9, 2, 2); c.fillRect(13, 9, 2, 2);
 };
 
 export const CAPWALKER = {
@@ -120,18 +144,42 @@ function wail(m, g, p) {
 }
 
 MODELS.dirge_wailer = {
-  parts: [
+  parts: decorate([
     ...[-1, 0, 1].map((i) => [`rag${i + 1}`, [3, 14, 3], [i * 3.5, 12, 0], [0, -7, 0], '#8ea3bd', { anim: 'tendril', idx: i + 1 }]),
     ['body', [10, 14, 6], [0, 19, 0], [0, 0, 0], '#b4c4d8', { emissive: '#2a3a52' }],
     ['head', [9, 9, 9], [0, 29, 0], [0, 0, 0], '#d6e0ec', { face: 'dirge_wailer', emissive: '#364a68' }],
     ['armL', [3, 14, 3], [6.5, 26, 0], [0, -7, 0], '#9db0c8', { anim: 'armSwing' }],
     ['armR', [3, 14, 3], [-6.5, 26, 0], [0, -7, 0], '#9db0c8', { anim: 'armSwingB' }],
-  ],
+  ], {
+    body: [
+      ['rib0', [10.8, 1, 6.6], [0, 5, 0], '#e3ebf5'],
+      ['rib1', [10.8, 1, 6.6], [0, 2.5, 0], '#e3ebf5'],
+      ['rib2', [10.8, 1, 6.6], [0, 0, 0], '#e3ebf5'],
+      ['shroudHem', [11, 2, 6.8], [0, -6, 0], '#8ea3bd'],
+      ['neckRuff', [12, 2, 8], [0, 7, 0], '#6f84a2'],
+    ],
+    head: [
+      ['veil', [9.8, 2.4, 9.8], [0, 3.4, 0], '#aebdd2'],
+      ['spike@', [1.6, 5, 1.6], [3, 6.5, 0], '#eef4fa'],
+      ['spikeTip@', [1, 3, 1], [3.2, 9.5, 0], '#ffffff'],
+      ['jaw', [6, 2, 0.8], [0, -3.2, -4.6], '#2a3a52'],
+    ],
+    'arm@': [
+      ['sleeve@', [3.6, 5, 3.6], [0, 4.5, 0], '#7488a4'],
+      ['claw@', [3.6, 3.5, 3.6], [0, -7.2, 0], '#eef4fa'],
+    ],
+    rag0: [['tip0', [3.8, 3, 3.8], [0, -5.8, 0], '#6f8098']],
+    rag1: [['tip1', [3.8, 3, 3.8], [0, -5.8, 0], '#6f8098']],
+    rag2: [['tip2', [3.8, 3, 3.8], [0, -5.8, 0], '#6f8098']],
+  }),
 };
 FACES.dirge_wailer = (c) => {
-  c.fillStyle = '#0c1220'; c.fillRect(2, 4, 4, 5); c.fillRect(10, 4, 4, 5);
-  c.fillStyle = '#7ac8f0'; c.fillRect(3, 6, 2, 2); c.fillRect(11, 6, 2, 2);
-  c.fillStyle = '#0c1220'; c.fillRect(6, 10, 4, 5);
+  c.fillStyle = '#0c1220'; c.fillRect(2, 3, 5, 6); c.fillRect(9, 3, 5, 6);
+  c.fillStyle = '#7ac8f0'; c.fillRect(3, 5, 3, 3); c.fillRect(10, 5, 3, 3);
+  c.fillStyle = '#e8fbff'; c.fillRect(4, 5, 1, 1); c.fillRect(11, 5, 1, 1);
+  c.fillStyle = '#0c1220'; c.fillRect(6, 10, 4, 5); c.fillRect(7, 15, 2, 1);
+  c.fillStyle = '#2a3a52'; c.fillRect(1, 2, 6, 1); c.fillRect(9, 2, 6, 1);
+  c.fillStyle = '#e3ebf5'; c.fillRect(6, 10, 1, 1); c.fillRect(9, 10, 1, 1);
 };
 
 export const DIRGE_WAILER = {
@@ -144,3 +192,7 @@ export const DIRGE_WAILER = {
 for (const [k, d] of Object.entries({ capwalker: CAPWALKER, dirge_wailer: DIRGE_WAILER })) { if (!MOBS[k]) { MOBS[k] = d; MOB_KEYS.push(k); } }
 // Cinder Brute spawners stand in Cinderforges (world/dimensions/cinderForge.js, spawner meta CINDER_BRUTE_SPAWNER_META)
 if (!SPAWNER_TYPES.includes('cinder_brute')) SPAWNER_TYPES.push('cinder_brute');
+
+// detail boxes follow their host parts (head pitch, claws...)
+followDecor(CAPWALKER, 'capwalker');
+followDecor(DIRGE_WAILER, 'dirge_wailer');

@@ -899,7 +899,7 @@ def(B.CARTOGRAPHERS_TABLE, "Cartographer's Table", { hardness: 2.5, resistance: 
 // Content pack 7 (appended, no id shifts; world/coldCurrents.js): Driftsnow gives way under whoever steps on it and freezes
 // them, Scaldrock burns feet and drags still water down (Mournsand lifts it), the Echo Coffer opens its owner's own store
 // wherever it stands (player/echoCoffer.js).
-ext('DRIFTSNOW'); ext('SCALDROCK'); ext('ECHO_COFFER'); ext('ASSEMBLER'); ext('TIDE_HEART'); ext('EMBER_HEARTH'); ext('GLIMMERMOSS'); ext('DAWNFERN'); ext('DAWNFERN_PLANT'); for (const [key] of COLORS) ext(key.toUpperCase() + '_GLAZED_TILES');
+ext('DRIFTSNOW'); ext('SCALDROCK'); ext('ECHO_COFFER'); ext('ASSEMBLER'); ext('TIDE_HEART'); ext('EMBER_HEARTH'); ext('GLIMMERMOSS'); ext('DAWNFERN'); ext('DAWNFERN_PLANT'); for (const [key] of COLORS) ext(key.toUpperCase() + '_GLAZED_TILES'); ext('MITE_STONE'); ext('MITE_COBBLE'); ext('MITE_BRICKS');
 def(B.DRIFTSNOW, 'Driftsnow', { hardness: 0.25, resistance: 0.25, tool: TOOL.SHOVEL, solid: false, opaque: false, opacity: 2, sound: 'snow' });
 def(B.SCALDROCK, 'Scaldrock', { hardness: 0.5, resistance: 0.5, tool: TOOL.PICKAXE, tier: TIER.WOOD, emit: 3, hot: true });
 def(B.ECHO_COFFER, 'Echo Coffer', { hardness: 22.5, resistance: 600, tool: TOOL.PICKAXE, tier: TIER.WOOD, emit: 7, tex: { top: 'echo_coffer_top', bottom: 'echo_coffer_top', side: 'echo_coffer_side', front: 'echo_coffer_front' } });
@@ -931,6 +931,12 @@ for (const [key, name] of COLORS) {
   COLOR_BLOCKS.glazed.push(B[K + '_GLAZED_TILES']);
   def(B[K + '_GLAZED_TILES'], `${name} Glazed Tiles`, { hardness: 1.4, resistance: 1.4, tool: TOOL.PICKAXE, tier: TIER.WOOD, sound: 'stone', glazed: true, tex: { all: key + '_glazed_tiles' } });
 }
+
+// Mite-Riddled stone (mobs/stoneMites.js): stone, cobblestone and stone bricks that look like the real thing, crumble almost at once,
+// drop nothing and let a Stone Mite out when they break (Gentle Hand brings them home whole instead).
+def(B.MITE_STONE, 'Mite-Riddled Stone', { hardness: 0.75, resistance: 0.75, tool: TOOL.PICKAXE, drops: null, sound: 'stone', tex: { all: 'stone' } });
+def(B.MITE_COBBLE, 'Mite-Riddled Cobblestone', { hardness: 0.75, resistance: 0.75, tool: TOOL.PICKAXE, drops: null, sound: 'stone', tex: { all: 'cobblestone' } });
+def(B.MITE_BRICKS, 'Mite-Riddled Stone Bricks', { hardness: 0.75, resistance: 0.75, tool: TOOL.PICKAXE, drops: null, sound: 'stone', tex: { all: 'stone_bricks' } });
 
 export const NUM_BLOCKS = BLOCKS.length;
 // Glazed blocks (the placing code records the facing in their meta; the mesher turns their top face by it)
