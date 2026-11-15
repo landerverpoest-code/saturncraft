@@ -10,6 +10,7 @@ import { sunkenRuinsNear } from '../world/sunkenRuins.js';
 import { sunTombsNear } from '../world/sunTombs.js';
 import { skywatchesNear } from '../world/skywatch.js';
 import { beaconsNear } from '../world/beaconHouse.js';
+import { librariesNear } from '../world/buriedLibrary.js';
 import { rimekeepsNear } from '../world/rimekeep.js';
 import { sporehallsNear } from '../world/sporehall.js';
 import { lighthousesNear } from '../world/lighthouse.js';
@@ -75,6 +76,11 @@ export const MILESTONES = [
   { id: 'rimekeep', title: 'Frozen Halls', desc: 'Find a Rimekeep', icon: B.ICE, tick: near(rimekeepsNear) },
   { id: 'sporehall', title: 'Heart of the Spores', desc: 'Find a Sporehall', icon: B.RED_MUSHROOM_BLOCK, tick: near(sporehallsNear) },
   { id: 'lighthouse', title: 'Keeper of the Light', desc: "Find a Hermit's Lighthouse", icon: B.LIGHTHOUSE_LENS, tick: near(lighthousesNear) },
+  { id: 'library', title: 'Quiet Please', desc: 'Step into a Buried Library', icon: B.BOOKSHELF, tick: (g) => {
+    if (!overworld(g)) return false;
+    const { x, y, z } = g.player;
+    return librariesNear(g.world.gen, x - 12, z - 12, x + 12, z + 12).some((s) => Math.abs(x - s.cx) <= 11 && Math.abs(z - s.cz) <= 11 && y >= s.y && y <= s.y + 10);
+  } },
   { id: 'beaconhouse', title: 'Keeper of the Coast', desc: 'Find a Beacon Lighthouse', icon: B.LIGHTHOUSE_LENS, tick: near(beaconsNear) },
   { id: 'mireshrine', title: 'Sunken Devotion', desc: 'Find a Mire Shrine', icon: B.AZURE_MOSAIC, tick: near(mireShrinesNear) },
   { id: 'observatory', title: 'Reading the Stars', desc: "Find a Stargazer's Observatory", icon: B.ROSE_WINDOW, tick: near(observatoriesNear) },

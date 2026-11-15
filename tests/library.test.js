@@ -1,328 +1,150 @@
+// Buried Libraries (world/buriedLibrary.js): planning from the seed, depth bounds, the hall footprint, chests and the loot table.
 import { describe, it, expect } from 'vitest';
-import { World } from '../src/world/world.js';
-import { B, BLOCKS, BOX_IDS, BOX_COLORS, isBox, SHAPE } from '../src/world/blocks.js';
-import { I, ITEMS, DYES, maxStack } from '../src/world/items.js';
-import { COLOR } from '../src/world/colors.js';
-import { computeChunkLight } from '../src/world/lighting.js';
-import { CHUNK_VOLUME, cidx, MIN_Y } from '../src/world/constants.js';
-import { comparatorLevel } from '../src/world/circuitShapes.js';
-import { containerSignal, isReadable } from '../src/world/comparators.js';
-import { craft } from '../src/player/crafting.js';
-import { canStack, withExtras, cleanContents } from '../src/world/enchantments.js';
-import { sameStack, copyStack, packEntity, unpackEntity } from '../src/net/protocol.js';
-import { blockBoxes, collisionBoxes } from '../src/world/shapes.js';
-import { TEX_NAMES } from '../src/world/textures.js';
-import { pidx, PAD_VOL, meshSection } from '../src/world/mesher.js';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { TerrainGenerator } from '../src/world/generator.js';
 import {
-  cleanPage, cleanPages, cleanTitle, signBook, sameBook, bookPages, lecternSignal, cleanLectern, lecternMeta,
-  BOOK_MAX_PAGES, PAGE_MAX, LECTERN_HAS_BOOK, LECTERN_POWERED, LECTERN_PULSE_TICKS,
-} from '../src/world/books.js';
-import { targetPower, targetTicks, projectileHit, cakeSignal, frameSignal, CAKE_SLICES, TARGET_TICKS_STUCK, TARGET_TICKS_THROWN } from '../src/world/signalBlocks.js';
-import { Arrow } from '../src/entities/entities.js';
-import { Interaction } from '../src/player/interaction.js';
+  libraryInRegion, librariesNear, nearestLibrary, libraryBlock, libraryChests, libraryGuards, libraryLootKind, libraryCeiling,
+  LIBRARY_HALF, LIBRARY_MIN_Y, LIBRARY_MAX_Y, LIBRARY_LOOT, LIBRARY_CHEST_KIND, LIBRARY_CHESTS,
+} from '../src/world/buriedLibrary.js';
+import { landmarksInBox, nearestLandmark } from '../src/world/landmarks.js';
+import { LANDMARK_BY_KEY } from '../src/world/landmarkKinds.js';
+import { FEATURES, CURRENT_FEATURE_VERSION } from '../src/world/retrofit.js';
+import { dungeonLoot, LOOT, STRUCTURE_LOOT } from '../src/mobs/spawnerBlocks.js';
+import { MILESTONES } from '../src/player/milestones.js';
+import { runCommand, HELP } from '../src/ui/commands.js';
+import nl from '../src/ui/lang/nl_ui.js';
+import { B } from '../src/world/blocks.js';
+import { BIOME } from '../src/world/biomes.js';
+import { SEA_LEVEL, cidx } from '../src/world/constants.js';
 
-function flatChunk() {
-  const blocks = new Uint16Array(CHUNK_VOLUME);
-  for (let x = 0; x < 16; x++) for (let z = 0; z < 16; z++) for (let y = MIN_Y; y < 64; y++) blocks[cidx(x, y, z)] = B.STONE;
-  const light = new Uint8Array(CHUNK_VOLUME);
-  computeChunkLight(blocks, light);
-  return { blocks, meta: new Uint8Array(CHUNK_VOLUME), light, biomes: new Uint8Array(256).fill(3), colors: new Uint8Array(256 * 6), heightmap: new Int16Array(256).fill(63) };
+const src = (p) => readFileSync(resolve(__dirname, '..', p), 'utf8');
+const gen = new TerrainGenerator(12345);
+const found = [];
+for (let r = 0; r <= 6 && found.length < 4; r++) for (let rx = -r; rx <= r; rx++) for (let rz = -r; rz <= r; rz++) {
+  if (Math.max(Math.abs(rx), Math.abs(rz)) !== r) continue;
+  const s = libraryInRegion(gen, rx, rz);
+  if (s) found.push(s);
 }
-const Y = 64, EAST = 1; // comparator meta: output towards +x, so it reads the block at -x
-function setup() {
-  const world = new World(1);
-  for (let cx = -1; cx <= 1; cx++) for (let cz = -1; cz <= 1; cz++) world.addChunk(cx, cz, flatChunk());
-  world.tick();
-  const g = { world, chests: new Map(), hoppers: new Map(), dispensers: new Map(), furnaces: new Map(), brewingStands: new Map(), lecterns: new Map(), frames: new Map() };
-  world.circuits.containerSignal = (x, y, z) => containerSignal(g, x, y, z);
-  return g;
-}
-const run = (w, n = 1) => { for (let i = 0; i < n; i++) w.tick(); };
-const grid3 = (cells) => cells.map((id) => (id == null ? null : { id, count: 1 }));
+const s = found[0];
 
-describe('writable and written books', () => {
-  it('clean pages, titles and authors from untrusted data', () => {
-    expect(cleanPage('a\u0000b\r\nc\td')).toBe('ab\ncd');
-    expect(cleanPage('x'.repeat(400)).length).toBe(PAGE_MAX);
-    expect(cleanPage(42)).toBe('');
-    const many = cleanPages(Array.from({ length: 80 }, (_, i) => 'p' + i));
-    expect(many.length).toBe(BOOK_MAX_PAGES);
-    expect(cleanPages(['one', '', 'three', '', ''])).toEqual(['one', '', 'three']); // blank pages at the end go
-    expect(cleanPages(['', ''])).toBe(null);
-    expect(cleanPages('nope')).toBe(null);
-    expect(cleanTitle('  My\u0007 Diary  ')).toBe('My Diary');
-    expect(cleanTitle('t'.repeat(50)).length).toBe(32);
-    expect(cleanTitle('   ')).toBe(null);
+describe('Buried Library planning', () => {
+  it('appears in a fair share of regions, deterministically', () => {
+    expect(found.length).toBeGreaterThanOrEqual(3);
+    const other = new TerrainGenerator(12345);
+    for (const f of found) expect(libraryInRegion(other, Math.floor(f.cx / 400), Math.floor(f.cz / 400))).toEqual(f);
   });
-
-  it('are crafted from a book, ink and a feather, and only written copies stack', () => {
-    expect(craft(grid3([I.BOOK, I.INK_SAC, I.FEATHER]), 3)).toEqual({ id: I.WRITABLE_BOOK, count: 1 });
-    expect(craft(grid3([I.FEATHER, DYES[COLOR.BLACK], I.BOOK]), 3).id).toBe(I.WRITABLE_BOOK);
-    expect(maxStack(I.WRITABLE_BOOK)).toBe(1);
-    expect(maxStack(I.WRITTEN_BOOK)).toBe(16);
-    const a = { id: I.WRITTEN_BOOK, count: 1, pages: ['hi'], title: 'T', author: 'Ann' };
-    expect(canStack(a, { ...a, pages: ['hi'] })).toBe(true);
-    expect(canStack(a, { ...a, pages: ['ho'] })).toBe(false);
-    expect(canStack(a, { ...a, title: 'U' })).toBe(false);
-    expect(canStack(a, { ...a, author: 'Bob' })).toBe(false);
-    expect(sameBook(a, { ...a })).toBe(true);
-    expect(sameStack(a, { ...a, pages: ['hi', 'more'] })).toBe(false);
-  });
-
-  it('sign into a read-only Written Book with a title and the author', () => {
-    const w = { id: I.WRITABLE_BOOK, count: 1, damage: 0, pages: ['Dear diary', 'Page two'] };
-    expect(signBook(w, '   ', 'Ann')).toBe(null); // a title is needed
-    expect(signBook({ id: I.BOOK, count: 1 }, 'T', 'Ann')).toBe(null);
-    const s = signBook(w, ' Notes ', 'Ann');
-    expect(s).toEqual({ id: I.WRITTEN_BOOK, count: 1, damage: 0, title: 'Notes', author: 'Ann', pages: ['Dear diary', 'Page two'] });
-    expect(signBook({ id: I.WRITABLE_BOOK, count: 1 }, 'Empty', '').author).toBe('Unknown');
-    expect(bookPages({ id: I.WRITABLE_BOOK })).toEqual(['']);
-  });
-
-  it('keep their text through stack copies, boxes, bundles and the network', () => {
-    const st = { id: I.WRITTEN_BOOK, count: 2, damage: 0, pages: ['a', 'b\nc'], title: 'Tale', author: 'Ann' };
-    expect(copyStack(st)).toEqual(st);
-    expect(withExtras({ id: I.WRITTEN_BOOK, count: 1 }, { pages: ['x\u0001'], title: 5 })).toEqual({ id: I.WRITTEN_BOOK, count: 1, pages: ['x'] });
-    expect(cleanContents([st])[0].pages).toEqual(['a', 'b\nc']);
-    const packed = packEntity({ kind: 'item', id: 7, x: 1, y: 2, z: 3, stack: st, pickupDelay: 0 });
-    const back = unpackEntity(JSON.parse(JSON.stringify(packed)));
-    expect(back.stack).toEqual(st);
-  });
-});
-
-describe('lecterns', () => {
-  it('give the reference comparator signal for the open page', () => {
-    const book = { id: I.WRITTEN_BOOK, pages: ['1', '2', '3', '4', '5'] };
-    expect(lecternSignal(null, 0)).toBe(0);
-    expect(lecternSignal(book, 0)).toBe(1);
-    expect(lecternSignal(book, 2)).toBe(8); // floor(14 * 2 / 4) + 1
-    expect(lecternSignal(book, 4)).toBe(15);
-    expect(lecternSignal({ id: I.WRITABLE_BOOK }, 0)).toBe(15); // a one-page book
-    expect(lecternSignal(book, 99)).toBe(15); // clamped to the last page
-  });
-
-  it('clean their state and keep the book bit and the page pulse in the meta', () => {
-    expect(cleanLectern(null)).toBe(null);
-    expect(cleanLectern({ book: { id: I.BOOK }, page: 0 })).toBe(null); // only books you write in
-    expect(cleanLectern({ book: { id: I.WRITTEN_BOOK, pages: ['a', 'b'], title: 'T' }, page: 7 })).toEqual({ book: { id: I.WRITTEN_BOOK, count: 1, damage: 0, pages: ['a', 'b'], title: 'T' }, page: 1 });
-    const s0 = { book: { id: I.WRITTEN_BOOK, pages: ['a', 'b'] }, page: 0 }, s1 = { ...s0, page: 1 };
-    expect(lecternMeta(2, null, s0)).toBe(2 | LECTERN_HAS_BOOK);
-    expect(lecternMeta(2 | LECTERN_HAS_BOOK, s0, s1)).toBe(2 | LECTERN_HAS_BOOK | LECTERN_POWERED);
-    expect(lecternMeta(2 | LECTERN_HAS_BOOK, s0, s0)).toBe(2 | LECTERN_HAS_BOOK);
-    expect(lecternMeta(2 | LECTERN_HAS_BOOK | LECTERN_POWERED, s1, null)).toBe(2);
-  });
-
-  it('are crafted from wooden slabs and a bookshelf and draw the book on the desk', () => {
-    const S = B.OAK_SLAB;
-    expect(craft(grid3([S, S, S, null, B.BOOKSHELF, null, null, S, null]), 3)).toEqual({ id: B.LECTERN, count: 1 });
-    expect(BLOCKS[B.LECTERN].shape).toBe(SHAPE.BOXES);
-    expect(blockBoxes(B.LECTERN, LECTERN_HAS_BOOK).length).toBe(blockBoxes(B.LECTERN, 0).length + 1);
-    // the desk turns with the side the reader stands on
-    const deskZ = blockBoxes(B.LECTERN, 0)[3], deskX = blockBoxes(B.LECTERN, 1)[3];
-    expect(deskZ[2]).toBeCloseTo(0.5); expect(deskX[0]).toBeCloseTo(1 / 16);
-    expect(collisionBoxes(B.LECTERN, 0)).toBeTruthy();
-    for (const t of ['lectern_top', 'lectern_side', 'lectern_book', 'lectern_post', 'target_top', 'cake_inner']) expect(TEX_NAMES).toContain(t);
-  });
-
-  it('are meshed with and without a book, beside cakes, targets and dyed boxes', () => {
-    const blocks = new Uint16Array(PAD_VOL), meta = new Uint8Array(PAD_VOL);
-    const put = (x, id, m = 0) => { blocks[pidx(x, 3, 3)] = id; meta[pidx(x, 3, 3)] = m; };
-    put(1, B.LECTERN, 1); put(3, B.LECTERN, 2 | LECTERN_HAS_BOOK); put(5, B.CAKE, 0); put(7, B.CAKE, 4); put(9, B.TARGET); put(11, BOX_COLORS[3]);
-    const r = meshSection({ blocks, light: new Uint8Array(PAD_VOL).fill(0xf0), meta, colors: new Uint8Array(256 * 6) });
-    expect(r.cutout.idx.length).toBe((4 + 5 + 1 + 1) * 36); // lectern boxes (+ the book) and two cakes
-    expect(r.opaque.idx.length).toBe(2 * 36); // the target block and the box
-  });
-
-  it('pulse when a page is turned and are read by a comparator', () => {
-    const g = setup(), { world } = g;
-    // the pulse: a lamp beside the lectern lights for a moment
-    world.setBlock(3, Y, 3, B.LECTERN, LECTERN_HAS_BOOK);
-    world.setBlock(4, Y, 3, B.CINNABAR_LAMP);
-    run(world, 2);
-    expect(world.getBlock(4, Y, 3)).toBe(B.CINNABAR_LAMP);
-    world.setBlock(3, Y, 3, B.LECTERN, LECTERN_HAS_BOOK | LECTERN_POWERED);
-    run(world, 1);
-    expect(world.getBlock(4, Y, 3)).toBe(B.CINNABAR_LAMP_ON);
-    run(world, LECTERN_PULSE_TICKS + 1);
-    expect(world.getMeta(3, Y, 3) & LECTERN_POWERED).toBe(0);
-    run(world, 6);
-    expect(world.getBlock(4, Y, 3)).toBe(B.CINNABAR_LAMP);
-    // a comparator behind it reads the page
-    world.setBlock(-1, Y, 0, B.LECTERN, LECTERN_HAS_BOOK);
-    g.lecterns.set(`-1,${Y},0`, { book: { id: I.WRITTEN_BOOK, pages: ['a', 'b', 'c'] }, page: 1 });
-    world.setBlock(0, Y, 0, B.COMPARATOR, EAST);
-    run(world, 6);
-    expect(comparatorLevel(world.getMeta(0, Y, 0))).toBe(8);
-    g.lecterns.get(`-1,${Y},0`).page = 2;
-    run(world, 6);
-    expect(comparatorLevel(world.getMeta(0, Y, 0))).toBe(15);
-    g.lecterns.delete(`-1,${Y},0`);
-    run(world, 6);
-    expect(comparatorLevel(world.getMeta(0, Y, 0))).toBe(0);
-  });
-
-  it('take a held book and open it on a right-click', () => {
-    const lecterns = new Map(), opened = [];
-    const slots = new Array(36).fill(null);
-    slots[0] = { id: I.WRITTEN_BOOK, count: 1, damage: 0, pages: ['hello'], title: 'T', author: 'A' };
-    const p = { creative: false, inventory: { slots, selected: 0, removeFromSlot(i, n) { slots[i].count -= n; if (slots[i].count <= 0) slots[i] = null; } } };
-    const game = {
-      player: p, lecterns, audio: { play() {} }, ui: { openLectern: (x, y, z) => opened.push([x, y, z]) },
-      setLectern(x, y, z, s) { lecterns.set(`${x},${y},${z}`, cleanLectern(s)); },
-    };
-    const it2 = Object.create(Interaction.prototype);
-    it2.game = game;
-    const t = { x: 1, y: Y, z: 2, id: B.LECTERN };
-    expect(it2.useLectern(t, null)).toBe(false); // nothing to put down, nothing to read
-    expect(it2.useLectern(t, slots[0])).toBe(true);
-    expect(slots[0]).toBe(null);
-    expect(lecterns.get(`1,${Y},2`).book.pages).toEqual(['hello']);
-    expect(it2.useLectern(t, null)).toBe(true);
-    expect(opened).toEqual([[1, Y, 2]]);
-  });
-});
-
-describe('comparators reading other blocks', () => {
-  it('read cakes, item frames and dyed boxes', () => {
-    const g = setup(), { world } = g;
-    const at = (x, z) => containerSignal(g, x, Y, z);
-    world.setBlock(0, Y, 5, B.CAKE, 0);
-    world.setBlock(1, Y, 5, B.CAKE, 5);
-    // item frames hang on a wall (meta side 1: the wall is at +x)
-    world.setBlock(3, Y, 8, B.STONE); world.setBlock(3, Y, 9, B.STONE);
-    world.setBlock(2, Y, 8, B.ITEM_FRAME, 1 | (3 << 2));
-    world.setBlock(2, Y, 9, B.ITEM_FRAME, 1);
-    g.frames.set(`2,${Y},8`, { id: I.ARROW, count: 1 });
-    world.setBlock(4, Y, 5, BOX_COLORS[COLOR.RED]);
-    g.chests.set(`4,${Y},5`, { slots: Array.from({ length: 27 }, () => ({ id: B.COBBLESTONE, count: 64 })) });
-    world.setBlock(5, Y, 5, B.LECTERN, 0);
-    expect(at(0, 5)).toBe(14);
-    expect(at(1, 5)).toBe(4);
-    expect(at(2, 8)).toBe(4); // rotation 3 -> 1 + 3
-    expect(at(2, 9)).toBe(0); // an empty frame
-    expect(at(4, 5)).toBe(15);
-    expect(at(5, 5)).toBe(0); // a lectern without a book
-    expect(cakeSignal(CAKE_SLICES)).toBe(0);
-    expect(frameSignal(7 << 2, true)).toBe(8);
-    for (const id of [B.CAKE, B.LECTERN, B.ITEM_FRAME, ...BOX_IDS]) expect(isReadable(id)).toBe(true);
-  });
-
-  it('follow a cake as it is eaten, slice by slice', () => {
-    const g = setup(), { world } = g;
-    world.setBlock(-1, Y, 0, B.CAKE, 0);
-    world.setBlock(0, Y, 0, B.COMPARATOR, EAST);
-    run(world, 6);
-    expect(comparatorLevel(world.getMeta(0, Y, 0))).toBe(14);
-    // eating: an Interaction with just enough of a game around it
-    const food = [];
-    const p = { creative: false, hunger: { canEat: () => true, eat: (h, s) => food.push([h, s]) } };
-    const it2 = Object.create(Interaction.prototype);
-    it2.game = { player: p, world: { getMeta: (x, y, z) => world.getMeta(x, y, z), setBlockUrgent: (x, y, z, id, m) => world.setBlock(x, y, z, id, m) }, audio: { play() {} } };
-    const t = { x: -1, y: Y, z: 0, id: B.CAKE };
-    expect(it2.eatCake(t)).toBe(true);
-    expect(food).toEqual([[2, 0.4]]);
-    run(world, 6);
-    expect(comparatorLevel(world.getMeta(0, Y, 0))).toBe(12);
-    for (let k = 1; k < CAKE_SLICES; k++) it2.eatCake(t);
-    expect(world.getBlock(-1, Y, 0)).toBe(B.AIR); // the last slice takes the cake away
-    p.hunger.canEat = () => false;
-    world.setBlock(-1, Y, 0, B.CAKE, 0);
-    expect(it2.eatCake(t)).toBe(false); // not when full
-  });
-
-  it('cakes are baked from milk, sugar, an egg and wheat, leaving the buckets', () => {
-    const M = I.MILK_BUCKET, S = I.SUGAR, W = I.WHEAT;
-    expect(craft(grid3([M, M, M, S, I.EGG, S, W, W, W]), 3)).toEqual({ id: B.CAKE, count: 1 });
-    expect(ITEMS[M].craftRemainder).toBe(I.BUCKET);
-    expect(maxStack(B.CAKE)).toBe(1);
-    expect(blockBoxes(B.CAKE, 0)[0][0]).toBeCloseTo(1 / 16);
-    expect(blockBoxes(B.CAKE, 3)[0][0]).toBeCloseTo(7 / 16);
-  });
-});
-
-describe('target blocks', () => {
-  it('give more power the closer the hit is to the middle of the face', () => {
-    expect(targetPower(10.5, 65.5, 4, [0, 0, -1])).toBe(15);
-    expect(targetPower(10.99, 65.5, 4, [0, 0, -1])).toBe(1);
-    expect(targetPower(10.75, 65.5, 4, [0, 0, -1])).toBe(8); // ceil(15 * 0.5)
-    expect(targetPower(10.5, 66, 4.6, [0, 1, 0])).toBe(12); // on the top face: x and z count
-    expect(targetPower(3, 65.5, 4.5, [1, 0, 0])).toBe(15);
-    expect(targetTicks('arrow')).toBe(TARGET_TICKS_STUCK);
-    expect(targetTicks('spear')).toBe(TARGET_TICKS_STUCK);
-    expect(targetTicks('snowball')).toBe(TARGET_TICKS_THROWN);
-    expect(craft(grid3([null, I.CINNABAR, null, I.CINNABAR, B.HAY_BALE, I.CINNABAR, null, I.CINNABAR, null]), 3)).toEqual({ id: B.TARGET, count: 1 });
-  });
-
-  it('send a signal for 8 or 20 ticks when struck, powering wire beside them', () => {
-    const { world } = setup();
-    world.setBlock(0, Y, 0, B.TARGET);
-    world.setBlock(1, Y, 0, B.CINNABAR_WIRE);
-    const hit = { x: 0, y: Y, z: 0, id: B.TARGET, face: [-1, 0, 0] };
-    expect(projectileHit(world, { ...hit, id: B.STONE }, 0, Y + 0.5, 0.5, 'arrow')).toBe(false);
-    expect(projectileHit(world, hit, 0, Y + 0.5, 0.5, 'snowball')).toBe(true);
-    run(world, 1);
-    expect(world.getMeta(0, Y, 0) & 15).toBe(15);
-    expect(world.getMeta(1, Y, 0) & 15).toBe(15);
-    run(world, TARGET_TICKS_THROWN);
-    expect(world.getMeta(0, Y, 0) & 15).toBe(0);
-    expect(world.getMeta(1, Y, 0) & 15).toBe(0);
-    // an arrow off-centre: weaker, and longer; a second hit keeps it going
-    projectileHit(world, hit, 0, Y + 0.9, 0.5, 'arrow');
-    run(world, 1);
-    const p = world.getMeta(0, Y, 0) & 15;
-    expect(p).toBe(targetPower(0, Y + 0.9, 0.5, [-1, 0, 0]));
-    expect(p).toBeLessThan(15);
-    run(world, 10);
-    projectileHit(world, hit, 0, Y + 0.5, 0.5, 'arrow');
-    run(world, 15);
-    expect(world.getMeta(0, Y, 0) & 15).toBe(15); // 25 ticks after the first hit, still on
-    run(world, 10);
-    expect(world.getMeta(0, Y, 0) & 15).toBe(0);
-  });
-
-  it('answer an arrow that sticks in them', () => {
-    const { world } = setup();
-    world.setBlock(0, Y, 0, B.TARGET);
-    const calls = [];
-    const game = {
-      world, audio: { play() {} }, particles: { emit() {} },
-      entities: { sweepHit: () => null },
-      onProjectileHit: (hit, x, y, z, kind) => { calls.push(kind); projectileHit(world, hit, x, y, z, kind); },
-    };
-    const a = new Arrow(-2, Y + 0.5, 0.5, 1.5, 0, 0, null);
-    for (let k = 0; k < 3 && !a.stuck; k++) a.tick(game);
-    expect(a.stuck).toBe(true);
-    expect(calls).toEqual(['arrow']);
-    run(world, 1);
-    expect(world.getMeta(0, Y, 0) & 15).toBeGreaterThanOrEqual(14);
-  });
-});
-
-describe('dyed Gloomshell Boxes', () => {
-  it('come in sixteen colours that are boxes like the plain one', () => {
-    expect(BOX_COLORS.length).toBe(16);
-    expect(BOX_IDS[0]).toBe(B.GLOOMSHELL_BOX);
-    for (const id of BOX_COLORS) {
-      expect(isBox(id)).toBe(true);
-      expect(BLOCKS[id].container).toBe(true);
-      expect(BLOCKS[id].drops).toBe(null);
-      expect(maxStack(id)).toBe(1);
-      expect(TEX_NAMES).toContain(BLOCKS[id].tex.side);
+  it('lies at a bounded depth under land, never under the sea', () => {
+    for (const f of found) {
+      expect(f.y).toBeGreaterThanOrEqual(LIBRARY_MIN_Y);
+      expect(f.y).toBeLessThanOrEqual(LIBRARY_MAX_Y);
+      const col = gen.column(f.cx, f.cz), top = gen.surfaceAt(f.cx, f.cz, col);
+      expect(top - f.y).toBeGreaterThanOrEqual(14);
+      expect(top).toBeGreaterThanOrEqual(SEA_LEVEL + 5);
+      expect([BIOME.OCEAN, BIOME.DEEP_OCEAN, BIOME.FROZEN_OCEAN, BIOME.BEACH, BIOME.RIVER]).not.toContain(gen.biomeFor(col, top));
+      expect(f.capH).toBeGreaterThan(13);
+      expect(f.x1 - f.x0).toBeGreaterThanOrEqual(2 * LIBRARY_HALF);
     }
-    expect(BLOCKS[BOX_COLORS[COLOR.RED]].name).toBe('Red Gloomshell Box');
-    expect(isBox(B.CHEST)).toBe(false);
   });
+  it('is found by the nearest search', () => {
+    for (const f of found) {
+      expect(librariesNear(gen, f.cx, f.cz, f.cx, f.cz)).toContainEqual(f);
+      expect(nearestLibrary(gen, f.cx, f.cz)).toEqual(f);
+    }
+  });
+});
 
-  it('keep their contents and name when dyed (or re-dyed)', () => {
-    const contents = new Array(27).fill(null); contents[3] = { id: B.COBBLESTONE, count: 12, damage: 0 };
-    const box = { id: B.GLOOMSHELL_BOX, count: 1, damage: 0, contents, label: 'Loot' };
-    const red = craft([box, { id: DYES[COLOR.RED], count: 1 }, null, null], 2);
-    expect(red.id).toBe(BOX_COLORS[COLOR.RED]);
-    expect(red.contents[3]).toEqual({ id: B.COBBLESTONE, count: 12, damage: 0 });
-    expect(red.label).toBe('Loot');
-    const white = craft([null, { id: I.BONE_MEAL, count: 1 }, red, null], 2);
-    expect(white.id).toBe(BOX_COLORS[COLOR.WHITE]);
-    expect(white.contents[3].count).toBe(12);
-    expect(craft([{ id: B.GLOOMSHELL_BOX, count: 1 }, { id: DYES[COLOR.BLUE], count: 1 }, null, null], 2)).toEqual({ id: BOX_COLORS[COLOR.BLUE], count: 1 });
+describe('Buried Library geometry', () => {
+  it('has a 21 x 15 hall with a vaulted ceiling, shelves, a lectern and a spawner', () => {
+    expect(libraryCeiling(0)).toBeGreaterThan(libraryCeiling(6));
+    const count = {};
+    let floor = 0;
+    for (let h = 0; h <= 10; h++) for (let u = -10; u <= 10; u++) for (let v = -7; v <= 7; v++) {
+      const id = libraryBlock(s, u, h, v)?.[0];
+      count[id] = (count[id] || 0) + 1;
+      if (h === 0 && id !== B.AIR) floor++;
+    }
+    expect(floor).toBe(21 * 15);
+    expect(count[B.RECORD_SHELF]).toBeGreaterThan(5);
+    expect(count[B.BOOKSHELF]).toBeGreaterThan(20);
+    expect(count[B.LECTERN]).toBe(1);
+    expect(count[B.SPAWNER]).toBe(1);
+    expect(count[B.COBWEB]).toBeGreaterThan(0);
+    expect(count[B.LANTERN]).toBe(2);
+    expect(libraryBlock(s, 0, 1, 3)[0]).toBe(B.AIR);
+  });
+  it('keeps every block inside the footprint and closes the shaft with a mossy cap', () => {
+    for (let h = 0; h <= s.capH + 3; h++) for (let u = -LIBRARY_HALF - 2; u <= LIBRARY_HALF + 2; u++) for (let v = -14; v <= 14; v++) {
+      const bl = libraryBlock(s, u, h, v);
+      if (bl) expect(Math.abs(u) <= LIBRARY_HALF && Math.abs(v) <= 12).toBe(true);
+    }
+    expect(libraryBlock(s, 13, s.capH, 0)[0]).toBe(B.MOSSY_COBBLESTONE);
+    expect(libraryBlock(s, 13, s.capH + 1, 0)).toBeNull();
+    expect(libraryBlock(s, 12, 1, 0)[0]).toBe(B.AIR);
+    expect(libraryBlock(s, 11, 1, 0)[0]).toBe(B.AIR); // the doorway
+  });
+  it('has a trap pocket of lava behind each west shelf panel', () => {
+    for (const tv of [4, -4]) {
+      expect(libraryBlock(s, -10, 1, tv)[0]).toBe(B.BOOKSHELF);
+      expect(libraryBlock(s, -11, 1, tv)[0]).toBe(B.AIR);
+      expect(libraryBlock(s, -11, 3, tv)[0]).toBe(B.LAVA);
+    }
+  });
+  it('is stamped into a chunk with the reading table standing', () => {
+    const cx = Math.floor(s.cx / 16), cz = Math.floor(s.cz / 16);
+    const c = gen.generate(cx, cz);
+    expect(c.blocks[cidx(s.cx - cx * 16, s.y + 1, s.cz - cz * 16)]).toBe(B.SPRUCE_PLANKS);
+  });
+});
+
+describe('Buried Library chests, guards and loot', () => {
+  it('places six chests and three Shamblers', () => {
+    const chests = libraryChests(s);
+    expect(chests).toHaveLength(LIBRARY_CHESTS.length);
+    for (const c of chests) expect(c.kind).toBe(LIBRARY_CHEST_KIND);
+    const g = libraryGuards(s);
+    expect(g).toHaveLength(3);
+    for (const m of g) expect(m.type).toBe('shambler');
+  });
+  it('rolls the library table inside a library and the old kind elsewhere', () => {
+    const c = libraryChests(s)[0];
+    expect(libraryLootKind(gen, c.x, c.z, LIBRARY_CHEST_KIND)).toBe(LIBRARY_LOOT);
+    expect(libraryLootKind(gen, c.x + 60, c.z + 60, LIBRARY_CHEST_KIND)).toBe(LIBRARY_CHEST_KIND);
+    expect(libraryLootKind(gen, c.x, c.z, 7)).toBe(7);
+  });
+  it('has a valid loot table', () => {
+    expect(LOOT.LIBRARY).toBe(LIBRARY_LOOT);
+    const [table, a, b, always] = STRUCTURE_LOOT[LIBRARY_LOOT];
+    expect(b).toBeGreaterThanOrEqual(a);
+    for (const [id, min, max, weight = 1] of [...table, ...always]) {
+      expect(id, 'item id').toBeGreaterThan(0);
+      expect(min).toBeGreaterThanOrEqual(1);
+      expect(max).toBeGreaterThanOrEqual(min);
+      expect(weight).toBeGreaterThan(0);
+    }
+    for (let k = 0; k < 20; k++) expect(dungeonLoot(Math.random, LIBRARY_LOOT).filter(Boolean).length).toBeGreaterThanOrEqual(a);
+  });
+});
+
+describe('Buried Library wiring', () => {
+  it('is a retrofit feature, a generator pass, a landmark kind and a milestone', () => {
+    expect(FEATURES.find((f) => f.key === 'library')).toMatchObject({ since: 10 });
+    expect(CURRENT_FEATURE_VERSION).toBeGreaterThanOrEqual(10);
+    expect(src('src/world/generator.js')).toContain("this.pass('library'");
+    expect(LANDMARK_BY_KEY.library.name).toBe('Buried Library');
+    expect(landmarksInBox(gen, s.cx - 5, s.cz - 5, s.cx + 5, s.cz + 5).some((l) => l.kind === 'library')).toBe(true);
+    expect(nearestLandmark(gen, 'library', s.cx, s.cz).x).toBe(s.cx);
+    const m = MILESTONES.find((x) => x.id === 'library');
+    expect(m.title).toBe('Quiet Please');
+    const at = (x, y, z) => ({ world: { dimension: 'overworld', gen }, player: { x, y, z } });
+    expect(m.tick(at(s.cx + 0.5, s.y + 1, s.cz + 0.5))).toBe(true);
+    expect(m.tick(at(s.cx + 0.5, s.y + 40, s.cz + 0.5))).toBe(false);
+    expect(nl['Quiet Please']).toBeTruthy();
+  });
+  it('can be located and keeps the sources tidy', () => {
+    expect(HELP.join('\n')).toMatch(/\|library\|/);
+    const game = { world: { dimension: 'overworld', gen }, player: { x: s.cx + 30, y: 70, z: s.cz } };
+    expect(String(runCommand(game, '/locate library'))).toMatch(/Buried Library/);
+    expect(src('src/world/buriedLibrary.js')).not.toMatch(/minecraft|nether|redstone|tripwire/i);
   });
 });

@@ -16,6 +16,7 @@ import { powerInto } from './world/circuits.js';
 import { newMap, updateMap, MAP_SIZE } from './world/maps.js';
 import { CURRENT_FEATURE_VERSION } from './world/retrofit.js';
 import { beaconLootKind } from './world/beaconHouse.js';
+import { libraryLootKind } from './world/buriedLibrary.js';
 import { noteLandmarks, chartMap, mapTitle } from './world/landmarks.js';
 import { KEEP_BITS, unpairAfterBreak } from './world/chests.js';
 import * as THREE from 'three';
@@ -940,7 +941,7 @@ export class Game {
       // dungeon chests roll their loot the first time they are opened or broken
       const meta = metaHint ?? this.world.getMeta(x, y, z);
       if (meta & 8) {
-        c.slots = dungeonLoot(Math.random, beaconLootKind(this.world.gen, x, z, (meta >> 4) & 15));
+        c.slots = dungeonLoot(Math.random, libraryLootKind(this.world.gen, x, z, beaconLootKind(this.world.gen, x, z, (meta >> 4) & 15)));
         addLore(this.world.gen, x, y, z, c.slots); // a log or chart left in some structure chests (world/packLore.js)
         if (this.world.getBlock(x, y, z) === B.CHEST) this.world.setBlockUrgent(x, y, z, B.CHEST, meta & KEEP_BITS, false);
       }

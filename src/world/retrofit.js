@@ -49,6 +49,7 @@ export const FEATURES = [
   { key: 'villageBoards', since: 7, label: 'village Bounty Boards', link: 1 },
   { key: 'coldCurrents', since: 8, label: 'Driftsnow hollows and sea vents', link: 2 },
   { key: 'beaconHouse', since: 9, label: 'Beacon Lighthouses', link: 3 },
+  { key: 'library', since: 10, label: 'Buried Libraries', link: 3 },
 ];
 export const CURRENT_FEATURE_VERSION = Math.max(...FEATURES.map((f) => f.since));
 export const FEATURE_KEYS = FEATURES.map((f) => f.key);
