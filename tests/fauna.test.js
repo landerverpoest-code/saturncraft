@@ -507,9 +507,9 @@ describe('Gloamlynx: shy at dusk, gone from light', () => {
     expect(m.enemy).toBe(prey);
   });
 
-  it('is not tameable and not persistent', () => {
+  it('is a companion only via the taming round and wild ones are not persistent', () => {
     expect(MOBS.gloamlynx.tameable).toBeFalsy();
-    expect(MOBS.gloamlynx.companion).toBeUndefined();
+    expect(MOBS.gloamlynx.companion.perk).toBe('pouncer');
     expect(new Mob('gloamlynx', 0, 64, 0).persistent).toBe(true);
     const m = new Mob('gloamlynx', 0, 64, 0); MOBS.gloamlynx.onSpawn(m);
     expect(m.persistent).toBe(false);

@@ -21,6 +21,8 @@ import { decorate, followDecor } from './modelKit.js';
 import { I, heldLightLevel } from '../world/items.js';
 import { B, SOLID, isWaterish } from '../world/blocks.js';
 import { BIOMES } from '../world/biomes.js';
+import { companionAI } from './companions.js';
+import { FISH_FOOD, ROOT_FOOD, NUGGET_FOOD, lynxLuredBy } from './tamingRound.js';
 import { mountGear, mountDeath, mountSave, mountLoad } from './mounts.js';
 
 // ---------------------------------------------------------------------------------------------
@@ -417,6 +419,11 @@ function lynxAI(m, g, p, pdist) {
     g.audio.play('yowl', [m.x, m.y + 0.6, m.z], 0.8);
     return;
   }
+  // fish in hand lure it (a wild one comes up to be offered a fish; right-click it to win it over)
+  if (p.inventory && p.inventory.selectedStack && lynxLuredBy(p.inventory.selectedStack.id) && pdist < LYNX.STALK_MIN + 6) {
+    if (pdist > 2.2) m.steer(p.x, p.z, 0.6); else { m.move = null; m.path = null; }
+    return;
+  }
   // stalking: never closer than a few blocks, creeping nearer only while nobody is looking
   const eye = p.eyePos(), watched = watchedBy(p.lookDir(), eye, [m.x, m.y + 0.5, m.z]) && m.canSee(g, eye[0], eye[1], eye[2]);
   m.orbit = m.orbit || (Math.random() < 0.5 ? 1 : -1);
@@ -573,6 +580,17 @@ FACES.tarnling = (c) => {
 // ---------------------------------------------------------------------------------------------
 // definitions
 
+// the bands of tame ones (drawn only while tamed, see Mob.render)
+MODELS.gloamlynx.parts.push(['band', [5.6, 6.6, 1.2], [0, 11, -3], [0, 0, 0], '#7a3ad8']);   // a tame Gloamlynx's violet collar
+MODELS.dustmole.parts.push(['band', [4.6, 3.6, 1], [0, 4, -2], [0, 0, 0], '#d8a23a']);       // a tame Dustmole's amber strap
+MODELS.tarnling.parts.push(['band', [3.6, 2.6, 0.8], [0, 2.6, -1.4], [0, 0, 0], '#e8e8f0']); // a tame Tarnling's silver ring
+
+/** A tame Dustmole, Gloamlynx or Tarnling: no hiding, stalking or pond-bound swimming any more, it is a companion (mobs/companions.js). */
+function tamedFaunaAI(m, g, p, pdist) {
+  m.special = false; m.emerging = 0; m.digging = 0; m.fleeTicks = 0; m.dry = 0; m.fetch = m.fetch || null;
+  return companionAI(m, g, p, pdist);
+}
+
 export const THISTLEHORN = {
   name: 'Thistlehorn', role: 'deer', category: CATEGORY.CREATURE, sound: 'thistle', rideable: true,
   health: 14, tamedHealth: 20, speed: 0.22, width: 0.9, height: 1.6, panicSpeed: 1.7,
@@ -580,7 +598,7 @@ export const THISTLEHORN = {
   food: [I.BEETROOT, I.SWEET_BERRIES], tameFood: [I.BEETROOT, I.SWEET_BERRIES],
   // ridable once won over with its food (a chance each time), fitted with a Thistle Harness and a Saddle; it follows its owner, tires on
   // long rides and is fed back to strength (mobs/mounts.js)
-  mount: { tack: true }, onDeath: mountDeath, saveExtra: mountSave, loadExtra: mountLoad,
+  mount: { tack: true, tameFood: [I.WHEAT] }, onDeath: mountDeath, saveExtra: mountSave, loadExtra: mountLoad,
   ownAI: thistleAI, onHurt: thistleHurt, customRender: thistleRender,
   onSpawn: (m) => { m.woolColor = Math.floor(Math.random() * THISTLE_COATS.length); m.saddled = false; m.temper = 0; m.fatigue = 0; m.jumpPower = 0.46 + Math.random() * 0.14; m.seatY = 0.8; },
 };
@@ -588,21 +606,27 @@ export const DUSTMOLE = {
   name: 'Dustmole', role: 'meerkat', category: CATEGORY.CREATURE, sound: 'burrow', burrower: true,
   health: 6, speed: 0.16, width: 0.5, height: 0.45, panicSpeed: 1.6, noFallDamage: true,
   drops: [{ id: B.SAND, min: 1, max: 2 }, { id: I.FLINT, min: 0, max: 1 }, { id: I.CLAY_BALL, min: 0, max: 1, chance: 0.4 }],
-  ownAI: moleAI, onHurt: moleHurt, customRender: moleRender, digDust: sandPuff,
+  ownAI: (m, g, p, d) => (m.tamed ? tamedFaunaAI(m, g, p, d) : moleAI(m, g, p, d)), onHurt: moleHurt,
+  // tame with carrots or beetroot (1 in 3): follows and sits like a companion, digs up one find every 4-6 minutes near its owner (mobs/tamingRound.js)
+  tamedHealth: 10, tamedAttack: 1, companion: { tameFood: ROOT_FOOD, perk: 'digger', sitDrop: 0.05 }, customRender: moleRender, digDust: sandPuff,
   onSpawn: (m) => { m.persistent = false; m.special = false; m.emerging = 0; m.digging = 0; m.lost = 0; m.stray = 0; },
 };
 export const GLOAMLYNX = {
   name: 'Gloamlynx', role: 'lynx', category: CATEGORY.CREATURE, sound: 'yowl', spawnWhen: 'dusk', shy: true,
   health: 14, speed: 0.3, width: 0.7, height: 0.9, attack: 3, panicSpeed: 1.9, noFallDamage: true,
   drops: [{ id: I.LEATHER, min: 0, max: 2 }, { id: I.BONE, min: 0, max: 1 }, { id: I.RABBIT_HIDE, min: 0, max: 1 }],
-  ownAI: lynxAI, customRender: lynxRender,
+  ownAI: (m, g, p, d) => (m.tamed ? tamedFaunaAI(m, g, p, d) : lynxAI(m, g, p, d)), customRender: lynxRender,
+  // tame with raw fish (1 in 3): follows, sits, pounces for 3 at Stone Mites and what threatens its owner, curls up on the owner's bed at night
+  tamedHealth: 20, tamedAttack: 3, companion: { tameFood: FISH_FOOD, perk: 'pouncer', sitDrop: 0.2 },
   onSpawn: (m) => { m.persistent = false; m.fleeTicks = 0; },
 };
 export const TARNLING = {
   name: 'Tarnling', role: 'tadpole', category: CATEGORY.CREATURE, sound: 'plip', bucketable: true, breathesWater: true,
   health: 3, speed: 0.1, width: 0.4, height: 0.3, noFallDamage: true,
   drops: [{ id: I.CLAY_BALL, min: 0, max: 1 }],
-  ownAI: tarnAI, customRender: tarnRender,
+  ownAI: (m, g, p, d) => (m.tamed ? tamedFaunaAI(m, g, p, d) : tarnAI(m, g, p, d)), customRender: tarnRender,
+  // tame with an iron or gold nugget (1 in 3): follows its owner and fetches loose metal and ore within 8 blocks (mobs/tamingRound.js)
+  tamedHealth: 8, tamedAttack: 1, companion: { tameFood: NUGGET_FOOD, perk: 'collector', sitDrop: 0.02 },
   onSpawn: (m) => { m.persistent = false; m.dry = 0; m.woolColor = Math.floor(Math.random() * TARN_COLORS.length); },
   saveExtra: (m) => ({ pond: m.persistent ? 1 : undefined }), // one let go from a bucket stays; the wild ones come and go with the chunks
   loadExtra: (m, s) => { if (s.pond) m.persistent = true; },
@@ -619,7 +643,7 @@ export const tarnlingBucket = (mob) => ({ id: I.TARNLING_BUCKET, count: 1, damag
 
 /** Right-click a Tarnling with an empty Bucket: scoop it up. Returns true when it did. `p` is the player (or a guest's stand-in on the host). */
 export function catchTarnling(g, mob, p, st, swing = () => {}) {
-  if (!st || st.id !== I.BUCKET || !mob.def.bucketable || mob.deathTime > 0 || mob.removed || mob.age < 0) return false;
+  if (!st || st.id !== I.BUCKET || !mob.def.bucketable || mob.deathTime > 0 || mob.removed || mob.age < 0 || mob.tamed) return false;
   const full = tarnlingBucket(mob);
   p.inventory.removeFromSlot(p.inventory.selected, 1);
   if (!p.inventory.selectedStack) p.inventory.slots[p.inventory.selected] = full;

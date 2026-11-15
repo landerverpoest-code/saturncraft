@@ -252,7 +252,8 @@ export function interactMount(g, mob, p, st, use) {
     }
   }
   const food = d && mob.def.food && mob.def.food.includes(id);
-  if (food && cfg.tack && !mob.tamed) {
+  const winsOver = food || !!(d && cfg.tameFood && cfg.tameFood.includes(id)); // (wheat only wins a wild Thistlehorn over, it does not breed it)
+  if (winsOver && cfg.tack && !mob.tamed) {
     use();
     mob.temper = Math.min(100, (mob.temper || 0) + 5);
     if (Math.random() < (cfg.tameChance ?? MOUNT.TAME_CHANCE) + (mob.temper || 0) / 400) { tame(); say('The Thistlehorn trusts you now'); } else g.particles.smoke(mob.x, mob.y + mob.height, mob.z, 7, 0.4);
