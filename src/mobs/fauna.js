@@ -17,6 +17,7 @@
 // `faunaTick` (called from MobSpawner.tick, a couple of tries a second at most). Everything here is simulated on the host.
 import { MOBS, MOB_KEYS, CATEGORY } from './mobTypes.js';
 import { MODELS, FACES } from './models.js';
+import { decorate, followDecor } from './modelKit.js';
 import { I, heldLightLevel } from '../world/items.js';
 import { B, SOLID, isWaterish } from '../world/blocks.js';
 import { BIOMES } from '../world/biomes.js';
@@ -208,7 +209,7 @@ function thistleRender(m, model) {
 }
 
 MODELS.thistlehorn = {
-  parts: [
+  parts: decorate([
     ['body', [8, 9, 15], [0, 17, 1], [0, 0, 0], '#a98a5e'],
     ['rump', [8.4, 5, 2.4], [0, 17, 8.4], [0, 0.4, 0], '#efe4cc'],
     ['neck', [4, 9, 4], [0, 21, -5], [0, 4, -0.5], '#a98a5e'],
@@ -229,14 +230,41 @@ MODELS.thistlehorn = {
     ['legFR', [3, 13, 3], [-2.4, 13, -5], [0, -6.5, 0], '#7a6040', { anim: 'legB' }],
     ['legBL', [3, 13, 3], [2.4, 13, 7], [0, -6.5, 0], '#7a6040', { anim: 'legB' }],
     ['legBR', [3, 13, 3], [-2.4, 13, 7], [0, -6.5, 0], '#7a6040', { anim: 'legA' }],
-  ],
+  ], {
+    body: [
+      ['belly', [6.4, 2, 13], [0, -4, 0], '#efe4cc'],
+      ['spineStripe', [2.4, 0.7, 13], [0, 4.6, 0], '#6a4e30'],
+      ['dapple0', [1.8, 0.7, 1.8], [-2.4, 4.6, -4], '#efe4cc'],
+      ['dapple1', [1.8, 0.7, 1.8], [2.4, 4.6, -1], '#efe4cc'],
+      ['dapple2', [1.8, 0.7, 1.8], [-2.2, 4.6, 2], '#efe4cc'],
+      ['dapple3', [1.8, 0.7, 1.8], [2.4, 4.6, 5], '#efe4cc'],
+      ['chestPatch', [5.4, 5, 1.6], [0, 0.5, -7.8], '#efe4cc'],
+    ],
+    head: [
+      ['blaze', [1.4, 0.6, 5], [0, 2.7, -1.6], '#efe4cc'],
+      ['earIn@', [0.8, 2.2, 0.5], [3.4, 2.4, -1.5], '#d8a8a0'],
+      ['cheek@', [0.8, 2.4, 3], [2.9, -1, -1.8], '#efe4cc'],
+      ['muzzle', [3.6, 2, 1.6], [0, -1.6, -4.2], '#efe4cc'],
+    ],
+    antlerL: [['antlerBaseL', [1.8, 1.4, 1.8], [0, -2.8, 0], '#a8946a'], ['tine2L', [1, 1, 3.4], [0, 1.2, 1.6], '#d8c8a0']],
+    antlerR: [['antlerBaseR', [1.8, 1.4, 1.8], [0, -2.8, 0], '#a8946a'], ['tine2R', [1, 1, 3.4], [0, 1.2, 1.6], '#d8c8a0']],
+    'legF@': [['hoof@', [3.4, 1.8, 3.4], [0, -5.8, 0], '#2a2018']],
+    'legB@': [['hoof@', [3.4, 1.8, 3.4], [0, -5.8, 0], '#2a2018']],
+    '*': [
+      ['tail', [2.6, 4, 2.2], [0, 19.5, 9.6], [0, 0, 0.8], '#efe4cc'],
+      ['tailTip', [2.8, 1.4, 2.4], [0, 19.5, 9.6], [0, -2.4, 0.8], '#8a6a46'],
+    ],
+  }),
 };
 // dark eyes set wide, a pale muzzle and nostrils
 FACES.thistlehorn = (c) => {
+  c.fillStyle = '#efe4cc'; c.fillRect(0, 9, 16, 7);
+  c.fillStyle = '#6a4e30'; c.fillRect(1, 4, 4, 1); c.fillRect(11, 4, 4, 1);
   c.fillStyle = '#17110a'; c.fillRect(1, 5, 3, 3); c.fillRect(12, 5, 3, 3);
-  c.fillStyle = '#e8d8b0'; c.fillRect(2, 5, 1, 1); c.fillRect(13, 5, 1, 1);
+  c.fillStyle = '#4a3220'; c.fillRect(2, 6, 1, 1); c.fillRect(13, 6, 1, 1);
+  c.fillStyle = '#f4ecd0'; c.fillRect(1, 5, 1, 1); c.fillRect(14, 5, 1, 1);
   c.fillStyle = '#3a2a1c'; c.fillRect(4, 11, 8, 4);
-  c.fillStyle = '#17110a'; c.fillRect(5, 12, 2, 1); c.fillRect(9, 12, 2, 1);
+  c.fillStyle = '#17110a'; c.fillRect(5, 12, 2, 1); c.fillRect(9, 12, 2, 1); c.fillRect(7, 14, 2, 1);
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -323,7 +351,7 @@ function moleRender(m, model, alpha, sec) {
 }
 
 MODELS.dustmole = {
-  parts: [
+  parts: decorate([
     ['body', [6, 5, 9], [0, 4, 1], [0, 0, 0], '#c9a96a'],
     ['back', [5, 1.4, 7], [0, 6.8, 1.2], [0, 0, 0], '#a88a4e'],
     ['head', [4.4, 4, 5], [0, 4.6, -3.6], [0, 0, -2], '#fffffc', { face: 'dustmole' }],
@@ -333,14 +361,28 @@ MODELS.dustmole = {
     ['legBL', [2, 2, 2.4], [2.4, 2, 4.4], [0, -1, 0], '#a88a4e', { anim: 'legB' }],
     ['legBR', [2, 2, 2.4], [-2.4, 2, 4.4], [0, -1, 0], '#a88a4e', { anim: 'legA' }],
     ['tail', [1.2, 1.2, 3.4], [0, 5, 5.6], [0, 0, 1.7], '#a88a4e'],
-  ],
+  ], {
+    body: [['belly', [4.8, 1, 7.4], [0, -2.1, 0], '#e8d8a8'], ['furTuft', [3.4, 1, 3.4], [0, 3, -1.4], '#c8aa6a']],
+    head: [['ear@', [0.8, 1, 0.8], [1.8, 2.2, 0.8], '#a88a4e'], ['cheek@', [0.6, 2, 2.4], [2.3, -0.8, -1], '#e8c8a0']],
+    nose: [['noseTip', [1.2, 0.8, 0.6], [0, 0.1, -0.9], '#8a4a3a']],
+    'claw@': [
+      ['digA@', [0.6, 0.7, 1.6], [0.8, -1.4, -2.4], '#e8dcc0'],
+      ['digB@', [0.6, 0.7, 1.6], [0, -1.4, -2.4], '#e8dcc0'],
+      ['digC@', [0.6, 0.7, 1.6], [-0.8, -1.4, -2.4], '#e8dcc0'],
+      ['wristFur@', [2.8, 1, 2.4], [0, 1.2, 0.2], '#a88a4e'],
+    ],
+    tail: [['tailTip', [1.6, 1.6, 1.2], [0, 0, 1.8], '#d8b878']],
+    'legB@': [['toes@', [2.4, 0.8, 2.8], [0, -1.2, -0.3], '#5a4a3a']],
+  }),
 };
 // tiny dark eyes high on the face and a pale muzzle
 FACES.dustmole = (c) => {
+  c.fillStyle = '#e8c8a0'; c.fillRect(4, 8, 8, 8);
   c.fillStyle = '#16100a'; c.fillRect(2, 4, 3, 3); c.fillRect(11, 4, 3, 3);
   c.fillStyle = '#e8dcc0'; c.fillRect(3, 4, 1, 1); c.fillRect(12, 4, 1, 1);
-  c.fillStyle = '#e8c8a0'; c.fillRect(5, 10, 6, 4);
-  c.fillStyle = '#5a3a2a'; c.fillRect(7, 12, 2, 1);
+  c.fillStyle = '#8a6a4a'; c.fillRect(1, 3, 4, 1); c.fillRect(11, 3, 4, 1);
+  c.fillStyle = '#8a4a3a'; c.fillRect(6, 9, 4, 2);
+  c.fillStyle = '#5a3a2a'; c.fillRect(7, 12, 2, 1); c.fillRect(6, 13, 1, 1); c.fillRect(9, 13, 1, 1);
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -403,7 +445,7 @@ function lynxRender(m, model, alpha, sec) {
 }
 
 MODELS.gloamlynx = {
-  parts: [
+  parts: decorate([
     ['body', [5, 6, 13], [0, 11, 1], [0, 0, 0], '#9a9484'],
     ['spots', [5.4, 1.2, 9], [0, 14.2, 1], [0, 0, 0], '#4e4a42'],
     ['ruff', [7, 4, 2], [0, 12, -5.6], [0, 0, 0], '#cfc8b6'],
@@ -417,14 +459,33 @@ MODELS.gloamlynx = {
     ['legBL', [2.6, 9, 2.6], [1.8, 9, 6], [0, -4.5, 0], '#7a7466', { anim: 'legB' }],
     ['legBR', [2.6, 9, 2.6], [-1.8, 9, 6], [0, -4.5, 0], '#7a7466', { anim: 'legA' }],
     ['tail', [2, 2, 4], [0, 12, 7.4], [0, 0, 2], '#4e4a42'],
-  ],
+  ], {
+    body: [
+      ['belly', [4, 1, 11], [0, -3.2, 0], '#e4ded0'],
+      ['stripeL0', [0.6, 2.6, 1.2], [2.7, 0.8, -2.6], '#4e4a42'], ['stripeR0', [0.6, 2.6, 1.2], [-2.7, 0.8, -2.6], '#4e4a42'],
+      ['stripeL1', [0.6, 2.6, 1.2], [2.7, 0.8, 0.4], '#4e4a42'], ['stripeR1', [0.6, 2.6, 1.2], [-2.7, 0.8, 0.4], '#4e4a42'],
+      ['stripeL2', [0.6, 2.6, 1.2], [2.7, 0.8, 3.4], '#4e4a42'], ['stripeR2', [0.6, 2.6, 1.2], [-2.7, 0.8, 3.4], '#4e4a42'],
+    ],
+    head: [
+      ['cheekRuff@', [1, 2.4, 2.2], [2.9, -1, -0.4], '#cfc8b6'],
+      ['browMark@', [1.8, 0.5, 2], [1.2, 2.6, -1.4], '#4e4a42'],
+      ['chin', [3, 1, 2.4], [0, -2.6, -1.2], '#e4ded0'],
+    ],
+    'ear@': [['earIn@', [0.8, 2.2, 0.5], [0, -0.2, -0.5], '#d88a8a']],
+    'legF@': [['paw@', [2.8, 1.2, 3.4], [0, -4.2, -0.5], '#cfc8b6']],
+    'legB@': [['paw@', [3, 1.2, 3.6], [0, -4.2, -0.5], '#cfc8b6']],
+    tail: [['tailRing0', [2.4, 2.4, 0.8], [0, 0, 0.2], '#17140f'], ['tailRing1', [2.4, 2.4, 0.8], [0, 0, 1.6], '#17140f'], ['tailTip', [2.4, 2.4, 1.2], [0, 0, 2.5], '#17140f']],
+  }),
 };
 // amber eyes with a slit pupil, a pink nose and a pale chin
 FACES.gloamlynx = (c) => {
+  c.fillStyle = '#4e4a42'; c.fillRect(0, 0, 16, 2); c.fillRect(3, 2, 1, 1); c.fillRect(12, 2, 1, 1);
   c.fillStyle = '#17140f'; c.fillRect(1, 3, 5, 4); c.fillRect(10, 3, 5, 4);
   c.fillStyle = '#ffd05a'; c.fillRect(2, 4, 3, 2); c.fillRect(11, 4, 3, 2);
   c.fillStyle = '#17140f'; c.fillRect(3, 4, 1, 2); c.fillRect(12, 4, 1, 2);
-  c.fillStyle = '#d88a8a'; c.fillRect(6, 9, 4, 2);
+  c.fillStyle = '#fff6c0'; c.fillRect(2, 4, 1, 1); c.fillRect(11, 4, 1, 1);
+  c.fillStyle = '#d88a8a'; c.fillRect(6, 8, 4, 2); c.fillStyle = '#a85a5a'; c.fillRect(7, 9, 2, 1);
+  c.fillStyle = '#17140f'; c.fillRect(7, 10, 2, 1); c.fillRect(5, 11, 2, 1); c.fillRect(9, 11, 2, 1);
   c.fillStyle = '#e4ded0'; c.fillRect(4, 12, 8, 3);
 };
 
@@ -478,7 +539,7 @@ function tarnRender(m, model, alpha, sec) {
 }
 
 MODELS.tarnling = {
-  parts: [
+  parts: decorate([
     ['body', [3.4, 2.6, 6], [0, 2.4, 0.5], [0, 0, 0], '#6aa05a'],
     ['belly', [3, 0.8, 5], [0, 1.2, 0.5], [0, 0, 0], '#d8e8a8'],
     ['head', [3.8, 2.8, 3], [0, 2.6, -3], [0, 0, -1.2], '#fffffa', { face: 'tarnling' }],
@@ -489,13 +550,24 @@ MODELS.tarnling = {
     ['legFR', [1, 1.4, 1], [-1.8, 1.4, -1.6], [0, -0.7, 0], '#6aa05c', { anim: 'legB' }],
     ['legBL', [1, 1.4, 1.4], [1.8, 1.4, 2.4], [0, -0.7, 0], '#6aa05d', { anim: 'legB' }],
     ['legBR', [1, 1.4, 1.4], [-1.8, 1.4, 2.4], [0, -0.7, 0], '#6aa05d', { anim: 'legA' }],
-  ],
+  ], {
+    body: [['stripe', [1, 0.4, 5], [0, 1.5, 0], '#c8d868'], ['spotA', [0.8, 0.4, 0.8], [-1, 1.5, -1.6], '#2a3a22'], ['spotB', [0.8, 0.4, 0.8], [0.9, 1.5, 0.6], '#2a3a22'], ['spotC', [0.8, 0.4, 0.8], [-0.8, 1.5, 2], '#2a3a22']],
+    head: [['eyeBump@', [1.2, 0.8, 1.2], [1.2, 1.7, -0.4], '#6aa05a'], ['throat', [2.6, 0.6, 2.4], [0, -1.5, -0.3], '#d8e8a8']],
+    'frill@': [['frillTip@', [0.6, 1.4, 0.8], [0.6, 0.4, 0], '#f0f8c0']],
+    tail: [['tailBelly', [0.9, 0.8, 4.5], [0, -1.3, 0], '#d8e8a8'], ['tailFin', [0.4, 1.2, 4], [0, 1.8, 0], '#8ac070']],
+    'legF@': [['toes@', [1.2, 0.4, 1.6], [0, -0.8, -0.3], '#8ac070']],
+    'legB@': [['toes@', [1.2, 0.4, 1.6], [0, -0.8, -0.3], '#8ac070']],
+  }),
 };
 // two big dark eyes and a wide little smile
 FACES.tarnling = (c) => {
-  c.fillStyle = '#10140e'; c.fillRect(1, 3, 5, 5); c.fillRect(10, 3, 5, 5);
-  c.fillStyle = '#f4f0d8'; c.fillRect(2, 4, 2, 2); c.fillRect(11, 4, 2, 2);
+  c.fillStyle = '#10140e'; c.fillRect(1, 2, 5, 6); c.fillRect(10, 2, 5, 6);
+  c.fillStyle = '#d8b83a'; c.fillRect(2, 3, 3, 3); c.fillRect(11, 3, 3, 3);
+  c.fillStyle = '#10140e'; c.fillRect(3, 3, 1, 3); c.fillRect(12, 3, 1, 3);
+  c.fillStyle = '#f4f0d8'; c.fillRect(2, 3, 1, 1); c.fillRect(11, 3, 1, 1);
   c.fillStyle = '#2a3a22'; c.fillRect(4, 11, 8, 1); c.fillRect(3, 10, 1, 1); c.fillRect(12, 10, 1, 1);
+  c.fillStyle = '#d8e8a8'; c.fillRect(5, 13, 6, 2);
+  c.fillStyle = '#2a3a22'; c.fillRect(7, 8, 1, 1); c.fillRect(9, 8, 1, 1);
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -613,3 +685,9 @@ export function faunaTick(spawner, rng = Math.random) {
     if (s) for (let i = 0, n = 1 + Math.floor(rng() * 3); i < n; i++) spawner.spawnMob('tarnling', s.x + 0.5 + (rng() - 0.5) * 0.8, s.y + 0.1, s.z + 0.5 + (rng() - 0.5) * 0.8);
   }
 }
+
+// detail boxes follow their host parts (head pitch, claws...)
+followDecor(THISTLEHORN, 'thistlehorn');
+followDecor(DUSTMOLE, 'dustmole');
+followDecor(GLOAMLYNX, 'gloamlynx');
+followDecor(TARNLING, 'tarnling');

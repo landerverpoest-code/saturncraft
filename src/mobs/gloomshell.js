@@ -9,6 +9,7 @@
 import * as THREE from 'three';
 import { MOBS, MOB_KEYS, CATEGORY } from './mobTypes.js';
 import { MODELS, FACES } from './models.js';
+import { decorate, followDecor } from './modelKit.js';
 import { I } from '../world/items.js';
 import { SOLID } from '../world/blocks.js';
 import { DIM_SPAWN_TABLES } from './dimensionMobs.js';
@@ -84,16 +85,33 @@ function gloomRender(m, model, alpha, sec) {
 }
 
 MODELS.gloomshell = {
-  parts: [
+  parts: decorate([
     ['base', [16, 8, 16], [0, 4, 0], [0, 0, 0], '#7a4a8a'],
     ['head', [6, 6, 6], [0, 7, 0], [0, 0, 0], '#e8d8a0', { face: 'gloomshell' }],
     ['lid', [16, 12, 16], [0, 4, 0], [0, 6, 0], '#9a64a8'],
-  ],
+  ], {
+    base: [
+      ['baseRim', [16.6, 1.2, 16.6], [0, 3.4, 0], '#5a3470'],
+      ['baseBand', [16.6, 1.2, 16.6], [0, -1.2, 0], '#8a5a9a'],
+      ['stud@', [2.4, 2.4, 2.4], [7.2, -3.4, -7.2], '#4a2a5a'],
+      ['studB@', [2.4, 2.4, 2.4], [7.2, -3.4, 7.2], '#4a2a5a'],
+    ],
+    head: [['cilia', [4, 1, 4], [0, 3.4, 0], '#c8b878'], ['chin', [4, 1.2, 1], [0, -2.4, -3.2], '#c8b878']],
+    lid: [
+      ['lidBand0', [16.6, 1.6, 16.6], [0, -2.5, 0], '#b07cbe'],
+      ['lidBand1', [16.6, 1.6, 16.6], [0, 2, 0], '#b07cbe'],
+      ['rib@', [1.4, 12.5, 16.6], [4.6, 0, 0], '#7a4a8a'],
+      ['crown', [9, 1.6, 9], [0, 6.6, 0], '#c890d4'],
+      ['knob', [3.4, 2.2, 3.4], [0, 8, 0], '#e8c8f0', { emissive: '#8a4aa0' }],
+    ],
+  }),
 };
 FACES.gloomshell = (c) => {
-  c.fillStyle = '#1a1020'; c.fillRect(3, 5, 3, 3); c.fillRect(10, 5, 3, 3);
-  c.fillStyle = '#7affd0'; c.fillRect(4, 6, 1, 1); c.fillRect(11, 6, 1, 1);
-  c.fillStyle = '#5a3a30'; c.fillRect(5, 11, 6, 1);
+  c.fillStyle = '#1a1020'; c.fillRect(2, 4, 4, 5); c.fillRect(10, 4, 4, 5);
+  c.fillStyle = '#7affd0'; c.fillRect(3, 5, 2, 3); c.fillRect(11, 5, 2, 3);
+  c.fillStyle = '#e8fff8'; c.fillRect(3, 5, 1, 1); c.fillRect(11, 5, 1, 1);
+  c.fillStyle = '#5a3a30'; c.fillRect(5, 11, 6, 2); c.fillStyle = '#e8d8a0'; c.fillRect(6, 11, 1, 1); c.fillRect(9, 11, 1, 1);
+  c.fillStyle = '#9a8a60'; c.fillRect(1, 3, 5, 1); c.fillRect(10, 3, 5, 1);
 };
 
 export const GLOOMSHELL = {
@@ -171,3 +189,6 @@ export class DriftSpark {
     m.rotation.set(sec * 4, sec * 6, 0);
   }
 }
+
+// detail boxes follow their host parts (head pitch, claws...)
+followDecor(GLOOMSHELL, 'gloomshell');
