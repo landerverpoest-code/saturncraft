@@ -54,7 +54,7 @@ export const EFFECT_NAMES = {
 
 // creature names (checked first by tCreature(): "Hopper" is a creature here but a funnel-like block elsewhere)
 export const CREATURE_NAMES = {
-  Dolphin: 'Dolfijn', Settler: 'Kolonist', 'Roving Peddler': 'Rondtrekkende marskramer', 'Mending Crystal': 'Herstelkristal',
+  Dolphin: 'Dolfijn', 'Stone Mite': 'Steenmijt', Settler: 'Kolonist', 'Roving Peddler': 'Rondtrekkende marskramer', 'Mending Crystal': 'Herstelkristal',
   'Elder Deepeye': 'Oude Deepeye', 'Dune Shambler': 'Duin-Shambler', 'Sodden Shambler': 'Doorweekte Shambler',
   'Rime Rattler': 'Rijp-Rattler', Hopper: 'Hopper',
 };
@@ -89,6 +89,9 @@ export default {
   'Sealed Copper Block': 'Verzegeld koperblok', 'Dulled Copper': 'Dof koper', 'Tarnished Copper': 'Aangelopen koper',
   'Verdigris Copper': 'Koper met groenspaan', 'Sealed Dulled Copper': 'Verzegeld dof koper',
   'Sealed Tarnished Copper': 'Verzegeld aangelopen koper', 'Sealed Verdigris Copper': 'Verzegeld koper met groenspaan',
+
+  'Mite-Riddled Stone': 'Steen vol mijten', 'Mite-Riddled Cobblestone': 'Keisteen vol mijten',
+  'Mite-Riddled Stone Bricks': 'Stenen bakstenen vol mijten',
 
   // ---- plants and farming ----
   'Cactus': 'Cactus', 'Pumpkin': 'Pompoen', 'Pumpkin Lantern': 'Pompoenlantaarn', 'Carved Pumpkin': 'Uitgesneden pompoen',
