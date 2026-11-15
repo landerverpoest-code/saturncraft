@@ -532,6 +532,13 @@ export class HostSession extends Session {
         this.broadcast({ t: 'lectern', x: m.x | 0, y: m.y | 0, z: m.z | 0, s: g.lecterns.get(`${m.x | 0},${m.y | 0},${m.z | 0}`) || null }, c);
         break;
       }
+      case 'shelf': {
+        // a guest put something on a Record Shelf or took it out
+        if (!finite(m.x, m.y, m.z) || !this.near(c, m.x, m.y, m.z, 12)) break;
+        g.setShelf(m.x | 0, m.y | 0, m.z | 0, m.s || null, true);
+        this.broadcast({ t: 'shelf', x: m.x | 0, y: m.y | 0, z: m.z | 0, s: g.shelves.get(`${m.x | 0},${m.y | 0},${m.z | 0}`) || null }, c);
+        break;
+      }
       case 'camp': {
         // a guest laid food on a campfire or took it off
         if (!finite(m.x, m.y, m.z) || !this.near(c, m.x, m.y, m.z, 12)) break;
@@ -689,7 +696,7 @@ export class HostSession extends Session {
       soc: 1, teams: soc.teamsToWire(), wps: soc.waypointsToWire(name), // optional: the social layer (net/social.js); older guests ignore both
       worldSpawn: g.worldSpawn, pos: { x: p.x, y: p.y, z: p.z, yaw: p.yaw },
       player: (ghost && ghost.rec) || g.netPlayers[name] || null, back: ghost ? 1 : undefined,
-      signs: [...g.signs], frames: [...g.frames], pots: [...g.pots], lecterns: [...g.lecterns], campfires: [...(g.campfires || [])],
+      signs: [...g.signs], frames: [...g.frames], pots: [...g.pots], lecterns: [...g.lecterns], shelves: [...(g.shelves || [])], campfires: [...(g.campfires || [])],
       vaults: g.proving ? g.proving.vaults.save() : [], // who opened which Vault (world/provingSystem.js)
       players: [{ id: 0, name: this.name }, ...this.joined().map((o) => ({ id: o.id, name: o.name }))],
       chunks: chunks.length,
@@ -1391,6 +1398,7 @@ export class HostSession extends Session {
   sendFrame(x, y, z, st) { this.broadcast({ t: 'frame', x, y, z, st }); }
   sendPot(x, y, z, f) { this.broadcast({ t: 'pot', x, y, z, f }); }
   sendLectern(x, y, z, s) { this.broadcast({ t: 'lectern', x, y, z, s }); }
+  sendShelf(x, y, z, s) { this.broadcast({ t: 'shelf', x, y, z, s }); }
   sendCampfire(x, y, z, s) { this.broadcast({ t: 'camp', x, y, z, s }); }
   sendNote(x, y, z) { this.broadcast({ t: 'note', x, y, z, d: this.game.world.dimension }); }
 
@@ -1605,6 +1613,7 @@ export class ClientSession extends Session {
     for (const [k, st] of w.frames || []) game.frames.set(k, st);
     for (const [k, f] of w.pots || []) { const [x, y, z] = String(k).split(',').map(Number); if (finite(x, y, z)) game.setPot(x, y, z, f, true); }
     for (const [k, c] of w.campfires || []) { const [x, y, z] = String(k).split(',').map(Number); if (finite(x, y, z)) game.setCampfire(x, y, z, c, true); }
+    for (const [k, sl] of w.shelves || []) { const [x, y, z] = String(k).split(',').map(Number); if (finite(x, y, z)) game.setShelf(x, y, z, sl, true); }
     for (const [k, l] of w.lecterns || []) { const [x, y, z] = String(k).split(',').map(Number); if (finite(x, y, z)) game.setLectern(x, y, z, l, true); }
     if (game.proving) game.proving.vaults.load(w.vaults);
     if (typeof w.dl === 'boolean') game.settings.daylightCycle = w.dl;
@@ -1670,6 +1679,7 @@ export class ClientSession extends Session {
       case 'frame': g.setFrameItem(m.x | 0, m.y | 0, m.z | 0, m.st || null, true); break;
       case 'pot': g.setPot(m.x | 0, m.y | 0, m.z | 0, m.f || null, true); break;
       case 'lectern': g.setLectern(m.x | 0, m.y | 0, m.z | 0, m.s || null, true); break;
+      case 'shelf': g.setShelf(m.x | 0, m.y | 0, m.z | 0, m.s || null, true); break;
       case 'camp': g.setCampfire(m.x | 0, m.y | 0, m.z | 0, m.s || null, true); break;
       case 'note': if (finite(m.x, m.y, m.z) && m.d === g.world.dimension) g.playChime(m.x | 0, m.y | 0, m.z | 0, { fromNet: true }); break;
       case 'vaultset': if (g.proving && typeof m.k === 'string' && /^-?\d+,-?\d+,-?\d+$/.test(m.k)) g.proving.vaults.set(m.k, m.n); break;
@@ -1997,6 +2007,7 @@ export class ClientSession extends Session {
   sendFrame(x, y, z, st) { this.send({ t: 'frame', x, y, z, st }); }
   sendPot(x, y, z, f) { this.send({ t: 'pot', x, y, z, f }); }
   sendLectern(x, y, z, s) { this.send({ t: 'lectern', x, y, z, s }); }
+  sendShelf(x, y, z, s) { this.send({ t: 'shelf', x, y, z, s }); }
   sendCampfire(x, y, z, s) { this.send({ t: 'camp', x, y, z, s }); }
   sendNote(x, y, z) { this.send({ t: 'note', x, y, z, d: this.game.world.dimension }); }
   /** Use the Vault at x,y,z with the held stack `st` (the host checks its ledger). */

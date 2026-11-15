@@ -117,6 +117,7 @@ const WS_TILES = (() => {
 })();
 /** Which set of WS_TILES a block uses for its meta. */
 const wsIndex = (id, m) => ((id === B.HUSH_SENSOR || id === B.CALIBRATED_HUSH_SENSOR) ? ((m & 15) ? 1 : 0) : id === B.LECTERN ? (m >> 2) & 1 : id === B.CAKE ? ((m & 7) ? 1 : 0) : m & 1);
+const RECORD_TILES = Array.from({ length: 64 }, (_, i) => texId('record_shelf_' + i)); // Record Shelf sides (world/recordShelf.js)
 const BERRY_TILES = [0, 1, 2, 3].map((i) => texId('sweet_berry_bush_' + i));
 const BRAMBLE_TILES = [0, 1, 2, 3].map((i) => texId('dewberry_bramble_' + i));
 // tired farmland (world/farming.js): the soil's memory sits in meta bits 3-7, the moisture in bits 0-2
@@ -233,6 +234,7 @@ export function meshSection(sec) {
         }
         else if (id === B.FARMLAND && d === 2 && (meta[i] & 7) > 0) tile = (meta[i] & 128) ? FARMLAND_TIRED_MOIST : FARMLAND_MOIST;
         else if (id === B.FARMLAND && d === 2 && (meta[i] & 128)) tile = FARMLAND_TIRED;
+        else if (id === B.RECORD_SHELF && d !== 2 && d !== 3) tile = RECORD_TILES[meta[i] & 63];
         else if (SUS_TILES[id]) tile = SUS_TILES[id][meta[i] & 3];
         else if (id === B.PROVING_SPAWNER && d !== 2 && d !== 3) tile = PROVING_SIDES[((meta[i] >> 4) & 3) % 3];
         else if (id === B.OMINOUS_SPAWNER && d !== 2 && d !== 3) tile = OMINOUS_SIDES[((meta[i] >> 4) & 3) % 3];

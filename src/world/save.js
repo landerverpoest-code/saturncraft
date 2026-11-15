@@ -7,6 +7,7 @@ import { cleanWaymark } from '../player/waymark.js';
 import { cleanHearth } from './emberHearth.js';
 import { cleanPotFaces } from './archaeology.js';
 import { cleanLectern } from './books.js';
+import { cleanShelf } from './recordShelf.js';
 import { cleanCamp } from './campfireCooking.js';
 import { encodeMap, decodeMap } from './maps.js';
 import { chunkKey } from './world.js';
@@ -124,6 +125,7 @@ export function buildSaveData(game) {
     frames: [...game.frames],
     pots: [...(game.pots || new Map())], // Decorated Pots' sherds (world/archaeology.js)
     lecterns: [...(game.lecterns || new Map())], // the books on Lecterns and their open pages (world/books.js)
+    shelves: [...(game.shelves || new Map())], // the items on Record Shelves (world/recordShelf.js)
     campfires: [...(game.campfires || new Map())], // the foods cooking on Campfires (world/campfireCooking.js)
     border: game.border ? game.border.save() : null, // the world border (world/border.js)
     proving: game.proving ? game.proving.save() : null, // Proving Spawner rests and who opened which Vault (world/provingSystem.js)
@@ -231,6 +233,7 @@ export function applySave(game, data) {
   for (const [k, st] of data.frames || []) game.frames.set(k, st);
   for (const [k, f] of data.pots || []) { const c = cleanPotFaces(f); if (c && game.pots) game.pots.set(k, c); }
   for (const [k, l] of data.lecterns || []) { const c = cleanLectern(l); if (c && game.lecterns) game.lecterns.set(String(k), c); }
+  for (const [k, sl] of data.shelves || []) { const c = cleanShelf(sl); if (c && game.shelves) game.shelves.set(String(k), c); }
   for (const [k, c] of data.campfires || []) { const s = cleanCamp(c); if (s && game.campfires) game.campfires.set(String(k), s); }
   if (game.proving) game.proving.load(data.proving);
   for (const d of data.maps || []) { const m = decodeMap(d); if (m) game.maps.set(m.id, m); }

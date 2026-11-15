@@ -7,6 +7,7 @@ import { B, BLOCKS, SHAPE, BLOCK_LIMIT } from './blocks.js';
 import { circuitSelection, circuitCollision } from './circuitShapes.js';
 import { railShapeOf } from './rails.js';
 import { crystalBox, rodBoxes } from './caves.js';
+import { hangingBoxes } from './hangingSigns.js';
 
 export const SIDE_DIRS = [[0, 0, -1], [1, 0, 0], [0, 0, 1], [-1, 0, 0]];
 
@@ -312,6 +313,7 @@ export function blockBoxes(id, meta) {
   if (id === B.CAMPFIRE) return CAMPFIRE_BOXES;
   if (id === B.OAK_SIGN) return (meta & 1) ? SIGN_X : SIGN_Z;
   if (id === B.OAK_WALL_SIGN) return WALL_SIGN[meta & 3];
+  if (id === B.HANGING_SIGN) return hangingBoxes(meta);
   if (id === B.ITEM_FRAME) return FRAME_BOXES[meta & 3];
   if (id === B.COCOA) return [cocoaBox(meta)];
   if (id === B.LANTERN) return meta & 1 ? LANTERN_HANGING : LANTERN_STANDING;

@@ -1,6 +1,23 @@
 // Procedural textures of content pack 7 (world/coldCurrents.js, player/echoCoffer.js): Driftsnow, Scaldrock and the Echo Coffer, the Ember Hearth and Glimmermoss.
 // Merged into textures.js like the other texture modules; each painter gets (canvas, { hex, mix, shade }).
 
+const SPINES = ['#8a2a2a', '#2a4a8a', '#2a6a3a', '#b08a2a', '#5a2a6a', '#c8bca0'];
+/** Record Shelf side: planks with two rows of three slots; a coloured spine stands in each slot whose bit is set. */
+function recordShelf(c, bits, { hex, shade }) {
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    const rim = x === 0 || x === 15 || y === 0 || y === 15 || y === 7 || y === 8;
+    c.set(x, y, shade(hex('#a7834e'), (rim ? 0.8 : 0.95) + c.h(x, y, 90) * 0.12));
+  }
+  for (let slot = 0; slot < 6; slot++) {
+    const x0 = 1 + (slot % 3) * 5, y0 = slot >= 3 ? 1 : 9; // the top row (slots 3-5) is the upper half of the picture
+    for (let y = y0; y < y0 + 6; y++) for (let x = x0; x < x0 + 4; x++) c.set(x, y, shade(hex('#5a4128'), 0.9 + c.h(x, y, 91) * 0.1)); // the dark niche
+    if (!(bits & (1 << slot))) continue;
+    const col = hex(SPINES[slot]);
+    for (let x = x0 + 1; x < x0 + 3; x++) for (let y = y0 + 1; y < y0 + 6; y++) c.set(x, y, shade(col, y === y0 + 1 ? 1.25 : 0.9 + c.h(x, y, 92) * 0.2));
+    c.set(x0 + 1, y0 + 3, hex('#e8d8a0'));
+  }
+}
+
 export const PACK7_TEX = {
   // Driftsnow: soft, bluish snow with wind ripples and a sparkle here and there
   driftsnow: (c, { hex, shade }) => {
@@ -121,3 +138,4 @@ export const PACK7_TEX = {
     c.set(7, 1, hex('#fff6c8')); c.set(8, 1, hex('#fff6c8')); c.set(7, 2, hex('#d6ffd8')); c.set(8, 2, hex('#d6ffd8'));
   },
 };
+for (let bits = 0; bits < 64; bits++) PACK7_TEX['record_shelf_' + bits] = (c, h) => recordShelf(c, bits, h);
