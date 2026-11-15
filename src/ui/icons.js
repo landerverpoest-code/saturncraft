@@ -15,6 +15,7 @@ import * as W from '../world/weaponStats.js';
 import { trinketLines } from '../player/trinkets.js';
 import { cleanInlay, inlayLine, inlayMask, INLAY_MATERIALS } from '../player/inlays.js';
 import { setLines } from '../player/setBonuses.js';
+import { tName, tCreature } from './i18n.js';
 import { TOOL_TEMPLATES, GEAR_TEMPLATES, paintTemplate, materialRamp, ramp, WOOD_HANDLE } from './toolArt.js';
 
 const cache = new Map();
@@ -443,8 +444,8 @@ export function tooltipHTML(st, extra = '') {
   const d = ITEMS[st.id];
   if (!d) return '';
   const lines = enchLines(st);
-  let h = `<div class="tt-name${lines.length ? ' ench' : ''}">${esc(d.name)}${esc(extra)}</div>`;
-  if (st.label) h += `<div class="tt-label">"${esc(st.label)}"</div>`; // a Name Tag's name
+  let h = `<div class="tt-name${lines.length ? ' ench' : ''}">${esc(tName(d.name))}${esc(extra)}</div>`;
+  if (st.label) h += `<div class="tt-label">"${esc(d.name === 'Creature Egg' ? tCreature(st.label) : st.label)}"</div>`; // a Name Tag's name
   if (d.written || d.writable) {
     // a book names its title and author, or how many pages are written
     if (st.title) h += `<div class="tt-label">${esc(st.title)}</div>`;

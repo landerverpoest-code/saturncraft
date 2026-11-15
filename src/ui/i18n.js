@@ -5,6 +5,8 @@
 // `data-i18n-attr="placeholder,title"` (those attributes). The English original is remembered, so the language can be
 // switched back and forth while the page is open. Everything here works in node (no document needed).
 import nl from './lang/nl.js';
+import NAMES_NL, { CREATURE_NAMES } from './lang/nl_names.js';
+import { NAME_RULES } from './nameRules.js';
 
 export const LANGUAGES = { en: 'English', nl: 'Nederlands' };
 const DICTIONARIES = { en: {}, nl };
@@ -86,4 +88,45 @@ export function translateDom(root) {
       attrs.set(el, m);
     }
   }
+}
+
+// ---- names of blocks, items and creatures (display only; the English registry names stay the identity of everything) ----
+const has = (obj, k) => Object.prototype.hasOwnProperty.call(obj, k);
+const NAME_DICTIONARIES = { nl: { names: NAMES_NL, creatures: CREATURE_NAMES } };
+const nameCache = { nl: new Map(), nlCreature: new Map() };
+
+function resolveName(name, creature) {
+  const book = NAME_DICTIONARIES[current];
+  if (!book) return name;
+  const cache = creature ? nameCache.nlCreature : nameCache.nl;
+  if (cache.has(name)) return cache.get(name);
+  let out = name;
+  if (creature && has(book.creatures, name)) out = book.creatures[name];
+  else if (has(book.names, name)) out = book.names[name];
+  else {
+    const tr = (n) => resolveName(n, false), trCreature = (n) => resolveName(n, true);
+    for (const rule of NAME_RULES) {
+      const r = rule(name, tr, trCreature);
+      if (typeof r === 'string' && r) { out = r; break; }
+    }
+  }
+  cache.set(name, out);
+  return out;
+}
+
+/** The display name of a block or item in the current language: the Dutch dictionary, then the pattern rules, else English. */
+export function tName(name) {
+  if (typeof name !== 'string' || !name || current === 'en') return name;
+  return resolveName(name, false);
+}
+/** The display name of a creature (creature spellings win over block/item ones: the Hopper mob vs. the Hopper block). */
+export function tCreature(name) {
+  if (typeof name !== 'string' || !name || current === 'en') return name;
+  return resolveName(name, true);
+}
+/** Does the (lower-case) search text `q` match this name in English or in the current language? */
+export function nameMatches(name, q) {
+  if (!q) return true;
+  const n = String(name);
+  return n.toLowerCase().includes(q) || tName(n).toLowerCase().includes(q);
 }

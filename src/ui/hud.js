@@ -14,7 +14,7 @@ import { shieldGauge } from '../player/shield.js';
 import { paintGhostFace, ghostPose, GHOST_TICKS } from './ghostFace.js';
 import { hudPalette, motionScales, bossBarLabel, raidBarLabel } from './accessibility.js';
 import { FrameGraph } from './frameGraph.js';
-import { t } from './i18n.js';
+import { t, tName } from './i18n.js';
 
 const svg = (inner) => `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" shape-rendering="crispEdges">${inner}</svg>`)}`;
 const heartPath = 'M9 16 L2 9 Q0 6 2 3.5 Q4.5 1 7 3 L9 5 L11 3 Q13.5 1 16 3.5 Q18 6 16 9 Z';
@@ -329,7 +329,7 @@ export class HUD {
       this.slots.forEach((s, i) => s.classList.toggle('sel', i === inv.selected));
       this.lastSel = inv.selected;
       const st = inv.selectedStack;
-      this.itemNameEl.textContent = st ? ITEMS[st.id].name : '';
+      this.itemNameEl.textContent = st ? tName(ITEMS[st.id].name) : '';
       if (st && hasEnch(st)) { const e = document.createElement('span'); e.className = 'ench-list'; e.textContent = enchLines(st).join(', '); this.itemNameEl.appendChild(e); }
       this.itemNameEl.style.opacity = 1;
       clearTimeout(this._nameT);

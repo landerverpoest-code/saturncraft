@@ -3,6 +3,7 @@
 // It reads the mirrored mob fields every client has (type, health, the `special` flag), so guests in a shared
 // world see the same bar as the host.
 import { MOBS } from '../mobs/mobTypes.js';
+import { tCreature } from './i18n.js';
 
 /** Boss bars show for a boss within this many blocks. */
 export const BAR_RANGE = 72;
@@ -29,5 +30,5 @@ export function bossBarInfo(list, x, y, z, range = BAR_RANGE) {
   }
   if (!best) return null;
   const { e, def } = best, max = def.health || 1, frac = Math.max(0, Math.min(1, e.health / max));
-  return { name: def.name, frac, phase: barPhase(frac, def.bossBar.phases), phases: def.bossBar.phases || [], shielded: !!e.special };
+  return { name: tCreature(def.name), frac, phase: barPhase(frac, def.bossBar.phases), phases: def.bossBar.phases || [], shielded: !!e.special };
 }

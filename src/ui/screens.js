@@ -35,7 +35,7 @@ import { buildTopics, searchTopics } from './helpTopics.js';
 import { isTrinket, TRINKET_SLOTS } from '../player/trinkets.js';
 import { wornSets, SET_PIECES } from '../player/setBonuses.js';
 import { TOUCH_MODE_LABELS, SIZE_RANGE, OPACITY_RANGE, nextTouchMode, normalizeTouch, detectTouch, readTouchEnv } from './touchMath.js';
-import { t, LANGUAGES, nextLanguage, getLanguage } from './i18n.js';
+import { t, LANGUAGES, nextLanguage, getLanguage, tName, tCreature, nameMatches } from './i18n.js';
 import { WORLD_RULES, WORLD_RULE_NAMES, ruleIn, ruleLockReason } from '../world/gameRules.js';
 import { loadPlayerName, MAX_PLAYERS } from '../net/protocol.js';
 import { EMOTES, EMOTE_LABELS, RESPAWN_WAIT_S } from '../net/social.js';
@@ -203,7 +203,7 @@ export class UI {
     const refresh = () => {
       const st = get();
       s.innerHTML = this.slotHTML(st);
-      s.setAttribute('aria-label', st && ITEMS[st.id] ? `${ITEMS[st.id].name}${st.count > 1 ? ' x' + st.count : ''}` : 'Empty slot');
+      s.setAttribute('aria-label', st && ITEMS[st.id] ? `${tName(ITEMS[st.id].name)}${st.count > 1 ? ' x' + st.count : ''}` : 'Empty slot');
     };
     if (!opts.lazy) refresh();
     const ref = { get, set, opts };
@@ -415,8 +415,8 @@ export class UI {
         const ok = !!chooseIngredients(layout, available());
         if (only && !ok) continue;
         const s = el(`<div class="slot recipe ${ok ? 'craftable' : 'missing'}">${this.slotHTML({ id: r.result, count: r.count })}</div>`);
-        s.tabIndex = -1; s.setAttribute('role', 'button'); s.setAttribute('aria-label', 'Recipe: ' + ITEMS[r.result].name + (ok ? '' : ' (missing ingredients)'));
-        s.addEventListener('mouseenter', () => { this.tooltipEl.textContent = ITEMS[r.result].name + (ok ? '' : ' (missing ingredients)'); this.tooltipEl.classList.remove('hidden'); });
+        s.tabIndex = -1; s.setAttribute('role', 'button'); s.setAttribute('aria-label', 'Recipe: ' + tName(ITEMS[r.result].name) + (ok ? '' : ' (missing ingredients)'));
+        s.addEventListener('mouseenter', () => { this.tooltipEl.textContent = tName(ITEMS[r.result].name) + (ok ? '' : ' (missing ingredients)'); this.tooltipEl.classList.remove('hidden'); });
         s.addEventListener('mouseleave', () => this.tooltipEl.classList.add('hidden'));
         s.addEventListener('mousedown', (e) => { e.preventDefault(); this.fillRecipe(layout, e.shiftKey ? 64 : 1); this.refreshAll(); });
         list.appendChild(s);
@@ -1170,15 +1170,15 @@ export class UI {
       this.refreshers.push(() => {
         const st = this.work && this.work[0], o = options();
         if (st && selFor !== st.id) { selFor = st.id; sel = -1; }
-        hint.textContent = !st ? 'Put in a stone block to cut' : sel < 0 ? 'Pick what to cut it into' : `${ITEMS[o[sel].id].name}${o[sel].count > 1 ? ' ×' + o[sel].count : ''}`;
+        hint.textContent = !st ? 'Put in a stone block to cut' : sel < 0 ? 'Pick what to cut it into' : `${tName(ITEMS[o[sel].id].name)}${o[sel].count > 1 ? ' ×' + o[sel].count : ''}`;
         const k = `${st ? st.id : -1}:${sel}`;
         if (k === key) return;
         key = k;
         list.innerHTML = '';
         o.forEach((r, i) => {
           const b = el(`<div class="slot cutter-opt${i === sel ? ' on' : ''}">${this.slotHTML({ id: r.id, count: r.count })}</div>`);
-          b.tabIndex = -1; b.setAttribute('role', 'button'); b.setAttribute('aria-label', ITEMS[r.id].name + (r.count > 1 ? ' x' + r.count : ''));
-          b.addEventListener('mouseenter', () => this.showTooltip(ITEMS[r.id].name + (r.count > 1 ? ' ×' + r.count : '')));
+          b.tabIndex = -1; b.setAttribute('role', 'button'); b.setAttribute('aria-label', tName(ITEMS[r.id].name) + (r.count > 1 ? ' x' + r.count : ''));
+          b.addEventListener('mouseenter', () => this.showTooltip(tName(ITEMS[r.id].name) + (r.count > 1 ? ' ×' + r.count : '')));
           b.addEventListener('mouseleave', () => this.tooltipEl.classList.add('hidden'));
           b.addEventListener('mousedown', (e) => { e.preventDefault(); sel = i; g.audio.play('click'); this.refreshAll(); });
           list.appendChild(b);
@@ -1251,7 +1251,7 @@ export class UI {
         const q = search.value.trim().toLowerCase();
         // one Creature Egg per creature (mobs/creatureEggs.js): the same item, labelled with what it hatches
         for (const e of eggs) {
-          if (q && !e.name.toLowerCase().includes(q)) continue;
+          if (q && !nameMatches(e.name, q)) continue;
           grid.appendChild(this.makeSlot(() => e.stack, () => {}, {
             lazy, catalog: true,
             onClick: (ev) => {
@@ -1263,7 +1263,7 @@ export class UI {
           }));
         }
         for (const d of all) {
-          if (q && !d.name.toLowerCase().includes(q)) continue;
+          if (q && !nameMatches(d.name, q)) continue;
           grid.appendChild(this.makeSlot(() => ({ id: d.id, count: 1 }), () => {}, {
             lazy, catalog: true,
             onClick: (e) => {
@@ -1296,7 +1296,7 @@ export class UI {
     this.game.input.unlock();
     if (this.game.onboarding) this.game.onboarding.trigger('trade'); // first-time hint (player/onboarding.js)
     const g = this.game, inv = g.player.inventory, trader = !!mob.def.trader;
-    const title = trader ? mob.def.name : `${mob.profession[0].toUpperCase() + mob.profession.slice(1)} Settler`;
+    const title = trader ? tCreature(mob.def.name) : `${mob.profession[0].toUpperCase() + mob.profession.slice(1)} Settler`;
     // Village Champions pay less (a guest pays from its own inventory, so its own effect sets the price)
     const cut = championDiscount(g.player.effects);
     const key = trader ? null : (mob.villageId ? mob.villageId(g) : mob.village) || null;
@@ -1319,7 +1319,7 @@ export class UI {
           <div class="arrow" aria-hidden="true">➜</div>
           <div class="slot">${this.slotHTML({ id: o.get, count: o.getCount })}</div>
           <span class="trade-name"></span><button class="btn trade-btn">Trade</button></div>`);
-        row.querySelector('.trade-name').textContent = ITEMS[o.get].name;
+        row.querySelector('.trade-name').textContent = tName(ITEMS[o.get].name);
         const btn = row.querySelector('button'), priceSlot = row.querySelector('.price'), cueEl = row.querySelector('.price-cue');
         btn.addEventListener('click', (e) => { // (a click, not a mousedown: Enter, Space and the gamepad's A press it too; Shift trades as often as affordable)
           const times = e.shiftKey ? 64 : 1;
@@ -1354,7 +1354,7 @@ export class UI {
           priceSlot.title = cue.text;
           cueEl.textContent = cue.mark ? `${cue.mark} ${cue.word}` : '';
           cueEl.className = 'price-cue' + (cue.cls ? ' ' + cue.cls : '');
-          row.setAttribute('aria-label', `${ITEMS[o.get].name} x${o.getCount} for ${ITEMS[o.give].name} x${now}. ${cue.text}${o.uses >= MAX_USES ? '. Sold out' : ''}`);
+          row.setAttribute('aria-label', `${tName(ITEMS[o.get].name)} x${o.getCount} for ${tName(ITEMS[o.give].name)} x${now}. ${cue.text}${o.uses >= MAX_USES ? '. Sold out' : ''}`);
           const refused = refusesTrade(market().rep);
           const ok = canTrade(o, inv, cut, market());
           btn.disabled = !ok;
@@ -1375,7 +1375,7 @@ export class UI {
           repLine.dataset.standing = String(st.index);
           const sel = inv.selectedStack, worth = sel && key ? giftValue(mob.profession, sel.id) : 0;
           gift.disabled = !key || !worth || g.time - mob.lastGift < GIFT_COOLDOWN;
-          gift.textContent = worth ? (g.time - mob.lastGift < GIFT_COOLDOWN ? 'Already given a gift' : `Gift: ${ITEMS[sel.id].name}`) : 'Gift (hold goods it wants)';
+          gift.textContent = worth ? (g.time - mob.lastGift < GIFT_COOLDOWN ? 'Already given a gift' : `Gift: ${tName(ITEMS[sel.id].name)}`) : 'Gift (hold goods it wants)';
         });
         gift.addEventListener('click', () => {
           if (gift.disabled) return;
@@ -2104,7 +2104,7 @@ export class UI {
     fill(s.querySelector('.stats-general'), statRows(st));
     fill(s.querySelector('.stats-guide'), guideRows(guideOf(st)));
     const kills = killRows(st, MOBS);
-    fill(s.querySelector('.stats-kills'), kills.length ? kills.map((k) => [k.name, String(k.count)]) : [['Nothing yet', '0']]);
+    fill(s.querySelector('.stats-kills'), kills.length ? kills.map((k) => [tCreature(k.name), String(k.count)]) : [['Nothing yet', '0']]);
     const back = s.querySelector('[data-a=back]');
     const body = s.querySelector('.stats-body');
     back.onclick = () => this.showPause();
@@ -2180,15 +2180,15 @@ export class UI {
       card.className = 'guide-card' + (rec ? '' : ' unknown');
       const img = document.createElement('img'); img.alt = ''; img.width = img.height = 56;
       const info = document.createElement('div'); info.className = 'guide-info';
-      const h = document.createElement('b'); h.textContent = rec ? e.name : '???';
+      const h = document.createElement('b'); h.textContent = rec ? (tab === 'creatures' ? tCreature(e.name) : e.name) : '???';
       const lines = [];
       if (tab === 'creatures') {
         img.src = creatureIcon(e.key, MOBS[e.key]);
         if (rec) {
           lines.push(`${e.kind}${e.traits.length ? ': ' + list(e.traits) : ''}`, `Lives in: ${list(e.habitat)}`);
-          if (e.feeds.length) lines.push(`Likes: ${list(e.feeds.map(itemName))}`);
-          if (e.tames.length) lines.push(`Tamed with: ${list(e.tames.map(itemName))}`);
-          lines.push(rec.l >= LEVEL.KILLED ? `Drops: ${e.drops.length ? list(e.drops.map(itemName)) : 'nothing'}` : 'Defeat one to learn what it drops.', when(rec));
+          if (e.feeds.length) lines.push(`Likes: ${list(e.feeds.map((id) => tName(itemName(id))))}`);
+          if (e.tames.length) lines.push(`Tamed with: ${list(e.tames.map((id) => tName(itemName(id))))}`);
+          lines.push(rec.l >= LEVEL.KILLED ? `Drops: ${e.drops.length ? list(e.drops.map((id) => tName(itemName(id)))) : 'nothing'}` : 'Defeat one to learn what it drops.', when(rec));
         } else lines.push('Not yet seen.');
       } else if (tab === 'biomes') {
         img.src = swatch(e.climate);
@@ -2228,7 +2228,7 @@ export class UI {
       arrow: 'was shot by a Rattler', poison: 'succumbed to poison', magic: 'was killed by magic', wither: 'withered away',
       wall: 'experienced kinetic energy', freeze: 'froze to death', border: 'left the confines of this world', hot_floor: 'discovered the floor was scalding',
     };
-    const text = msgs[cause] ? t(msgs[cause]) : cause && cause.startsWith('mob:') ? t('was slain by a {mob}', { mob: cause.slice(4) }) : cause && cause.startsWith('player:') ? t('was slain by {name}', { name: cause.slice(7) }) : t('died');
+    const text = msgs[cause] ? t(msgs[cause]) : cause && cause.startsWith('mob:') ? t('was slain by a {mob}', { mob: tCreature(cause.slice(4)) }) : cause && cause.startsWith('player:') ? t('was slain by {name}', { name: cause.slice(7) }) : t('died');
     const s = el(`<div class="screen" id="death-screen"><h2>${t('You Died!')}</h2><p class="sub">${t('Player {what}', { what: text })}</p>${this.game.hardcoreOver ? `<p class="sub">${t('This was a One Life world: it can only be watched now.')}</p>` : ''}<button class="btn">${this.game.hardcoreOver ? t('Watch the world') : t('Respawn')}</button></div>`);
     s.querySelector('button').onclick = () => { this.open = null; this.clear(); this.game.respawn(); };
     const net = this.game.net;
