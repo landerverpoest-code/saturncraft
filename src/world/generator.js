@@ -35,6 +35,7 @@ import { stampSandvaults } from './sandvault.js';
 import { stampHagHuts } from './hagHut.js';
 import { stampFrozenDeep, stampIcebergs, stampHulks } from './frozenDeep.js';
 import { stampColdCurrents } from './coldCurrents.js';
+import { stampMiteStone } from './stoneMiteGen.js';
 import { BIOME, BIOMES } from './biomes.js';
 import { MIN_Y, WORLD_HEIGHT, SEA_LEVEL, CHUNK_VOLUME, cidx } from './constants.js';
 import { grassColor, foliageColor } from './textures.js';
@@ -546,6 +547,8 @@ export class TerrainGenerator {
     this.pass('frozenHulk', blocks, meta, biomes, () => stampHulks(this, blocks, meta, cx, cz));    // Icebound Hulks frozen into the sheet (world/frozenDeep.js)
     this.pass('villageBoards', blocks, meta, biomes, () => stampVillageBoards(this, blocks, meta, cx, cz)); // the Bounty Board beside each village's well (world/villages.js), a pass of its own so old saves can be given one
     this.pass('coldCurrents', blocks, meta, biomes, () => stampColdCurrents(this, blocks, meta, cx, cz, biomes)); // Driftsnow hollows, Scald Vents and Upwells (world/coldCurrents.js)
+
+    stampMiteStone(this, blocks, meta, cx, cz, heightmap, biomes); // (not a retrofit pass: old chunks keep their plain stone) clusters of Mite-Riddled Stone in the mountains (world/stoneMiteGen.js)
 
     // Final heightmap: highest non-air block
     for (let z = 0; z < 16; z++) for (let x = 0; x < 16; x++) {

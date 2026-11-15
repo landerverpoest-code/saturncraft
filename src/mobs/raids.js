@@ -28,6 +28,7 @@ import { villageKey, REP } from './reputation.js';
 import { repEvent } from './villageRep.js';
 import { SOLID, OPAQUE, isFluid } from '../world/blocks.js';
 import { effectLevel } from '../player/effects.js';
+import { waveMemberType, patrolCasterIndex } from './gloamweavers.js';
 
 export const DAY_TICKS = 24000;
 /** Patrols only come once the world is three days old. */
@@ -387,7 +388,7 @@ export class Raids {
       if (isFluid(w.getBlock(x, y - 1, z)) || isFluid(w.getBlock(x, y, z))) continue;
       for (let i = 0; i < count; i++) {
         const sx = x + (Math.random() - 0.5) * 4, sz = z + (Math.random() - 0.5) * 4;
-        const m = g.spawner.spawnMob('marauder', sx, w.heightAt(Math.floor(sx), Math.floor(sz)) + 1, sz);
+        const m = g.spawner.spawnMob(waveMemberType(i, r.wave, count), sx, w.heightAt(Math.floor(sx), Math.floor(sz)) + 1, sz); // Gloamweavers take the last places from wave 3 on
         if (!m) continue;
         m.raider = true; m.raidId = r.id; m.raidCenter = { x: r.cx, z: r.cz }; m.persistent = true;
         if (i === 0) { m.captain = true; m.offhand = captainOffhand(m.offhand); } // each wave marches behind a banner (no omen from these)
@@ -432,12 +433,13 @@ export class Raids {
       const y = w.heightAt(s.x, s.z) + 1;
       if (!validPatrolGround(w.getBlock(s.x, y - 1, s.z), w.getBlock(s.x, y, s.z), w.getBlock(s.x, y + 1, s.z), w.skyLight(s.x, y, s.z))) continue;
       const n = patrolSize();
+      const caster = patrolCasterIndex(n); // rarely the last member is a Gloamweaver
       const out = [];
       for (let i = 0; i < n; i++) {
         const x = s.x + (i ? Math.floor(Math.random() * 5) - 2 : 0), z = s.z + (i ? Math.floor(Math.random() * 5) - 2 : 0);
         const yy = w.heightAt(x, z) + 1;
         if (i && !validPatrolGround(w.getBlock(x, yy - 1, z), w.getBlock(x, yy, z), w.getBlock(x, yy + 1, z), 15)) continue;
-        const m = g.spawner.spawnMob('marauder', x + 0.5, yy, z + 0.5);
+        const m = g.spawner.spawnMob(i === caster ? 'gloamweaver' : 'marauder', x + 0.5, yy, z + 0.5);
         if (!m) continue;
         m.persistent = true; // patrols roam by day too
         if (!out.length) { m.captain = true; m.offhand = captainOffhand(m.offhand); } else m.patrolLeader = out[0];

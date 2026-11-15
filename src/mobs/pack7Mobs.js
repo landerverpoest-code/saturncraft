@@ -14,6 +14,7 @@
 // state is not in the snapshot (the damage rule runs on the host and applies to everyone regardless).
 import { MOBS, MOB_KEYS, CATEGORY } from './mobTypes.js';
 import { MODELS, FACES } from './models.js';
+import { decorate, followDecor } from './modelKit.js';
 import { I, ITEMS } from '../world/items.js';
 import { B } from '../world/blocks.js';
 
@@ -125,7 +126,7 @@ function rootsnoutRender(m, model) {
 }
 
 MODELS.rootsnout = {
-  parts: [
+  parts: decorate([
     ['body', [12, 10, 18], [0, 16, 0], [0, 0, 0], '#6a5a3e'],
     ['moss', [11, 2.4, 15], [0, 21.4, 0.5], [0, 0, 0], '#5a8a46'],
     ['mossL', [3, 2, 6], [4.5, 22.8, 2], [0, 0, 0], '#7ab35c'],
@@ -138,14 +139,35 @@ MODELS.rootsnout = {
     ['legFR', [4, 11, 4], [-4, 11, -6], [0, -5.5, 0], '#4e4230', { anim: 'legB' }],
     ['legBL', [4, 11, 4], [4, 11, 6], [0, -5.5, 0], '#4e4230', { anim: 'legB' }],
     ['legBR', [4, 11, 4], [-4, 11, 6], [0, -5.5, 0], '#4e4230', { anim: 'legA' }],
-  ],
+  ], {
+    body: [
+      ['belly', [10, 2, 16], [0, -4.2, 0], '#8a7a58'],
+      ['stripeL', [0.6, 4, 12], [6.1, -1, 0], '#5a4a2e'], ['stripeR', [0.6, 4, 12], [-6.1, -1, 0], '#5a4a2e'],
+      ['shroomStem', [1.2, 2.4, 1.2], [3, 6.8, 5], '#e8e0c8'], ['shroomCap', [3.4, 1.4, 3.4], [3, 8.4, 5], '#c8402a'], ['shroomDot', [1, 0.4, 1], [3.4, 9.2, 5.2], '#fff0d8'],
+      ['fern', [1, 3, 1], [-3, 6.8, 6], '#7ab35c'], ['fern2', [1, 2.2, 1], [-4, 6.4, 5], '#8ac86a'],
+    ],
+    moss: [['mossC', [4, 1.6, 4], [-2, 1, -5], '#8ac86a']],
+    head: [
+      ['mossBrow', [8.4, 1.4, 8.4], [0, 4.1, 0], '#5a8a46'],
+      ['tusk@', [1, 2.4, 1], [2.8, -3.4, -4.4], '#efe4c8'],
+      ['cheek@', [0.8, 3, 4], [4.2, -1.2, -1], '#4a3c28'],
+    ],
+    'legF@': [['hoof@', [4.4, 1.6, 4.4], [0, -5.3, 0], '#2a2218'], ['mossLeg@', [4.4, 2, 4.4], [0, 3.5, 0], '#5a8a46']],
+    'legB@': [['hoof@', [4.4, 1.6, 4.4], [0, -5.3, 0], '#2a2218'], ['mossLeg@', [4.4, 2, 4.4], [0, 3.5, 0], '#5a8a46']],
+    '*': [
+      ['tail', [3, 3, 4], [0, 18, 9], [0, 0, 2], '#4e4230'],
+      ['tailTuft', [3.4, 3.4, 1.6], [0, 18, 9], [0, 0, 4.6], '#5a8a46'],
+    ],
+  }),
 };
 // small, gentle eyes under a mossy brow, and a broad dark snout
 FACES.rootsnout = (c) => {
+  c.fillStyle = '#4a3c28'; c.fillRect(0, 7, 2, 4); c.fillRect(14, 7, 2, 4);
   c.fillStyle = '#1a140c'; c.fillRect(2, 6, 3, 3); c.fillRect(11, 6, 3, 3);
   c.fillStyle = '#e8e0b8'; c.fillRect(3, 6, 1, 1); c.fillRect(12, 6, 1, 1);
-  c.fillStyle = '#6a9a4e'; c.fillRect(1, 3, 5, 2); c.fillRect(10, 3, 5, 2);
+  c.fillStyle = '#6a9a4e'; c.fillRect(1, 3, 5, 2); c.fillRect(10, 3, 5, 2); c.fillRect(6, 2, 4, 2);
   c.fillStyle = '#3a2e1c'; c.fillRect(5, 11, 6, 3);
+  c.fillStyle = '#1a140c'; c.fillRect(6, 12, 1, 1); c.fillRect(9, 12, 1, 1);
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -203,7 +225,7 @@ function platebackRender(m, model) {
 }
 
 MODELS.plateback = {
-  parts: [
+  parts: decorate([
     ['body', [7, 5, 10], [0, 5.5, 1], [0, 0, 0], '#a88a5a'],
     ['shell', [8, 3, 10.6], [0, 6.4, 1], [0, 0, 0], '#8a6a42'],
     ['head', [4.6, 4, 5], [0, 5.4, -4], [0, 0, -2.2], '#fffffa', { face: 'plateback' }],
@@ -213,13 +235,29 @@ MODELS.plateback = {
     ['legBL', [2, 3, 2], [2.6, 3, 4.4], [0, -1.5, 0], '#6a5030', { anim: 'legB' }],
     ['legBR', [2, 3, 2], [-2.6, 3, 4.4], [0, -1.5, 0], '#6a5030', { anim: 'legA' }],
     ['tail', [1.6, 1.6, 4], [0, 5, 6.4], [0, 0, 2], '#8a6a42'],
-  ],
+  ], {
+    body: [['belly', [6, 1, 8], [0, -2.6, 0], '#d8c49a'], ['flank@', [0.6, 3, 6], [3.6, -0.4, 0], '#c8ae80']],
+    shell: [
+      ['band0', [8.6, 3.5, 1], [0, 0, -3.8], '#6e5232'],
+      ['band1', [8.6, 3.5, 1], [0, 0, -1.2], '#6e5232'],
+      ['band2', [8.6, 3.5, 1], [0, 0, 1.4], '#6e5232'],
+      ['band3', [8.6, 3.5, 1], [0, 0, 4], '#6e5232'],
+      ['rim', [9, 0.8, 11], [0, -1.6, 0], '#5a4228'],
+      ['crest', [3, 1, 8], [0, 1.8, 0], '#b89a68'],
+    ],
+    head: [['ear@', [1.2, 2, 0.8], [1.9, 2.6, 0.8], '#8a6a42'], ['headPlate', [4.8, 1, 5.2], [0, 2.1, 0], '#8a6a42'], ['cheek@', [0.6, 2, 2.4], [2.4, -0.8, -0.8], '#c8a47a']],
+    'legF@': [['claw@', [2.2, 0.6, 2.6], [0, -1.7, -0.6], '#e8dcc0']],
+    'legB@': [['claw@', [2.2, 0.6, 2.6], [0, -1.7, -0.6], '#e8dcc0']],
+    tail: [['tailPlate', [2, 0.8, 4.4], [0, 1, 0], '#8a6a42'], ['tailTip', [1.2, 1.2, 1.6], [0, 0, 2.2], '#6a5030']],
+  }),
 };
 // small bright eyes, a pale snout
 FACES.plateback = (c) => {
-  c.fillStyle = '#14100a'; c.fillRect(2, 5, 3, 3); c.fillRect(11, 5, 3, 3);
-  c.fillStyle = '#f0e4c0'; c.fillRect(2, 5, 1, 1); c.fillRect(11, 5, 1, 1);
-  c.fillStyle = '#3a2a1a'; c.fillRect(6, 11, 4, 2);
+  c.fillStyle = '#6a5030'; c.fillRect(1, 3, 5, 1); c.fillRect(10, 3, 5, 1);
+  c.fillStyle = '#14100a'; c.fillRect(2, 4, 3, 3); c.fillRect(11, 4, 3, 3);
+  c.fillStyle = '#f0e4c0'; c.fillRect(2, 4, 1, 1); c.fillRect(11, 4, 1, 1);
+  c.fillStyle = '#d8c49a'; c.fillRect(4, 9, 8, 5);
+  c.fillStyle = '#3a2a1a'; c.fillRect(6, 10, 1, 1); c.fillRect(9, 10, 1, 1); c.fillRect(6, 12, 4, 1);
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -304,3 +342,7 @@ for (const [k, d] of [['rootsnout', ROOTSNOUT], ['plateback', PLATEBACK]]) {
   if (!MOBS[k]) { MOBS[k] = d; MOB_KEYS.push(k); }
 }
 hookHowler();
+
+// detail boxes follow their host parts (head pitch, claws...)
+followDecor(ROOTSNOUT, 'rootsnout');
+followDecor(PLATEBACK, 'plateback');

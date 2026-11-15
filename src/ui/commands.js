@@ -104,6 +104,7 @@ export const HELP = [
   '/gamemode <survival|creative|adventure|spectator>  (or /gm 0|1|2|3)',
   '/time set <day|night|noon|midnight|ticks>,  /time add <ticks>,  /time query',
   '/gamerule <' + WORLD_RULE_NAMES.join('|') + '> <true|false>',
+  '/portalyard  (builds a flat yard beside you with the Rift portal and the Hollow Gate both lit, to test the dimensions)',
   '/worldborder [set <size> [seconds] | add <blocks> [seconds] | center <x> <z> | center here | off]',
   '/gamerule doDaylightCycle <true|false>,  /gamerule doSeasons <true|false>,  /gamerule doHostileSpawning <true|false>,  /gamerule doWorldEvents <true|false>,  /gamerule fireworksHurtPlayers <true|false>',
   '/event  (list),  /event trigger <starfall|dust|fog|festival|hush>,  /event stop <kind|all>  (world events: creative players and the host)',
@@ -130,7 +131,7 @@ export const HELP = [
 ];
 
 /** Commands that change the world or the player; a world made with cheats off (world creation options) refuses them. */
-export const CHEAT_COMMANDS = new Set(['worldborder', 'wb', 'gamemode', 'gm', 'time', 'season', 'event', 'events', 'difficulty', 'gamerule', 'weather', 'tp', 'teleport', 'give', 'enchant', 'summon', 'xp', 'experience', 'kill', 'effect', 'raid', 'caravan', 'heal', 'clear', 'spawnpoint', 'dimension', 'dim', 'retrofit', ...BUILD_COMMANDS]);
+export const CHEAT_COMMANDS = new Set(['worldborder', 'wb', 'gamemode', 'gm', 'time', 'season', 'event', 'events', 'difficulty', 'gamerule', 'weather', 'tp', 'teleport', 'give', 'enchant', 'summon', 'xp', 'experience', 'kill', 'effect', 'raid', 'caravan', 'heal', 'clear', 'spawnpoint', 'dimension', 'dim', 'portalyard', 'retrofit', ...BUILD_COMMANDS]);
 
 export function runCommand(game, text) {
   const p = game.player;
@@ -342,6 +343,7 @@ export function runCommand(game, text) {
     case 'spawnpoint': p.spawn = { x: p.x, y: p.y, z: p.z }; p.bed = null; return `Set spawn point to ${Math.floor(p.x)}, ${Math.floor(p.y)}, ${Math.floor(p.z)}`;
     case 'seed': return `Seed: [${game.seed}]`;
     case 'retrofit': return runRetrofitCommand(game, args);
+    case 'portalyard': return game.buildPortalYard ? game.buildPortalYard() : 'Not available here';
     case 'dimension': case 'dim': return game.dims ? game.dims.command(args[0]) : 'Dimensions unavailable';
     // ---- multiplayer social layer (net/social.js); the host runs the ones that change shared state
     case 'wp': case 'waypoint':

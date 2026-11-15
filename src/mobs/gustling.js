@@ -9,6 +9,7 @@
 import * as THREE from 'three';
 import { MOBS, MOB_KEYS, CATEGORY } from './mobTypes.js';
 import { MODELS, FACES } from './models.js';
+import { decorate, followDecor } from './modelKit.js';
 import { I } from '../world/items.js';
 import { BLOCKS } from '../world/blocks.js';
 
@@ -199,19 +200,37 @@ function gustlingRender(m, model) {
 
 // ---- the model --------------------------------------------------------------------------
 MODELS.gustling = {
-  parts: [
+  parts: decorate([
     ['head', [6, 6, 6], [0, 11, 0], [0, 0, 0], '#d6edf4', { face: 'gustling' }],
     ['core', [4, 6, 4], [0, 5, 0], [0, 0, 0], '#9cc4d6'],
     ...[0, 1, 2].map((i) => [`whirlA${i}`, [2, 5, 2], [0, 8, 0], [5, 0, 0], '#eef9fc', { anim: 'orbit', idx: i, emissive: '#6a8a98' }]),
     ...[0, 1, 2].map((i) => [`whirlB${i}`, [2, 3, 2], [0, 3, 0], [4, 0, 0], '#cfe6ee', { anim: 'orbitB', idx: i }]),
     ['wisp', [3, 4, 3], [0, 0, 0], [0, 1, 0], '#b6d8e4', { anim: 'tendril', idx: 0 }],
-  ],
+  ], {
+    head: [
+      ['cheekPuff@', [1, 1.4, 1.4], [3.3, -1.2, 0.8], '#eef9fc'],
+      ['crestTuft', [3, 1.2, 4.4], [0, 3.4, 0.8], '#ffffff'],
+    ],
+    core: [
+      ['bandA', [4.8, 1.2, 4.8], [0, 1.6, 0], '#d6edf4'],
+      ['bandB', [4.8, 1.2, 4.8], [0, -1.6, 0], '#7aa4b8'],
+      ['chestSwirl', [2.4, 2.4, 0.6], [0, 0.6, -2.3], '#ffffff', { emissive: '#8ab0c0' }],
+    ],
+    '*': [
+      ['gale', [9, 0.8, 9], [0, 7, 0], [0, 0, 0], '#eef9fc', { anim: 'spinA', alpha: 0.4 }],
+      ['wispC', [2, 3, 2], [2, 1, 1], [0, 0.5, 0], '#cfe6ee', { anim: 'tendril', idx: 1 }],
+      ['wispD', [2, 2.4, 2], [-2, 1.5, -1], [0, 0.5, 0], '#b6d8e4', { anim: 'tendril', idx: 2 }],
+    ],
+  }),
 };
 FACES.gustling = (c) => {
-  c.fillStyle = '#243a46'; c.fillRect(3, 6, 3, 2); c.fillRect(10, 6, 3, 2);
-  c.fillStyle = '#e8fbff'; c.fillRect(4, 6, 1, 1); c.fillRect(11, 6, 1, 1);
-  c.fillStyle = '#5a8294'; c.fillRect(6, 11, 4, 1);
-  c.fillStyle = '#ffffff'; c.fillRect(0, 0, 16, 2); // a swept-back crest of wind
+  c.fillStyle = '#243a46'; c.fillRect(2, 5, 4, 3); c.fillRect(10, 5, 4, 3);
+  c.fillStyle = '#9ad8f0'; c.fillRect(3, 5, 2, 3); c.fillRect(11, 5, 2, 3);
+  c.fillStyle = '#ffffff'; c.fillRect(3, 5, 1, 1); c.fillRect(11, 5, 1, 1);
+  c.fillStyle = '#243a46'; c.fillRect(3, 4, 3, 1); c.fillRect(10, 4, 3, 1);
+  c.fillStyle = '#5a8294'; c.fillRect(7, 10, 2, 2); c.fillStyle = '#e8fbff'; c.fillRect(7, 10, 1, 1);
+  c.fillStyle = '#ffffff'; c.fillRect(0, 0, 16, 2); c.fillRect(2, 2, 4, 1); c.fillRect(9, 2, 5, 1);
+  c.fillStyle = '#cfe6ee'; c.fillRect(1, 8, 2, 2); c.fillRect(13, 8, 2, 2);
 };
 
 export const GUSTLING = {
@@ -234,3 +253,6 @@ export function galeLeap(game) {
   for (let k = 0; k < 16; k++) game.particles.emit(p.x + (Math.random() - 0.5) * 0.8, p.y + 0.1, p.z + (Math.random() - 0.5) * 0.8, (Math.random() - 0.5) * 0.1, -0.05 - Math.random() * 0.1, (Math.random() - 0.5) * 0.1, 0.92, 0.97, 1, 16, 0);
   game.audio.play('gust', [p.x, p.y, p.z], 0.9);
 }
+
+// detail boxes follow their host parts (head pitch, claws...)
+followDecor(GUSTLING, 'gustling');

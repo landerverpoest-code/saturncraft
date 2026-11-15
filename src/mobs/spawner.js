@@ -36,6 +36,7 @@ import { duneTick, duneChunkSpawn } from './duneMobs.js';
 import { observatoriesNear, observatoryGuards } from '../world/observatory.js';
 import { HUT_MONSTERS, isNewtPoolFloor } from './spawnRules.js';
 import { soddenSpawnChance } from './hostileVariants.js';
+import { outpostCaster } from './gloamweavers.js';
 import { babyHealth } from './babies.js';
 import { SEA_LEVEL } from '../world/constants.js';
 import { tickMonumentSpawns, spawnElders } from './oceanMobs.js';
@@ -359,6 +360,10 @@ export class MobSpawner {
       if (Math.floor(o.cx / 16) !== cx || Math.floor(o.cz / 16) !== cz || !this.hostileEnabled()) continue;
       for (const [dx, dy, dz] of [[0, 13, 0], [-2, 13, 2], [5, 0, 5], [-5, 0, 4], [6, 0, -5]]) {
         const m = this.spawnMob('marauder', o.cx + dx + 0.5, dy ? o.y + dy : this.game.world.heightAt(o.cx + dx, o.cz + dz) + 1, o.cz + dz + 0.5);
+        if (m) m.persistent = true;
+      }
+      if (outpostCaster()) { // now and then a Gloamweaver stands behind them
+        const m = this.spawnMob('gloamweaver', o.cx + 0.5, this.game.world.heightAt(o.cx, o.cz) + 1, o.cz + 3.5);
         if (m) m.persistent = true;
       }
     }

@@ -39,6 +39,8 @@ export default {
   'Fireworks hurt players': 'Vuurwerk verwondt spelers',
   'Keep inventory on death': 'Inventaris behouden na overlijden',
   'One Life (hardcore)': 'Eén Leven (hardcore)',
+  'Portal test yard': 'Portaal-testplein',
+  'Starts with a flat yard where the Rift portal and the Hollow Gate stand lit side by side, in creative mode.': 'Begint met een vlak plein waar het Kloofportaal en de Holle Poort aangestoken naast elkaar staan, in creatieve modus.',
   'Survival on Hard without cheats. When you die the world can only be watched.': 'Overleven op Moeilijk, zonder cheats. Als je doodgaat, kun je de wereld alleen nog bekijken.',
   'Render distance:': 'Zichtafstand:',
   'chunks': 'chunks',

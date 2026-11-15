@@ -8,6 +8,7 @@
 // keep close to the grown-ups.
 import { MOBS, MOB_KEYS, CATEGORY } from './mobTypes.js';
 import { MODELS, FACES } from './models.js';
+import { decorate, followDecor } from './modelKit.js';
 import { I } from '../world/items.js';
 import { B, SOLID } from '../world/blocks.js';
 import { BIOMES } from '../world/biomes.js';
@@ -208,7 +209,7 @@ function striderRender(m, model, alpha, sec) {
 }
 
 MODELS.dune_strider = {
-  parts: [
+  parts: decorate([
     ['body', [12, 10, 26], [0, 23, 0], [0, 0, 0], '#c9a467'],
     ['belly', [10, 2, 20], [0, 17.5, 0], [0, 0, 0], '#b28d54'],
     ['hump', [9, 6, 10], [0, 28, 1], [0, 3, 0], '#b8915a'],
@@ -223,13 +224,32 @@ MODELS.dune_strider = {
     ['legBL', [4, 18, 4], [4, 18, 9], [0, -9, 0], '#b8935a', { anim: 'legB' }],
     ['legBR', [4, 18, 4], [-4, 18, 9], [0, -9, 0], '#b8935a', { anim: 'legA' }],
     ['tail', [2, 9, 2], [0, 26, 13], [0, -4.5, 0.5], '#8e6a3e'],
-  ],
+  ], {
+    body: [
+      ['spine', [3.4, 0.7, 22], [0, 5.3, 0], '#a8834e'],
+      ['chestFur', [9, 7, 2.2], [0, -1.5, -13.2], '#e0c898'],
+      ['flankBand@', [0.7, 6, 10], [6.2, 0, 7], '#d8b87c'],
+      ['rumpFur', [9, 6, 1.6], [0, -1, 13.2], '#d8b87c'],
+    ],
+    hump: [['humpTop', [7, 2, 8], [0, 3.4, 0], '#a07c48'], ['humpTuft', [4, 1.4, 4], [0, 4.6, 0.4], '#8e6a3e']],
+    head: [
+      ['poll', [4.4, 1.2, 4.4], [0, 3.5, 1.5], '#8e6a3e'],
+      ['earIn@', [0.6, 1.4, 0.6], [2.5, 4.6, -0.3], '#d8a88a'],
+      ['cheekFur@', [1, 3, 3.6], [3.3, -1.4, 0.6], '#e0c898'],
+      ['chin', [3.2, 1.2, 4.4], [0, -3.4, -2.4], '#e0c898'],
+    ],
+    'legF@': [['foot@', [5, 2, 5.4], [0, -8.8, -0.3], '#8e6a3e'], ['knee@', [4.8, 3, 4.8], [0, 1.5, 0], '#8e6a3e']],
+    'legB@': [['foot@', [5, 2, 5.4], [0, -8.8, -0.3], '#8e6a3e'], ['knee@', [4.8, 3, 4.8], [0, 1.5, 0], '#8e6a3e']],
+  }),
 };
 // long lashes over dark eyes, nostril slits and a split lip
 FACES.dune_strider = (c) => {
-  c.fillStyle = '#3a2614'; c.fillRect(0, 4, 3, 1); c.fillRect(13, 4, 3, 1);
-  c.fillStyle = '#141008'; c.fillRect(0, 5, 2, 2); c.fillRect(14, 5, 2, 2);
+  c.fillStyle = '#3a2614'; c.fillRect(0, 3, 4, 1); c.fillRect(12, 3, 4, 1);
+  c.fillStyle = '#141008'; c.fillRect(0, 4, 3, 3); c.fillRect(13, 4, 3, 3);
+  c.fillStyle = '#6a4a2a'; c.fillRect(1, 5, 1, 1); c.fillRect(14, 5, 1, 1);
+  c.fillStyle = '#f0e4c0'; c.fillRect(0, 4, 1, 1); c.fillRect(15, 4, 1, 1);
   c.fillStyle = '#5a3e22'; c.fillRect(5, 9, 2, 1); c.fillRect(9, 9, 2, 1); c.fillRect(7, 12, 2, 3);
+  c.fillStyle = '#e0c898'; c.fillRect(2, 11, 3, 4); c.fillRect(11, 11, 3, 4);
   c.fillStyle = '#a07c48'; c.fillRect(3, 13, 10, 1);
 };
 
@@ -271,3 +291,6 @@ export function desertChunkSpawn(spawner, cx, cz, rng = Math.random) {
   for (let k = 0; k < n; k++) spawner.spawnMob('dune_strider', x + 0.5 + k * 2, y, z + 0.5);
   return n;
 }
+
+// detail boxes follow their host parts (head pitch, claws...)
+followDecor(DUNE_STRIDER, 'dune_strider');
