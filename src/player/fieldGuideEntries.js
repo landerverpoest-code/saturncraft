@@ -55,6 +55,8 @@ const HABITAT_NOTES = {
   rootsnout: 'Forests and flower forests, rooting up Dawnfern Seeds every few minutes',
   plateback: 'Savannas and badlands; curls into a ball when a runner comes near',
   tarnling: 'Quiet ponds, tarns and waterholes',
+  smokeray: 'Drifting through the open caverns of the Cinderdeep; one that sees you swells, then spits a Slag Glob',
+  slagboar: 'Herds on Cinderdeep ground; charges in a straight line and fears Glowshard',
   gloamlynx: 'Only at dusk and by night',
   brinecrab: 'Sand, mud and gravel along the shore',
   wickling: 'Swamps and dark forests by night; the Mire Shrine, Hag Huts, Observatory and Lighthouse',

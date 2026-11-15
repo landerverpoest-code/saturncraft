@@ -275,7 +275,11 @@ export class Audio {
       case 'mew': this.tone(t, 0.22, 700 + Math.random() * 120, 1000, 0.12 * gain, out, 'triangle'); this.tone(t + 0.12, 0.2, 1000, 620, 0.1 * gain, out, 'triangle'); break;
       case 'squeak': this.tone(t, 0.06, 3200 + Math.random() * 800, 2600, 0.06 * gain, out, 'sine'); this.tone(t + 0.08, 0.05, 3400, 2800, 0.05 * gain, out, 'sine'); break;
       case 'snuffle': this.noise(t, 0.3, 700, 0.8, 0.14 * gain, out, 'lowpass'); this.tone(t + 0.05, 0.25, 130 + Math.random() * 20, 100, 0.14 * gain, out, 'triangle'); break; // a Rootsnout's snuffling
-      case 'clink': this.tone(t, 0.06, 1900 + Math.random() * 300, 1500, 0.09 * gain, out, 'square'); this.tone(t + 0.06, 0.08, 2300, 1900, 0.06 * gain, out, 'triangle'); break; // plates knocking together
+      case 'billow': this.noise(t, 0.9, 500, 0.6, 0.12 * gain, out, 'lowpass'); this.tone(t, 0.8, 150, 90, 0.1 * gain, out, 'sine'); break; // a Smokeray's low, smoky billow
+      case 'glob_spit': this.noise(t, 0.25, 900, 0.8, 0.2 * gain, out, 'lowpass'); this.tone(t, 0.3, 320, 120, 0.14 * gain, out, 'sawtooth'); break; // a Slag Glob spat
+      case 'boar_snort': this.noise(t, 0.2, 800, 1, 0.16 * gain, out, 'lowpass'); this.tone(t, 0.25, 95 + Math.random() * 20, 70, 0.2 * gain, out, 'sawtooth'); break; // a Slagboar's snort
+      case 'boar_charge': this.tone(t, 0.4, 85, 130, 0.22 * gain, out, 'sawtooth'); this.noise(t, 0.5, 600, 0.7, 0.18 * gain, out, 'lowpass'); break; // a Slagboar breaks into its charge
+      case 'clink':this.tone(t, 0.06, 1900 + Math.random() * 300, 1500, 0.09 * gain, out, 'square'); this.tone(t + 0.06, 0.08, 2300, 1900, 0.06 * gain, out, 'triangle'); break; // plates knocking together
       case 'thistle': this.tone(t, 0.35, 190 + Math.random() * 30, 150, 0.16 * gain, out, 'triangle'); this.tone(t + 0.04, 0.3, 380, 300, 0.05 * gain, out, 'sine'); break; // a Thistlehorn's soft lowing
       case 'burrow': this.noise(t, 0.22, 1800, 1, 0.16 * gain, out, 'lowpass'); this.tone(t + 0.05, 0.08, 1500 + Math.random() * 300, 1900, 0.05 * gain, out, 'sine'); this.noise(t + 0.12, 0.15, 2600, 2, 0.1 * gain, out); break; // a Dustmole's scuffle and chirr in the sand
       case 'yowl': this.tone(t, 0.5, 420, 760, 0.11 * gain, out, 'sawtooth'); this.tone(t + 0.35, 0.45, 760, 380, 0.1 * gain, out, 'sawtooth'); this.noise(t, 0.4, 1600, 3, 0.04 * gain, out); break; // a Gloamlynx's far-off yowl

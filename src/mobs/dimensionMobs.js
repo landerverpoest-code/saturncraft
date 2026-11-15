@@ -219,6 +219,7 @@ export function attemptDimensionSpawn(spawner, cx, cz, category) {
       if (!SOLID[below] || !OPAQUE[below] || NO_FLOOR.has(below)) continue;
     }
     if (!spawner.canFit(entry.type, x, y, z)) continue;
+    if (def.spawnCheck && !def.spawnCheck(spawner, x, y, z)) continue; // a creature's own condition (mobs/cinderFauna.js)
     const m = spawner.spawnMob(entry.type, x + 0.5, y, z + 0.5);
     m.yaw = Math.random() * TAU;
     n++;

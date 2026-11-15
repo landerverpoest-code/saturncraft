@@ -333,6 +333,7 @@ export class Mob {
     baby.woolColor = Math.random() < 0.5 ? this.woolColor : mate.woolColor; // (the reference blends dye colours)
     baby.yaw = this.yaw;
     baby.persistent = true; // young animals stay (ambient ones such as Dolphins and Gillnewts would otherwise despawn)
+    if (this.def.onBreed) this.def.onBreed(baby, this, mate, g); // (Slagboars born to a bred pair are calm: mobs/cinderFauna.js)
     if (this.tamed) { baby.tamed = true; baby.health = baby.def.tamedHealth; baby.persistent = true; baby.ownerName = this.ownerName; } // pups of tame Howlers are tame and keep the owner
     for (const m of [this, mate]) { m.loveTicks = 0; m.age = breedCooldownTicks(); m.breedTime = 0; }
     this.hearts(g, 7);
