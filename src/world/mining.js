@@ -33,6 +33,7 @@ export function breakProgressPerTick(blockId, tool = HAND, ctx = {}) {
   let speed = 1;
   if (isCorrectToolType(b, tool)) speed = tool.type === 'sword' ? 1.5 : tool.speed;
   if (ctx.swiftdig && speed > 1) speed += swiftdigBonus(ctx.swiftdig);
+  if (ctx.forged && speed > 1) speed += ctx.forged; // an Ember-forged Slagsteel tool (player/slagsteelGear.js)
   if (ctx.forgegrip && speed > 1) speed += forgegripBonus(ctx.forgegrip); // a tempered grip (world/enchantments.js)
   if (ctx.haste) speed *= 1 + 0.2 * ctx.haste;
   if (ctx.fatigue) speed *= fatigueFactor(ctx.fatigue); // Mining Fatigue

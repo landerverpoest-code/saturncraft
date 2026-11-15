@@ -114,7 +114,7 @@ describe('angling: Big Catch', () => {
   it('a dropped trophy fish keeps its weight over the wire', () => {
     const e = { kind: 'item', id: 5, x: 1, y: 2, z: 3, stack: { id: I.RAW_REDFIN, count: 1, damage: 0, trophy: 3.9 }, pickupDelay: 0 };
     const wire = packEntity(e);
-    expect(wire[wire.length - 1]).toBe(3.9);
+    expect(wire[17]).toBe(3.9);
     expect(unpackEntity(JSON.parse(JSON.stringify(wire))).stack.trophy).toBe(3.9);
   });
 });

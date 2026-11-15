@@ -4,6 +4,7 @@
 //
 // Enchantments live on an item stack as `stack.ench = { key: level }`; the
 // anvil's prior-work penalty is `stack.rw` (0, 1, 3, 7, ...).
+import { cleanForged, forgeCombine, forgedDamage } from '../player/slagsteelGear.js';
 import { ITEMS, I } from './items.js';
 import { B, BLOCKS, SHAPE } from './blocks.js';
 import { mulberry32 } from './noise.js';
@@ -141,7 +142,7 @@ export function sameEnch(a, b) {
 
 /** Can two stacks be merged into one? Never for durability items, nor enchanted with plain. */
 export function canStack(a, b) {
-  return !!a && !!b && a.id === b.id && !(ITEMS[a.id] && ITEMS[a.id].durability) && sameEnch(a.ench, b.ench) && (a.rw | 0) === (b.rw | 0) && a.map === b.map && (a.label || '') === (b.label || '') && String(a.sherds || '') === String(b.sherds || '') && sameFw(a.fw, b.fw) && sameInlay(a.inlay, b.inlay) && (a.broth || '') === (b.broth || '') && sameTrophy(a.trophy, b.trophy) && sameBook(a, b);
+  return !!a && !!b && a.id === b.id && !(ITEMS[a.id] && ITEMS[a.id].durability) && sameEnch(a.ench, b.ench) && (a.rw | 0) === (b.rw | 0) && a.map === b.map && (a.label || '') === (b.label || '') && String(a.sherds || '') === String(b.sherds || '') && sameFw(a.fw, b.fw) && sameInlay(a.inlay, b.inlay) && (a.broth || '') === (b.broth || '') && sameTrophy(a.trophy, b.trophy) && !!a.forged === !!b.forged && sameBook(a, b);
 }
 
 /** A cleaned copy of an enchantment map from untrusted data (network, saves). */
@@ -177,6 +178,7 @@ export function withExtras(dst, src) {
   if (broth) dst.broth = broth;
   const trophy = src && cleanTrophy(src.trophy); // a Trophy fish's weight (world/trophyFish.js)
   if (trophy) dst.trophy = trophy;
+  if (src && cleanForged(src.forged)) dst.forged = true; // an Ember-forged Slagsteel tool (player/slagsteelGear.js)
   copyBookFields(dst, src); // a book's pages, title and author (world/books.js)
   return dst;
 }
@@ -211,6 +213,7 @@ export function cleanBundle(list) {
     if (broth) st.broth = broth;
     const trophy = cleanTrophy(s.trophy);
     if (trophy) st.trophy = trophy;
+    if (cleanForged(s.forged)) st.forged = true;
     copyBookFields(st, s); // a book keeps its text
     out.push(st);
   }
@@ -242,6 +245,7 @@ export function cleanContents(list) {
     if (broth) st.broth = broth;
     const trophy = cleanTrophy(s.trophy);
     if (trophy) st.trophy = trophy;
+    if (cleanForged(s.forged)) st.forged = true;
     copyBookFields(st, s); // a book keeps its text
     out[i] = st; any = true;
   }
@@ -386,6 +390,8 @@ export function anvilCombine(left, right) {
   const rwCost = (left.rw | 0) + (right.rw | 0);
   const tempered = temperCombine(left, right);
   if (tempered) return tempered;
+  const forged = forgeCombine(left, right); // a Slagsteel tool and an Ember Rod
+  if (forged) return forged;
   const out = { id: left.id, count: 1, damage: left.damage | 0, ench: { ...(left.ench || {}) } };
   let cost = 0, use = 1;
   const mat = repairMaterial(left.id);
@@ -485,6 +491,7 @@ export function meleeBonus(st, target) {
   const hal = enchLevel(st, 'hallowed');
   if (hal && target && target.def && (target.def.undead || target.def.burnsInSun)) d += 2.5 * hal;
   d += enchLevel(st, 'forgebite'); // tempered edge: a whole point of damage a level
+  d += forgedDamage(st); // Ember-forged Slagsteel blade or axe
   return d;
 }
 

@@ -559,9 +559,10 @@ for (const kind of ['warhammer', 'dagger', 'glaive', 'disc']) {
   }
 }
 // Slagsteel armour (reference: none): the set with the Dirgestep Boots as its fourth piece (player/setBonuses.js)
-ARMOR_MATERIALS.slagsteel = { defense: [2, 6, 5, 3], durability: 19, toughness: 0, color: '#8a7a86', name: 'Slagsteel' };
+// (each piece also wards 15% off fire, lava and burning: `fireward`, player/gear.js; the Boots come at the very end of this file)
+ARMOR_MATERIALS.slagsteel = { defense: [2, 6, 5, 2], durability: 19, toughness: 1, color: '#5e5662', accent: '#e0782a', name: 'Slagsteel' };
 [['helmet', 'Helmet', 11], ['chestplate', 'Chestplate', 16], ['leggings', 'Leggings', 15]].forEach(([piece, pname, base], slot) => {
-  item(`slagsteel_${piece}`, `Slagsteel ${pname}`, { stack: 1, durability: base * 19, repairWith: 'SLAGSTEEL_INGOT', armor: { slot, piece, material: 'slagsteel', defense: ARMOR_MATERIALS.slagsteel.defense[slot], toughness: 0 } });
+  item(`slagsteel_${piece}`, `Slagsteel ${pname}`, { stack: 1, durability: base * 19, repairWith: 'SLAGSTEEL_INGOT', armor: { slot, piece, material: 'slagsteel', defense: ARMOR_MATERIALS.slagsteel.defense[slot], toughness: 1, fireward: 0.15 } });
 });
 // Trinkets (player/trinkets.js): two slots beside the armour; each kind works once, and only while worn there
 const ICON_ANKLET = ['................', '...........ww...', '..........wwW...', '.........wwW....', '....hhhh.wW.....', '...hHHHHh.......', '..hH....Hh......', '..hh....hh......', '..hH....Hh......', '...hHHHHh.......', '....hhhh........', '................', '................', '................', '................', '................'];
@@ -653,3 +654,12 @@ item('raw_glimmereel', 'Raw Glimmereel', { food: { hunger: 1, saturation: 0.4 },
 item('cooked_glimmereel', 'Roast Glimmereel', { food: { hunger: 6, saturation: 8 }, iconStyle: ['fish', { h: '#6a4a8a', H: '#c8a8f0', s: '#2a1a48' }] });
 item('raw_sunscale', 'Raw Sunscale', { food: { hunger: 2, saturation: 0.4 }, iconStyle: ['fish', { h: '#f0a030', H: '#ffe070', s: '#a05a10' }] });
 item('cooked_sunscale', 'Roast Sunscale', { food: { hunger: 6, saturation: 7.6 }, iconStyle: ['fish', { h: '#c87a30', H: '#f0c060', s: '#6a3a10' }] });
+// Slagsteel gear set (player/slagsteelGear.js; appended, so no item id shifts): the Boots complete the armour (the helmet, chestplate and
+// leggings sit with the Dirgestep Boots above) and a sword, axe, shovel and hoe join the pickaxe: a little better than iron, below diamond.
+item('slagsteel_boots', 'Slagsteel Boots', { stack: 1, durability: 13 * 19, repairWith: 'SLAGSTEEL_INGOT', armor: { slot: 3, piece: 'boots', material: 'slagsteel', defense: ARMOR_MATERIALS.slagsteel.defense[3], toughness: 1, fireward: 0.15 } });
+for (const [type, [damage, attackSpeed]] of Object.entries({ sword: [6.5, 1.6], axe: [9, 0.95], shovel: [5, 1], hoe: [1, 3.5] })) {
+  item(`slagsteel_${type}`, `Slagsteel ${type[0].toUpperCase()}${type.slice(1)}`, {
+    stack: 1, durability: 480, repairWith: 'SLAGSTEEL_INGOT',
+    tool: { type, material: 'slagsteel', speed: 7, tier: TIER.IRON, damage, attackSpeed },
+  });
+}

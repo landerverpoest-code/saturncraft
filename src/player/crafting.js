@@ -472,6 +472,14 @@ shaped(['LSL', 'LGL', 'L L'], { L: I.LEATHER, S: I.STRING, G: I.GOLD_NUGGET }, I
   shaped(['XXX', 'X X'], { X: I.SLAGSTEEL_INGOT }, I.SLAGSTEEL_HELMET);
   shaped(['X X', 'XXX', 'XXX'], { X: I.SLAGSTEEL_INGOT }, I.SLAGSTEEL_CHESTPLATE);
   shaped(['XXX', 'X X', 'X X'], { X: I.SLAGSTEEL_INGOT }, I.SLAGSTEEL_LEGGINGS);
+  shaped(['X X', 'X X'], { X: I.SLAGSTEEL_INGOT }, I.SLAGSTEEL_BOOTS);
+  { // Slagsteel tools (the pickaxe's pattern is in world/dimensions/register.js)
+    const SX = { X: I.SLAGSTEEL_INGOT, S: I.STICK };
+    shaped(['X', 'X', 'S'], SX, I.SLAGSTEEL_SWORD);
+    shaped(['XX', 'XS', ' S'], SX, I.SLAGSTEEL_AXE);
+    shaped(['X', 'S', 'S'], SX, I.SLAGSTEEL_SHOVEL);
+    shaped(['XX', ' S', ' S'], SX, I.SLAGSTEEL_HOE);
+  }
   // trinkets
   shaped(['SLS', 'F F'], { S: I.STRING, L: I.LEATHER, F: I.FEATHER }, I.FLEET_ANKLET);
   shaped([' S ', 'ICI', ' I '], { S: I.STRING, I: I.IRON_INGOT, C: I.CINNABAR }, I.LODESTONE_CHARM);

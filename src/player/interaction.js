@@ -26,6 +26,7 @@ import { isRiddled, releaseMite } from '../mobs/stoneMites.js';
 import { enchLevel, meleeBonus, silkDropsSelf, canSurge, surgeVelocity } from '../world/enchantments.js';
 import { spearDamage } from '../entities/tidespear.js';
 import { ReturningDisc } from '../entities/disc.js';
+import { forgedSpeed, forgedIgnite } from './slagsteelGear.js';
 import { weaponOf, isDisc, reachOf, backstabFactor, sweepTargets, sweepDamage, wearPerBlow, wearPerBlock } from './weapons.js';
 import { gearBonuses } from './gear.js';
 import { lodestonePull } from './magnet.js';
@@ -453,7 +454,7 @@ export class Interaction {
       if (t.id === B.CHIME_BLOCK) g.playChime(t.x, t.y, t.z); // punching a Chime Block plays its note
     }
     const tool = toolOf(p.inventory.selectedStack);
-    const per = breakProgressPerTick(t.id, tool, { onGround: p.body.onGround || p.body.inWater, inWater: p.body.eyeInWater, swiftdig: enchLevel(p.inventory.selectedStack, 'swiftdig'), forgegrip: enchLevel(p.inventory.selectedStack, 'forgegrip'), haste: p.effectLevel ? p.effectLevel('haste') : 0, fatigue: p.effectLevel ? p.effectLevel('mining_fatigue') : 0 });
+    const per = breakProgressPerTick(t.id, tool, { onGround: p.body.onGround || p.body.inWater, inWater: p.body.eyeInWater, swiftdig: enchLevel(p.inventory.selectedStack, 'swiftdig'), forgegrip: enchLevel(p.inventory.selectedStack, 'forgegrip'), forged: forgedSpeed(p.inventory.selectedStack), haste: p.effectLevel ? p.effectLevel('haste') : 0, fatigue: p.effectLevel ? p.effectLevel('mining_fatigue') : 0 });
     this.breaking.progress += per * (isOre(t.id) ? 1 + gearBonuses(p.inventory).mineOre : 1); // Miner's Loupe
     // holding the button chains full swings into a continuous chopping motion
     if (this.swing <= 0) this.swing = SWING_TICKS;
@@ -524,8 +525,8 @@ export class Interaction {
     p.lastAttacked = mob; // tamed Howlers join in
     if (mob.kind === 'mob') mob.plunder = enchLevel(held, 'plunder') + gearBonuses(p.inventory).plunder; // looting for its drops (the Gilded set adds one)
     if (mob.hurt(dmg, 'player', p, knock)) {
-      const fire = enchLevel(held, 'emberbrand');
-      if (fire && mob.kind === 'mob' && !(mob.def && mob.def.fireImmune)) mob.fireTicks = Math.max(mob.fireTicks || 0, fire * 80);
+      const fire = Math.max(enchLevel(held, 'emberbrand') * 80, forgedIgnite(held));
+      if (fire && mob.kind === 'mob' && !(mob.def && mob.def.fireImmune)) mob.fireTicks = Math.max(mob.fireTicks || 0, fire);
       if (crit) g.particles && g.particles.crit(mob.x, mob.y + mob.height * 0.6, mob.z);
       if (p.sprinting && cd > 0.9) p.sprinting = false;
       if (tool.type) p.inventory.damageSelected(wearPerBlow(held, tool));

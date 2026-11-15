@@ -232,7 +232,7 @@ export function savePlayerName(name) {
 export function packEntity(e, riderOf = () => -1, playerIdOf = () => -1) {
   switch (e.kind) {
     case 'mob': return ['m', ...packMob(e, playerIdOf)];
-    case 'item': return ['i', e.id, r2(e.x), r2(e.y), r2(e.z), e.stack.id, e.stack.count, e.stack.damage | 0, e.pickupDelay > 0 ? 1 : 0, e.stack.ench ? cleanEnch(e.stack.ench) : 0, e.stack.contents || 0, Number.isInteger(e.stack.map) ? [e.stack.map, e.stack.mapX | 0, e.stack.mapZ | 0] : 0, e.stack.sherds || 0, e.stack.pages || e.stack.title ? { p: e.stack.pages, t: e.stack.title, a: e.stack.author, g: e.stack.gen || undefined } : 0, e.stack.fw || 0, inlayCode(e.stack.inlay), e.stack.broth || 0, e.stack.trophy || 0];
+    case 'item': return ['i', e.id, r2(e.x), r2(e.y), r2(e.z), e.stack.id, e.stack.count, e.stack.damage | 0, e.pickupDelay > 0 ? 1 : 0, e.stack.ench ? cleanEnch(e.stack.ench) : 0, e.stack.contents || 0, Number.isInteger(e.stack.map) ? [e.stack.map, e.stack.mapX | 0, e.stack.mapZ | 0] : 0, e.stack.sherds || 0, e.stack.pages || e.stack.title ? { p: e.stack.pages, t: e.stack.title, a: e.stack.author, g: e.stack.gen || undefined } : 0, e.stack.fw || 0, inlayCode(e.stack.inlay), e.stack.broth || 0, e.stack.trophy || 0, e.stack.forged ? 1 : 0];
     case 'xp': return ['x', e.id, r2(e.x), r2(e.y), r2(e.z), e.value];
     case 'arrow': return ['a', e.id, r2(e.x), r2(e.y), r2(e.z), r2(e.vx), r2(e.vy), r2(e.vz), e.stuck ? 1 : 0, e.pickup ? 1 : 0, e.thrown === 'spear' ? 4 : e.thrown === 'potion' ? 3 : e.thrown === 'egg' ? 2 : e.thrown ? 1 : 0, e.potion | 0];
     case 'boat': return ['b', e.id, r2(e.x), r2(e.y), r2(e.z), r2(e.yaw), e.hitTime | 0, riderOf(e), boatFlags(e), r2(e.pitch || 0), passengerOf(e)];
@@ -264,7 +264,7 @@ export function unpackEntity(a) {
   const [k, id, x, y, z] = a;
   if (![x, y, z].every(Number.isFinite)) return null;
   const o = { kind: ENTITY_KINDS[k], id, x, y, z };
-  if (k === 'i') Object.assign(o, { stack: withExtras({ id: a[5] | 0, count: a[6] | 0, damage: a[7] | 0 }, { ench: a[9], contents: a[10], sherds: a[12], fw: a[14], inlay: inlayFromCode(a[15]), broth: a[16] || undefined, trophy: a[17] || undefined, ...(a[13] && typeof a[13] === 'object' ? { pages: a[13].p, title: a[13].t, author: a[13].a, gen: a[13].g } : {}), ...(Array.isArray(a[11]) ? { map: a[11][0] | 0, mapX: a[11][1], mapZ: a[11][2] } : {}) }), delayed: !!a[8] });
+  if (k === 'i') Object.assign(o, { stack: withExtras({ id: a[5] | 0, count: a[6] | 0, damage: a[7] | 0 }, { ench: a[9], contents: a[10], sherds: a[12], fw: a[14], inlay: inlayFromCode(a[15]), broth: a[16] || undefined, trophy: a[17] || undefined, forged: a[18] === 1 ? true : undefined, ...(a[13] && typeof a[13] === 'object' ? { pages: a[13].p, title: a[13].t, author: a[13].a, gen: a[13].g } : {}), ...(Array.isArray(a[11]) ? { map: a[11][0] | 0, mapX: a[11][1], mapZ: a[11][2] } : {}) }), delayed: !!a[8] });
   else if (k === 'x') o.value = a[5] | 0;
   else if (k === 'a') Object.assign(o, { vx: a[5], vy: a[6], vz: a[7], stuck: !!a[8], pickup: !!a[9], thrown: a[10] === 4 ? 'spear' : a[10] === 3 ? 'potion' : a[10] === 2 ? 'egg' : a[10] === 1 ? 'snowball' : null, potion: a[11] | 0 });
   else if (k === 'b') {
@@ -290,7 +290,7 @@ export function setContainerSlot(kind, c, i, st) {
 }
 export function sameStack(a, b) {
   if (!a || !b) return !a && !b;
-  return a.id === b.id && a.count === b.count && (a.damage | 0) === (b.damage | 0) && sameEnch(a.ench, b.ench) && (a.rw | 0) === (b.rw | 0) && String(a.sherds || '') === String(b.sherds || '') && sameFw(a.fw, b.fw) && sameInlay(a.inlay, b.inlay) && (a.broth || '') === (b.broth || '') && (a.trophy || 0) === (b.trophy || 0) && sameBook(a, b);
+  return a.id === b.id && a.count === b.count && (a.damage | 0) === (b.damage | 0) && sameEnch(a.ench, b.ench) && (a.rw | 0) === (b.rw | 0) && String(a.sherds || '') === String(b.sherds || '') && sameFw(a.fw, b.fw) && sameInlay(a.inlay, b.inlay) && (a.broth || '') === (b.broth || '') && (a.trophy || 0) === (b.trophy || 0) && !!a.forged === !!b.forged && sameBook(a, b);
 }
 /** A clean copy of a stack (id, count, damage, enchantments and anvil prior work only). */
 export const copyStack = (s) => (s ? withExtras({ id: s.id, count: s.count, damage: s.damage | 0 }, s) : null);

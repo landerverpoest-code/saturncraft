@@ -970,7 +970,7 @@ export class UI {
     if (right.count <= 0) this.work[1] = null;
     if (!p.creative) spendLevels(p.xp, r.cost);
     g.audio.play('anvil', [x + 0.5, y + 0.5, z + 0.5]);
-    if (g.milestones) { g.milestones.event('anvil'); if (r.temper) g.milestones.event('temper'); }
+    if (g.milestones) { g.milestones.event('anvil'); if (r.temper) g.milestones.event('temper'); if (r.forge) g.milestones.event('forge'); }
     // 12 % chance the anvil wears a step (meta bits 1-2); worn out three times, it breaks
     const w = g.world;
     if (!p.creative && w.getBlock(x, y, z) === B.ANVIL && Math.random() < 0.12) {

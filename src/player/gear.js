@@ -6,6 +6,7 @@
 //   light (a held-torch light level that follows the wearer)
 import { bonusFor, countPieces } from './setBonuses.js';
 import { TRINKETS, wornKinds } from './trinkets.js';
+import { fireWard } from './slagsteelGear.js';
 
 export const NO_GEAR = Object.freeze({ speed: 0, sprintSave: 0, wearSave: 0, plunder: 0, protect: 0, knockResist: 0, fireResist: 0, ward: 0, pull: 0, mineOre: 0, oreXp: 0, light: 0 });
 const CAPS = { wearSave: 0.6, speed: 0.5, sprintSave: 0.75, knockResist: 0.9, fireResist: 0.9, ward: 0.5, protect: 12, plunder: 3 };
@@ -16,6 +17,7 @@ export function gearTotals(armor, trinkets) {
   const add = (b) => { for (const [k, v] of Object.entries(b)) t[k] = k === 'light' || k === 'pull' ? Math.max(t[k], v) : t[k] + v; };
   const counts = countPieces(armor);
   for (const [s, n] of Object.entries(counts)) add(bonusFor(s, n));
+  t.fireResist += fireWard(armor); // Slagsteel pieces ward off fire, lava and burning (15% each)
   for (const k of wornKinds(trinkets)) add(TRINKETS[k].bonus);
   for (const [k, c] of Object.entries(CAPS)) t[k] = Math.min(c, t[k]);
   return t;
