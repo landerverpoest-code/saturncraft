@@ -40,6 +40,7 @@ const HABITAT_NOTES = {
   wobbler: 'Swamps and the dark underground of slime chunks',
   settler: 'Villages and igloo basements',
   hexwife: 'Swamp huts',
+  gloamweaver: 'Raids from the third wave on; rarely with Marauder patrols and at Raider Outposts',
   ironguard: 'Built from iron blocks; guards villages',
   frostling: 'Built from snow blocks and a pumpkin',
   inkling: 'Deep water of oceans and rivers',

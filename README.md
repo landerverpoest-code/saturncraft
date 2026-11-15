@@ -636,6 +636,8 @@ poison from eyes) follow the documented table.
 
 - **Portal test yard**: the "Portal test yard" world option (and the `/portalyard` cheat command) builds a flat yard with the Rift portal and the Hollow Gate both lit side by side, in creative mode, for trying the dimensions. Falling lava now drops quickly (4-tick steps) instead of hanging in mid-air between slow 30-tick steps.
 
+- **Gloamweaver** (`src/mobs/gloamweavers.js`): a hooded spellcaster of the raider faction (24 HP). It keeps 8-12 blocks from its target and runs from anything that closes in. Every 6 seconds, after a 1.2 second windup (arms raised, swirling particles), it casts one spell chosen by the situation: **Thornsnap** (a line of thorn spikes erupts from the ground from it toward you, one cell every 3 ticks for up to 12 blocks, 5 damage to anything standing on one except raiders), **Mantle** (Resistance for 6 s to every raider within 8 blocks; only when allies near it are hurt or fighting) or **Haunt** (2-3 Flitters that sweep at the target for 20 s; the Flitter's AI is hooked for the summoned ones only). It joins raid waves from wave 3 on, taking places inside the wave (one at waves 3-4, two from wave 5, so wave sizes are unchanged), is rarely the last member of a Marauder patrol and now and then stands behind the guards of a Raider Outpost. Drops 0-2 Beryl and, 5 % of the time, a Charm of Undying. Deviation: the thorn spikes are particles and damage only (no blocks), and guests do not see the raised-arm casting pose.
+
 **Not yet implemented**
 
 * Large structures beyond villages, temples, wrecks, Tide Citadels, Sunken Ruins, Sun Tombs, Skywatch Towers, Rimekeeps, Sporehalls, outposts, ruined rifts, dungeons, sanctums, bastions, Cinderforges, Hollow Cities and Wyrm Ribs
