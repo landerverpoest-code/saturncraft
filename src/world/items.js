@@ -642,3 +642,14 @@ item('seared_slagboar_chop', 'Seared Slagboar Chop', { food: { hunger: 8, satura
 
 // Wanderer's Broth (world/wandererBroth.js; appended, so no item id shifts): bowl + a wild flower + a mushroom; the flower decides the effect (stack.broth).
 item('wanderers_broth', "Wanderer's Broth", { stack: 1, food: { hunger: 6, saturation: 7.2, always: true, leaves: 'bowl', broth: true }, iconStyle: ['bowl', { h: '#8a6034', H: '#a87a48', w: '#b8884a' }] });
+
+// Angling round (world/angling.js; appended, so no item id shifts): biome fish, raw and roasted. Mudcarp (bog and river mud), Frostperch (cold water and
+// ice holes), Glimmereel (only at night or in dark water) and Sunscale (warm seas).
+item('raw_mudcarp', 'Raw Mudcarp', { food: { hunger: 2, saturation: 0.4 }, iconStyle: ['fish', { h: '#6a5a3a', H: '#a89460', s: '#3a2e1a' }] });
+item('cooked_mudcarp', 'Roast Mudcarp', { food: { hunger: 5, saturation: 6 }, iconStyle: ['fish', { h: '#8a6a30', H: '#c8a060', s: '#4a3418' }] });
+item('raw_frostperch', 'Raw Frostperch', { food: { hunger: 2, saturation: 0.6 }, iconStyle: ['fish', { h: '#9ac8e8', H: '#e4f4ff', s: '#4a7aa0' }] });
+item('cooked_frostperch', 'Roast Frostperch', { food: { hunger: 6, saturation: 7.2 }, iconStyle: ['fish', { h: '#c8a888', H: '#f0dcc0', s: '#6a5238' }] });
+item('raw_glimmereel', 'Raw Glimmereel', { food: { hunger: 1, saturation: 0.4 }, iconStyle: ['fish', { h: '#3a2a6a', H: '#9a7af0', s: '#1a1038' }] });
+item('cooked_glimmereel', 'Roast Glimmereel', { food: { hunger: 6, saturation: 8 }, iconStyle: ['fish', { h: '#6a4a8a', H: '#c8a8f0', s: '#2a1a48' }] });
+item('raw_sunscale', 'Raw Sunscale', { food: { hunger: 2, saturation: 0.4 }, iconStyle: ['fish', { h: '#f0a030', H: '#ffe070', s: '#a05a10' }] });
+item('cooked_sunscale', 'Roast Sunscale', { food: { hunger: 6, saturation: 7.6 }, iconStyle: ['fish', { h: '#c87a30', H: '#f0c060', s: '#6a3a10' }] });

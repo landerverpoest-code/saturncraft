@@ -8,6 +8,8 @@ import { I, ITEMS } from '../world/items.js';
 import { BIOMES } from '../world/biomes.js';
 import { luckOf } from '../player/effects.js';
 import { enchLevel } from '../world/enchantments.js';
+import { anglingFish, isIceHole, isTrophyCast, trophyEscapes, rollTrophyWeight, rollWeight, speciesOf, recordFish } from '../world/angling.js';
+import { skyState } from '../sky/suns.js';
 
 let nextId = 7_000_000;
 
@@ -40,7 +42,7 @@ export function catchWeights(luck = 0) {
  * Weighted loot: fish (silverfin 60, redfin 25, spinefish 13, glimmerfin 2; in a bog, in dry lands and on a beach 40 % are the local fish; with
  * Haul a few are Gilded Perch), junk and treasure. `haul` is the rod's Haul level: one level of luck each, and the Gilded Perch.
  */
-export function rollCatch(rng = Math.random, luck = 0, biomeKey = '', haul = 0) {
+export function rollCatch(rng = Math.random, luck = 0, biomeKey = '', haul = 0, ctx = null) {
   luck += haul;
   const w = catchWeights(luck), total = w.fish + w.junk + w.treasure;
   const r = rng();
@@ -50,6 +52,8 @@ export function rollCatch(rng = Math.random, luck = 0, biomeKey = '', haul = 0) 
     if (deep && rng() < deep.fish) return { id: I.RAW_LANTERNFIN, count: 1 };
     if (LOCAL_FISH[biomeKey] && rng() < LOCAL_FISH_SHARE) return { id: I[LOCAL_FISH[biomeKey]], count: 1 };
     if (haul > 0 && rng() < PERCH_PER_HAUL * haul) return { id: I.GILDED_PERCH, count: 1 };
+    const ang = anglingFish(biomeKey, ctx || {}, rng); // Mudcarp, Frostperch, Glimmereel, Sunscale (world/angling.js)
+    if (ang) return { id: I[ang], count: 1 };
     const f = rng() * 100;
     return { id: f < 60 ? I.RAW_SILVERFIN : f < 85 ? I.RAW_REDFIN : f < 98 ? I.SPINEFISH : I.GLIMMERFIN, count: 1 };
   }
@@ -106,7 +110,8 @@ export class Bobber {
       if (this.bite > 0) {
         if (--this.bite === 0) this.resetWait(game); // got away
       } else if (--this.wait <= 0) {
-        this.bite = 20 + Math.floor(Math.random() * 20) + (this.lure | 0) * 6; // (a lured fish bites a little longer)
+        this.trophy = isTrophyCast(); // the Big Catch: one cast in forty hooks a Trophy fish, which fights longer
+        this.bite = 20 + Math.floor(Math.random() * 20) + (this.lure | 0) * 6 + (this.trophy ? 30 : 0); // (a lured fish bites a little longer)
         game.audio.play('splash', [this.x, this.y, this.z], 0.8);
         for (let k = 0; k < 10; k++) game.particles.emit(this.x + (Math.random() - 0.5) * 0.6, this.y + 0.1, this.z + (Math.random() - 0.5) * 0.6, (Math.random() - 0.5) * 0.08, 0.12, (Math.random() - 0.5) * 0.08, 0.6, 0.75, 1, 12, 0.03);
       } else if (this.wait < 40 && Math.random() < 0.3) {
@@ -132,8 +137,30 @@ export class Bobber {
     const p = game.player;
     let dmg = 0;
     if (this.bite > 0) {
-      const bk = BIOMES[game.world.biomeAt(Math.floor(this.x), Math.floor(this.z))]; const st = rollCatch(Math.random, luckOf(p.effects), bk ? bk.key : '', this.haul | 0);
+      const w = game.world, bx = Math.floor(this.x), by = Math.floor(this.y), bz = Math.floor(this.z);
+      if (this.trophy && trophyEscapes()) { // the One That Got Away
+        if (game.hud && game.hud.toast) game.hud.toast('It slipped the line...', 1800);
+        if (game.milestones) game.milestones.event('got_away');
+        this.remove(game);
+        return 1;
+      }
+      const bk = BIOMES[w.biomeAt(bx, bz)];
+      const dark = (w.dimension === 'overworld' && skyState(game.time || 0).aboveCount === 0) || (w.skyLight ? w.skyLight(bx, by + 1, bz) < 4 : false);
+      const ctx = { dark, ice: isIceHole((x, y, z) => w.getBlock(x, y, z), bx, by, bz) };
+      let st = rollCatch(Math.random, luckOf(p.effects), bk ? bk.key : '', this.haul | 0, ctx);
+      if (this.trophy) for (let k = 0; k < 30 && !speciesOf(st.id); k++) st = rollCatch(Math.random, luckOf(p.effects), bk ? bk.key : '', this.haul | 0, ctx); // a Trophy is always a fish
       if (ITEMS[st.id] && ITEMS[st.id].food && haulExtra(Math.random, this.haul | 0)) st.count += 1; // Haul: a second fish on the line
+      const sp = speciesOf(st.id);
+      if (sp) { // the Fishing Log: weight of each species, best kept (world/angling.js)
+        const tw = this.trophy ? rollTrophyWeight() : 0, kg = tw || rollWeight();
+        if (tw) st.trophy = tw;
+        if (p.stats) {
+          if (!p.stats.fishLog) p.stats.fishLog = {};
+          const r = recordFish(p.stats.fishLog, sp, kg);
+          if (game.hud && game.hud.toast && (r.isNew || r.isRecord)) game.hud.toast(`${r.isNew ? 'New in the Fishing Log' : 'New record'}: ${ITEMS[st.id].name}, ${kg.toFixed(1)} kg`, 2600);
+        }
+        if (tw && game.milestones) game.milestones.event('trophy');
+      }
       const dx = p.x - this.x, dy = p.y + 1 - this.y, dz = p.z - this.z;
       const d = Math.hypot(dx, dy, dz) || 1;
       game.entities.spawnItem(this.x, this.y + 0.3, this.z, st, [dx * 0.1, dy * 0.1 + Math.sqrt(d) * 0.08, dz * 0.1]);

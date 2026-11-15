@@ -4,6 +4,7 @@
 import { B } from '../world/blocks.js';
 import { I, ITEMS, CHARTS } from '../world/items.js';
 import { wornSets } from './setBonuses.js';
+import { speciesCaught } from '../world/angling.js';
 import { BIOME } from '../world/biomes.js';
 import { villagesNear } from '../world/villages.js';
 import { sunkenRuinsNear } from '../world/sunkenRuins.js';
@@ -131,6 +132,10 @@ export const MILESTONES = [
   { id: 'ground_fog', title: 'Into the Mist', desc: 'Walk through the ground fog of a swamp or forest at dawn', icon: B.OAK_LEAVES, event: 'ground_fog' },
   { id: 'lantern_fest', title: 'Festival of Lanterns', desc: 'Join a village for its Lantern Festival', icon: B.LANTERN, event: 'lantern_fest' },
   { id: 'hush_night', title: 'Hold Your Breath', desc: 'Spend a Hush Night under the aurora', icon: B.HUSHMOSS, event: 'hush_night' },
+  // angling round (world/angling.js)
+  { id: 'trophy', title: 'Big Catch', desc: 'Land a Trophy fish', icon: I.RAW_SILVERFIN, event: 'trophy' },
+  { id: 'got_away', title: 'The One That Got Away', desc: 'Lose a Trophy fish from the line', icon: I.FISHING_ROD, event: 'got_away' },
+  { id: 'angler', title: 'Keen Angler', desc: 'Log six different fish in the Fishing Log', icon: I.RAW_REDFIN, tick: (g) => speciesCaught((g.player.stats || {}).fishLog) >= 6 },
 ];
 
 /** Veilfire counts as seen once its smoothed brightness (sky.aurora, 0..1) passes this. */

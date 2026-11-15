@@ -183,6 +183,7 @@ export default {
   'Roast Gilded Perch': 'Gebraden vergulde baars', 'Raw Silverfin': 'Rauwe Silverfin', 'Cooked Silverfin': 'Gebakken Silverfin',
   'Raw Redfin': 'Rauwe Redfin', 'Cooked Redfin': 'Gebakken Redfin', 'Raw Lanternfin': 'Rauwe Lanternfin', 'Cooked Lanternfin': 'Gebakken Lanternfin',
   'Raw Bogcarp': 'Rauwe Bogcarp', 'Roast Bogcarp': 'Gebraden Bogcarp', 'Raw Dunefin': 'Rauwe Dunefin', 'Roast Dunefin': 'Gebraden Dunefin',
+  'Raw Mudcarp': 'Rauwe Modderkarper', 'Roast Mudcarp': 'Gebraden Modderkarper', 'Raw Frostperch': 'Rauwe Vorstbaars', 'Roast Frostperch': 'Gebraden Vorstbaars', 'Raw Glimmereel': 'Rauwe Glimaal', 'Roast Glimmereel': 'Gebraden Glimaal', 'Raw Sunscale': 'Rauwe Zonneschub', 'Roast Sunscale': 'Gebraden Zonneschub',
 
   // ---- elixirs without an effect ----
   'Water Vial': 'Waterflesje', 'Murky Elixir': 'Troebel elixer', 'Bland Elixir': 'Flauw elixer', 'Thick Elixir': 'Dik elixer',

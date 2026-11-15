@@ -24,6 +24,7 @@ import { MILESTONES } from '../player/milestones.js';
 import { openBoard, showJournal } from './questScreens.js';
 import { openCartographersTable } from './tableScreens.js';
 import { statRows, killRows, formatTime } from '../player/stats.js';
+import { fishLogRows } from '../world/angling.js';
 import { guideOf, recordOf, LEVEL, TABS } from '../player/fieldGuide.js';
 import { entriesOf, guideProgress, guideRows, TAB_LABELS, itemName } from '../player/fieldGuideEntries.js';
 import { creatureIcon, structureIcon } from './guideArt.js';
@@ -2093,6 +2094,7 @@ export class UI {
       <div class="stats-body" tabindex="0" role="region" aria-label="${t('Statistics')}">
         <table class="stats-table"><caption class="world-head">${t('General')}</caption><tbody class="stats-general"></tbody></table>
         <table class="stats-table"><caption class="world-head">${t('Field Guide')}</caption><tbody class="stats-guide"></tbody></table>
+        <table class="stats-table"><caption class="world-head">${t('Fishing Log')}</caption><tbody class="stats-fish"></tbody></table>
         <table class="stats-table"><caption class="world-head">${t('Defeated')}</caption><tbody class="stats-kills"></tbody></table>
       </div>
       <button class="btn" data-a="back">${t('Back')}</button></div>`);
@@ -2106,6 +2108,7 @@ export class UI {
     };
     fill(s.querySelector('.stats-general'), statRows(st).map(([l, v]) => [t(l), v]));
     fill(s.querySelector('.stats-guide'), guideRows(guideOf(st)).map(([l, v]) => [l.startsWith('Field Guide: ') ? t('Field Guide') + ': ' + t(l.slice(13)) : t(l), v]));
+    fill(s.querySelector('.stats-fish'), fishLogRows(st.fishLog));
     const kills = killRows(st, MOBS);
     fill(s.querySelector('.stats-kills'), kills.length ? kills.map((k) => [tCreature(k.name), String(k.count)]) : [[t('Nothing yet'), '0']]);
     const back = s.querySelector('[data-a=back]');

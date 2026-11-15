@@ -22,6 +22,7 @@ export default {
   'Best Friends': 'Beste vrienden', 'Tame a Howler with a bone': 'Tem een Huiler met een bot',
   'Heavy Metal': 'Zwaar metaal', 'Build an Ironguard': 'Bouw een Ijzerwacht',
   'Gone Fishing': 'Gaan vissen', 'Catch something with a fishing rod': 'Vang iets met een hengel',
+  'Big Catch': 'Grote vangst', 'Land a Trophy fish': 'Land een trofeevis', 'The One That Got Away': 'Die ene die wegkwam', 'Lose a Trophy fish from the line': 'Verlies een trofeevis van de lijn', 'Keen Angler': 'Fervent hengelaar', 'Log six different fish in the Fishing Log': 'Noteer zes verschillende vissen in het Visboek', 'Fishing Log': 'Visboek',
   'Saddle Up': 'Zadel op', 'Tame a Galloper by riding it': 'Tem een Galopper door erop te rijden',
   'Fair Trade': 'Eerlijke handel', 'Trade with a Settler': 'Handel met een Kolonist',
   'Cage Breaker': 'Kooibreker', 'Break a monster spawner': 'Breek een monsterkooi',
