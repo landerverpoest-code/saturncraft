@@ -6,6 +6,7 @@
 import { B } from '../blocks.js';
 import { MIN_Y, cidx } from '../constants.js';
 import { mulberry32, hash4 } from '../noise.js';
+import { sanctumRiddled } from '../stoneMiteGen.js';
 import { ringCells } from './portal.js';
 
 export const SANCTUM_REGION = 640;
@@ -88,7 +89,7 @@ export function stampSanctums(gen, blocks, meta, cx, cz) {
           const b = planBlock(s, x, y, z, seed);
           if (!b) continue;
           const i = cidx(x - X0, y, z - Z0);
-          blocks[i] = b[0]; meta[i] = b[1];
+          blocks[i] = b[0] === B.STONE_BRICKS && sanctumRiddled(seed, x, y, z) ? B.MITE_BRICKS : b[0]; meta[i] = b[1]; // a twelfth of the bricks hide mites (mobs/stoneMites.js)
         }
   }
 }

@@ -636,6 +636,8 @@ poison from eyes) follow the documented table.
 
 - **Portal test yard**: the "Portal test yard" world option (and the `/portalyard` cheat command) builds a flat yard with the Rift portal and the Hollow Gate both lit side by side, in creative mode, for trying the dimensions. Falling lava now drops quickly (4-tick steps) instead of hanging in mid-air between slow 30-tick steps.
 
+- **Stone Mites and Mite-Riddled stone** (`src/mobs/stoneMites.js`, `src/world/stoneMiteGen.js`): three new blocks, Mite-Riddled Stone, Cobblestone and Stone Bricks, look exactly like the plain ones, crumble in a moment under a pickaxe and drop nothing, but let a Stone Mite out when broken (a Gentle Hand tool brings the block home whole). A Stone Mite is a tiny 4-health biter with a quick scurry. Hurt one and every mite within 10 blocks comes for you while every Riddled block within 6 blocks of it bursts open with a hiss and lets its own mite out. A mite that has lost its target for ten seconds and stands beside plain stone, cobblestone or stone bricks burrows back in, turning that block Riddled again. World generation hides small clusters of 3 to 6 Riddled Stone (about 1.5 percent of the stone) below the surface of peaks and highlands, and about a twelfth of the Hollow Sanctums' stone bricks are Riddled; mites never spawn in the open.
+
 **Not yet implemented**
 
 * Large structures beyond villages, temples, wrecks, Tide Citadels, Sunken Ruins, Sun Tombs, Skywatch Towers, Rimekeeps, Sporehalls, outposts, ruined rifts, dungeons, sanctums, bastions, Cinderforges, Hollow Cities and Wyrm Ribs

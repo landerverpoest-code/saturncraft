@@ -52,6 +52,7 @@ const HABITAT_NOTES = {
   hoverling: 'Caged at Raider Outposts, drifting through Hollow cities',
   dune_strider: 'Desert villages and the open desert',
   dustmole: 'Hidden in the sand until it digs out',
+  stone_mite: 'Hidden in Mite-Riddled stone of mountains and Hollow Sanctums; pours out when one of them is hurt',
   rootsnout: 'Forests and flower forests, rooting up Dawnfern Seeds every few minutes',
   plateback: 'Savannas and badlands; curls into a ball when a runner comes near',
   tarnling: 'Quiet ponds, tarns and waterholes',
