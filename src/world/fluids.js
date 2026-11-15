@@ -6,6 +6,8 @@ import { B, BLOCKS, SOLID, SHAPE } from './blocks.js';
 
 export const WATER_DELAY = 5;
 export const LAVA_DELAY = 30;
+// a falling column of lava drops quickly (it only crawls sideways): without this a cliff of lava hangs in mid-air for seconds per block
+export const LAVA_FALL_DELAY = 4;
 
 export function fluidDelay(id) { return id === B.LAVA ? LAVA_DELAY : WATER_DELAY; }
 const dropOff = (id) => (id === B.LAVA ? 2 : 1);
@@ -99,11 +101,13 @@ export function tickFluid(world, x, y, z, id) {
   const belowB = world.getBlock(x, y - 1, z);
   if (canFlowInto(world, x, y - 1, z, id, 0) && belowB !== id) {
     placeFluid(world, x, y - 1, z, id, 8);
+    if (id === B.LAVA && world.scheduleTick) world.scheduleTick(x, y - 1, z, LAVA_FALL_DELAY);
     return;
   }
   if (belowB === id && !((world.getMeta(x, y - 1, z) & 7) === 0 && !(world.getMeta(x, y - 1, z) & 8))) {
     // falling column continues
     if (!(world.getMeta(x, y - 1, z) & 8)) world.setBlock(x, y - 1, z, id, 8);
+    if (id === B.LAVA && world.scheduleTick) world.scheduleTick(x, y - 1, z, LAVA_FALL_DELAY);
     if (!isSource) return;
   }
 

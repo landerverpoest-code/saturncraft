@@ -176,3 +176,23 @@ export function buildRiftPortal(world, x, y, z, axis, platform, set = (a, b, c, 
   fillRift(world, f, (a, b, c, id, m) => set(a, b, c, id, m));
   return f;
 }
+
+/**
+ * A test yard for both portals, side by side on a flat stone-brick floor with open sky: the Rift portal (to the Cinderdeep)
+ * lit and standing, and the ring of Hollow Frames with every Eye set and the Hollow Gate open. (x, y, z) is the standing spot
+ * (y = the first free cell above the floor). Returns where to stand and where each portal is.
+ */
+export function buildPortalYard(world, x, y, z, set = (a, b, c, id, m = 0) => world.setBlock(a, b, c, id, m, false)) {
+  for (let dx = -8; dx <= 16; dx++) for (let dz = -7; dz <= 7; dz++) {
+    for (let j = 0; j < 8; j++) set(x + dx, y + j, z + dz, B.AIR);
+    set(x + dx, y - 1, z + dz, B.STONE_BRICKS);
+    set(x + dx, y - 2, z + dz, B.STONE);
+  }
+  // the Rift portal: a 4x5 frame in the x plane, lit
+  const rift = buildRiftPortal(world, x + 2, y, z - 1, 1, false, set);
+  // the Hollow ring: 12 eyed frames around a 3x3 gate, flat on the floor
+  const cx = x + 9, cz = z;
+  for (const [a, b, c] of ringCells(cx, y, cz)) set(a, b, c, B.HOLLOW_FRAME_EYE);
+  fillHollowGate(world, { x: cx, y, z: cz }, set);
+  return { stand: { x: x + 0.5, y, z: z + 0.5 }, rift, hollow: { x: cx, y, z: cz } };
+}

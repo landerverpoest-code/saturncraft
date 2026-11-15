@@ -69,7 +69,7 @@ export function readCreateOptions() {
     worldType: $('wo-type').value, gamemode: $('wo-mode').value, difficulty: $('wo-diff').value,
     allowCheats: $('wo-cheats').checked, seasons: $('wo-seasons').checked, startSeason: $('wo-start').value, seasonDays: +$('wo-days').value,
     daylightCycle: $('wo-daylight').checked, hostileMobs: $('wo-hostile').checked, worldEvents: $('wo-events').checked, fireworksHurtPlayers: $('wo-fwhurt').checked,
-    keepInventory: $('wo-keepinv').checked, hardcore: $('wo-hardcore').checked,
+    keepInventory: $('wo-keepinv').checked, hardcore: $('wo-hardcore').checked, portalYard: $('wo-portalyard').checked,
   });
 }
 

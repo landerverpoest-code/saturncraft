@@ -11,7 +11,7 @@ export const defaultOptions = () => ({
   name: '', seedText: '', worldType: 'normal', gamemode: 'survival', difficulty: 'normal', allowCheats: true,
   seasons: true, startSeason: 'spring', seasonDays: DEFAULT_DAYS,
   daylightCycle: true, hostileMobs: true, worldEvents: true, fireworksHurtPlayers: false,
-  keepInventory: false, hardcore: false,
+  keepInventory: false, hardcore: false, portalYard: false,
 });
 
 const bool = (v, d) => (typeof v === 'boolean' ? v : d);
@@ -24,8 +24,9 @@ export function cleanOptions(raw = {}) {
   // One Life (hardcore): survival on Hard, no cheats, nothing kept on death - and the death is final
   const hardcore = bool(raw.hardcore, d.hardcore);
   if (hardcore) raw = { ...raw, gamemode: 'survival', difficulty: 'hard', allowCheats: false, keepInventory: false };
+  const portalYard = bool(raw.portalYard, d.portalYard) && !hardcore;
   return {
-    hardcore,
+    hardcore, portalYard,
     keepInventory: bool(raw.keepInventory, d.keepInventory),
     name: cleanName(raw.name),
     seedText: String(raw.seedText ?? '').replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, LIMITS.seedTextMax),
@@ -68,6 +69,7 @@ export function applyNewWorldOptions(game, o) {
   game.seedText = o.seedText || null;
   game.createdAt = Date.now();
   if (game.player && o.gamemode !== game.player.gamemode) game.player.setGamemode(o.gamemode);
+  if (o.portalYard && game.buildPortalYard) { game.allowCheats = true; game.buildPortalYard(); } // a test world: both portals lit, side by side
   if (game.seasons) {
     if (o.seasonDays !== game.seasons.days) game.seasons.setDays(o.seasonDays, game.time);
     game.seasons.setSeason(o.startSeason, game.time);
